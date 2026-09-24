@@ -1,0 +1,91 @@
+---
+/**
+ * Semantic minimap (UI_UX §12): content topology, not page percentage.
+ *
+ * Each region is one line on a vertical lineage rule: display ordinal, title,
+ * and a quiet count of the research objects it holds ("5 eq · 1 alg · 3 fm").
+ * The exact markers (Eq. 5.4, Alg. 5.2, a failure mode …) are listed only
+ * under the region being read, so the outline stays calm while every object
+ * remains one click away. Order and ordinals follow the page's presentation
+ * order (lib/presentation.ts) when given.
+ *
+ * Client contract (minimap.ts / scroll-sync.ts): the root carries
+ * `data-minimap`; the client marks the active region's link `is-active` /
+ * `aria-current="location"` and writes the fraction read to `data-progress`.
+ */
+import type { OutlineEntry, OutlineMarkerType, ResearchDocument } from '@atlas/core';
+import { depthAttrs, minimapAttrs, progressAttrs } from './lib/dom.ts';
+import { MARKER_NAMES, MINIMAP_MARKER_TYPES } from './lib/grammar.ts';
+
+interface Props {
+  doc: ResearchDocument;
+  outline?: readonly OutlineEntry[];
+  ordinals?: ReadonlyMap<string, string>;
+}
+
+const { doc, outline = doc.outline, ordinals } = Astro.props;
+
+const COUNT_ABBR: Readonly<Partial<Record<OutlineMarkerType, string>>> = {
+  equation: 'eq',
+  figure: 'fig',
+  algorithm: 'alg',
+  experiment: 'exp',
+  'failure-mode': 'fm',
+  'open-question': 'oq',
+  definition: 'def',
+  code: 'code',
+};
+const COUNT_ORDER: readonly OutlineMarkerType[] = ['figure', 'equation', 'algorithm', 'definition', 'experiment', 'failure-mode', 'open-question', 'code'];
+const SELF_DESCRIBING: ReadonlySet<string> = new Set(['equation', 'figure', 'algorithm', 'experiment']);
+
+const entries = outline.map((entry) => {
+  const markers = entry.markers.filter((marker) => MINIMAP_MARKER_TYPES.has(marker.type));
+  const counts = COUNT_ORDER.map((type) => {
+    const n = markers.filter((marker) => marker.type === type).length;
+    const abbr = COUNT_ABBR[type];
+    return n > 0 && abbr !== undefined ? `${String(n)} ${abbr}` : null;
+  }).filter((text): text is string => text !== null);
+  return {
+    entry,
+    ordinal: ordinals?.get(entry.anchor) ?? null,
+    counts: counts.join(' · '),
+    markers: markers.map((marker) => ({
+      ...marker,
+      text: SELF_DESCRIBING.has(marker.type) ? marker.label : `${MARKER_NAMES[marker.type]}: ${marker.label}`,
+      short: SELF_DESCRIBING.has(marker.type) ? marker.label.replace(/\.\s+/u, '. ') : marker.label,
+    })),
+  };
+});
+---
+
+{
+  entries.length > 0 && (
+    <nav class="rb-minimap" aria-label="Page outline" {...minimapAttrs(doc.meta.id)}>
+      <p class="rb-minimap__head">On this page</p>
+      <span class="rb-minimap__progress" aria-hidden="true" {...progressAttrs()} />
+      <ol class="rb-minimap__list" role="list">
+        {entries.map(({ entry, ordinal, counts, markers }) => (
+          <li class={`rb-minimap__entry rb-minimap__entry--${entry.role}`} {...depthAttrs(entry.depth)}>
+            <a class="rb-minimap__link" href={`#${entry.anchor}`}>
+              <span class="rb-minimap__tick" aria-hidden="true" />
+              {ordinal !== null && <span class="rb-minimap__ord" aria-hidden="true">{ordinal}</span>}
+              <span class="rb-minimap__title">{entry.title}</span>
+              {counts !== '' && <span class="rb-minimap__count">{counts}</span>}
+            </a>
+            {markers.length > 0 && (
+              <ul class="rb-minimap__markers" role="list">
+                {markers.map((marker) => (
+                  <li>
+                    <a class={`rb-minimap__marker rb-minimap__marker--${marker.type}`} href={`#${marker.anchor}`} title={marker.text}>
+                      {marker.short}
+                    </a>
+                  </li>
+                ))}
+              </ul>
+            )}
+          </li>
+        ))}
+      </ol>
+    </nav>
+  )
+}

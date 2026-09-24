@@ -1,0 +1,63 @@
+---
+/**
+ * Equation variable inspector (UI_UX §10, §16): each numbered equation of the
+ * region with its rendered form and symbol → meaning rows. Rows carry
+ * `data-eq-var` and sit beside their KaTeX output, so hovering a row lights
+ * the symbol in the rendered equation (and the reverse). The number links to
+ * the equation in the reading column.
+ */
+import type { PageData, RailInstrument, ResearchDocument } from '@atlas/core';
+import { eqVarAttrs, equationAttrs, instrumentAttrs } from '../lib/dom.ts';
+import { findBlock } from '../lib/walk.ts';
+import InstrumentHead from './InstrumentHead.astro';
+
+interface Props {
+  instrument: Extract<RailInstrument, { kind: 'equations' }>;
+  doc: ResearchDocument;
+  pageData?: PageData | undefined;
+}
+
+const { instrument, doc, pageData } = Astro.props;
+
+interface InspectedEquation {
+  readonly number: string;
+  readonly anchor: string;
+  readonly html: string;
+  readonly variables: readonly { readonly symbol: string; readonly meaning: string }[];
+}
+
+const equations: InspectedEquation[] = instrument.anchors.flatMap((anchor) => {
+  const block = findBlock(doc, 'equation', anchor);
+  if (block !== null && block.number !== null) {
+    return [{ number: block.number, anchor, html: block.html, variables: block.variables }];
+  }
+  const fromPage = Object.values(pageData?.equations ?? {}).find((entry) => entry.anchor === anchor);
+  return fromPage === undefined ? [] : [{ number: fromPage.number, anchor, html: fromPage.html, variables: fromPage.variables }];
+});
+---
+
+{
+  equations.length > 0 && (
+    <div class="rb-instrument rb-instrument--equations" {...instrumentAttrs('equations')}>
+      <InstrumentHead title="Variable inspector" meta={`${equations.length} eq.`} />
+      {equations.map((equation) => (
+        <div class="rb-eqi" {...equationAttrs(equation.number)}>
+          <p class="rb-eqi__head">
+            <a class="rb-eqi__num" href={`#${equation.anchor}`}>Eq. {equation.number}</a>
+          </p>
+          <div class="rb-eqi__math" set:html={equation.html} />
+          {equation.variables.length > 0 && (
+            <dl class="rb-kv">
+              {equation.variables.map((variable) => (
+                <div class="rb-kv__row" {...eqVarAttrs(variable.symbol)}>
+                  <dt class="rb-kv__key"><code>{variable.symbol}</code></dt>
+                  <dd class="rb-kv__value">{variable.meaning}</dd>
+                </div>
+              ))}
+            </dl>
+          )}
+        </div>
+      ))}
+    </div>
+  )
+}

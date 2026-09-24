@@ -1,0 +1,84 @@
+---
+/**
+ * Graph (UI_UX §13, §73): not a thousand-node hairball. The index lists the
+ * research domains and their chapters; each entry opens that node's Map —
+ * a constrained neighbourhood (prerequisites left, dependents right,
+ * siblings and alternatives above and below) with a navigable text twin.
+ */
+import { DOMAIN_LABELS, type DomainKey, type GraphNode } from '@atlas/core';
+import PageHeader from '../../components/shell/PageHeader.astro';
+import ReaderLayout from '../../layouts/ReaderLayout.astro';
+import { getGraph } from '../../lib/atlas.ts';
+import { grouped } from '../../lib/format.ts';
+import { childrenOf, nodesOfType } from '../../lib/nodes.ts';
+import { mapUrl } from '../../lib/urls.ts';
+import StackExplorer from '../../components/shell/StackExplorer.astro';
+import '../../styles/explorer.css';
+import { getStackModel } from '../../lib/stack.ts';
+
+const [graph, stackModel] = await Promise.all([getGraph(), getStackModel()]);
+const parts = nodesOfType(graph, 'part');
+const byDomain = new Map<DomainKey, GraphNode[]>();
+for (const part of parts) byDomain.set(part.domain, [...(byDomain.get(part.domain) ?? []), part]);
+const domains = [...byDomain.entries()];
+const reference = [...nodesOfType(graph, 'frontmatter'), ...nodesOfType(graph, 'appendix')].filter((node) => node.id !== 'ms.root');
+const chaptersOf = (part: GraphNode) => childrenOf(graph, part).filter((child) => child.entityType === 'chapter');
+---
+
+<ReaderLayout
+  title="Graph"
+  description="The knowledge graph of The Model Stack by research domain; every node opens a constrained neighbourhood map."
+  canonicalPath="/graph/"
+  currentId={null}
+  navKey="graph"
+>
+  <PageHeader
+    identity="Research Atlas / Graph"
+    title="Graph"
+    lede="Choose a node to see its local neighbourhood: what it depends on, what it enables, and what sits beside it."
+    meta={`${grouped(Object.keys(graph.nodes).length)} nodes · ${grouped(graph.edges.length)} typed edges`}
+  />
+
+  <StackExplorer model={stackModel} />
+
+  {
+    domains.map(([domain, domainParts]) => (
+      <section class="sh-section sh-graph-domain" data-domain={domain} aria-labelledby={`domain-${domain}`}>
+        <h2 id={`domain-${domain}`}>{DOMAIN_LABELS[domain]}</h2>
+        {domainParts.map((part) => (
+          <div class="sh-graph-part">
+            <h3 class="sh-graph-part-title">
+              <a href={mapUrl(part.url)}>
+                <span class="sh-num">Part {part.number}</span> {part.title}
+              </a>
+            </h3>
+            <ol class="sh-index-list sh-index-list--columns">
+              {chaptersOf(part).map((chapter) => (
+                <li class:list={['sh-index-row', { 'sh-index-row--planned': !chapter.hasManuscript }]}>
+                  <span class="sh-num">{chapter.number}</span>
+                  <a href={mapUrl(chapter.url)}>{chapter.shortTitle}</a>
+                </li>
+              ))}
+            </ol>
+          </div>
+        ))}
+      </section>
+    ))
+  }
+
+  {
+    reference.length > 0 && (
+      <section class="sh-section" aria-labelledby="domain-reference">
+        <h2 id="domain-reference">{DOMAIN_LABELS.reference}</h2>
+        <ol class="sh-index-list sh-index-list--columns">
+          {reference.map((node) => (
+            <li class:list={['sh-index-row', { 'sh-index-row--planned': !node.hasManuscript }]}>
+              <span class="sh-num">{node.number ?? ''}</span>
+              <a href={mapUrl(node.url)}>{node.shortTitle}</a>
+            </li>
+          ))}
+        </ol>
+      </section>
+    )
+  }
+</ReaderLayout>

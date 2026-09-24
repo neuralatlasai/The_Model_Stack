@@ -1,0 +1,48 @@
+---
+/**
+ * Dispatches one context-rail instrument (UI_UX §10, VISUAL_GRAMMAR §6) to
+ * its renderer. `INSTRUMENTS` is keyed by every `RailInstrumentKind`, so a
+ * new instrument kind in core without a renderer is a type error here.
+ * `pageData` supplies inspector payloads (references, terms, neighbours);
+ * instruments that need it render nothing when it is absent.
+ */
+import type { PageData, RailInstrument as RailInstrumentNode, RailInstrumentKind, ResearchDocument } from '@atlas/core';
+import CitationStack from './instruments/CitationStack.astro';
+import EquationInspector from './instruments/EquationInspector.astro';
+import EvidenceProfile from './instruments/EvidenceProfile.astro';
+import FailureIndex from './instruments/FailureIndex.astro';
+import PositionInstrument from './instruments/PositionInstrument.astro';
+import RailFigure from './instruments/RailFigure.astro';
+import SiblingDifferentials from './instruments/SiblingDifferentials.astro';
+import TermList from './instruments/TermList.astro';
+
+type InstrumentOf<K extends RailInstrumentKind> = Extract<RailInstrumentNode, { kind: K }>;
+type InstrumentRenderer<K extends RailInstrumentKind> = (props: {
+  instrument: InstrumentOf<K>;
+  doc: ResearchDocument;
+  pageData?: PageData | undefined;
+}) => unknown;
+
+const INSTRUMENTS: { readonly [K in RailInstrumentKind]: InstrumentRenderer<K> } = {
+  figure: RailFigure,
+  equations: EquationInspector,
+  position: PositionInstrument,
+  siblings: SiblingDifferentials,
+  citations: CitationStack,
+  evidence: EvidenceProfile,
+  'failure-modes': FailureIndex,
+  terms: TermList,
+};
+
+interface Props {
+  instrument: RailInstrumentNode;
+  doc: ResearchDocument;
+  pageData?: PageData | undefined;
+}
+
+const { instrument, doc, pageData } = Astro.props;
+// Correlated lookup: INSTRUMENTS[k] accepts InstrumentOf<k>; widened once here.
+const Renderer = INSTRUMENTS[instrument.kind] as InstrumentRenderer<RailInstrumentKind>;
+---
+
+<Renderer instrument={instrument} doc={doc} pageData={pageData} />

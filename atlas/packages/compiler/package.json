@@ -1,0 +1,34 @@
+{
+  "name": "@atlas/compiler",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Compiles docs/ manuscripts into typed research objects, the knowledge graph, registries, and the search index (atlas/.atlas/).",
+  "type": "module",
+  "exports": {
+    ".": "./src/index.ts"
+  },
+  "bin": {
+    "atlas-compile": "./src/cli.ts"
+  },
+  "engines": {
+    "node": ">=24.0.0"
+  },
+  "dependencies": {
+    "@atlas/core": "0.1.0",
+    "@atlas/visual": "0.1.0",
+    "katex": "0.18.7",
+    "mdast-util-from-markdown": "2.0.3",
+    "mdast-util-gfm": "3.1.0",
+    "mdast-util-math": "3.0.0",
+    "mdast-util-to-string": "4.0.0",
+    "micromark-extension-gfm": "3.0.0",
+    "micromark-extension-math": "3.1.0",
+    "minisearch": "7.2.0",
+    "shiki": "4.4.3",
+    "yaml": "2.9.1",
+    "zod": "4.6.5"
+  },
+  "devDependencies": {
+    "@types/mdast": "4.0.4"
+  }
+}

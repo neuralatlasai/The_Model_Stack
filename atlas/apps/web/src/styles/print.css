@@ -1,0 +1,161 @@
+/*
+ * Print / PDF (UI_UX §75): the same semantic content without interactive
+ * chrome — no tree, rail, top bar, dock, or mode strip; every depth layer
+ * shown (base.css scopes depth hiding to screen); inline expansions opened;
+ * figures and equations keep their numbers; citations carry their keys and
+ * external links their URLs. Always the light palette on white paper.
+ */
+
+@media print {
+  :root,
+  :root[data-theme='dark'],
+  :root:not([data-theme='light']) {
+    color-scheme: light;
+    --paper: #ffffff;
+    --paper-raised: #ffffff;
+    --paper-sunk: #f4f2ec;
+    --ink: #000000;
+    --ink-2: #2b2a27;
+    --ink-3: #55524b;
+    --rule: #c9c3b6;
+    --rule-strong: #8f887b;
+    --accent: #000000;
+    --accent-hover: #000000;
+    --accent-wash: transparent;
+    --focus: #000000;
+    --ev-source: #3e5c45;
+    --ev-inference: #5a4b7a;
+    --ev-gap: #8a5a2b;
+    --domain: #000000;
+    --fig-stroke: #2b2a27;
+    --fig-fill: #ffffff;
+    --fig-fill-2: #f4f2ec;
+    --fig-muted: #55524b;
+    --fig-grid: #c9c3b6;
+    --fig-emphasis: #000000;
+  }
+
+  @page {
+    margin: 18mm 16mm 20mm;
+  }
+
+  html,
+  body {
+    background: #ffffff;
+    color: #000000;
+  }
+
+  body {
+    font-size: 11pt;
+    line-height: 1.5;
+    padding: 0;
+  }
+
+  /* Interactive chrome. */
+  .sh-skip,
+  .sh-topbar,
+  .sh-tree,
+  .sh-rail,
+  .sh-dock,
+  .sh-modes,
+  .sh-depth,
+  .sh-search,
+  .sh-theme,
+  .sh-pager,
+  .sh-jump,
+  .sh-footer-nav,
+  .sh-panel-close,
+  [data-action],
+  [data-minimap],
+  [data-rail-for] {
+    display: none !important;
+  }
+
+  .sh-frame {
+    display: block;
+  }
+
+  .sh-main,
+  .sh-home,
+  .sh-plain {
+    padding: 0;
+  }
+
+  .sh-reader,
+  .sh-wide,
+  .sh-reader :where(p, ul, ol, dl, blockquote, h1, h2, h3, h4, h5, h6, pre, details) {
+    max-width: none;
+  }
+
+  .sh-home-grid {
+    display: block;
+  }
+
+  /* Inline expansions print open. */
+  details > summary {
+    list-style: none;
+    font-style: italic;
+  }
+
+  details::details-content {
+    content-visibility: visible;
+    display: block;
+  }
+
+  /* Keep objects whole and headings with their text. */
+  h1,
+  h2,
+  h3,
+  h4 {
+    break-after: avoid-page;
+  }
+
+  figure,
+  table,
+  pre,
+  .katex-display,
+  .sh-instrument {
+    break-inside: avoid-page;
+  }
+
+  p,
+  li {
+    orphans: 3;
+    widows: 3;
+  }
+
+  a {
+    color: #000000;
+    text-decoration: none;
+  }
+
+  /* Citations resolve to their bibliography keys; external links show their URL. */
+  a[data-cite]::after {
+    content: ' [' attr(data-cite) ']';
+    font-size: 0.85em;
+  }
+
+  a[href^='http']:not([data-cite])::after {
+    content: ' <' attr(href) '>';
+    font-family: var(--font-mono);
+    font-size: 0.75em;
+    overflow-wrap: anywhere;
+  }
+
+  .sh-tree-progress {
+    display: none;
+  }
+
+  .sh-universe-plan {
+    position: static;
+    width: auto;
+    height: auto;
+    clip-path: none;
+    white-space: normal;
+  }
+
+  .sh-footer {
+    margin-top: 2rem;
+    padding: 0.75rem 0 0;
+  }
+}

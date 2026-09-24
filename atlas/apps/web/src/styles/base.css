@@ -1,0 +1,411 @@
+/*
+ * Base typography and element defaults — the editorial monograph surface:
+ * old-style serif body on warm paper, restrained oxblood links, hairline
+ * rules, small-caps section heads. Component classes live in shell.css (sh-),
+ * research.css (rb-) and visual-grammar.css (vg-).
+ *
+ * Numerals: prose uses old-style proportional figures (OpenType onum/pnum);
+ * tables, metadata and instruments switch to lining tabular figures
+ * (lnum/tnum). Small caps use `all-small-caps`, which selects the font's real
+ * smcp/c2sc glyphs in EB Garamond rather than synthesising them.
+ */
+
+@import 'katex/dist/katex.min.css';
+
+/* ── reset ─────────────────────────────────────────────────────────────────── */
+
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
+html {
+  -webkit-text-size-adjust: 100%;
+  text-size-adjust: 100%;
+  background: var(--paper);
+  color: var(--ink);
+  /* Anchored regions and equations clear the sticky top bar. */
+  scroll-padding-top: calc(var(--sh-topbar-h, 52px) + 1.25rem);
+}
+
+body {
+  margin: 0;
+  min-height: 100vh;
+  min-height: 100dvh;
+  background: var(--paper);
+  color: var(--ink);
+  font-family: var(--font-serif);
+  font-size: var(--fs-body);
+  line-height: var(--lh-body);
+  font-weight: 400;
+  font-kerning: normal;
+  font-variant-ligatures: common-ligatures;
+  font-variant-numeric: oldstyle-nums proportional-nums;
+  font-optical-sizing: auto;
+  hanging-punctuation: first;
+  text-rendering: optimizeLegibility;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+[hidden]:not([hidden='until-found']) {
+  display: none !important;
+}
+
+img,
+svg,
+video,
+canvas {
+  display: block;
+  max-width: 100%;
+  height: auto;
+}
+
+svg {
+  overflow: visible;
+}
+
+button,
+input,
+select,
+textarea {
+  font: inherit;
+  color: inherit;
+}
+
+button {
+  cursor: pointer;
+}
+
+p,
+ul,
+ol,
+dl,
+blockquote,
+figure,
+pre,
+table {
+  margin-block: 0 var(--gap-related);
+}
+
+ul,
+ol {
+  padding-inline-start: 1.4em;
+}
+
+/* ── headings ──────────────────────────────────────────────────────────────── */
+
+h1,
+h2,
+h3,
+h4,
+h5,
+h6 {
+  margin: 0;
+  font-family: var(--font-serif);
+  font-weight: 500;
+  color: var(--ink);
+  text-wrap: balance;
+  font-variant-numeric: lining-nums proportional-nums;
+}
+
+h1 {
+  font-size: var(--fs-h1);
+  line-height: 1.12;
+  letter-spacing: -0.005em;
+}
+
+/* Section heads à la AI 2040: real small caps, open tracking. */
+h2 {
+  font-size: var(--fs-h2);
+  line-height: 1.2;
+  font-variant-caps: all-small-caps;
+  letter-spacing: 0.04em;
+}
+
+h3 {
+  font-size: var(--fs-h3);
+  line-height: 1.28;
+}
+
+h4,
+h5,
+h6 {
+  font-size: var(--fs-body);
+  line-height: 1.4;
+  font-style: italic;
+}
+
+/* ── links ─────────────────────────────────────────────────────────────────── */
+
+a {
+  color: var(--accent);
+  text-decoration-line: underline;
+  text-decoration-thickness: 0.06em;
+  text-underline-offset: 0.2em;
+  text-decoration-color: color-mix(in srgb, var(--accent) 38%, transparent);
+  transition:
+    color var(--t-hover) ease-out,
+    text-decoration-color var(--t-hover) ease-out;
+}
+
+a:hover {
+  color: var(--accent-hover);
+  text-decoration-color: currentColor;
+}
+
+::selection {
+  background: var(--accent-wash);
+  color: var(--ink);
+}
+
+/* ── focus ─────────────────────────────────────────────────────────────────── */
+
+:focus {
+  outline: none;
+}
+
+:focus-visible {
+  outline: 2px solid var(--focus);
+  outline-offset: 2px;
+  border-radius: 1px;
+}
+
+/* ── rules, quotes, small text ─────────────────────────────────────────────── */
+
+hr {
+  border: 0;
+  border-top: 1px solid var(--rule);
+  margin: var(--gap-section) 0;
+}
+
+blockquote {
+  margin-inline: 0;
+  padding-inline-start: 1.1em;
+  border-inline-start: 1px solid var(--rule-strong);
+  color: var(--ink-2);
+}
+
+small {
+  font-size: 0.8em;
+}
+
+abbr[title] {
+  text-decoration: underline dotted;
+  text-underline-offset: 0.2em;
+}
+
+sup,
+sub {
+  line-height: 0;
+  font-variant-numeric: lining-nums;
+}
+
+/* ── code ──────────────────────────────────────────────────────────────────── */
+
+code,
+kbd,
+samp,
+pre {
+  font-family: var(--font-mono);
+  font-size: var(--fs-code);
+  font-variant-ligatures: none;
+  font-variant-numeric: lining-nums tabular-nums slashed-zero;
+}
+
+/*
+ * Inline code and tensor shapes are identifiers inside prose: monospace in a
+ * slightly quieter ink, no chip. Background chips on every `[B, T, D]` turned
+ * dense technical paragraphs into a patchwork.
+ */
+:not(pre) > code {
+  padding: 0;
+  background: none;
+  color: var(--ink-2);
+  font-size: 0.8em;
+  letter-spacing: -0.01em;
+  /* `anywhere` (not break-word) also lowers min-content, so long identifiers wrap inside grid cells on phones. */
+  overflow-wrap: anywhere;
+}
+
+kbd {
+  padding: 0.05em 0.35em;
+  border: 1px solid var(--rule-strong);
+  border-radius: 3px;
+  font-size: var(--fs-meta);
+  color: var(--ink-2);
+}
+
+pre {
+  overflow-x: auto;
+  padding: 0.9rem 1rem;
+  border-radius: 2px;
+  background: var(--paper-sunk);
+  line-height: 1.55;
+  tab-size: 2;
+}
+
+/*
+ * Shiki dual theme (compiler emits CSS variables per token). Light is the
+ * default; dark applies under the same resolution as the tokens. `!important`
+ * lets the variables win if the compiler also inlines the light colour.
+ * Backgrounds come from our paper tokens, not from the syntax theme.
+ */
+.shiki,
+.shiki span {
+  color: var(--shiki-light, inherit);
+  font-style: var(--shiki-light-font-style, inherit);
+  font-weight: var(--shiki-light-font-weight, inherit);
+  text-decoration: var(--shiki-light-text-decoration, inherit);
+}
+
+.shiki {
+  background-color: var(--paper-sunk) !important;
+}
+
+:root[data-theme='dark'] .shiki,
+:root[data-theme='dark'] .shiki span {
+  color: var(--shiki-dark, inherit) !important;
+  font-style: var(--shiki-dark-font-style, inherit) !important;
+  font-weight: var(--shiki-dark-font-weight, inherit) !important;
+  text-decoration: var(--shiki-dark-text-decoration, inherit) !important;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme='light']) .shiki,
+  :root:not([data-theme='light']) .shiki span {
+    color: var(--shiki-dark, inherit) !important;
+    font-style: var(--shiki-dark-font-style, inherit) !important;
+    font-weight: var(--shiki-dark-font-weight, inherit) !important;
+    text-decoration: var(--shiki-dark-text-decoration, inherit) !important;
+  }
+}
+
+/* ── mathematics (KaTeX, server-rendered HTML + MathML) ────────────────────── */
+
+/*
+ * KaTeX sets 1.21em by default, tuned for Computer Modern beside Latin Modern.
+ * EB Garamond's x-height is small, so math is brought down to sit on the
+ * same optical size as the 19px serif.
+ */
+.katex {
+  font-size: 1.08em;
+  text-rendering: auto;
+}
+
+.katex-display {
+  margin: var(--gap-argument) 0;
+  padding-block: 0.2em;
+  overflow-x: auto;
+  overflow-y: hidden;
+}
+
+.katex-display > .katex {
+  font-size: 1.12em;
+}
+
+/* ── tables ────────────────────────────────────────────────────────────────── */
+
+table {
+  width: 100%;
+  border-collapse: collapse;
+  font-family: var(--font-sans);
+  font-size: var(--fs-tech);
+  line-height: 1.45;
+  font-variant-numeric: lining-nums tabular-nums;
+}
+
+th,
+td {
+  padding: 0.45rem 0.75rem 0.45rem 0;
+  border-bottom: 1px solid var(--rule);
+  text-align: start;
+  vertical-align: top;
+}
+
+th {
+  font-weight: 600;
+  color: var(--ink-2);
+  font-size: var(--fs-meta);
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  border-bottom-color: var(--rule-strong);
+}
+
+caption {
+  caption-side: top;
+  text-align: start;
+  font-family: var(--font-sans);
+  font-size: var(--fs-meta);
+  color: var(--ink-3);
+  padding-bottom: 0.4rem;
+}
+
+/* ── inline expansion ──────────────────────────────────────────────────────── */
+
+summary {
+  cursor: pointer;
+}
+
+/* ── depth control (UI_UX §29): one document, cumulative visibility layers ── */
+
+/* Screen only: print always carries every layer (UI_UX §75). */
+@media screen {
+  html[data-depth='overview'] [data-depth-min='technical'],
+  html[data-depth='overview'] [data-depth-min='research'],
+  html[data-depth='overview'] [data-depth-min='implementation'],
+  html[data-depth='technical'] [data-depth-min='research'],
+  html[data-depth='technical'] [data-depth-min='implementation'],
+  html[data-depth='research'] [data-depth-min='implementation'] {
+    display: none;
+  }
+}
+
+/* ── utilities ─────────────────────────────────────────────────────────────── */
+
+.sh-visually-hidden {
+  position: absolute !important;
+  width: 1px !important;
+  height: 1px !important;
+  padding: 0 !important;
+  margin: -1px !important;
+  overflow: hidden !important;
+  clip-path: inset(50%) !important;
+  white-space: nowrap !important;
+  border: 0 !important;
+}
+
+.sh-smallcaps {
+  font-variant-caps: all-small-caps;
+  letter-spacing: 0.04em;
+}
+
+.sh-mono {
+  font-family: var(--font-mono);
+  font-variant-numeric: lining-nums tabular-nums slashed-zero;
+}
+
+.sh-sans {
+  font-family: var(--font-sans);
+  font-variant-numeric: lining-nums tabular-nums;
+}
+
+/* ── motion ────────────────────────────────────────────────────────────────── */
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0ms !important;
+    scroll-behavior: auto !important;
+  }
+
+  ::view-transition-group(*),
+  ::view-transition-old(*),
+  ::view-transition-new(*) {
+    animation: none !important;
+  }
+}

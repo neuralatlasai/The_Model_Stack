@@ -1,0 +1,48 @@
+{
+  "name": "research-atlas",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Research Atlas for The Model Stack: compiles docs/ manuscripts into typed research objects and renders them as an interactive technical atlas.",
+  "type": "module",
+  "license": "UNLICENSED",
+  "engines": {
+    "node": ">=24.0.0 <27",
+    "npm": ">=11"
+  },
+  "packageManager": "npm@11.6.2",
+  "workspaces": [
+    "packages/core",
+    "packages/visual",
+    "packages/compiler",
+    "apps/web"
+  ],
+  "scripts": {
+    "compile": "node packages/compiler/src/cli.ts --docs ../docs --reference-stack ../Instruction/AI_REFERENCE_STACK.md --out .atlas",
+    "compile:check": "node packages/compiler/src/cli.ts --docs ../docs --reference-stack ../Instruction/AI_REFERENCE_STACK.md --out .atlas --check",
+    "figures:check": "node scripts/validate-figures.ts ../docs",
+    "dev": "npm run compile && npm run dev --workspace @atlas/web",
+    "build": "npm run compile && npm run build --workspace @atlas/web",
+    "preview": "npm run preview --workspace @atlas/web",
+    "typecheck": "tsc -p packages/core && tsc -p packages/visual && tsc -p packages/compiler && npm run typecheck --workspace @atlas/web",
+    "lint": "eslint --max-warnings=0 .",
+    "format": "prettier --write .",
+    "format:check": "prettier --check .",
+    "test": "node --test --experimental-test-coverage --test-coverage-include=\"packages/*/src/**\" \"packages/*/tests/**/*.test.ts\" \"apps/web/tests/**/*.test.ts\" \"apps/web/src/**/*.test.ts\"",
+    "test:e2e": "playwright test",
+    "check": "npm run format:check && npm run lint && npm run typecheck && npm run test && npm run build"
+  },
+  "devDependencies": {
+    "@axe-core/playwright": "4.13.0",
+    "@eslint/js": "10.0.1",
+    "@playwright/test": "1.63.0",
+    "@types/node": "24.13.6",
+    "eslint": "10.11.0",
+    "eslint-config-prettier": "10.1.8",
+    "eslint-plugin-astro": "1.7.0",
+    "globals": "17.12.0",
+    "prettier": "3.9.9",
+    "prettier-plugin-astro": "1.0.1",
+    "typescript": "6.0.3",
+    "typescript-eslint": "8.70.1"
+  }
+}

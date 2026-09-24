@@ -1,0 +1,98 @@
+---
+/**
+ * Document shell for every page: <head> metadata, the pre-paint theme/depth
+ * bootstrap, ClientRouter (instant route transitions with a persisted tree,
+ * UI_UX §71), JSON-LD (UI_UX §74), the skip link, global navigation, footer,
+ * and the single client entry (apps/web/src/client/main.ts).
+ *
+ * Children supply <main id="main">: ReaderLayout for the three-region reading
+ * frame, or a plain <main> (home, 404).
+ */
+import { ClientRouter } from 'astro:transitions';
+import { DEFAULT_DEPTH, type DomainKey, type TopNavKey } from '@atlas/core';
+import garamondLatin from '@fontsource-variable/eb-garamond/files/eb-garamond-latin-wght-normal.woff2?url';
+import Footer from '../components/shell/Footer.astro';
+import ReadingDock from '../components/shell/ReadingDock.astro';
+import TopNav from '../components/shell/TopNav.astro';
+import { bootstrapScript } from '../lib/bootstrap.ts';
+import { clip, squash } from '../lib/format.ts';
+import { jsonForHtml } from '../lib/json.ts';
+import { SITE_TITLE, absoluteUrl } from '../lib/jsonld.ts';
+import '../styles/tokens.css';
+import '../styles/fonts.css';
+import '../styles/base.css';
+import '../styles/shell.css';
+import '../styles/research.css';
+// @atlas/visual asks the site to load its figure stylesheet once; the package exports no CSS
+// entry, so it is imported by path (export requested from the visual owner).
+import '../../../../packages/visual/src/svg/visual-grammar.css';
+import '../styles/print.css';
+
+interface Props {
+  /** Page title without the site suffix. */
+  readonly title: string;
+  readonly description: string;
+  /** Site-relative canonical path (`/ch05-…/`). */
+  readonly canonicalPath: string;
+  readonly domain?: DomainKey;
+  readonly navKey?: TopNavKey | null;
+  readonly hasTree?: boolean;
+  readonly hasRail?: boolean;
+  readonly depthControl?: boolean;
+  readonly jsonLd?: Readonly<Record<string, unknown>> | null;
+  /** e.g. `noindex` for the 404 page. */
+  readonly robots?: string;
+}
+
+const {
+  title,
+  description,
+  canonicalPath,
+  domain = 'reference',
+  navKey = null,
+  hasTree = false,
+  hasRail = false,
+  depthControl = false,
+  jsonLd = null,
+  robots,
+} = Astro.props;
+
+const fullTitle = title === SITE_TITLE ? title : `${title} — ${SITE_TITLE}`;
+const metaDescription = clip(squash(description), 300);
+const canonical = absoluteUrl(canonicalPath, Astro.site);
+---
+
+<!doctype html>
+<html lang="en" data-depth={DEFAULT_DEPTH} transition:animate="none">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>{fullTitle}</title>
+    <meta name="description" content={metaDescription} />
+    <link rel="canonical" href={canonical} />
+    {robots !== undefined && <meta name="robots" content={robots} />}
+    <meta name="color-scheme" content="light dark" />
+    <meta name="theme-color" content="#FCFBF7" media="(prefers-color-scheme: light)" />
+    <meta name="theme-color" content="#151412" media="(prefers-color-scheme: dark)" />
+    <meta name="generator" content={Astro.generator} />
+    <meta property="og:title" content={fullTitle} />
+    <meta property="og:description" content={metaDescription} />
+    <meta property="og:type" content="article" />
+    <link rel="icon" href="/favicon.svg" type="image/svg+xml" />
+    <link rel="preload" href={garamondLatin} as="font" type="font/woff2" crossorigin="anonymous" />
+    <script is:inline set:html={bootstrapScript()} />
+    <ClientRouter fallback="swap" />
+    {jsonLd !== null && <script is:inline type="application/ld+json" set:html={jsonForHtml(jsonLd)} />}
+    <slot name="head" />
+  </head>
+  <body data-domain={domain}>
+    <a class="sh-skip" href="#main">Skip to content</a>
+    <TopNav navKey={navKey} hasTree={hasTree} depthControl={depthControl} />
+    <slot />
+    <ReadingDock hasTree={hasTree} hasRail={hasRail} />
+    <Footer />
+    <script>
+      import '../client/main.ts';
+    </script>
+  </body>
+</html>

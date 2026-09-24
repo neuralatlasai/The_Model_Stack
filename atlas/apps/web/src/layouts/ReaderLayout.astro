@@ -1,0 +1,81 @@
+---
+/**
+ * The three projections of one research state (UI_UX §4): knowledge tree ·
+ * research reader · context rail.
+ *
+ *   ≥1440 px   tree 280 · reader · rail 340 (all in flow, tree and rail sticky)
+ *   1024–1439  reader · rail 300; the tree is an off-canvas popover (top-bar toggle)
+ *   <1024      reader only; tree = slide-in navigator, rail = bottom sheet,
+ *              both opened from the fixed reading dock
+ *
+ * Column widths are fixed grid tracks, so neither rail nor tree shifts the
+ * reader on load (CLS). Pages without rail content pass `rail={false}` and the
+ * reader takes the space.
+ */
+import type { DomainKey, NodeId, TopNavKey } from '@atlas/core';
+import { fade } from 'astro:transitions';
+import KnowledgeTree from '../components/shell/KnowledgeTree.astro';
+import BaseLayout from './BaseLayout.astro';
+
+interface Props {
+  readonly title: string;
+  readonly description: string;
+  readonly canonicalPath: string;
+  readonly currentId: NodeId | null;
+  readonly domain?: DomainKey;
+  readonly navKey?: TopNavKey | null;
+  readonly rail?: boolean;
+  readonly depthControl?: boolean;
+  readonly jsonLd?: Readonly<Record<string, unknown>> | null;
+}
+
+const {
+  title,
+  description,
+  canonicalPath,
+  currentId,
+  domain = 'reference',
+  navKey = null,
+  rail = false,
+  depthControl = false,
+  jsonLd = null,
+} = Astro.props;
+---
+
+<BaseLayout
+  title={title}
+  description={description}
+  canonicalPath={canonicalPath}
+  domain={domain}
+  navKey={navKey}
+  hasTree={true}
+  hasRail={rail}
+  depthControl={depthControl}
+  jsonLd={jsonLd}
+>
+  <slot name="head" slot="head" />
+  <div class="sh-frame" data-has-rail={rail ? 'true' : 'false'}>
+    <KnowledgeTree currentId={currentId} />
+    <main id="main" class="sh-main" tabindex="-1">
+      <div class="sh-reader" transition:name="atlas-reader" transition:animate={fade({ duration: '160ms' })}>
+        <slot />
+      </div>
+    </main>
+    {
+      rail && (
+        <aside id="context-rail" class="sh-rail" aria-label="Context" popover data-rail>
+          <div class="sh-rail-head">
+            <span class="sh-rail-title">Context</span>
+            <span class="sh-rail-current" data-rail-current></span>
+            <button type="button" class="sh-panel-close" popovertarget="context-rail" popovertargetaction="hide">
+              Close
+            </button>
+          </div>
+          <div class="sh-rail-body" transition:name="atlas-rail" transition:animate={fade({ duration: '160ms' })}>
+            <slot name="rail" />
+          </div>
+        </aside>
+      )
+    }
+  </div>
+</BaseLayout>

@@ -1,0 +1,16 @@
+---
+/** Tensor trace (`Tensor trace` fenced block), drawn by the visual grammar's tensor-flow view. */
+import type { TensorTraceBlock } from '@atlas/core';
+import { TensorTraceView } from '@atlas/visual/svg';
+import { depthAttrs } from '../lib/dom.ts';
+
+interface Props {
+  block: TensorTraceBlock;
+}
+
+const { block } = Astro.props;
+---
+
+<div class="rb-trace rb-trace--tensor" id={block.anchor ?? undefined} {...depthAttrs(block.depth)}>
+  <TensorTraceView block={block} />
+</div>

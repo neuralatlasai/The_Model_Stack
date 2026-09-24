@@ -1,0 +1,18 @@
+---
+/**
+ * Evidence label as a quiet semantic marker (UI_UX §20): a shape-coded glyph
+ * (source ●, inference ◆, gap ○) and the short label in small caps. Not a
+ * badge. Screen readers get the full label when the visible one is shortened.
+ */
+import type { EvidenceLabel } from '@atlas/core';
+import { evidenceMarker } from '../lib/grammar.ts';
+
+interface Props {
+  label: EvidenceLabel;
+}
+
+const marker = evidenceMarker(Astro.props.label);
+const abbreviated = marker.short !== marker.label;
+---
+
+<span class={`rb-label rb-label--${marker.cls}`} title={marker.label} data-evidence={marker.label}><span class="rb-label__glyph" aria-hidden="true">{marker.glyph}</span>{abbreviated ? <Fragment><span aria-hidden="true">{marker.short}</span><span class="rb-vh">{marker.label}</span></Fragment> : marker.short}</span>

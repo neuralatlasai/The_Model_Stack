@@ -1,0 +1,18 @@
+---
+/**
+ * One normalised equation symbol (lib/symbol-threads.ts) set as text: an
+ * italic single-letter base (TeX convention for variables and lower-case
+ * Greek), an upright word or capital Greek, and a subscript. Light enough to
+ * repeat on every row of the equation index (no KaTeX per chip).
+ */
+import { symbolParts } from '../../lib/symbol-threads.ts';
+
+interface Props {
+  symbol: string;
+}
+
+const { base, sub, word } = symbolParts(Astro.props.symbol);
+const italic = !word && /^[A-Za-zα-ω]$/u.test(base);
+---
+
+<span class:list={['sg', italic ? 'sg--it' : 'sg--rm']}>{base}{sub !== '' && <sub>{sub}</sub>}</span>

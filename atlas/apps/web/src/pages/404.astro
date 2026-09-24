@@ -1,0 +1,34 @@
+---
+/**
+ * Not found. Points back into the atlas structure rather than apologising.
+ */
+import SearchTrigger from '../components/shell/SearchTrigger.astro';
+import BaseLayout from '../layouts/BaseLayout.astro';
+---
+
+<BaseLayout
+  title="Not in the atlas"
+  description="This address does not correspond to a node, paper, system, or view of The Model Stack."
+  canonicalPath="/404/"
+  robots="noindex"
+>
+  <main id="main" class="sh-plain" tabindex="-1">
+    <header class="sh-page-header">
+      <p class="sh-identity">Research Atlas / 404</p>
+      <h1 class="sh-page-title">Not in the atlas</h1>
+      <p class="sh-lede">
+        This address does not correspond to any node, paper, system, or view. Slugs are stable, so a broken link usually
+        means a typo or a node that was never part of the plan.
+      </p>
+    </header>
+    <ul class="sh-actions">
+      <li><a href="/">Atlas home</a></li>
+      <li><a href="/library/">Library</a></li>
+      <li><a href="/graph/">Graph</a></li>
+      <li><a href="/papers/">Papers</a></li>
+    </ul>
+    <div class="sh-plain-search">
+      <SearchTrigger />
+    </div>
+  </main>
+</BaseLayout>

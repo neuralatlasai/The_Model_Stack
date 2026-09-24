@@ -1,0 +1,217 @@
+---
+/**
+ * Figures (UI_UX §52) as a coverage instrument plus one filterable ledger.
+ *
+ *   matrix   chapters × the twelve figure kinds; each cell's square grows with
+ *            its count and takes its kind family's colour (structure,
+ *            computation, quantity, comparison); row totals carry the live
+ *            count — the visual grammar's coverage, chapter by chapter
+ *   ledger   every figure: number, kind, title (to its anchor), section,
+ *            placement, live states
+ *
+ * Connected (client figures-explorer.ts): a cell, row, or column names what it
+ * holds in a fixed-size readout and lights its figures in the ledger; clicking
+ * a cell filters the ledger to it; kind, placement, live, and text filters
+ * drive matrix and ledger together; hovering a ledger row lights its cell.
+ * Server-rendered: every cell is a link to the ledger filtered by it, every
+ * figure a link to its anchor.
+ */
+import type { AtlasGraph, FigureKind } from '@atlas/core';
+import { KIND_INFO, KIND_ORDER, type FigureRow } from '../../lib/figure-index.ts';
+import { nodesOfType } from '../../lib/nodes.ts';
+
+interface Props {
+  figures: readonly FigureRow[];
+  graph: AtlasGraph;
+}
+
+const { figures, graph } = Astro.props;
+const pad = (n: number): string => String(n).padStart(2, '0');
+const chapterNodes = new Map(nodesOfType(graph, 'chapter').map((node) => [Number.parseInt(node.number ?? '0', 10), node]));
+const chapters = [...new Set(figures.map((figure) => figure.chapter))].sort((a, b) => a - b);
+const count = (chapter: number | null, kind: FigureKind | null): number =>
+  figures.filter((figure) => (chapter === null || figure.chapter === chapter) && (kind === null || figure.kind === kind)).length;
+const maxCell = Math.max(1, ...chapters.flatMap((chapter) => KIND_ORDER.map((kind) => count(chapter, kind))));
+const size = (n: number): number => (n === 0 ? 0 : Math.round((0.5 + 0.5 * Math.sqrt(n / maxCell)) * 100));
+const live = figures.filter((figure) => figure.states > 0).length;
+const placements = (['rail', 'inline', 'wide'] as const).map((placement) => ({ placement, n: figures.filter((figure) => figure.placement === placement).length }));
+const maxRow = Math.max(1, ...chapters.map((chapter) => count(chapter, null)));
+---
+
+<section class="fx" data-figures-explorer aria-label="Figures of the book">
+  <div class="fx-top">
+    <div class="fx-matrix-wrap">
+      <p class="fx-head">
+        <span>Coverage</span>
+        <span class="fx-head__note">chapters × kinds · square size = figures · point at a cell, row, or column</span>
+      </p>
+      <div class="fx-matrix-scroll">
+        <div class="fx-matrix" role="grid" aria-label="Figures by chapter and kind. Arrow keys move between cells; Enter filters the ledger." data-fx-matrix style={`--fx-cols:${String(KIND_ORDER.length)}`}>
+          <div class="fx-row fx-row--head" role="row">
+            <span class="fx-corner" role="columnheader">chapter</span>
+            {KIND_ORDER.map((kind) => (
+              <button type="button" class={`fx-colhead fx-fam--${KIND_INFO[kind].family}`} role="columnheader" data-fx-col={kind} title={`${kind}: ${KIND_INFO[kind].purpose}`} tabindex="-1">
+                {kind}
+              </button>
+            ))}
+            <span class="fx-total-head" role="columnheader">total · live</span>
+          </div>
+          {chapters.map((chapter, r) => {
+            const node = chapterNodes.get(chapter);
+            const rowTotal = count(chapter, null);
+            const rowLive = figures.filter((figure) => figure.chapter === chapter && figure.states > 0).length;
+            return (
+              <div class="fx-row" role="row" data-fx-row={chapter}>
+                <button type="button" class="fx-rowhead" role="rowheader" data-fx-rowhead={chapter} tabindex="-1" title={node?.title ?? ''}>
+                  <span class="fx-rowhead__n">{pad(chapter)}</span>
+                  <span class="fx-rowhead__t">{node?.shortTitle ?? `Chapter ${pad(chapter)}`}</span>
+                </button>
+                {KIND_ORDER.map((kind, c) => {
+                  const n = count(chapter, kind);
+                  return (
+                    <a
+                      class:list={['fx-cell', `fx-fam--${KIND_INFO[kind].family}`, { 'is-empty': n === 0 }]}
+                      role="gridcell"
+                      href={`#fx-ledger`}
+                      data-fx-cell={`${String(chapter)}|${kind}`}
+                      data-fx-n={n}
+                      tabindex={r === 0 && c === 0 ? 0 : -1}
+                      aria-label={`Chapter ${pad(chapter)}, ${kind}: ${String(n)} figure${n === 1 ? '' : 's'}`}
+                    >
+                      {n > 0 && (
+                        <span class="fx-cell__sq" style={`--fx-s:${String(size(n))}`}>
+                          <span class="fx-cell__n">{n}</span>
+                        </span>
+                      )}
+                    </a>
+                  );
+                })}
+                <span class="fx-total">
+                  <span class="fx-total__bar" aria-hidden="true">
+                    <span style={`inline-size:${String(Math.round((rowTotal / maxRow) * 100))}%`} />
+                    <span class="fx-total__live" style={`inline-size:${String(Math.round((rowLive / maxRow) * 100))}%`} />
+                  </span>
+                  <span class="fx-total__n">
+                    {rowTotal} · {rowLive}
+                  </span>
+                </span>
+              </div>
+            );
+          })}
+          <div class="fx-row fx-row--foot" role="row">
+            <span class="fx-corner" role="rowheader">all</span>
+            {KIND_ORDER.map((kind) => (
+              <span class="fx-coltotal" role="gridcell">
+                {count(null, kind)}
+              </span>
+            ))}
+            <span class="fx-total__n">{figures.length} · {live}</span>
+          </div>
+        </div>
+      </div>
+      <p class="fx-families" aria-hidden="true">
+        <span class="fx-fam--structure"><i></i>structure</span>
+        <span class="fx-fam--computation"><i></i>computation</span>
+        <span class="fx-fam--quantity"><i></i>quantity</span>
+        <span class="fx-fam--comparison"><i></i>comparison</span>
+        <span class="fx-families__live"><i></i>live = scroll-driven rail instrument</span>
+      </p>
+    </div>
+
+    <aside class="fx-readout" aria-live="polite" data-fx-readout>
+      <p class="fx-readout__kicker" data-fx-kicker>{figures.length} figures · {live} live</p>
+      <p class="fx-readout__title" data-fx-title>The visual grammar, chapter by chapter</p>
+      <p class="fx-readout__meta" data-fx-meta>Point at a cell for its figures, a row for a chapter's mix, a column for what a kind is for.</p>
+      <ol class="fx-readout__list" data-fx-list></ol>
+    </aside>
+  </div>
+
+  <div class="fx-filters" id="fx-ledger">
+    <div class="fx-filters__row" role="group" aria-label="Kinds">
+      <span class="fx-filters__label">Kind</span>
+      {KIND_ORDER.map((kind) => (
+        <button type="button" class={`fx-chip fx-fam--${KIND_INFO[kind].family}`} data-fx-kind={kind} aria-pressed="false">
+          <i aria-hidden="true"></i>
+          {kind} <span class="fx-chip__n">{count(null, kind)}</span>
+        </button>
+      ))}
+    </div>
+    <div class="fx-filters__row" role="group" aria-label="Placement and state">
+      <span class="fx-filters__label">Where</span>
+      {placements.map(({ placement, n }) => (
+        <button type="button" class="fx-chip" data-fx-place={placement} aria-pressed="false">
+          {placement} <span class="fx-chip__n">{n}</span>
+        </button>
+      ))}
+      <button type="button" class="fx-chip fx-chip--live" data-fx-live aria-pressed="false">
+        <i aria-hidden="true"></i>live only <span class="fx-chip__n">{live}</span>
+      </button>
+      <button type="button" class="fx-chip fx-chip--clear" data-fx-clear hidden>
+        clear cell filter
+      </button>
+      <label class="fx-search">
+        <span class="sh-visually-hidden">Filter figures by title or number</span>
+        <input type="search" placeholder="Filter by title or number…" data-fx-search autocomplete="off" spellcheck="false" />
+      </label>
+      <span class="fx-shown" data-fx-shown aria-live="polite">{figures.length} of {figures.length}</span>
+    </div>
+  </div>
+
+  <table class="fx-table">
+    <caption class="sh-visually-hidden">Every figure, by chapter</caption>
+    <thead>
+      <tr>
+        <th scope="col">Fig.</th>
+        <th scope="col">Kind</th>
+        <th scope="col">Title · section</th>
+        <th scope="col">Where</th>
+        <th scope="col">Live</th>
+      </tr>
+    </thead>
+    {chapters.map((chapter) => {
+      const node = chapterNodes.get(chapter);
+      return (
+        <tbody data-fx-group={chapter}>
+          <tr class="fx-group">
+            <th colspan="5" scope="colgroup">
+              {node !== undefined ? (
+                <a href={node.url}>
+                  <span class="fx-group__n">{pad(chapter)}</span> {node.title}
+                </a>
+              ) : (
+                `Chapter ${pad(chapter)}`
+              )}
+            </th>
+          </tr>
+          {figures
+            .filter((figure) => figure.chapter === chapter)
+            .map((figure) => (
+              <tr
+                class={`fx-item fx-fam--${KIND_INFO[figure.kind].family}`}
+                data-fx-item={figure.id}
+                data-chapter={figure.chapter}
+                data-kind={figure.kind}
+                data-place={figure.placement}
+                data-live={figure.states > 0 ? 'yes' : 'no'}
+                data-text={`${figure.number ?? ''} ${figure.title} ${figure.whereTitle}`.toLowerCase()}
+              >
+                <td class="fx-num">{figure.number ?? '—'}</td>
+                <td class="fx-kind">
+                  <i aria-hidden="true"></i>
+                  {figure.kind}
+                </td>
+                <td class="fx-title">
+                  <a href={figure.url}>{figure.title}</a>
+                  <span class="fx-where">
+                    {figure.where === 'README' ? 'chapter opening' : figure.where === 'verification' ? 'verification' : `§${figure.where}`} · {figure.whereTitle}
+                  </span>
+                </td>
+                <td class="fx-place">{figure.placement}</td>
+                <td class="fx-live">{figure.states > 0 ? `${String(figure.states)} states` : ''}</td>
+              </tr>
+            ))}
+        </tbody>
+      );
+    })}
+  </table>
+</section>

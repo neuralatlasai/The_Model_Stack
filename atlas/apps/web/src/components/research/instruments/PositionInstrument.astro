@@ -1,0 +1,61 @@
+---
+/**
+ * Where am I (UI_UX §1, §13): prerequisites · siblings · downstream of the
+ * current node, as compact numbered lists from the page's neighbourhood.
+ */
+import type { PageData, RailInstrument, ResearchDocument } from '@atlas/core';
+import { instrumentAttrs } from '../lib/dom.ts';
+import { href } from '../lib/site.ts';
+import InstrumentHead from './InstrumentHead.astro';
+
+interface Props {
+  instrument: Extract<RailInstrument, { kind: 'position' }>;
+  doc: ResearchDocument;
+  pageData?: PageData | undefined;
+}
+
+const { doc, pageData } = Astro.props;
+const LIMIT = 8;
+const neighbours = pageData?.neighbours;
+const groups =
+  neighbours === undefined
+    ? []
+    : [
+        { label: 'Prerequisites', items: neighbours.prerequisites },
+        { label: 'Siblings', items: neighbours.siblings },
+        { label: 'Downstream', items: neighbours.dependents },
+      ].filter((group) => group.items.length > 0);
+const selfNumber = doc.meta.section ?? doc.header.number;
+---
+
+{
+  neighbours !== undefined && (
+    <div class="rb-instrument rb-instrument--position" {...instrumentAttrs('position')}>
+      <InstrumentHead title="Position" meta={selfNumber ?? undefined} />
+      <p class="rb-pos__self">
+        <span class="rb-pos__here" aria-hidden="true">▸</span>
+        <span class="rb-vh">You are reading </span>
+        {doc.meta.shortTitle}
+      </p>
+      {groups.map((group) => (
+        <div class="rb-pos__group">
+          <p class="rb-pos__label">
+            <span>{group.label}</span>
+            <span class="rb-pos__count">{group.items.length}</span>
+          </p>
+          <ol class="rb-pos__list" role="list">
+            {group.items.slice(0, LIMIT).map((item) => (
+              <li>
+                <a class="rb-pos__link" href={href(item.url)}>
+                  {item.number !== null && <span class="rb-pos__num">{item.number}</span>}
+                  <span class="rb-pos__title">{item.title}</span>
+                </a>
+              </li>
+            ))}
+          </ol>
+          {group.items.length > LIMIT && <p class="rb-pos__more">+ {group.items.length - LIMIT} more</p>}
+        </div>
+      ))}
+    </div>
+  )
+}

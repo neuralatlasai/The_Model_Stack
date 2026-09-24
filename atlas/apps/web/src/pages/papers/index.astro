@@ -1,0 +1,41 @@
+---
+/**
+ * Papers (UI_UX §19, §67): every work in the citation registry as a research
+ * object. The citation field, its chapter panel, and the one filterable ledger
+ * are one component (PapersExplorer.astro); the ledger is the complete text
+ * form. `#type-…` fragments land on the matching type filter.
+ */
+import PageHeader from '../../components/shell/PageHeader.astro';
+import PapersExplorer from '../../components/shell/PapersExplorer.astro';
+import ReaderLayout from '../../layouts/ReaderLayout.astro';
+import { getGraph, getRegistry } from '../../lib/atlas.ts';
+import { grouped } from '../../lib/format.ts';
+import '../../styles/papers.css';
+
+const [registry, graph] = await Promise.all([getRegistry(), getGraph()]);
+const spineCount = registry.references.filter((record) => record.spine).length;
+const unverified = registry.references.filter((record) => record.status === 'UNVERIFIED').length;
+---
+
+<ReaderLayout
+  title="Papers"
+  description="Every work cited by The Model Stack: spine papers and chapter references with venue, status, and where each is used."
+  canonicalPath="/papers/"
+  currentId={null}
+  navKey="papers"
+>
+  <PageHeader
+    identity="Research Atlas / Papers"
+    title="Papers"
+    lede="Every cited work as a research object: what it is, where it was published, whether it could be verified, and which chapters draw on it."
+    meta={`${grouped(registry.references.length)} works · ${grouped(spineCount)} spine papers · ${grouped(unverified)} unverified`}
+  />
+
+  {
+    registry.references.length === 0 ? (
+      <p class="sh-empty">The citation registry is empty in this bundle.</p>
+    ) : (
+      <PapersExplorer registry={registry} graph={graph} />
+    )
+  }
+</ReaderLayout>

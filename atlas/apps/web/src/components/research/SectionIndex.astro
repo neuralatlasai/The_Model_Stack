@@ -1,0 +1,78 @@
+---
+/**
+ * Section index for a chapter page: the chapter's "Sections" table set as the
+ * chapter's table of contents rather than as a data table. Each entry is a
+ * numbered step with its title, the one clause of what changes there (the
+ * causal progression of UI_UX §3.4), and its primary evidence labels.
+ *
+ * Expects the contract's column order: § · Title · What changes here · Primary
+ * evidence labels (CONTENT_CONTRACT §3 item 8). Missing cells degrade to empty.
+ */
+import { inlineToText, type Inline as InlineNode, type TableBlock } from '@atlas/core';
+import Inline from './Inline.astro';
+import { href as siteHref } from './lib/site.ts';
+
+interface Props {
+  table: TableBlock;
+}
+
+const { table } = Astro.props;
+const EMPTY: readonly InlineNode[] = [];
+
+interface Entry {
+  readonly number: string;
+  readonly href: string | null;
+  readonly title: readonly InlineNode[];
+  readonly change: readonly InlineNode[];
+  readonly labels: readonly InlineNode[];
+}
+
+function firstNodeHref(cell: readonly InlineNode[]): string | null {
+  for (const node of cell) {
+    if (node.kind === 'link' && (node.target.type === 'node' || node.target.type === 'planned')) return siteHref(node.target.href);
+  }
+  return null;
+}
+
+const entries: Entry[] = table.rows.map((row) => {
+  const numberCell = row[0] ?? EMPTY;
+  return {
+    number: inlineToText(numberCell).trim(),
+    href: firstNodeHref(numberCell),
+    title: row[1] ?? EMPTY,
+    change: row[2] ?? EMPTY,
+    labels: row[3] ?? EMPTY,
+  };
+});
+---
+
+<ol class="rb-secidx" role="list" {...(table.anchor !== null ? { id: table.anchor } : {})}>
+  {
+    entries.map((entry) => (
+      <li class="rb-secidx__item">
+        <p class="rb-secidx__head">
+          <span class="rb-secidx__num">{entry.number}</span>
+          {entry.href !== null ? (
+            <a class="rb-secidx__title" href={entry.href}>
+              <Inline nodes={entry.title} />
+            </a>
+          ) : (
+            <span class="rb-secidx__title">
+              <Inline nodes={entry.title} />
+            </span>
+          )}
+        </p>
+        {entry.change.length > 0 && (
+          <p class="rb-secidx__change">
+            <Inline nodes={entry.change} />
+          </p>
+        )}
+        {entry.labels.length > 0 && (
+          <p class="rb-secidx__labels">
+            <Inline nodes={entry.labels} />
+          </p>
+        )}
+      </li>
+    ))
+  }
+</ol>

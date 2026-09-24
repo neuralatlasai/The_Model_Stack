@@ -1,0 +1,299 @@
+---
+/**
+ * Stack Explorer — the home page's first viewport: the whole book as one
+ * connected, explorable dependency map (UI_UX §36, §83–84; the AI 2027 lesson
+ * that every mark on the page is part of one responsive system).
+ *
+ *   lanes      11 parts, grouped by volume; 6 chapter nodes per lane
+ *   edges      every declared prerequisite (plan + manuscripts), faint at rest
+ *   readout    what the focused chapter is, what it builds on, what it unlocks
+ *   routes     reading routes and integrated studies drawn as paths through the book
+ *   timeline   dated lineage entries; each entry lights its chapter and vice versa
+ *
+ * Server-rendered SVG + HTML: every node is a real link, every route and
+ * timeline entry has a text form, so the map works without JavaScript and is
+ * never the only representation (UI_UX §60). The client (stack-explorer.ts)
+ * adds the connected behaviour: transitive upstream/downstream tracing, route
+ * paths with order badges, cross-lighting between map, readout, and timeline.
+ */
+import type { StackModel } from '../../lib/stack.ts';
+import { jsonForHtml } from '../../lib/json.ts';
+import { lineageStrip } from '../../lib/lineage-strip.ts';
+
+interface Props {
+  model: StackModel;
+}
+
+const { model } = Astro.props;
+
+// ── geometry (SVG user units) ────────────────────────────────────────────────
+const W = 1000;
+const LABEL_W = 232;
+const COL0 = 292;
+const COL_STEP = 136;
+const LANE_H = 44;
+const VOL_H = 30;
+const TOP = 8;
+
+interface LaneGeo {
+  readonly part: StackModel['parts'][number];
+  readonly y: number;
+}
+const lanes: LaneGeo[] = [];
+const volumeRows: { volume: StackModel['volumes'][number]; y: number; y1: number }[] = [];
+let y = TOP;
+for (const volume of model.volumes) {
+  const start = y;
+  y += VOL_H;
+  for (const partNumber of volume.parts) {
+    const part = model.parts.find((candidate) => candidate.n === partNumber);
+    if (part === undefined) continue;
+    lanes.push({ part, y: y + LANE_H / 2 });
+    y += LANE_H;
+  }
+  volumeRows.push({ volume, y: start, y1: y });
+  y += 6;
+}
+const H = y + 4;
+
+const pos = new Map<number, { x: number; y: number }>();
+for (const lane of lanes) {
+  lane.part.chapters.forEach((n, index) => pos.set(n, { x: COL0 + index * COL_STEP, y: lane.y }));
+}
+
+function edgePath(from: number, to: number): string | null {
+  const a = pos.get(from);
+  const b = pos.get(to);
+  if (a === undefined || b === undefined) return null;
+  if (Math.abs(a.y - b.y) < 1) {
+    const lift = 16 + Math.abs(b.x - a.x) * 0.12;
+    return `M${a.x} ${a.y - 11} C${a.x} ${a.y - lift}, ${b.x} ${b.y - lift}, ${b.x} ${b.y - 11}`;
+  }
+  const dy = b.y - a.y;
+  return `M${a.x} ${a.y + Math.sign(dy) * 11} C${a.x} ${a.y + dy * 0.5}, ${b.x} ${b.y - dy * 0.5}, ${b.x} ${b.y - Math.sign(dy) * 11}`;
+}
+
+const chapters = Object.values(model.chapters).sort((a, b) => a.n - b.n);
+const written = chapters.filter((chapter) => chapter.written);
+const totalFigures = chapters.reduce((sum, chapter) => sum + chapter.figures, 0);
+const totalEquations = chapters.reduce((sum, chapter) => sum + chapter.equations, 0);
+
+// ── lineage strip geometry (lib/lineage-strip.ts) ─────────────────────────────
+const strip = model.lineage.length > 0 ? lineageStrip(model.lineage) : null;
+const RELATIONS = [
+  ['conceptual ancestor', 'anc'],
+  ['engineering optimization', 'opt'],
+  ['alternative branch', 'alt'],
+  ['superseded approach', 'sup'],
+  ['current frontier', 'fro'],
+] as const;
+const relationCount = (relation: string): number => model.lineage.filter((entry) => entry.relation === relation).length;
+const chapterNumber = (n: number): string => String(n).padStart(2, '0');
+---
+
+<section class="sx" aria-labelledby="sx-title" data-stack-explorer>
+  <div class="sx-head">
+    <h2 class="sx-title" id="sx-title">The stack, as one map</h2>
+    <p class="sx-lede">
+      Every chapter is a node; every line is a declared prerequisite. Point at a chapter to trace what it builds on and
+      what it unlocks — or choose a route and watch it thread the book.
+    </p>
+  </div>
+
+  <div class="sx-body">
+    <div class="sx-map" role="group" aria-label="Chapters by part, with prerequisite links">
+      <svg class="sx-svg" viewBox={`0 0 ${String(W)} ${String(H)}`} role="img" aria-labelledby="sx-svg-title sx-svg-desc" data-sx-svg>
+        <title id="sx-svg-title">Dependency map of the 66 chapters</title>
+        <desc id="sx-svg-desc">
+          Eleven lanes, one per part, in three volumes; six chapter nodes per lane. {written.length} chapters have
+          manuscripts. {model.edges.length} prerequisite links connect earlier chapters to later ones.
+        </desc>
+
+        {
+          volumeRows.map(({ volume, y: vy, y1 }) => (
+            <g class="sx-volume">
+              <rect class="sx-volume__band" x="0" y={vy} width={W} height={y1 - vy} />
+              <text class="sx-volume__label" x="10" y={vy + 19}>
+                <a href={volume.url}>
+                  VOLUME {volume.numeral} · {volume.title.toUpperCase()}
+                </a>
+              </text>
+            </g>
+          ))
+        }
+
+        {
+          lanes.map(({ part, y: ly }) => (
+            <g class="sx-lane" data-sx-part={part.n} data-domain={part.domain}>
+              <line class="sx-lane__rule" x1={LABEL_W} x2={W - 12} y1={ly} y2={ly} />
+              <a href={part.url} class="sx-lane__link">
+                <text class="sx-lane__num" x="12" y={ly + 4}>
+                  {part.numeral}
+                </text>
+                <text class="sx-lane__title" x="46" y={ly + 4}>
+                  {part.title.length > 30 ? `${part.title.slice(0, 29)}…` : part.title}
+                </text>
+              </a>
+            </g>
+          ))
+        }
+
+        <g class="sx-edges" aria-hidden="true">
+          {model.edges.map(([from, to]) => {
+            const d = edgePath(from, to);
+            return d === null ? null : <path class="sx-edge" d={d} data-from={from} data-to={to} />;
+          })}
+        </g>
+
+        <g class="sx-route" aria-hidden="true" data-sx-route-layer>
+          <path class="sx-route__path" d="" data-sx-route-path />
+          <g data-sx-route-badges></g>
+        </g>
+
+        <g class="sx-nodes">
+          {chapters.map((chapter) => {
+            const p = pos.get(chapter.n);
+            if (p === undefined) return null;
+            return (
+              <a
+                class:list={['sx-node', { 'sx-node--written': chapter.written }]}
+                href={chapter.url}
+                data-sx-node={chapter.n}
+                data-domain={chapter.domain}
+                aria-label={`${chapter.number} ${chapter.title}. ${chapter.written ? `${String(chapter.sectionsWritten)} of ${String(chapter.sectionsTotal)} sections written` : 'planned'}. Builds on ${String(chapter.prereqs.length)}, unlocks ${String(chapter.unlocks.length)}.`}
+                tabindex={chapter.n === 1 ? 0 : -1}
+              >
+                <circle class="sx-node__hit" cx={p.x} cy={p.y} r="19" />
+                <circle class="sx-node__dot" cx={p.x} cy={p.y} r="12.5" />
+                <text class="sx-node__num" x={p.x} y={p.y + 3.6}>
+                  {chapter.number}
+                </text>
+                <text class="sx-node__label" x={p.x} y={p.y + 27}>
+                  {chapter.short.length > 22 ? `${chapter.short.slice(0, 21)}…` : chapter.short}
+                </text>
+              </a>
+            );
+          })}
+        </g>
+      </svg>
+    </div>
+
+    <aside class="sx-panel" aria-label="Explorer readout">
+      <div class="sx-readout" data-sx-readout aria-live="polite">
+        <p class="sx-readout__kicker" data-sx-kicker>THE MODEL STACK · 3 VOLUMES · 11 PARTS</p>
+        <p class="sx-readout__title" data-sx-title>66 chapters, one dependency graph</p>
+        <p class="sx-readout__summary" data-sx-summary>
+          {written.length} chapters written, {totalFigures} figures, {totalEquations} numbered equations. Filled nodes have
+          manuscripts; hollow nodes are planned. Hover or focus any node.
+        </p>
+        <dl class="sx-readout__rows" data-sx-rows>
+          <div><dt>chapters written</dt><dd>{written.length} / {chapters.length}</dd></div>
+          <div><dt>prerequisite links</dt><dd>{model.edges.length}</dd></div>
+          <div><dt>figures · equations</dt><dd>{totalFigures} · {totalEquations}</dd></div>
+          <div><dt>routes · studies</dt><dd>{model.routes.length}</dd></div>
+        </dl>
+        <p class="sx-readout__links" data-sx-links></p>
+        <p class="sx-readout__legend" aria-hidden="true">
+          <span class="sx-key sx-key--up"></span>builds on <span class="sx-key sx-key--down"></span>unlocks
+          <span class="sx-key sx-key--route"></span>route
+        </p>
+      </div>
+
+      {
+        model.routes.length > 0 && (
+          <div class="sx-routes">
+            <p class="sx-routes__head">Reading routes and studies</p>
+            <ol class="sx-routes__list" role="list">
+              {model.routes.map((route, index) => (
+                <li>
+                  <button type="button" class="sx-route-btn" data-sx-route={index} aria-pressed="false">
+                    <span class="sx-route-btn__label">{route.label}</span>
+                    <span class="sx-route-btn__count">{route.chapters.length} ch</span>
+                  </button>
+                </li>
+              ))}
+            </ol>
+          </div>
+        )
+      }
+    </aside>
+  </div>
+
+  {
+    strip !== null && (
+      <div class="sx-timeline" role="group" aria-labelledby="sx-tl-title" data-sx-timeline>
+        <div class="sx-timeline__head">
+          <h3 class="sx-timeline__title" id="sx-tl-title">
+            Lineage <span class="sx-timeline__count">{model.lineage.length} dated entries</span>
+          </h3>
+          <div class="sx-timeline__chips" role="group" aria-label="Show one relation">
+            {RELATIONS.map(([relation, key]) => (
+              <button type="button" class="sx-tl-chip" data-sx-tl-chip={key} aria-pressed="false">
+                <span class={`sx-tl-chip__dot sx-tl--${key}`} aria-hidden="true" />
+                {relation}
+                <span class="sx-tl-chip__n">{relationCount(relation)}</span>
+              </button>
+            ))}
+            <a class="sx-timeline__all" href="/timeline/">Open the timeline →</a>
+          </div>
+        </div>
+        <svg
+          class="sx-timeline__svg"
+          viewBox={`0 0 ${String(strip.width)} ${String(strip.height)}`}
+          role="group"
+          aria-label={`${String(model.lineage.length)} lineage entries by year. Arrow keys step through them in time order; Enter opens one on the timeline.`}
+          data-sx-tl-svg
+        >
+          <g class="sx-timeline__years" aria-hidden="true">
+            {strip.years.map((year) => (
+              <a href={`/timeline/#year-${String(year.year)}`} tabindex="-1" data-sx-year={year.year} data-sx-year-counts={Object.entries(year.byRelation).map(([key, count]) => `${key}:${String(count)}`).join(' ')}>
+                <rect class="sx-timeline__col" x={year.x0} y="0" width={Math.max(2, year.x1 - year.x0)} height={strip.axisY + 18} />
+              </a>
+            ))}
+          </g>
+          <line class="sx-timeline__guide" x1="0" x2="0" y1="2" y2={strip.axisY} data-sx-tl-guide />
+          {
+            strip.breakX === null ? (
+              <line class="sx-timeline__axis" x1={strip.x0} x2={strip.x1} y1={strip.axisY} y2={strip.axisY} />
+            ) : (
+              <g class="sx-timeline__axis-g" aria-hidden="true">
+                <line class="sx-timeline__axis" x1={strip.x0 - 8} x2={strip.breakX - 4} y1={strip.axisY} y2={strip.axisY} />
+                <line class="sx-timeline__axis" x1={strip.breakX + 4} x2={strip.x1 + 8} y1={strip.axisY} y2={strip.axisY} />
+                <path class="sx-timeline__break" d={`M${String(strip.breakX - 6)} ${String(strip.axisY + 4)} l4 -8 M${String(strip.breakX + 2)} ${String(strip.axisY + 4)} l4 -8`} />
+              </g>
+            )
+          }
+          {strip.ticks.map((tick) => (
+            <text class="sx-timeline__tick" x={tick.x} y={strip.axisY + 15}>
+              {tick.label}
+            </text>
+          ))}
+          <g class="sx-timeline__marks">
+            {strip.marks.map((mark, index) => (
+              <a
+                class={`sx-tl sx-tl--${mark.relationKey}`}
+                href={`/timeline/#tl-${String(mark.id)}`}
+                data-sx-tl={mark.id}
+                data-chapter={mark.chapter}
+                data-relation={mark.relationKey}
+                tabindex={index === 0 ? 0 : -1}
+                aria-label={`${String(mark.year)}, ${mark.work}, ${mark.relation}, Chapter ${chapterNumber(mark.chapter)}`}
+              >
+                <circle class="sx-tl__hit" cx={mark.x} cy={mark.y} r="5.2" />
+                <circle class="sx-tl__dot" cx={mark.x} cy={mark.y} r="3.2" />
+              </a>
+            ))}
+          </g>
+        </svg>
+        <p class="sx-timeline__readout" data-sx-tl-readout aria-live="polite">
+          <span class="sx-timeline__hint">
+            Point at a dot for the work, its relation, and the chapter that places it — that chapter's whole lineage lights
+            with it. Point at a year for its mix; click to open either on the timeline.
+          </span>
+        </p>
+      </div>
+    )
+  }
+
+  <script is:inline type="application/json" data-sx-model set:html={jsonForHtml(model)} />
+</section>

@@ -1,0 +1,784 @@
+/*
+ * Equations: symbol threads — chapter strip, fixed readout, symbol
+ * index, sticky barcode, grouped index (components/shell/EquationsExplorer.astro,
+ * client equations-explorer.ts).
+ *
+ * One encoding throughout: a cell or chip in the thread under the pointer is
+ * accent; the equation under the pointer is ink; equations that share its
+ * notation are accent at three strengths (1, 2, 3+ shared symbols); the
+ * equations in view are a darker band in the barcode.
+ */
+
+.eqx {
+  --eqx-cell: color-mix(in oklab, var(--ink-3) 27%, var(--paper));
+  --eqx-cell-declared: color-mix(in oklab, var(--ink-3) 58%, var(--paper));
+  --eqx-lit: var(--accent);
+  --eqx-share-1: color-mix(in oklab, var(--accent) 38%, var(--paper));
+  --eqx-share-2: color-mix(in oklab, var(--accent) 68%, var(--paper));
+  --eqx-share-3: var(--accent);
+  --eqx-bar-h: 58px;
+  margin-top: 1.25rem;
+}
+
+/* Symbols set as text (SymbolGlyph.astro). */
+.sg {
+  font-family: var(--font-serif);
+  font-feature-settings: 'lnum';
+  white-space: nowrap;
+}
+
+.sg--it {
+  font-style: italic;
+}
+
+.sg sub {
+  font-size: 0.7em;
+  font-style: normal;
+  line-height: 0;
+}
+
+/* ── strip + readout ───────────────────────────────────────────────────── */
+.eqx-top {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 280px;
+  gap: 1.5rem;
+  align-items: start;
+  padding-block: 0.8rem 0.4rem;
+  border-block-start: 1.5px solid var(--ink);
+}
+
+.eqx-inst {
+  min-inline-size: 0;
+}
+
+.eqx-head {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.2rem 1rem;
+  margin: 0 0 0.45rem;
+  font: 600 10.5px var(--font-mono);
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--ink-2);
+}
+
+.eqx-head__note {
+  font-weight: 400;
+  letter-spacing: 0.02em;
+  text-transform: none;
+  color: var(--ink-3);
+}
+
+.eqx-strip {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  border-block-start: 1px solid var(--ink-2);
+}
+
+.eqx-ch {
+  display: grid;
+  grid-template-columns: 11rem minmax(0, 1fr) 3.6rem;
+  align-items: center;
+  gap: 0.5rem;
+  min-block-size: 24px;
+  border-block-end: 1px dotted var(--rule);
+  transition: background-color var(--t-hover) ease;
+}
+
+.eqx-ch.is-lit,
+.eqx-ch:hover {
+  background: color-mix(in oklab, var(--accent-wash) 50%, transparent);
+}
+
+.eqx-ch.is-pinned {
+  background: var(--accent-wash);
+  box-shadow: inset 2px 0 0 var(--accent);
+}
+
+.eqx-ch__btn {
+  display: flex;
+  align-items: baseline;
+  gap: 0.45rem;
+  min-inline-size: 0;
+  padding: 0.2rem 0.3rem;
+  background: none;
+  border: 0;
+  font: 12.5px var(--font-sans);
+  text-align: start;
+  color: var(--ink-2);
+  cursor: pointer;
+}
+
+.eqx-ch__btn:focus-visible {
+  outline: 2px solid var(--focus);
+  outline-offset: -2px;
+}
+
+.eqx-ch.is-lit .eqx-ch__btn,
+.eqx-ch.is-pinned .eqx-ch__btn {
+  color: var(--ink);
+}
+
+.eqx-ch__n {
+  flex: none;
+  inline-size: 1.3rem;
+  font: 600 11px var(--font-mono);
+  color: var(--accent);
+}
+
+.eqx-ch__t {
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+
+.eqx-ch.is-here .eqx-ch__t {
+  text-decoration: underline;
+  text-decoration-color: var(--ink-3);
+  text-underline-offset: 0.2em;
+}
+
+.eqx-ch__cells {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  min-inline-size: 0;
+}
+
+.eqx-cell {
+  flex: 0 1 12px;
+  min-inline-size: 3px;
+  block-size: 14px;
+  background: var(--eqx-cell);
+  outline: none;
+  transition:
+    background-color var(--t-hover) ease,
+    opacity var(--t-state) ease;
+}
+
+.eqx-ch__c {
+  font: 11px var(--font-mono);
+  font-variant-numeric: tabular-nums;
+  text-align: end;
+  white-space: nowrap;
+  color: var(--ink-3);
+}
+
+.eqx-ch.is-lit .eqx-ch__c {
+  color: var(--accent);
+}
+
+/* Shared cell states (strip cells and barcode cells). Rest: solid where the equation declares its variables. */
+:is(.eqx-cell, .eqx-bar__cells i).is-declared {
+  background: var(--eqx-cell-declared);
+}
+
+:is(.eqx-cell, .eqx-bar__cells i).is-view {
+  background: color-mix(in oklab, var(--ink-2) 62%, var(--paper));
+}
+
+.eqx.has-light :is(.eqx-cell, .eqx-bar__cells i):not(.is-lit, .is-focus, .is-s1, .is-s2, .is-s3) {
+  opacity: 0.45;
+}
+
+:is(.eqx-cell, .eqx-bar__cells i).is-s1 { background: var(--eqx-share-1); }
+:is(.eqx-cell, .eqx-bar__cells i).is-s2 { background: var(--eqx-share-2); }
+:is(.eqx-cell, .eqx-bar__cells i).is-s3 { background: var(--eqx-share-3); }
+
+:is(.eqx-cell, .eqx-bar__cells i).is-lit {
+  background: var(--eqx-lit);
+}
+
+:is(.eqx-cell, .eqx-bar__cells i).is-focus {
+  background: var(--ink);
+}
+
+.eqx-cell.is-focus,
+.eqx-cell:hover {
+  box-shadow: 0 0 0 1.5px var(--paper), 0 0 0 2.5px var(--ink);
+}
+
+:is(.eqx-cell, .eqx-bar__cells i).is-filtered {
+  opacity: 0.12 !important;
+}
+
+/* Fixed-geometry readout. */
+.eqx-readout {
+  padding: 0.65rem 0.8rem 0.7rem;
+  border: 1px solid var(--rule-strong);
+  background: var(--paper-raised);
+}
+
+.eqx-readout > * {
+  margin: 0;
+  overflow: hidden;
+}
+
+.eqx-readout__kicker {
+  block-size: 1.4em;
+  font: 600 10.5px/1.4 var(--font-mono);
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+  color: var(--ink-2);
+}
+
+.eqx-readout__title {
+  display: -webkit-box;
+  block-size: 2.6em;
+  margin-top: 0.25rem !important;
+  font: 500 16px/1.3 var(--font-serif);
+  color: var(--ink);
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+  line-clamp: 2;
+}
+
+.eqx-readout__title .sg {
+  font-size: 19px;
+}
+
+.eqx-readout__meta {
+  display: -webkit-box;
+  block-size: 4.35em;
+  font: 12px/1.45 var(--font-sans);
+  color: var(--ink-3);
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 3;
+  line-clamp: 3;
+}
+
+.eqx-readout__list {
+  block-size: calc(6 * 1.5em);
+  margin-top: 0.4rem !important;
+  padding: 0;
+  list-style: none;
+  font: 12px/1.5 var(--font-sans);
+}
+
+.eqx-readout__list li {
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+  color: var(--ink-2);
+}
+
+.eqx-readout__list b {
+  display: inline-block;
+  min-inline-size: 3.1rem;
+  font: 600 11px var(--font-mono);
+  color: var(--accent);
+}
+
+.eqx-readout__list b .sg {
+  font-size: 14px;
+  font-weight: 500;
+}
+
+.eqx-readout__list a {
+  color: inherit;
+  text-decoration: none;
+}
+
+/* ── symbol index ──────────────────────────────────────────────────────── */
+.eqx-symbols {
+  padding-block: 0.6rem 0.7rem;
+}
+
+.eqx-symidx {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+}
+
+/* Clamped to three rows only when the controller can offer "all symbols". */
+.eqx.is-enhanced .eqx-symidx:not(.is-open) {
+  max-block-size: calc(3 * 28px + 2 * 4px);
+  overflow: hidden;
+}
+
+.eqx-chip {
+  display: inline-flex;
+  align-items: baseline;
+  gap: 0.3rem;
+  min-block-size: 28px;
+  padding: 0.2rem 0.5rem 0;
+  background: none;
+  border: 1px solid var(--rule);
+  border-radius: 2px;
+  font-size: 15px;
+  line-height: 1.3;
+  color: var(--ink);
+  cursor: pointer;
+  transition:
+    opacity var(--t-state) ease,
+    border-color var(--t-hover) ease;
+}
+
+.eqx-chip__n {
+  font: 10.5px var(--font-mono);
+  color: var(--ink-3);
+}
+
+.eqx-chip:hover,
+.eqx-chip.is-focus {
+  border-color: var(--accent);
+}
+
+.eqx-chip:focus-visible {
+  outline: 2px solid var(--focus);
+  outline-offset: 1px;
+}
+
+.eqx-chip.is-lit {
+  border-color: var(--ink-2);
+}
+
+.eqx-symidx.has-light .eqx-chip:not(.is-lit, .is-focus, [aria-pressed='true']) {
+  opacity: 0.32;
+}
+
+.eqx-chip.is-empty {
+  opacity: 0.3;
+}
+
+.eqx-chip[aria-pressed='true'] {
+  border-color: var(--ink);
+  background: var(--accent-wash);
+}
+
+.eqx-chip[aria-pressed='true'] .eqx-chip__n {
+  color: var(--accent);
+}
+
+.eqx-more {
+  margin-top: 0.4rem;
+  padding: 0;
+  background: none;
+  border: 0;
+  font: 11px var(--font-mono);
+  letter-spacing: 0.04em;
+  color: var(--accent);
+  cursor: pointer;
+}
+
+.eqx-more::after {
+  content: ' ↓';
+}
+
+.eqx-more[aria-expanded='true']::after {
+  content: ' ↑';
+}
+
+/* ── filters ───────────────────────────────────────────────────────────── */
+.eqx-filters {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.35rem 0.5rem;
+  padding-block: 0.6rem;
+  border-block-start: 1px solid var(--rule-strong);
+}
+
+.eqx-search input {
+  inline-size: 24rem;
+  max-inline-size: 100%;
+  min-block-size: 30px;
+  padding: 0 0.6rem;
+  background: var(--paper-raised);
+  border: 1px solid var(--rule-strong);
+  border-radius: 2px;
+  font: 13px var(--font-sans);
+  color: var(--ink);
+}
+
+.eqx-search input:focus-visible {
+  outline: 2px solid var(--focus);
+  outline-offset: 1px;
+}
+
+.eqx-pins {
+  display: inline-flex;
+  flex-wrap: wrap;
+  gap: 0.3rem;
+  font: 12px var(--font-sans);
+  color: var(--ink-2);
+}
+
+.eqx-pins b {
+  font: 600 10.5px var(--font-mono);
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--accent);
+}
+
+.eqx-clear {
+  min-block-size: 28px;
+  padding: 0 0.55rem;
+  background: none;
+  border: 1px solid var(--accent);
+  border-radius: 2px;
+  font: 12px var(--font-sans);
+  color: var(--accent);
+  cursor: pointer;
+}
+
+.eqx-shown {
+  margin-inline-start: auto;
+  font: 11px var(--font-mono);
+  color: var(--ink-3);
+}
+
+/* ── sticky barcode ────────────────────────────────────────────────────── */
+.eqx-bar {
+  position: sticky;
+  top: var(--sh-topbar-h, 52px);
+  z-index: 4;
+  padding-block: 0.4rem 0.3rem;
+  background: var(--paper);
+  border-block-end: 1px solid var(--rule-strong);
+}
+
+.eqx-bar__strip {
+  display: flex;
+  gap: 4px;
+}
+
+.eqx-bar__ch {
+  display: flex;
+  flex-direction: column;
+  flex-basis: 0;
+  gap: 2px;
+  min-inline-size: 0;
+}
+
+.eqx-bar__lab {
+  overflow: hidden;
+  font: 9.5px/1 var(--font-mono);
+  white-space: nowrap;
+  color: var(--ink-3);
+}
+
+.eqx-bar__ch.is-here .eqx-bar__lab {
+  color: var(--ink);
+  font-weight: 600;
+}
+
+.eqx-bar__cells {
+  display: flex;
+  gap: 1px;
+  block-size: 12px;
+  cursor: pointer;
+}
+
+.eqx-bar__cells i {
+  flex: 1 1 0;
+  min-inline-size: 1px;
+  background: var(--eqx-cell);
+  transition: background-color var(--t-hover) ease;
+}
+
+.eqx-bar__status {
+  block-size: 1.45em;
+  margin: 0.3rem 0 0;
+  overflow: hidden;
+  font: 12px/1.45 var(--font-sans);
+  white-space: nowrap;
+  text-overflow: ellipsis;
+  color: var(--ink-2);
+}
+
+.eqx-bar__status b {
+  font: 600 11px var(--font-mono);
+  color: var(--accent);
+}
+
+.eqx-bar__status .sg {
+  font-size: 14px;
+  color: var(--accent);
+}
+
+/* ── index ─────────────────────────────────────────────────────────────── */
+.eqx-group {
+  margin-top: 1.6rem;
+}
+
+.eqx-group[hidden],
+.eqx-row[hidden] {
+  display: none;
+}
+
+.eqx-group__h {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 0.2rem 1rem;
+  max-width: none;
+  margin: 0;
+  padding-block: 0.3rem 0.35rem;
+  border-block-end: 1px solid var(--ink-2);
+  font: 500 19px/1.3 var(--font-serif);
+  scroll-margin-top: calc(var(--sh-topbar-h, 52px) + var(--eqx-bar-h) + 8px);
+}
+
+.eqx-group__h a {
+  color: var(--ink);
+  text-decoration: none;
+}
+
+.eqx-group__h a:hover {
+  color: var(--accent);
+}
+
+.eqx-group__n {
+  font: 600 12px var(--font-mono);
+  color: var(--accent);
+}
+
+.eqx-group__c {
+  font: 11px var(--font-mono);
+  color: var(--ink-3);
+}
+
+.eqx-rows {
+  max-width: none;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.eqx-row {
+  display: grid;
+  grid-template-columns: 4.4rem minmax(0, 1fr);
+  column-gap: 0.7rem;
+  padding: 0.4rem 0.4rem 0.3rem 0;
+  border-block-end: 1px solid var(--rule);
+  scroll-margin-top: calc(var(--sh-topbar-h, 52px) + var(--eqx-bar-h) + 8px);
+  transition: background-color var(--t-hover) ease;
+}
+
+.eqx-row:target {
+  background: var(--accent-wash);
+}
+
+.eqx-row.is-focus {
+  background: color-mix(in oklab, var(--accent-wash) 70%, transparent);
+}
+
+.eqx-row.is-lit {
+  background: color-mix(in oklab, var(--accent-wash) 45%, transparent);
+  box-shadow: inset 2px 0 0 var(--accent);
+}
+
+.eqx-row__num {
+  display: grid;
+  align-content: start;
+  gap: 0.1rem;
+  padding: 0.3rem 0 0 0.4rem;
+}
+
+.eqx-row__num a {
+  font: 12.5px var(--font-mono);
+  color: var(--accent);
+  text-decoration: none;
+}
+
+.eqx-row__num a:hover {
+  text-decoration: underline;
+}
+
+.eqx-row__num a:focus-visible {
+  outline: 2px solid var(--focus);
+  outline-offset: 2px;
+}
+
+.eqx-row__share {
+  block-size: 1.3em;
+  font: 10px/1.3 var(--font-mono);
+  white-space: nowrap;
+  color: var(--accent);
+}
+
+.eqx-row__body {
+  min-inline-size: 0;
+}
+
+.eqx-row__math {
+  overflow-x: auto;
+  overflow-y: hidden;
+  padding-block: 0.1rem;
+  font-size: 16px;
+}
+
+.eqx-row__math .katex-display {
+  margin: 0;
+  text-align: start;
+}
+
+.eqx-row__math .katex-display > .katex {
+  text-align: start;
+}
+
+.eqx-row .katex .is-var-hit {
+  color: var(--accent);
+  background: var(--accent-wash);
+}
+
+/* One line of section + symbols; the full line opens over the next row on hover or focus (no reflow). */
+.eqx-row__meta {
+  position: relative;
+  block-size: 1.6em;
+  margin-top: 0.1rem;
+  font: 12px/1.6 var(--font-sans);
+}
+
+.eqx-row__line {
+  position: absolute;
+  inset: 0 0 auto;
+  max-width: none;
+  margin: 0;
+  overflow: hidden;
+  white-space: nowrap;
+  color: var(--ink-3);
+}
+
+.eqx-row:is(:hover, :focus-within) .eqx-sym {
+  white-space: normal;
+}
+
+.eqx-row:is(:hover, :focus-within) .eqx-sym .sg {
+  white-space: nowrap;
+}
+
+.eqx-row:is(:hover, :focus-within) .eqx-row__line {
+  z-index: 3;
+  overflow: visible;
+  inset-inline: -0.45rem -0.4rem;
+  padding: 0 0.4rem 0.15rem;
+  white-space: normal;
+  background: var(--paper-raised);
+  border: 1px solid var(--rule-strong);
+  border-block-start: 0;
+}
+
+.eqx-row__meta[data-more]::after {
+  content: '+' attr(data-more);
+  position: absolute;
+  inset-block-start: 0;
+  inset-inline-end: 0;
+  z-index: 1;
+  padding-inline-start: 0.5rem;
+  background: var(--paper);
+  font: 10.5px/19px var(--font-mono);
+  color: var(--accent);
+}
+
+.eqx-row:is(:hover, :focus-within, .is-focus, .is-lit) .eqx-row__meta[data-more]::after {
+  display: none;
+}
+
+.eqx-row__where {
+  margin-inline-end: 0.7rem;
+  white-space: nowrap;
+  color: var(--ink-2);
+  text-decoration-line: underline;
+  text-decoration-style: dotted;
+  text-decoration-color: var(--rule-strong);
+  text-underline-offset: 0.2em;
+}
+
+.eqx-row__where:hover {
+  color: var(--accent);
+}
+
+.eqx-sym {
+  margin-inline-end: 0.75rem;
+  padding-inline: 0.1rem;
+  white-space: nowrap;
+}
+
+.eqx-sym .sg {
+  font-size: 14.5px;
+}
+
+.eqx-sym .sg {
+  color: var(--ink-3);
+}
+
+/* Symbols that thread to other equations are ink and pointable; one-off symbols stay quiet. */
+.eqx-sym.is-thread {
+  cursor: pointer;
+}
+
+.eqx-sym.is-thread .sg {
+  color: var(--ink);
+}
+
+.eqx-sym__m {
+  margin-inline-start: 0.25rem;
+  color: var(--ink-3);
+}
+
+.eqx-sym.is-lit,
+.eqx-sym.is-var-hit {
+  background: var(--accent-wash);
+}
+
+.eqx-sym.is-lit .sg,
+.eqx-sym.is-var-hit .sg {
+  color: var(--accent);
+}
+
+@media (max-width: 1099.98px) {
+  .eqx-top {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+
+@media (max-width: 720px) {
+  .eqx-ch {
+    grid-template-columns: 2rem minmax(0, 1fr) 2.8rem;
+    gap: 0.35rem;
+  }
+
+  .eqx-ch__t {
+    display: none;
+  }
+
+  .eqx-search {
+    flex: 1 1 100%;
+  }
+
+  .eqx-search input {
+    inline-size: 100%;
+  }
+
+  .eqx-row {
+    grid-template-columns: 3.3rem minmax(0, 1fr);
+    column-gap: 0.4rem;
+  }
+
+  .eqx-row__math {
+    font-size: 14.5px;
+  }
+
+  .eqx-bar__lab {
+    font-size: 8px;
+  }
+
+  .eqx-bar__strip {
+    gap: 2px;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .eqx-ch,
+  .eqx-cell,
+  .eqx-chip,
+  .eqx-row,
+  .eqx-bar__cells i {
+    transition: none;
+  }
+}

@@ -1,0 +1,287 @@
+---
+/**
+ * Labs (UI_UX §22): where the book's written chapters draw on each research
+ * organisation in the reference stack — a footprint matrix, labs × chapters
+ * grouped by part (labs × parts on narrow screens). Never a ranking: the
+ * default order is the reference stack's own list position, and "by
+ * footprint" only reorders by how much of the book so far draws on a lab.
+ *
+ * Connected (client entity-explorer.ts): a row lights its marks and the
+ * readout names the lab, what the chapters take from it, and its surfaces; a
+ * column lights the labs one chapter (or part) draws on; a mark shows the one
+ * relationship it stands for. Server-rendered tables with real links are the
+ * text form; nothing depends on JavaScript to be read.
+ *
+ * Mark size = sections of that chapter whose coverage row names the lab
+ * (parsed from the row's "Sections" cell). Wide columns are written chapters;
+ * narrow columns are planned ones — they fill as the book is written.
+ */
+import PageHeader from '../../components/shell/PageHeader.astro';
+import ReaderLayout from '../../layouts/ReaderLayout.astro';
+import { getGraph, getRegistry } from '../../lib/atlas.ts';
+import { buildLabsModel, weightOf, type LabRow } from '../../lib/entity-model.ts';
+import { jsonForHtml } from '../../lib/json.ts';
+import { getStackModel } from '../../lib/stack.ts';
+import { chapterFragment } from '../../lib/urls.ts';
+import '../../styles/entities.css';
+
+const [registry, graph, stack] = await Promise.all([getRegistry(), getGraph(), getStackModel()]);
+const model = buildLabsModel(graph, registry, stack);
+const chapters = model.parts.flatMap((part) => part.chapters.map((n) => model.chapters[String(n)]).filter((chapter) => chapter !== undefined));
+const partStarts = new Set(model.parts.map((part) => part.chapters[0]));
+const written = chapters.filter((chapter) => chapter.written);
+const active = model.labs.filter((lab) => lab.chapters.length > 0);
+const idle = model.labs.filter((lab) => lab.chapters.length === 0);
+const chapterNo = (n: number): string => model.chapters[String(n)]?.number ?? String(n).padStart(2, '0');
+const footprint = (lab: LabRow): number => lab.chapters.length * 1000 + lab.sections;
+const inPart = (lab: LabRow, part: (typeof model.parts)[number]): number => lab.chapters.filter((n) => part.chapters.includes(n)).length;
+const labsPerChapter = new Map<number, number>();
+for (const lab of active) for (const n of lab.chapters) labsPerChapter.set(n, (labsPerChapter.get(n) ?? 0) + 1);
+const broadest = [...active].sort((a, b) => footprint(b) - footprint(a))[0];
+const busiest = [...labsPerChapter.entries()].sort((a, b) => b[1] - a[1] || a[0] - b[0])[0];
+const cellLabel = (lab: LabRow, n: number): string => {
+  const uses = lab.uses.filter((use) => use.ch === n);
+  const sections = uses.map((use) => use.sections).join('; ');
+  return `${lab.name} in chapter ${chapterNo(n)}: sections ${sections}`;
+};
+---
+
+<ReaderLayout
+  title="Labs"
+  description="Research organisations from the reference stack and where the written chapters of The Model Stack draw on their papers, reports, and code."
+  canonicalPath="/labs/"
+  currentId={null}
+  navKey="labs"
+>
+  <PageHeader
+    identity="Research Atlas / Labs"
+    title="Labs"
+    lede="Where the book draws on each lab: the organisations the reference stack lists, against the chapters that use their papers, reports, and code. List position is the reference stack’s, not a ranking."
+  >
+    <p class="en-meta">
+      <span><b>{model.labs.length}</b> labs</span>
+      <span><b>{active.length}</b> drawn on by a written chapter</span>
+      <span><b>{idle.length}</b> not yet</span>
+      <span><b>{written.length}</b> of {chapters.length} chapters written</span>
+    </p>
+  </PageHeader>
+
+  <section class="en en--labs" data-entity-explorer="labs" aria-labelledby="el-title">
+    <div class="en-bar">
+      <h2 class="en-title" id="el-title">Footprint</h2>
+      <p class="en-hint">
+        <span class="en-hint__key" aria-hidden="true">◇</span> Point at a lab, a chapter, or a mark — the readout says what the book takes
+        from it. Click a row to open the lab. Arrow keys move; Esc clears.
+      </p>
+    </div>
+
+    <div class="el-controls">
+      <div class="el-sort" role="group" aria-label="Row order" data-el-sortbar hidden>
+        <button type="button" class="el-sort__btn" data-el-sort="rank" aria-pressed="true">reference-stack order</button>
+        <button type="button" class="el-sort__btn" data-el-sort="footprint" aria-pressed="false">by footprint</button>
+      </div>
+      <p class="el-sort__note" data-el-sortnote>Reference-stack list order — a position, not a ranking.</p>
+      <p class="el-legend" aria-hidden="true">
+        <span class="el-legend__marks"><i data-s="1"></i><i data-s="3"></i><i data-s="6"></i></span>
+        <span class="el-legend--ch">1 → 6+ sections of that chapter</span>
+        <span class="el-legend--pt">1 → 6 chapters of that part</span>
+        <span class="el-legend__cols el-legend--ch"><i class="is-w"></i><i class="is-p"></i></span>
+        <span class="el-legend--ch">wide: written · narrow: planned</span>
+      </p>
+    </div>
+
+    <div class="en-readout el-readout" data-en-readout aria-live="polite">
+      <div class="el-readout__id">
+        <p class="en-ro__kicker" data-ro-kicker>Reference stack · {model.labs.length} labs</p>
+        <p class="en-ro__title" data-ro-title>{active.length} labs are drawn on by the {written.length} written chapters</p>
+        <p class="en-ro__sub" data-ro-sub>
+          {idle.length} are not yet: the matrix covers only what written chapters cite, so an empty row is a gap in the book so far, not a
+          judgement of the lab.
+        </p>
+        <dl class="en-ro__rows" data-ro-rows>
+          {
+            broadest !== undefined && (
+              <div>
+                <dt>broadest footprint</dt>
+                <dd>
+                  {broadest.name} · {broadest.chapters.length} ch · {broadest.sections} §
+                </dd>
+              </div>
+            )
+          }
+          {
+            busiest !== undefined && (
+              <div>
+                <dt>most labs in a chapter</dt>
+                <dd>
+                  {chapterNo(busiest[0])} · {busiest[1]} labs
+                </dd>
+              </div>
+            )
+          }
+        </dl>
+      </div>
+      <div class="el-readout__detail">
+        <div class="en-ro__list" data-ro-list>
+          <p class="en-ro__legend">A mark is one chapter drawing on one lab; its size is how many of that chapter’s sections do.</p>
+          <p class="en-ro__legend">Wide columns are written chapters; narrow ones are planned and fill as the book is written.</p>
+          <p class="en-ro__legend">Point at a row for the lab’s surfaces and what each chapter takes; at a mark for that one use.</p>
+        </div>
+        <p class="en-ro__foot" data-ro-foot>{active.length} rows · {idle.length} labs listed below the matrix</p>
+      </div>
+    </div>
+
+    <div class="el-matrixwrap" data-el-matrix>
+      <table class="el-matrix el-matrix--ch" data-el-grain="chapter">
+        <caption class="sh-visually-hidden">
+          Labs by written chapter: each marked cell is a chapter whose reference-stack coverage names the lab; mark size is the number of
+          sections.
+        </caption>
+        <colgroup>
+          <col class="el-col-rank" />
+          <col class="el-col-name" />
+          {chapters.map((chapter) => <col class:list={['el-col-ch', chapter.written ? 'is-w' : 'is-p']} />)}
+          <col class="el-col-n" />
+          <col class="el-col-s" />
+        </colgroup>
+        <thead>
+          <tr class="el-hparts">
+            <td class="el-corner" colspan="2"><span aria-hidden="true">part →</span></td>
+            {
+              model.parts.map((part) => (
+                <th scope="colgroup" colspan={part.chapters.length} class="el-ph" data-el-part={part.n}>
+                  <a href={part.url} tabindex="-1" title={`Part ${part.numeral} — ${part.title}`}>
+                    {part.numeral}
+                  </a>
+                </th>
+              ))
+            }
+            <td colspan="2"></td>
+          </tr>
+          <tr class="el-hchs">
+            <th scope="col" class="el-rank">#</th>
+            <th scope="col" class="el-name">Lab</th>
+            {
+              chapters.map((chapter) => (
+                <th
+                  scope="col"
+                  class:list={['el-ch', chapter.written ? 'is-w' : 'is-p', { 'is-pstart': partStarts.has(chapter.n) }]}
+                  data-el-col={chapter.n}
+                  title={`${chapter.number} ${chapter.title}${chapter.written ? '' : ' (planned)'}`}
+                >
+                  {chapter.written ? (
+                    <a href={chapter.url} tabindex="-1">
+                      {chapter.number}
+                    </a>
+                  ) : (
+                    <span class="sh-visually-hidden">{chapter.number} (planned)</span>
+                  )}
+                </th>
+              ))
+            }
+            <th scope="col" class="el-n" title="Written chapters that draw on the lab">ch</th>
+            <th scope="col" class="el-s" title="Sections that draw on the lab">§</th>
+          </tr>
+        </thead>
+        <tbody data-el-body>
+          {
+            active.map((lab, index) => (
+              <tr class="el-row" data-el-row={lab.key} data-rank={lab.rank ?? 999} data-fp={footprint(lab)}>
+                <td class="el-rank">{lab.rank ?? '—'}</td>
+                <th scope="row" class="el-name">
+                  <a href={lab.url} data-el-nav tabindex={index === 0 ? 0 : -1}>
+                    {lab.name}
+                  </a>
+                </th>
+                {chapters.map((chapter) => {
+                  const sections = lab.sectionsByChapter[String(chapter.n)];
+                  return (
+                    <td class:list={['el-cell', chapter.written ? 'is-w' : 'is-p', { 'is-pstart': partStarts.has(chapter.n) }]} data-el-col={chapter.n}>
+                      {sections !== undefined && (
+                        <a class="el-mark" data-s={weightOf(Math.max(1, sections))} href={`${lab.url}#${chapterFragment(chapter.n)}`} data-el-nav data-el-cell={chapter.n} tabindex="-1" aria-label={cellLabel(lab, chapter.n)} />
+                      )}
+                    </td>
+                  );
+                })}
+                <td class="el-n">{lab.chapters.length}</td>
+                <td class="el-s">{lab.sections}</td>
+              </tr>
+            ))
+          }
+        </tbody>
+      </table>
+
+      <table class="el-matrix el-matrix--pt" data-el-grain="part">
+        <caption class="sh-visually-hidden">
+          Labs by part: each marked cell is a part with written chapters that draw on the lab; mark size is the number of chapters.
+        </caption>
+        <colgroup>
+          <col class="el-col-name" />
+          {model.parts.map(() => <col class="el-col-pt" />)}
+          <col class="el-col-n" />
+        </colgroup>
+        <thead>
+          <tr class="el-hchs">
+            <th scope="col" class="el-name">Lab</th>
+            {
+              model.parts.map((part) => (
+                <th scope="col" class="el-ch el-pcol" data-el-part={part.n} title={`Part ${part.numeral} — ${part.title}`}>
+                  <a href={part.url} tabindex="-1">
+                    {part.numeral}
+                  </a>
+                </th>
+              ))
+            }
+            <th scope="col" class="el-n" title="Written chapters that draw on the lab">ch</th>
+          </tr>
+        </thead>
+        <tbody data-el-body>
+          {
+            active.map((lab, index) => (
+              <tr class="el-row" data-el-row={lab.key} data-rank={lab.rank ?? 999} data-fp={footprint(lab)}>
+                <th scope="row" class="el-name">
+                  <a href={lab.url} data-el-nav tabindex={index === 0 ? 0 : -1}>
+                    {lab.name}
+                  </a>
+                </th>
+                {model.parts.map((part) => {
+                  const count = inPart(lab, part);
+                  return (
+                    <td class="el-cell el-pcell" data-el-part={part.n}>
+                      {count > 0 && (
+                        <a class="el-mark" data-s={weightOf(count)} href={lab.url} data-el-nav data-el-pcell={part.n} tabindex="-1" aria-label={`${lab.name} in Part ${part.numeral}: ${String(count)} ${count === 1 ? 'chapter' : 'chapters'}`} />
+                      )}
+                    </td>
+                  );
+                })}
+                <td class="el-n">{lab.chapters.length}</td>
+              </tr>
+            ))
+          }
+        </tbody>
+      </table>
+    </div>
+
+    <div class="el-idle" aria-labelledby="el-idle-head">
+      <p class="el-idle__head" id="el-idle-head">
+        Not yet drawn on by a written chapter <span class="el-idle__n">{idle.length}</span>
+      </p>
+      <ul class="el-idle__list" role="list">
+        {
+          idle.map((lab) => (
+            <li>
+              <a href={lab.url} data-el-idle={lab.key}>
+                <span class="el-idle__rank">{lab.rank ?? '—'}</span>
+                {lab.name}
+              </a>
+            </li>
+          ))
+        }
+      </ul>
+    </div>
+
+    <script is:inline type="application/json" data-en-model set:html={jsonForHtml(model)} />
+  </section>
+
+  {model.labs.length === 0 && <p class="sh-empty">No labs are recorded in this bundle.</p>}
+</ReaderLayout>

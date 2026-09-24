@@ -1,0 +1,76 @@
+---
+/**
+ * Dispatches one research block to its first-class renderer (UI_UX §6: each
+ * object has its own typographic grammar, never a generic callout).
+ *
+ * `RENDERERS` is keyed by every `BlockKind`; a kind added to core without a
+ * renderer, or a renderer whose props do not match its kind, is a type error.
+ * Every renderer root carries `data-depth-min` and, when the block is
+ * linkable, `id={block.anchor}`.
+ */
+import type { Block as BlockNode, BlockKind, BlockOf } from '@atlas/core';
+import Algorithm from './blocks/Algorithm.astro';
+import Assumption from './blocks/Assumption.astro';
+import Claim from './blocks/Claim.astro';
+import Code from './blocks/Code.astro';
+import Definition from './blocks/Definition.astro';
+import Equation from './blocks/Equation.astro';
+import Expansion from './blocks/Expansion.astro';
+import Experiment from './blocks/Experiment.astro';
+import FailureMode from './blocks/FailureMode.astro';
+import FigureEntry from './blocks/FigureEntry.astro';
+import Heading from './blocks/Heading.astro';
+import List from './blocks/List.astro';
+import Note from './blocks/Note.astro';
+import Observation from './blocks/Observation.astro';
+import ObservationLayer from './blocks/ObservationLayer.astro';
+import OpenQuestion from './blocks/OpenQuestion.astro';
+import Paragraph from './blocks/Paragraph.astro';
+import Proposition from './blocks/Proposition.astro';
+import Quote from './blocks/Quote.astro';
+import Rule from './blocks/Rule.astro';
+import Sibling from './blocks/Sibling.astro';
+import SystemsTrace from './blocks/SystemsTrace.astro';
+import Table from './blocks/Table.astro';
+import TensorTrace from './blocks/TensorTrace.astro';
+
+type BlockRenderer<K extends BlockKind> = (props: { block: BlockOf<K> }) => unknown;
+
+const RENDERERS: { readonly [K in BlockKind]: BlockRenderer<K> } = {
+  paragraph: Paragraph,
+  heading: Heading,
+  list: List,
+  table: Table,
+  quote: Quote,
+  rule: Rule,
+  definition: Definition,
+  claim: Claim,
+  assumption: Assumption,
+  observation: Observation,
+  proposition: Proposition,
+  equation: Equation,
+  expansion: Expansion,
+  algorithm: Algorithm,
+  code: Code,
+  'tensor-trace': TensorTrace,
+  'systems-trace': SystemsTrace,
+  experiment: Experiment,
+  'failure-mode': FailureMode,
+  'open-question': OpenQuestion,
+  note: Note,
+  'observation-layer': ObservationLayer,
+  sibling: Sibling,
+  figure: FigureEntry,
+};
+
+interface Props {
+  block: BlockNode;
+}
+
+const { block } = Astro.props;
+// The table guarantees RENDERERS[k] accepts BlockOf<k>; TS cannot correlate the
+// indexed union with `block`, so the lookup is widened once, here.
+const Renderer = RENDERERS[block.kind] as BlockRenderer<BlockKind>;
+---
+
+<Renderer block={block} />

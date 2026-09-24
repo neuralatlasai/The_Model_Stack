@@ -1,0 +1,60 @@
+---
+/**
+ * Left rail: the recursive knowledge tree (UI_UX §5) — Volume → Part →
+ * Chapter → Section, then front matter and appendices.
+ *
+ * Server-rendered for the current page: the active branch is expanded, its
+ * ancestors stay visible, unrelated branches are collapsed, planned nodes are
+ * muted but navigable. The element persists across ClientRouter navigations
+ * (`transition:persist`, named per tree variant — see persistName), so the
+ * client re-syncs `aria-current`,
+ * `aria-expanded`, `hidden`, and the roving tabindex on `astro:page-load`
+ * (see TreeBranch.astro for the DOM contract).
+ *
+ * At ≥1440 px it is an in-flow column; below that it is a native popover
+ * (off-canvas navigator) opened by the top-bar or dock toggle.
+ */
+import type { NodeId } from '@atlas/core';
+import { getGraph } from '../../lib/atlas.ts';
+import { enclosing, treeContains, treeState } from '../../lib/nodes.ts';
+import TreeBranch from './TreeBranch.astro';
+
+interface Props {
+  readonly currentId: NodeId | null;
+}
+
+const { currentId } = Astro.props;
+const graph = await getGraph();
+const state = treeState(graph, currentId);
+const firstRoot = graph.tree[0]?.id ?? null;
+const focusId = state.currentId !== null && treeContains(graph.tree, state.currentId) ? state.currentId : firstRoot;
+const entityOf = (id: string): string => graph.nodes[id]?.entityType ?? 'node';
+/*
+ * The tree omits the planned children of chapters without a manuscript unless
+ * they are on the active branch, so pages inside such a chapter render a
+ * different tree. Its persistence name says so: navigating into or out of that
+ * chapter swaps the tree instead of keeping one that lacks the current node.
+ */
+const plannedChapter = state.currentId === null ? null : enclosing(graph, state.currentId, 'chapter');
+const persistName =
+  plannedChapter !== null && !plannedChapter.hasManuscript ? `knowledge-tree-${plannedChapter.id}` : 'knowledge-tree';
+---
+
+<nav
+  id="knowledge-tree"
+  class="sh-tree"
+  aria-label="Knowledge tree"
+  popover
+  data-tree-panel
+  transition:persist={persistName}
+>
+  <div class="sh-tree-head">
+    <span class="sh-tree-title" id="knowledge-tree-title">Contents</span>
+    <button type="button" class="sh-panel-close" popovertarget="knowledge-tree" popovertargetaction="hide">
+      Close
+    </button>
+  </div>
+  <ul role="tree" class="sh-tree-list" aria-labelledby="knowledge-tree-title">
+    <TreeBranch nodes={graph.tree} level={1} state={state} focusId={focusId} entityOf={entityOf} />
+  </ul>
+</nav>

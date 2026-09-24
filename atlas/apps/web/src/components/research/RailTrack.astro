@@ -1,0 +1,61 @@
+---
+/**
+ * "Now reading" track at the head of the context rail — the atlas's analogue
+ * of the ai-2027 dashboard header that advances as the reader scrolls.
+ *
+ *   §5.2  ATTENTION CALCULATION                               38%
+ *   ▮▮▮▮▮▯▯▯▯▯▯▯▯▯▯    one tick per region, in display order
+ *   05  Mechanism
+ *
+ * Server-rendered with the first region current; the client (rail-track.ts)
+ * moves the current tick, marks read ticks, and updates the percentage and
+ * the region line on every EVENTS.activeRegion / progress change. Every tick
+ * is a link to its region, so the track doubles as a compact navigator.
+ */
+import type { Region, ResearchDocument } from '@atlas/core';
+
+interface Props {
+  doc: ResearchDocument;
+  regions: readonly Region[];
+  ordinals: ReadonlyMap<string, string>;
+}
+
+const { doc, regions, ordinals } = Astro.props;
+const number = doc.header.number;
+const idLabel = number === null ? '' : doc.meta.entityType === 'section' ? `§${number}` : number;
+const first = regions[0];
+---
+
+{
+  regions.length > 1 && (
+    <div class="rb-track" data-rail-track>
+      <p class="rb-track__head">
+        {idLabel !== '' && <span class="rb-track__id">{idLabel}</span>}
+        <span class="rb-track__title">{doc.meta.shortTitle}</span>
+        <span class="rb-track__pct" data-track-pct aria-hidden="true">0%</span>
+      </p>
+      <ol class="rb-track__ticks" role="list" aria-label="Regions of this page">
+        {regions.map((region, index) => (
+          <li class="rb-track__cell">
+            <a
+              class:list={['rb-track__tick', { 'is-current': index === 0 }]}
+              href={`#${region.anchor}`}
+              data-track-tick={region.anchor}
+              data-track-ord={ordinals.get(region.anchor) ?? ''}
+              data-track-title={region.title}
+              title={`${ordinals.get(region.anchor) ?? ''} ${region.title}`}
+            >
+              <span class="rb-vh">
+                {ordinals.get(region.anchor) ?? ''} {region.title}
+              </span>
+            </a>
+          </li>
+        ))}
+      </ol>
+      <p class="rb-track__now" aria-live="off">
+        <span class="rb-track__ord" data-track-now-ord>{first === undefined ? '' : (ordinals.get(first.anchor) ?? '')}</span>
+        <span class="rb-track__label" data-track-now-label>{first?.title ?? ''}</span>
+      </p>
+    </div>
+  )
+}

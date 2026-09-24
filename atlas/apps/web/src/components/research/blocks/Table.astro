@@ -1,0 +1,89 @@
+---
+/**
+ * DataTable (UI_UX §51). Sticky header inside a keyboard-scrollable region;
+ * wide tables break out to analysis width with a sticky first column; numeric
+ * columns set in tabular mono. Role-specific grammar:
+ * - position: compact relation grid, relation names as row headers;
+ * - sections: "what changes here" carries the emphasis;
+ * - stack-coverage: the stack-layer column set as an identifier;
+ * - references and record tables: key / row-header columns as identifiers.
+ */
+import type { Inline as InlineNode, TableBlock } from '@atlas/core';
+import Inline from '../Inline.astro';
+import RecordList from '../RecordList.astro';
+import { depthAttrs } from '../lib/dom.ts';
+import type { ColumnProfile } from '../lib/table.ts';
+import { hasRowHeader, isTallTable, profileColumns, tableLabel } from '../lib/table.ts';
+
+interface Props {
+  block: TableBlock;
+}
+
+const { block } = Astro.props;
+const profiles = profileColumns(block);
+const rowHeader = hasRowHeader(block);
+const EMPTY: readonly InlineNode[] = [];
+
+function cellClass(profile: ColumnProfile | undefined): string[] {
+  if (profile === undefined) return [];
+  const classes = [`rb-al-${profile.align}`];
+  if (profile.numeric) classes.push('rb-num');
+  if (profile.emphasis) classes.push('rb-col-emph');
+  if (profile.key) classes.push('rb-col-key');
+  return classes;
+}
+
+const rows = block.rows.map((row) => block.columns.map((_, index) => row[index] ?? EMPTY));
+/** Ledger tables read better as records than as a 7–10 column grid in the reading measure. */
+const ledger = block.role === 'stack-coverage' || block.role === 'references' ? block.role : null;
+---
+
+{
+  ledger !== null ? (
+    <div class={`rb-ledger rb-ledger--${ledger}`} id={block.anchor ?? undefined} {...depthAttrs(block.depth)}>
+      <RecordList table={block} layout={ledger} />
+    </div>
+  ) : (
+
+<div
+  class:list={['rb-table', `rb-table--${block.role}`, { 'rb-wide': block.wide, 'rb-table--tall': isTallTable(block) }]}
+  id={block.anchor ?? undefined}
+  {...depthAttrs(block.depth)}
+>
+  <div class="rb-table__scroll" tabindex="0" role="region" aria-label={tableLabel(block)}>
+    <table class="rb-table__table">
+      <thead>
+        <tr>
+          {
+            block.columns.map((column, index) => (
+              <th scope="col" class:list={cellClass(profiles[index])}>
+                <Inline nodes={column.header} />
+              </th>
+            ))
+          }
+        </tr>
+      </thead>
+      <tbody>
+        {
+          rows.map((cells) => (
+            <tr>
+              {cells.map((cell, index) =>
+                index === 0 && rowHeader ? (
+                  <th scope="row" class:list={['rb-row-head', ...cellClass(profiles[index])]}>
+                    <Inline nodes={cell} />
+                  </th>
+                ) : (
+                  <td class:list={cellClass(profiles[index])}>
+                    <Inline nodes={cell} />
+                  </td>
+                ),
+              )}
+            </tr>
+          ))
+        }
+      </tbody>
+    </table>
+  </div>
+</div>
+  )
+}

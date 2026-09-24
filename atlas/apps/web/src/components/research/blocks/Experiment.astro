@@ -1,0 +1,39 @@
+---
+/**
+ * Experiment (UI_UX §42): the fixed field list as a definition grid under a
+ * numbered H3, with the Edition 1.0 status stated plainly — every experiment
+ * is a proposal; nothing here was executed (CONTENT_CONTRACT §6).
+ */
+import type { ExperimentBlock } from '@atlas/core';
+import Blocks from '../Blocks.astro';
+import { depthAttrs } from '../lib/dom.ts';
+
+interface Props {
+  block: ExperimentBlock;
+}
+
+const { block } = Astro.props;
+const title = `Experiment ${block.number}`;
+---
+
+<section class="rb-experiment" id={block.anchor ?? undefined} {...depthAttrs(block.depth)}>
+  <h3 class="rb-h rb-h3 rb-experiment__title">
+    <span class="rb-experiment__num">{title}</span>
+    <span class="rb-experiment__sep" aria-hidden="true">—</span>
+    <span class="rb-experiment__name">{block.name}</span>
+    {block.anchor !== null && <a class="rb-anchor" href={`#${block.anchor}`}><span aria-hidden="true">#</span><span class="rb-vh">Link to {title}</span></a>}
+  </h3>
+  <p class="rb-experiment__status"><span class="rb-experiment__glyph" aria-hidden="true">○</span>Proposal — not executed in Edition 1.0</p>
+  <dl class="rb-grid rb-experiment__grid">
+    {
+      block.fields.map((field) => (
+        <div class="rb-grid__row">
+          <dt class="rb-grid__key">{field.name}</dt>
+          <dd class="rb-grid__value">
+            <Blocks blocks={field.blocks} />
+          </dd>
+        </div>
+      ))
+    }
+  </dl>
+</section>

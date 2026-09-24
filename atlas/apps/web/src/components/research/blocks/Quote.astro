@@ -1,0 +1,16 @@
+---
+/** A plain quotation (typed objects written as blockquotes are recognised upstream and never reach here). */
+import type { QuoteBlock } from '@atlas/core';
+import Blocks from '../Blocks.astro';
+import { depthAttrs } from '../lib/dom.ts';
+
+interface Props {
+  block: QuoteBlock;
+}
+
+const { block } = Astro.props;
+---
+
+<blockquote class="rb-quote" id={block.anchor ?? undefined} {...depthAttrs(block.depth)}>
+  <Blocks blocks={block.blocks} />
+</blockquote>

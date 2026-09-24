@@ -1,0 +1,104 @@
+---
+/**
+ * Citation timeline for a chapter's references page: every cited work placed
+ * on a year axis, marked by type (paper ●, technical report ◆, documentation
+ * ■, repository ▲, other ○), stacked where years coincide. Each mark links to
+ * the work's paper page. The chapter's intellectual time-span at one glance —
+ * unique per chapter, derived from its references table.
+ */
+import type { ReferenceRecord, ResearchDocument } from '@atlas/core';
+import { href as siteHref } from './lib/site.ts';
+
+interface Props {
+  doc: ResearchDocument;
+  references: readonly ReferenceRecord[];
+}
+
+const { doc, references } = Astro.props;
+const chapter = doc.meta.chapter;
+const cited = references.filter((record) => chapter !== null && record.uses.some((use) => use.chapter === chapter));
+
+const yearOf = (record: ReferenceRecord): number | null => {
+  const match = /\b(19[5-9]\d|20[0-4]\d)\b/u.exec(record.venue) ?? /\b(19[5-9]\d|20[0-4]\d)\b/u.exec(record.work);
+  return match?.[1] === undefined ? null : Number(match[1]);
+};
+type Mark = 'paper' | 'report' | 'doc' | 'repo' | 'other';
+const markOf = (record: ReferenceRecord): Mark => {
+  const type = record.type.toLowerCase();
+  if (type.startsWith('paper')) return 'paper';
+  if (type.includes('report')) return 'report';
+  if (type.includes('documentation') || type.includes('card') || type.includes('course')) return 'doc';
+  if (type.includes('repository')) return 'repo';
+  return 'other';
+};
+const GLYPH: Readonly<Record<Mark, string>> = { paper: '●', report: '◆', doc: '■', repo: '▲', other: '○' };
+const LABEL: Readonly<Record<Mark, string>> = {
+  paper: 'paper',
+  report: 'technical report',
+  doc: 'documentation / card',
+  repo: 'repository',
+  other: 'other',
+};
+
+const dated = cited
+  .map((record) => ({ record, year: yearOf(record), mark: markOf(record) }))
+  .filter((entry): entry is { record: ReferenceRecord; year: number; mark: Mark } => entry.year !== null)
+  .sort((a, b) => a.year - b.year || a.record.key.localeCompare(b.record.key));
+const years = dated.map((entry) => entry.year);
+const minYear = years.length > 0 ? Math.min(...years) : 0;
+const maxYear = years.length > 0 ? Math.max(...years) : 0;
+const span = Math.max(1, maxYear - minYear);
+const byYear = new Map<number, typeof dated>();
+for (const entry of dated) byYear.set(entry.year, [...(byYear.get(entry.year) ?? []), entry]);
+const tickYears = [...new Set([minYear, ...[...byYear.keys()].filter((year) => year % 5 === 0), maxYear])].sort((a, b) => a - b);
+const pct = (year: number): string => `${String(((year - minYear) / span) * 100)}%`;
+const marks = [...new Set(dated.map((entry) => entry.mark))];
+const undated = cited.length - dated.length;
+---
+
+{
+  dated.length > 1 && (
+    <figure class="rb-ctl" aria-labelledby="ctl-title">
+      <figcaption class="rb-ctl__head" id="ctl-title">
+        <span class="rb-ctl__kicker">Sources in time</span>
+        <span class="rb-ctl__note">
+          {dated.length} dated works, {minYear}–{maxYear}
+          {undated > 0 ? ` · ${String(undated)} undated` : ''}
+        </span>
+      </figcaption>
+      <div class="rb-ctl__plot">
+        {[...byYear.entries()].map(([year, entries]) => (
+          <div class="rb-ctl__col" style={`--x: ${pct(year)}`}>
+            {entries.map((entry) => (
+              <a
+                class={`rb-ctl__mark rb-ctl__mark--${entry.mark}`}
+                href={siteHref(entry.record.atlasUrl)}
+                title={`${entry.record.key} · ${entry.record.work} (${String(year)})`}
+                aria-label={`${entry.record.key}: ${entry.record.work}, ${String(year)}`}
+              >
+                <span aria-hidden="true">{GLYPH[entry.mark]}</span>
+              </a>
+            ))}
+          </div>
+        ))}
+        <div class="rb-ctl__axis" aria-hidden="true">
+          {tickYears.map((year) => (
+            <span class="rb-ctl__tick" style={`--x: ${pct(year)}`}>
+              {year}
+            </span>
+          ))}
+        </div>
+      </div>
+      <ul class="rb-ctl__legend" role="list">
+        {marks.map((mark) => (
+          <li>
+            <span class={`rb-ctl__glyph rb-ctl__mark--${mark}`} aria-hidden="true">
+              {GLYPH[mark]}
+            </span>
+            {LABEL[mark]}
+          </li>
+        ))}
+      </ul>
+    </figure>
+  )
+}

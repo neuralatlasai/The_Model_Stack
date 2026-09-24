@@ -1,0 +1,565 @@
+/*
+ * Styles for UI the client builds at runtime (`cx-` prefix) and for the
+ * client-only state classes it toggles on server markup (`is-`). Consumes the
+ * design tokens from src/styles/tokens.css only; defines none. Installed once
+ * per document as a constructable stylesheet by main.ts (it survives
+ * ClientRouter swaps). Editorial restraint: hairline rules, no shadows, no
+ * gradients, no rounded card stacks; motion only where it preserves object
+ * continuity and never under prefers-reduced-motion.
+ */
+
+.cx-sr-only {
+  position: absolute !important;
+  width: 1px;
+  height: 1px;
+  margin: -1px;
+  padding: 0;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+  border: 0;
+}
+
+.cx-offscreen {
+  position: fixed;
+  top: 0;
+  left: -9999px;
+  opacity: 0;
+}
+
+/* ── citation / term / equation preview (UI_UX §19, §31) ─────────────────── */
+
+.cx-preview {
+  position: fixed;
+  z-index: 60;
+  box-sizing: border-box;
+  width: max-content;
+  max-width: min(22.5rem, calc(100vw - 16px));
+  padding: 0.7rem 0.85rem 0.75rem;
+  background: var(--paper-raised);
+  color: var(--ink);
+  border: 1px solid var(--rule-strong);
+  border-top: 2px solid var(--domain, var(--accent));
+  font-family: var(--font-sans);
+  font-size: var(--fs-meta, 12.5px);
+  line-height: 1.5;
+}
+
+.cx-preview[hidden] {
+  display: none;
+}
+
+.cx-insp__kind {
+  display: block;
+  font-family: var(--font-mono);
+  font-size: 11px;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--ink-3);
+}
+
+.cx-insp__title {
+  margin: 0.2rem 0 0.35rem;
+  font-family: var(--font-serif);
+  font-size: 17px;
+  font-weight: 500;
+  line-height: 1.3;
+  color: var(--ink);
+}
+
+.cx-insp__title:focus {
+  outline: none;
+}
+
+.cx-insp__title:focus-visible {
+  outline: 2px solid var(--focus);
+  outline-offset: 2px;
+}
+
+.cx-insp__body > * + * {
+  margin-top: 0.5rem;
+}
+
+.cx-insp__authors,
+.cx-insp__definition,
+.cx-insp__note,
+.cx-insp__used {
+  margin: 0;
+  color: var(--ink-2);
+}
+
+.cx-insp__note {
+  color: var(--ink-3);
+}
+
+/* Link preview card: where an internal link leads. */
+.cx-insp__within,
+.cx-insp__facts {
+  margin: 0;
+  font-family: var(--font-mono);
+  font-size: 11px;
+  letter-spacing: 0.02em;
+  color: var(--ink-3);
+}
+
+.cx-insp__within {
+  margin-top: -0.2rem;
+}
+
+.cx-insp__sections {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 3px;
+  margin: 0;
+}
+
+.cx-insp__sec {
+  inline-size: 14px;
+  block-size: 4px;
+  background: var(--rule);
+}
+
+.cx-insp__sec.is-written {
+  background: var(--domain, var(--accent));
+}
+
+.cx-insp__sec.is-self {
+  outline: 1.5px solid var(--ink);
+  outline-offset: 1.5px;
+}
+
+.cx-insp__sec-label {
+  margin-inline-start: 0.4rem;
+  font-family: var(--font-mono);
+  font-size: 11px;
+  color: var(--ink-3);
+}
+
+.cx-insp__label {
+  margin: 0;
+  font-family: var(--font-mono);
+  font-size: 11px;
+  font-weight: 400;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--ink-3);
+}
+
+.cx-insp__rows,
+.cx-insp__vars {
+  display: grid;
+  grid-template-columns: auto 1fr;
+  gap: 0.15rem 0.9rem;
+  margin: 0;
+  padding: 0.35rem 0;
+  border-top: 1px solid var(--rule);
+  border-bottom: 1px solid var(--rule);
+}
+
+.cx-insp__rows dt,
+.cx-insp__vars dt {
+  font-family: var(--font-mono);
+  color: var(--ink-3);
+}
+
+.cx-insp__rows dd {
+  margin: 0;
+  text-align: right;
+  font-family: var(--font-mono);
+  color: var(--ink);
+}
+
+.cx-insp__vars dt {
+  color: var(--ink);
+}
+
+.cx-insp__vars dd {
+  margin: 0;
+  color: var(--ink-2);
+}
+
+.cx-insp__math {
+  overflow-x: auto;
+  padding: 0.25rem 0;
+  font-size: 15px;
+}
+
+.cx-insp__links,
+.cx-insp__list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.25rem 1rem;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.cx-insp__list {
+  flex-direction: column;
+}
+
+.cx-insp__links a,
+.cx-insp__list a {
+  color: var(--accent);
+  text-decoration: underline;
+  text-decoration-thickness: 1px;
+  text-underline-offset: 0.18em;
+}
+
+.cx-insp__links a:hover,
+.cx-insp__list a:hover {
+  color: var(--accent-hover);
+}
+
+.cx-insp__group + .cx-insp__group {
+  margin-top: 0.75rem;
+}
+
+/* ── pinned rail inspector ────────────────────────────────────────────────── */
+
+.cx-inspector {
+  margin: 0 0 var(--gap-argument, 1.5rem);
+  padding: 0 0 0.9rem;
+  border-bottom: 1px solid var(--rule-strong);
+  font-family: var(--font-sans);
+  font-size: var(--fs-meta, 12.5px);
+  line-height: 1.5;
+}
+
+.cx-inspector[hidden] {
+  display: none;
+}
+
+.cx-inspector__head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 1rem;
+}
+
+.cx-inspector__close,
+.cx-sheet__close {
+  padding: 0.15rem 0;
+  border: 0;
+  background: none;
+  color: var(--ink-3);
+  font: inherit;
+  font-family: var(--font-sans);
+  font-size: 12px;
+  cursor: pointer;
+  text-decoration: underline;
+  text-underline-offset: 0.18em;
+}
+
+.cx-inspector__close:hover,
+.cx-sheet__close:hover {
+  color: var(--accent);
+}
+
+/* ── sheets (UI_UX §56–57) ────────────────────────────────────────────────── */
+
+.cx-sheet {
+  box-sizing: border-box;
+  max-width: none;
+  max-height: none;
+  margin: 0;
+  padding: 0;
+  border: 0;
+  background: var(--paper);
+  color: var(--ink);
+}
+
+.cx-sheet::backdrop {
+  background: color-mix(in srgb, var(--ink) 28%, transparent);
+}
+
+.cx-sheet[data-side='bottom'] {
+  inset: auto 0 0;
+  width: 100%;
+  max-height: 85dvh;
+  border-top: 1px solid var(--rule-strong);
+}
+
+.cx-sheet[data-side='left'] {
+  inset: 0 auto 0 0;
+  width: min(88vw, calc(var(--tree-w, 280px) + 3rem));
+  height: 100dvh;
+  border-right: 1px solid var(--rule-strong);
+}
+
+.cx-sheet__frame {
+  display: flex;
+  flex-direction: column;
+  box-sizing: border-box;
+  width: 100%;
+  height: 100%;
+  max-height: inherit;
+}
+
+.cx-sheet__head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  padding: 0.75rem 16px 0.5rem;
+  border-bottom: 1px solid var(--rule);
+}
+
+.cx-sheet__title {
+  font-family: var(--font-mono);
+  font-size: 11px;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--ink-3);
+}
+
+.cx-sheet__body {
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  padding: 0.75rem 16px 1.25rem;
+}
+
+/* A borrowed panel (tree, rail) is shown in flow inside the sheet whatever its column styles say. */
+.cx-sheet__body > [data-in-sheet] {
+  display: block;
+  position: static;
+  inset: auto;
+  width: auto;
+  max-width: none;
+  height: auto;
+  max-height: none;
+  overflow: visible;
+  transform: none;
+  visibility: visible;
+  border: 0;
+}
+
+.cx-sheet .cx-inspector--sheet {
+  margin: 0;
+  border: 0;
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  .cx-sheet[open] {
+    transition:
+      transform var(--t-panel, 190ms) cubic-bezier(0.2, 0, 0, 1),
+      opacity var(--t-panel, 190ms) linear;
+  }
+
+  @starting-style {
+    .cx-sheet[data-side='bottom'][open] {
+      transform: translateY(1.5rem);
+      opacity: 0;
+    }
+
+    .cx-sheet[data-side='left'][open] {
+      transform: translateX(-1.5rem);
+      opacity: 0;
+    }
+  }
+}
+
+/* ── palette (UI_UX §32–33) ───────────────────────────────────────────────── */
+
+.cx-palette {
+  box-sizing: border-box;
+  width: min(40rem, calc(100vw - 32px));
+  max-height: min(34rem, 80dvh);
+  margin: 12dvh auto auto;
+  padding: 0;
+  border: 1px solid var(--rule-strong);
+  border-top: 2px solid var(--accent);
+  background: var(--paper);
+  color: var(--ink);
+}
+
+.cx-palette::backdrop {
+  background: color-mix(in srgb, var(--ink) 24%, transparent);
+}
+
+.cx-palette__frame {
+  display: flex;
+  flex-direction: column;
+  max-height: inherit;
+}
+
+.cx-palette__bar {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  padding: 0.7rem 0.9rem;
+  border-bottom: 1px solid var(--rule);
+}
+
+.cx-palette__input {
+  flex: 1;
+  min-width: 0;
+  border: 0;
+  background: none;
+  color: var(--ink);
+  font-family: var(--font-sans);
+  font-size: 17px;
+  outline: none;
+}
+
+.cx-palette__input::placeholder {
+  color: var(--ink-3);
+}
+
+.cx-palette__esc {
+  font-family: var(--font-mono);
+  font-size: 11px;
+  color: var(--ink-3);
+}
+
+.cx-palette__status {
+  margin: 0;
+  padding: 0.4rem 0.9rem;
+  min-height: 1.2em;
+  font-family: var(--font-mono);
+  font-size: 11px;
+  color: var(--ink-3);
+}
+
+.cx-palette__list {
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  padding-bottom: 0.4rem;
+}
+
+.cx-palette__group-label {
+  padding: 0.55rem 0.9rem 0.2rem;
+  font-family: var(--font-mono);
+  font-size: 10.5px;
+  letter-spacing: 0.08em;
+  color: var(--ink-3);
+}
+
+.cx-palette__option {
+  display: block;
+  padding: 0.4rem 0.9rem 0.45rem calc(0.9rem - 2px);
+  border-left: 2px solid transparent;
+  color: var(--ink);
+  text-decoration: none;
+  cursor: pointer;
+}
+
+.cx-palette__option[aria-selected='true'] {
+  border-left-color: var(--accent);
+  background: var(--accent-wash);
+}
+
+.cx-palette__type {
+  display: block;
+  overflow: hidden;
+  font-family: var(--font-mono);
+  font-size: 10.5px;
+  letter-spacing: 0.04em;
+  color: var(--ink-3);
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.cx-palette__title {
+  display: block;
+  font-family: var(--font-serif);
+  font-size: 17px;
+  line-height: 1.35;
+}
+
+/* ── charts (UI_UX §42) ───────────────────────────────────────────────────── */
+
+.cx-chart-focus {
+  fill: var(--paper);
+  stroke: var(--fig-emphasis, var(--accent));
+  stroke-width: 1.5;
+  pointer-events: none;
+}
+
+.cx-chart-readout {
+  min-height: 1.5em;
+  margin: 0.25rem 0 0;
+  font-family: var(--font-mono);
+  font-size: 12px;
+  color: var(--ink-2);
+}
+
+[data-series].is-dimmed {
+  opacity: 0.16;
+}
+
+[data-series-toggle][aria-pressed='true'] {
+  text-decoration: underline;
+  text-underline-offset: 0.2em;
+}
+
+/* ── equation variables and tensor dimensions (UI_UX §16, §54) ────────────── */
+
+.katex .is-var-hit {
+  color: var(--domain, var(--accent));
+}
+
+[data-eq-var].is-var-hit,
+[data-dim].is-dim-active {
+  background: var(--accent-wash);
+  color: var(--accent);
+}
+
+/* ── calculator island ────────────────────────────────────────────────────── */
+
+.cx-calc__foot {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 0.5rem 1rem;
+  margin-top: 0.4rem;
+}
+
+.cx-calc__reset {
+  padding: 0;
+  border: 0;
+  background: none;
+  color: var(--accent);
+  font-family: var(--font-sans);
+  font-size: 12px;
+  text-decoration: underline;
+  text-underline-offset: 0.18em;
+  cursor: pointer;
+}
+
+.cx-calc__reset:disabled {
+  color: var(--ink-3);
+  text-decoration: none;
+  cursor: default;
+}
+
+.cx-calc__note {
+  margin: 0;
+  font-family: var(--font-sans);
+  font-size: 12px;
+  color: var(--ev-gap);
+}
+
+/* ── focus ────────────────────────────────────────────────────────────────── */
+
+.cx-preview a:focus-visible,
+.cx-inspector :focus-visible,
+.cx-sheet :focus-visible,
+.cx-palette__option:focus-visible,
+.cx-calc__reset:focus-visible,
+[data-series-toggle]:focus-visible,
+svg[tabindex]:focus-visible {
+  outline: 2px solid var(--focus);
+  outline-offset: 2px;
+}
+
+/* ── explorable figures (figure-explore.ts): one tab stop, arrows step ───── */
+
+svg.is-explorable:focus {
+  outline: none;
+}
+
+svg.is-explorable:focus-visible {
+  outline: 2px solid var(--focus);
+  outline-offset: 4px;
+}

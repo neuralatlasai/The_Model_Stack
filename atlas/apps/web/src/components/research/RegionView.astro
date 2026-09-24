@@ -1,0 +1,62 @@
+---
+/**
+ * One H2 region: the unit of scroll synchronisation (UI_UX §11). Carries the
+ * DOM-contract attributes the client observes; the H2 is set in serif small
+ * caps with its display ordinal in the margin.
+ *
+ * Region-specific presentation:
+ * - Siblings open with a sibling strip before the full differentials.
+ * - Concept map: the diagram leads; its nested-list text equivalent (required
+ *   for accessibility, CONTENT_CONTRACT §8) folds into an inline expansion so
+ *   it does not read as a second copy of the figure.
+ * - Sections: the chapter's section table renders as a section index.
+ */
+import type { Block, Region, ResearchDocument, TableBlock } from '@atlas/core';
+import Blocks from './Blocks.astro';
+import SectionIndex from './SectionIndex.astro';
+import SiblingStrip from './SiblingStrip.astro';
+import { regionAttrs } from './lib/dom.ts';
+import { roleOrdinal } from './lib/grammar.ts';
+import { regionSiblings } from './lib/walk.ts';
+
+interface Props {
+  region: Region;
+  doc: ResearchDocument;
+  /** Display ordinal from the page's presentation order; falls back to the role's contract position. */
+  ordinal?: string | null;
+}
+
+const { region, doc, ordinal: givenOrdinal } = Astro.props;
+const ordinal = givenOrdinal ?? roleOrdinal(region.role);
+const siblings = region.role === 'siblings' ? regionSiblings(region) : [];
+
+const firstFigure = region.blocks.findIndex((block) => block.kind === 'figure');
+const foldAfterFigure = region.role === 'concept-map' && firstFigure >= 0 && firstFigure < region.blocks.length - 1;
+const leading: readonly Block[] = foldAfterFigure ? region.blocks.slice(0, firstFigure + 1) : region.blocks;
+const folded: readonly Block[] = foldAfterFigure ? region.blocks.slice(firstFigure + 1) : [];
+
+const sectionTable =
+  region.role === 'sections'
+    ? (region.blocks.find((block): block is TableBlock => block.kind === 'table' && block.role === 'sections') ?? null)
+    : null;
+const rest: readonly Block[] = sectionTable === null ? leading : leading.filter((block) => block !== sectionTable);
+---
+
+<section id={region.anchor} class={`rb-region rb-region--${region.role}`} {...regionAttrs(region.anchor, region.role, region.depth)}>
+  <h2 class="rb-region__title">
+    {ordinal !== null && <span class="rb-region__ordinal" aria-hidden="true">{ordinal}</span>}
+    <span class="rb-region__text">{region.title}</span>
+    <a class="rb-anchor" href={`#${region.anchor}`}><span aria-hidden="true">#</span><span class="rb-vh">Link to {region.title}</span></a>
+  </h2>
+  {siblings.length > 1 && <SiblingStrip self={doc.header.title} siblings={siblings} />}
+  {sectionTable !== null && <SectionIndex table={sectionTable} />}
+  <Blocks blocks={rest} />
+  {
+    folded.length > 0 && (
+      <details class="rb-textequiv">
+        <summary class="rb-textequiv__summary">Text equivalent of the concept map</summary>
+        <Blocks blocks={folded} />
+      </details>
+    )
+  }
+</section>

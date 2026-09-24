@@ -1,0 +1,16 @@
+{
+  "name": "@atlas/core",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Domain contracts for the Research Atlas: ids, evidence labels, frontmatter schema, typed research AST, visual-grammar specs, scene geometry, graph, routes, DOM contract. No I/O.",
+  "type": "module",
+  "exports": {
+    ".": "./src/index.ts"
+  },
+  "engines": {
+    "node": ">=24.0.0"
+  },
+  "dependencies": {
+    "zod": "4.6.5"
+  }
+}

@@ -1,0 +1,36 @@
+---
+/**
+ * Site footer: edition, compile date, the evidence-label legend, reference
+ * pages, and where the content comes from. No marketing copy.
+ */
+import { getGraph, getManifest } from '../../lib/atlas.ts';
+import { isoDate, updatedLabel } from '../../lib/format.ts';
+import { BOOK_TITLE } from '../../lib/jsonld.ts';
+
+const [manifest, graph] = await Promise.all([getManifest(), getGraph()]);
+const compiledIso = isoDate(manifest.compiledAt);
+const notation = graph.nodes['ms.frontmatter.notation'];
+const routes = graph.nodes['ms.frontmatter.reading-routes'];
+---
+
+<footer class="sh-footer">
+  <div class="sh-footer-inner">
+    <p class="sh-footer-book">
+      <span class="sh-smallcaps">{BOOK_TITLE}</span>
+      <span class="sh-footer-sep" aria-hidden="true">·</span>
+      <span>Edition {manifest.edition}</span>
+      <span class="sh-footer-sep" aria-hidden="true">·</span>
+      {compiledIso !== null ? <time datetime={compiledIso}>{updatedLabel(manifest.compiledAt)}</time> : <span>{manifest.compiledAt}</span>}
+    </p>
+    <nav class="sh-footer-nav" aria-label="Reference pages">
+      <ul>
+        <li><a href="/evidence/">Evidence labels</a></li>
+        <li><a href="/terms/">Terms</a></li>
+        {notation !== undefined && <li><a href={notation.url}>Notation</a></li>}
+        {routes !== undefined && <li><a href={routes.url}>Reading routes</a></li>}
+        <li><a href="/library/">Library</a></li>
+        <li><a href="/timeline/">Timeline</a></li>
+      </ul>
+    </nav>
+  </div>
+</footer>

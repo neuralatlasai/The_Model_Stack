@@ -1,0 +1,81 @@
+---
+/**
+ * Evidence-label legend (UI_UX §20, §41; CONTENT_CONTRACT §6): the ten labels,
+ * the three classes they are drawn in, their short forms, and the Edition 1.0
+ * rules. Linked from every page's footer.
+ */
+import {
+  EVIDENCE_CLASS,
+  EVIDENCE_LABELS,
+  EVIDENCE_SHORT,
+  FORBIDDEN_IN_EDITION_1,
+  OBSERVATION_PART_TITLES,
+  OBSERVATION_PARTS,
+  type EvidenceClass,
+} from '@atlas/core';
+import PageHeader from '../components/shell/PageHeader.astro';
+import ReaderLayout from '../layouts/ReaderLayout.astro';
+import { EVIDENCE_CLASS_TITLES, EVIDENCE_MEANINGS } from '../lib/evidence.ts';
+
+const classes: readonly EvidenceClass[] = ['source', 'inference', 'gap', 'measurement'];
+---
+
+<ReaderLayout
+  title="Evidence labels"
+  description="The ten evidence labels of The Model Stack, what each permits, and how the atlas draws them."
+  canonicalPath="/evidence/"
+  currentId={null}
+>
+  <PageHeader
+    identity="Research Atlas / Reference"
+    title="Evidence labels"
+    lede="Every non-trivial statement carries exactly one label. Labels are drawn as quiet markers in one of three classes — source, inference, gap — never as a wall of badges."
+  />
+
+  {
+    classes.map((evidenceClass) => {
+      const labels = EVIDENCE_LABELS.filter((label) => EVIDENCE_CLASS[label] === evidenceClass);
+      return (
+        <section class="sh-section" data-evidence-class={evidenceClass} aria-labelledby={`ev-${evidenceClass}`}>
+          <h2 id={`ev-${evidenceClass}`}>{EVIDENCE_CLASS_TITLES[evidenceClass]}</h2>
+          <dl class="sh-evidence-list">
+            {labels.map((label) => (
+              <div class="sh-evidence-row">
+                <dt>
+                  <span class="sh-evidence-mark" aria-hidden="true" />
+                  <span class="sh-mono">{label}</span>
+                  {EVIDENCE_SHORT[label] !== label && <span class="sh-evidence-short">short form {EVIDENCE_SHORT[label]}</span>}
+                </dt>
+                <dd>{EVIDENCE_MEANINGS[label]}.</dd>
+                {FORBIDDEN_IN_EDITION_1.has(label) && (
+                  <dd class="sh-evidence-rule">Does not appear in Edition 1.0: no experiments were run; every experiment is a proposal.</dd>
+                )}
+                {label === 'CODE-VERIFIED' && (
+                  <dd class="sh-evidence-rule">Requires the repository, the commit, and the check performed.</dd>
+                )}
+              </div>
+            ))}
+          </dl>
+        </section>
+      );
+    })
+  }
+
+  <section class="sh-section" aria-labelledby="ev-observation">
+    <h2 id="ev-observation">The observation layer</h2>
+    <p>
+      Every Observations region separates four things, in this order, so that source evidence is never visually
+      indistinguishable from the book's commentary:
+    </p>
+    <ol class="sh-index-list">
+      {
+        OBSERVATION_PARTS.map((part, index) => (
+          <li class="sh-index-row">
+            <span class="sh-num">{index + 1}</span>
+            <span>{OBSERVATION_PART_TITLES[part]}</span>
+          </li>
+        ))
+      }
+    </ol>
+  </section>
+</ReaderLayout>

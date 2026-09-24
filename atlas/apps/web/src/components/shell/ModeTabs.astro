@@ -1,0 +1,29 @@
+---
+/**
+ * Mode strip under a node's header (UI_UX §9): [Read] [Map] [Papers]
+ * [Implementations] [Compare] as quiet links, the active view marked with
+ * aria-current. Not ARIA tabs: each mode is its own URL.
+ */
+import { MODE_LABELS, MODES, type Mode, type ModeLinks } from '../../lib/modes.ts';
+
+interface Props {
+  readonly links: ModeLinks;
+  readonly current: Mode;
+}
+
+const { links, current } = Astro.props;
+---
+
+<nav class="sh-modes" aria-label="Views of this node">
+  <ul class="sh-modes-list">
+    {
+      MODES.map((mode) => (
+        <li>
+          <a class="sh-mode" href={links[mode]} data-view={mode} aria-current={mode === current ? 'page' : undefined}>
+            {MODE_LABELS[mode]}
+          </a>
+        </li>
+      ))
+    }
+  </ul>
+</nav>

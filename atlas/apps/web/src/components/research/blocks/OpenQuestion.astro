@@ -1,0 +1,18 @@
+---
+/** Open question: labelled, the question in italic serif, then what evidence would settle it. */
+import type { OpenQuestionBlock } from '@atlas/core';
+import Inline from '../Inline.astro';
+import { depthAttrs } from '../lib/dom.ts';
+
+interface Props {
+  block: OpenQuestionBlock;
+}
+
+const { block } = Astro.props;
+---
+
+<div class="rb-oq" id={block.anchor ?? undefined} {...depthAttrs(block.depth)}>
+  <p class="rb-oq__label"><span class="rb-oq__glyph" aria-hidden="true">?</span>Open question</p>
+  <p class="rb-oq__question"><Inline nodes={block.content} /></p>
+  {block.settle !== null && <p class="rb-oq__settle"><span class="rb-lead">What would settle it</span> <Inline nodes={block.settle} /></p>}
+</div>

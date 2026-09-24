@@ -1,0 +1,47 @@
+---
+/**
+ * Terms index: every glossary term with its definition and the single node
+ * that owns it (CONTENT_CONTRACT §3 item 12: a term is defined in exactly one
+ * place; everywhere else links there), as a connected vocabulary — owners,
+ * A–Z rail, and the terms each definition mentions (TermsExplorer.astro).
+ * Anchors: `#letter-X` (`#letter-other`) per initial, `#term-<slug>` per term.
+ */
+import PageHeader from '../components/shell/PageHeader.astro';
+import TermsExplorer from '../components/shell/TermsExplorer.astro';
+import ReaderLayout from '../layouts/ReaderLayout.astro';
+import { getGraph, getRegistry } from '../lib/atlas.ts';
+import { grouped } from '../lib/format.ts';
+import { mentionGraph } from '../lib/term-network.ts';
+import '../styles/terms.css';
+
+const [registry, graph] = await Promise.all([getRegistry(), getGraph()]);
+const terms = registry.terms;
+const owners = new Set(terms.map((term) => term.owner)).size;
+const chapters = new Set(terms.map((term) => term.chapter)).size;
+const mentions = [...mentionGraph(terms).values()].reduce((sum, outs) => sum + outs.length, 0);
+const glossaryNode = graph.nodes['ms.frontmatter.glossary'];
+---
+
+<ReaderLayout
+  title="Terms"
+  description="Every term defined in The Model Stack, with its definition, the one section that owns it, and the other terms it mentions."
+  canonicalPath="/terms/"
+  currentId={null}
+>
+  <PageHeader
+    identity="Research Atlas / Terms"
+    title="Terms"
+    lede="Each term is defined once, in the section that owns it; this index points there and shows which terms lean on which."
+    meta={`${grouped(terms.length)} terms · owned by ${grouped(owners)} sections in ${grouped(chapters)} chapters · ${grouped(mentions)} mentions between definitions`}
+  >
+    {
+      glossaryNode !== undefined && (
+        <p class="sh-meta-line">
+          The compiled glossary chapter: <a href={glossaryNode.url}>{glossaryNode.title}</a>
+        </p>
+      )
+    }
+  </PageHeader>
+
+  {terms.length === 0 ? <p class="sh-empty">No glossary terms are recorded in this bundle.</p> : <TermsExplorer terms={terms} graph={graph} />}
+</ReaderLayout>

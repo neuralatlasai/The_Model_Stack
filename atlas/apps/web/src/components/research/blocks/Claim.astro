@@ -1,0 +1,38 @@
+---
+/**
+ * Claim with claim-level provenance (UI_UX §20): the statement, then a quiet
+ * trailing line with the evidence marker and each source — citation keys as
+ * inspector links, derivations as equation links, documentation ids in mono.
+ */
+import type { ClaimBlock } from '@atlas/core';
+import Inline from '../Inline.astro';
+import CiteLink from '../inline/CiteLink.astro';
+import EvidenceMark from '../inline/EvidenceMark.astro';
+import { depthAttrs, xrefAttrs } from '../lib/dom.ts';
+import { provenanceItem } from '../lib/objects.ts';
+
+interface Props {
+  block: ClaimBlock;
+}
+
+const { block } = Astro.props;
+const items = block.sources.map(provenanceItem);
+---
+
+<div class="rb-claim" id={block.anchor ?? undefined} data-evidence={block.label} {...depthAttrs(block.depth)}>
+  <p class="rb-claim__text"><span class="rb-lead">Claim</span> <Inline nodes={block.content} /></p>
+  <p class="rb-claim__prov">
+    <span class="rb-vh">Provenance:</span>
+    <EvidenceMark label={block.label} />
+    {
+      items.map((item) => (
+        <span class="rb-claim__src">
+          {item.type === 'cite' && <CiteLink citeKey={item.key} />}
+          {item.type === 'equation' && <a class="rb-xref" href={`#${item.anchor}`} {...xrefAttrs(`equation:${item.number}`)}>Eq. {item.number}</a>}
+          {item.type === 'doc' && <span class="rb-claim__doc">OD:{item.id}</span>}
+          {item.type === 'text' && item.text}
+        </span>
+      ))
+    }
+  </p>
+</div>

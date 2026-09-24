@@ -1,0 +1,26 @@
+---
+/** Ordered and unordered lists; items hold blocks (tight lists hold one paragraph). */
+import type { ListBlock } from '@atlas/core';
+import Blocks from '../Blocks.astro';
+import { depthAttrs } from '../lib/dom.ts';
+
+interface Props {
+  block: ListBlock;
+}
+
+const { block } = Astro.props;
+const Tag = block.ordered ? 'ol' : 'ul';
+const start = block.ordered && block.start !== null && block.start !== 1 ? block.start : undefined;
+---
+
+<Tag class={`rb-list rb-list--${block.ordered ? 'ordered' : 'bullet'}`} id={block.anchor ?? undefined} start={start} {...depthAttrs(block.depth)}>
+  {
+    block.items.map((item) => (
+      <li class:list={['rb-li', { 'rb-li--task': item.checked !== null }]}>
+        {item.checked !== null && <span class="rb-li__check" aria-hidden="true">{item.checked ? '☑' : '☐'}</span>}
+        {item.checked !== null && <span class="rb-vh">{item.checked ? 'Done: ' : 'Open: '}</span>}
+        <Blocks blocks={item.blocks} />
+      </li>
+    ))
+  }
+</Tag>

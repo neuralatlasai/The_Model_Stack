@@ -1,0 +1,253 @@
+---
+/**
+ * Terms (CONTENT_CONTRACT §3 item 12) as an owned, connected vocabulary.
+ *
+ *   owners   one row per owning chapter; one cell per term, grouped by the
+ *            section that owns it; solid where the term is linked to others
+ *   readout  fixed-size: the term, chapter, or letter under the pointer — its
+ *            owner, definition, what it mentions and what mentions it
+ *   rail     a sticky A–Z rail with per-letter counts (letters with none are
+ *            disabled); it recounts for whatever is lit or filtered
+ *   entries  every term: name, owner, links, and its definition clamped to two
+ *            lines (the whole of it on hover or focus, or via "more"); other
+ *            glossary terms named in a definition are links to them
+ *
+ * Mentions are exact name matches (lib/term-network.ts); a term is defined in
+ * exactly one place, and every entry links there.
+ *
+ * Connected (client terms-explorer.ts): a term lights the terms it mentions,
+ * the terms that mention it, and its owner; a chapter lights its terms and
+ * recounts the A–Z rail; a letter lights where its terms are owned. Click a
+ * chapter to filter; the search matches term and definition.
+ */
+import type { AtlasGraph, GlossaryTerm, GraphNode } from '@atlas/core';
+import Inline from '../research/Inline.astro';
+import { compareStrings } from '../../lib/format.ts';
+import { equationRefs, matchers, mentionGraph, proseOf, segment } from '../../lib/term-network.ts';
+
+interface Props {
+  terms: readonly GlossaryTerm[];
+  graph: AtlasGraph;
+}
+
+const { terms: raw, graph } = Astro.props;
+
+const sortKey = (term: GlossaryTerm): string => term.term.normalize('NFKD').replace(/[^\p{L}\p{N} ]/gu, '').toLowerCase();
+const terms = [...raw].sort((a, b) => compareStrings(sortKey(a), sortKey(b)) || compareStrings(a.slug, b.slug));
+const letterOf = (term: GlossaryTerm): string => {
+  const first = sortKey(term).charAt(0).toUpperCase();
+  return /^[A-Z]$/u.test(first) ? first : '#';
+};
+const letterId = (letter: string): string => `letter-${letter === '#' ? 'other' : letter}`;
+const LETTERS = ['#', ...'ABCDEFGHIJKLMNOPQRSTUVWXYZ'];
+const groups = LETTERS.map((letter) => ({ letter, members: terms.filter((term) => letterOf(term) === letter) }));
+
+const outOf = mentionGraph(terms);
+const inOf = new Map<string, string[]>();
+for (const [slug, outs] of outOf) for (const target of outs) inOf.set(target, [...(inOf.get(target) ?? []), slug]);
+const all = matchers(terms);
+const nameOf = new Map(terms.map((term) => [term.slug, term.term]));
+
+const pad = (n: number): string => String(n).padStart(2, '0');
+const owner = (term: GlossaryTerm): GraphNode | undefined => graph.nodes[term.owner];
+const ownerLabel = (term: GlossaryTerm): string => {
+  const node = owner(term);
+  return node?.number === null || node === undefined ? '' : `§${node.number}`;
+};
+const ownerUrl = (term: GlossaryTerm): string => owner(term)?.url ?? term.url.replace(/#.*$/u, '');
+
+interface Section {
+  readonly id: string;
+  readonly label: string;
+  readonly title: string;
+  readonly terms: GlossaryTerm[];
+}
+const chapterKeys = [...new Set(terms.map((term) => term.chapter ?? 0))].sort((a, b) => a - b);
+const chapters = chapterKeys.map((n) => {
+  const node = graph.nodes[`ms.chapter.${String(n)}`];
+  const members = terms.filter((term) => (term.chapter ?? 0) === n);
+  const sections: Section[] = [...new Set(members.map((term) => String(term.owner)))]
+    .map((id) => {
+      const section = graph.nodes[id as keyof typeof graph.nodes];
+      return {
+        id,
+        label: section?.number === null || section === undefined ? '' : `§${section.number}`,
+        title: section?.shortTitle ?? '',
+        terms: members.filter((term) => String(term.owner) === id),
+      };
+    })
+    .sort((a, b) => a.label.localeCompare(b.label, 'en', { numeric: true }));
+  return { n, key: String(n), node, title: node?.shortTitle ?? `Chapter ${pad(n)}`, members, sections };
+});
+const linked = (slug: string): boolean => (outOf.get(slug)?.length ?? 0) > 0 || (inOf.get(slug)?.length ?? 0) > 0;
+const edgeCount = [...outOf.values()].reduce((sum, outs) => sum + outs.length, 0);
+const eqAnchor = (number: string): string => `/equations/#eq-index-${number.replace('.', '-')}`;
+const textOf = (term: GlossaryTerm): string => `${term.term} ${proseOf(term.definition)} ${term.ownerTitle}`.toLowerCase().replace(/\s+/gu, ' ');
+---
+
+<section class="tmx" data-terms-explorer aria-label="Glossary terms, their owners, and the terms they mention">
+  <div class="tmx-top">
+    <div class="tmx-inst">
+      <p class="tmx-head">
+        <span>Owners</span>
+        <span class="tmx-head__note">one row per chapter · one cell per term, grouped by owning section · solid = linked to other terms</span>
+      </p>
+      <div class="tmx-strip" role="group" aria-label="Owning chapters. Arrow keys move; Enter filters the terms to a chapter; Escape clears." data-tmx-strip>
+        {
+          chapters.map((chapter, index) => (
+            <div class="tmx-ch" data-tmx-ch={chapter.key}>
+              <button type="button" class="tmx-ch__btn" data-tmx-chbtn={chapter.key} aria-pressed="false" tabindex={index === 0 ? 0 : -1} title={chapter.node?.title ?? chapter.title}>
+                <span class="tmx-ch__n">{pad(chapter.n)}</span>
+                <span class="tmx-ch__t">{chapter.title}</span>
+              </button>
+              <span class="tmx-ch__cells">
+                {chapter.sections.map((section) => (
+                  <span class="tmx-sec" data-tmx-sec={section.id} data-label={section.label} title={`${section.label} ${section.title}`}>
+                    {section.terms.map((term) => (
+                      <a class:list={['tmx-cell', { 'is-linked': linked(term.slug) }]} href={`#term-${term.slug}`} tabindex="-1" data-tmx-cell={term.slug} aria-label={term.term} />
+                    ))}
+                  </span>
+                ))}
+              </span>
+              <span class="tmx-ch__c" data-tmx-chcount={chapter.members.length}>
+                {chapter.members.length}
+              </span>
+            </div>
+          ))
+        }
+      </div>
+    </div>
+
+    <aside class="tmx-readout" aria-live="polite" data-tmx-readout>
+      <p class="tmx-readout__kicker" data-tmx-kicker>{terms.length} terms · {edgeCount} mentions</p>
+      <p class="tmx-readout__title" data-tmx-title>Defined once, linked everywhere</p>
+      <p class="tmx-readout__meta" data-tmx-meta>Point at a term, a chapter, or a letter: its owner, its definition, the terms it mentions (→) and the terms that mention it (←). Most mentioned:</p>
+      <ol class="tmx-readout__list" data-tmx-list>
+        {
+          [...inOf.entries()]
+            .sort((a, b) => b[1].length - a[1].length)
+            .slice(0, 5)
+            .map(([slug, from]) => (
+              <li class="is-in">
+                <b>← {from.length}</b> {nameOf.get(slug)}
+              </li>
+            ))
+        }
+      </ol>
+    </aside>
+  </div>
+
+  <div class="tmx-filters">
+    <label class="tmx-search">
+      <span class="sh-visually-hidden">Filter terms by name or definition</span>
+      <input type="search" placeholder="Filter by term or definition…" data-tmx-search autocomplete="off" spellcheck="false" />
+    </label>
+    <span class="tmx-pins" data-tmx-pins></span>
+    <button type="button" class="tmx-clear" data-tmx-clear hidden>clear filters</button>
+    <span class="tmx-shown" data-tmx-shown aria-live="polite">{terms.length} of {terms.length}</span>
+  </div>
+
+  <nav class="tmx-az" aria-label="Initial letter" data-tmx-az>
+    <ol role="list">
+      {
+        groups.map(({ letter, members }) =>
+          members.length > 0 ? (
+            <li>
+              <a href={`#${letterId(letter)}`} data-tmx-letter={letter} tabindex={letter === '#' ? 0 : -1}>
+                <b>{letter}</b>
+                <span data-tmx-azn={members.length}>{members.length}</span>
+              </a>
+            </li>
+          ) : (
+            <li>
+              <span class="is-off" aria-disabled="true" data-tmx-letter-off={letter}>
+                <b>{letter}</b>
+                <span>0</span>
+              </span>
+            </li>
+          ),
+        )
+      }
+    </ol>
+  </nav>
+
+  <div class="tmx-list">
+    {
+      groups
+        .filter((group) => group.members.length > 0)
+        .map(({ letter, members }) => (
+          <section class="tmx-group" aria-labelledby={letterId(letter)} data-tmx-group={letter}>
+            <h2 id={letterId(letter)} class="tmx-group__h">
+              {letter}
+              <span class="tmx-group__c">
+                {members.length} term{members.length === 1 ? '' : 's'}
+              </span>
+            </h2>
+            <dl class="tmx-entries">
+              {members.map((term) => {
+                const outs = outOf.get(term.slug) ?? [];
+                const ins = inOf.get(term.slug) ?? [];
+                const eqs = equationRefs(term.definition);
+                return (
+                  <div
+                    class="tmx-entry"
+                    id={`term-${term.slug}`}
+                    data-tmx-entry={term.slug}
+                    data-ch={term.chapter ?? 0}
+                    data-sec={term.owner}
+                    data-letter={letter}
+                    data-out={outs.join(' ')}
+                    data-in={ins.join(' ')}
+                    data-eqs={eqs.join(' ')}
+                    data-text={textOf(term)}
+                  >
+                    <dt class="tmx-entry__head">
+                      <a class="tmx-term" href={term.url}>
+                        {term.term}
+                      </a>
+                      <span class="tmx-entry__tags">
+                        {outs.length + ins.length > 0 && (
+                          <span class="tmx-net" title={`mentions ${String(outs.length)} other term${outs.length === 1 ? '' : 's'} · mentioned by ${String(ins.length)}`}>
+                            {outs.length > 0 && <span class="is-out">→{outs.length}</span>}
+                            {ins.length > 0 && <span class="is-in">←{ins.length}</span>}
+                          </span>
+                        )}
+                        {eqs.slice(0, 2).map((number) => (
+                          <a class="tmx-eq" href={eqAnchor(number)} title={`Equation ${number} in the equation index`}>
+                            Eq {number}
+                          </a>
+                        ))}
+                        <a class="tmx-owner" href={ownerUrl(term)} title={`Owned by ${ownerLabel(term)} ${term.ownerTitle}`}>
+                          <span class="tmx-owner__n">{ownerLabel(term)}</span> {term.ownerTitle}
+                        </a>
+                      </span>
+                    </dt>
+                    <dd class="tmx-defbox">
+                      <p class="tmx-def" data-tmx-def>
+                        {term.definition.map((node) =>
+                          node.kind === 'text' ? (
+                            segment(node.value, all, term.slug).map((part) =>
+                              part.slug === null ? (
+                                part.text
+                              ) : (
+                                <a class="tmx-mention" href={`#term-${part.slug}`} data-tmx-mention={part.slug} title={nameOf.get(part.slug)}>{part.text}</a>
+                              ),
+                            )
+                          ) : (
+                            <Inline nodes={[node]} />
+                          ),
+                        )}
+                      </p>
+                      <button type="button" class="tmx-more" data-tmx-more hidden aria-expanded="false">
+                        more
+                      </button>
+                    </dd>
+                  </div>
+                );
+              })}
+            </dl>
+          </section>
+        ))
+    }
+  </div>
+</section>

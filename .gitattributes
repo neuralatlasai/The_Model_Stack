@@ -1,0 +1,13 @@
+# Normalise text to LF in the repository and in every checkout (the compiler and
+# figure validator parse Markdown/YAML with LF line endings; see atlas/.editorconfig).
+* text=auto eol=lf
+
+*.pdf binary
+*.png binary
+*.jpg binary
+*.jpeg binary
+*.gif binary
+*.webp binary
+*.woff binary
+*.woff2 binary
+*.ico binary

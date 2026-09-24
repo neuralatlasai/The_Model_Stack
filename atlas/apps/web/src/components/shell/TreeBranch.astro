@@ -1,0 +1,96 @@
+---
+/**
+ * One level of the knowledge tree (recursive via Astro.self).
+ *
+ * DOM contract (APG navigation treeview; apps/web/src/client/tree.ts relies on it):
+ *
+ *   <li role="none" class="sh-tree-item" data-entity? data-domain?>
+ *     <div class="sh-tree-row">
+ *       <button data-action="tree-toggle" data-tree-target="{id}"    ← caret (parents only), pointer-only;
+ *               tabindex="-1" aria-hidden="true">                      keyboard uses ←/→ on the treeitem
+ *       <a role="treeitem" data-tree-node="{id}" href aria-level
+ *          aria-expanded? aria-owns="{group id}"? aria-current="page"? tabindex="0|-1">
+ *         <span class="sh-tree-num"> <span class="sh-tree-label">
+ *         <span class="sh-tree-progress" data-progress="{id}">        ← client sets --progress: 0..1
+ *       </a>
+ *     </div>
+ *     <ul role="group" id="{group id}" hidden?> … </ul>
+ *   </li>
+ *
+ * Expansion lives in `aria-expanded` + the group's `hidden`; the current page
+ * in `aria-current`. All emphasis (current node, active branch, domain tick)
+ * is derived in CSS from those attributes, so the persisted tree stays correct
+ * when the client moves them. Weight matters (the tree is in every page):
+ * `data-entity` is emitted for volumes, parts, and chapters only, `data-domain`
+ * only on parts (the accent inherits as --domain-local), and chapters without
+ * a manuscript do not render their planned children unless they are on the
+ * active branch — their plan page lists them.
+ */
+import type { TreeNode } from '@atlas/core';
+import type { TreeState } from '../../lib/nodes.ts';
+import { domIdFor } from '../../lib/urls.ts';
+
+interface Props {
+  readonly nodes: readonly TreeNode[];
+  readonly level: number;
+  readonly state: TreeState;
+  readonly focusId: string | null;
+  /** Entity type per node id (the tree payload does not carry it). */
+  readonly entityOf: (id: string) => string;
+}
+
+const { nodes, level, state, focusId, entityOf } = Astro.props;
+const MARKED_ENTITIES = new Set(['volume', 'part', 'chapter']);
+---
+
+{
+  nodes.map((node) => {
+    const entity = entityOf(node.id);
+    const onActivePath = state.activePath.has(node.id);
+    const renderChildren = node.children.length > 0 && (node.hasManuscript || entity !== 'chapter' || onActivePath);
+    const expanded = renderChildren && state.expanded.has(node.id);
+    const groupId = domIdFor('tg', node.id);
+    return (
+      <li
+        role="none"
+        class:list={['sh-tree-item', { 'sh-tree-item--planned': !node.hasManuscript }]}
+        data-entity={MARKED_ENTITIES.has(entity) ? entity : undefined}
+        data-domain={entity === 'part' ? node.domain : undefined}
+      >
+        <div class="sh-tree-row">
+          {renderChildren && (
+            <button
+              type="button"
+              class="sh-tree-caret"
+              data-action="tree-toggle"
+              data-tree-target={node.id}
+              tabindex="-1"
+              aria-hidden="true"
+            />
+          )}
+          <a
+            role="treeitem"
+            class="sh-tree-link"
+            href={node.url}
+            data-tree-node={node.id}
+            aria-level={level}
+            aria-expanded={renderChildren ? (expanded ? 'true' : 'false') : undefined}
+            aria-owns={renderChildren ? groupId : undefined}
+            aria-current={state.currentId === node.id ? 'page' : undefined}
+            tabindex={node.id === focusId ? '0' : '-1'}
+          >
+            {node.number !== null && <span class="sh-tree-num">{node.number}</span>}
+            <span class="sh-tree-label">{node.shortTitle}</span>
+            {!node.hasManuscript && <span class="sh-visually-hidden"> (planned)</span>}
+            <span class="sh-tree-progress" data-progress={node.id} aria-hidden="true" />
+          </a>
+        </div>
+        {renderChildren && (
+          <ul role="group" id={groupId} class="sh-tree-group" hidden={!expanded}>
+            <Astro.self nodes={node.children} level={level + 1} state={state} focusId={focusId} entityOf={entityOf} />
+          </ul>
+        )}
+      </li>
+    );
+  })
+}

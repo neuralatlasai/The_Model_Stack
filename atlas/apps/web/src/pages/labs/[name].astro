@@ -1,0 +1,66 @@
+---
+/**
+ * Lab object (UI_UX §22): its surfaces exactly as the reference stack lists
+ * them, and what each chapter takes from it (reports, papers, repositories).
+ */
+import type { GetStaticPaths } from 'astro';
+import type { LabId } from '@atlas/core';
+import Breadcrumbs from '../../components/shell/Breadcrumbs.astro';
+import PageHeader from '../../components/shell/PageHeader.astro';
+import StackUses from '../../components/shell/StackUses.astro';
+import ReaderLayout from '../../layouts/ReaderLayout.astro';
+import { getGraph, getRegistry } from '../../lib/atlas.ts';
+
+type Props = { readonly id: LabId };
+
+export const getStaticPaths = (async () => {
+  const registry = await getRegistry();
+  return registry.labs.map((lab) => ({ params: { name: lab.id.slice('lab.'.length) }, props: { id: lab.id } }));
+}) satisfies GetStaticPaths;
+
+const { id } = Astro.props;
+const [registry, graph] = await Promise.all([getRegistry(), getGraph()]);
+const lab = registry.labs.find((entry) => entry.id === id);
+if (lab === undefined) throw new Error(`labs/[name]: ${id} missing from the registry`);
+const identity = ['Lab', lab.rank === null ? null : `reference-stack position ${String(lab.rank)}`]
+  .filter((part): part is string => part !== null)
+  .join(' · ');
+---
+
+<ReaderLayout
+  title={lab.name}
+  description={`${lab.name}: the chapters of The Model Stack that draw on its papers, reports, and code.`}
+  canonicalPath={lab.atlasUrl}
+  currentId={null}
+  navKey="labs"
+>
+  <Breadcrumbs crumbs={[{ title: 'Labs', number: null, url: '/labs/' }]} current={lab.name} />
+  <article class="sh-article">
+    <PageHeader identity={identity} title={lab.name} meta={`Identifier ${lab.id}`}>
+      {
+        lab.surfaces.length > 0 && (
+          <ul class="sh-actions">
+            {lab.surfaces.map((surface) => (
+              <li>
+                <a href={surface.url} rel="external">
+                  {surface.label}
+                </a>
+              </li>
+            ))}
+          </ul>
+        )
+      }
+    </PageHeader>
+
+    <section class="sh-section" aria-labelledby="takes-heading">
+      <h2 id="takes-heading">What chapters take from it</h2>
+      {
+        lab.uses.length === 0 ? (
+          <p class="sh-empty">No chapter's reference-stack coverage table names this lab yet.</p>
+        ) : (
+          <StackUses uses={lab.uses} graph={graph} />
+        )
+      }
+    </section>
+  </article>
+</ReaderLayout>

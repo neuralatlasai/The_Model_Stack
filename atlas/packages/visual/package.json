@@ -1,0 +1,20 @@
+{
+  "name": "@atlas/visual",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Visual grammar of the Research Atlas: diagram primitives, Mermaid-subset parser, ELK layout to Scene, and server-side SVG renderers for every figure kind.",
+  "type": "module",
+  "exports": {
+    ".": "./src/index.ts",
+    "./svg": "./src/svg/index.ts",
+    "./state": "./src/state.ts"
+  },
+  "engines": {
+    "node": ">=24.0.0"
+  },
+  "dependencies": {
+    "@atlas/core": "0.1.0",
+    "elkjs": "0.12.0",
+    "preact": "10.29.8"
+  }
+}

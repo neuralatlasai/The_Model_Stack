@@ -1,0 +1,43 @@
+---
+/**
+ * Timeline (UI_UX §21): every dated lineage entry from every chapter, in
+ * chronological order, marked by relation — conceptual ancestor, engineering
+ * optimization, alternative branch, superseded approach, current frontier —
+ * and linked to the chapter that places it and the cited work. The chronicle
+ * and its live minimap are one component (TimelineExplorer.astro).
+ */
+import PageHeader from '../components/shell/PageHeader.astro';
+import ReaderLayout from '../layouts/ReaderLayout.astro';
+import { getGraph, getRegistry } from '../lib/atlas.ts';
+import { grouped } from '../lib/format.ts';
+import { groupByYear } from '../lib/lineage.ts';
+import TimelineExplorer from '../components/shell/TimelineExplorer.astro';
+import '../styles/explorer.css';
+
+const [registry, graph] = await Promise.all([getRegistry(), getGraph()]);
+const years = groupByYear(registry.lineage);
+const knownCitations = new Set<string>(registry.references.map((record) => record.key));
+---
+
+<ReaderLayout
+  title="Timeline"
+  description="The lineage of the methods and systems in The Model Stack, by year and by relation to the current frontier."
+  canonicalPath="/timeline/"
+  currentId={null}
+  navKey="timeline"
+>
+  <PageHeader
+    identity="Research Atlas / Timeline"
+    title="Timeline"
+    lede="How the book's mechanisms evolved: each entry is dated, typed by its relation to what came before, and owned by the chapter that analyses it."
+    meta={`${grouped(registry.lineage.length)} entries · ${String(years.length)} years`}
+  />
+
+  {
+    registry.lineage.length === 0 ? (
+      <p class="sh-empty">No lineage entries are recorded in this bundle.</p>
+    ) : (
+      <TimelineExplorer entries={registry.lineage} graph={graph} knownCitations={knownCitations} />
+    )
+  }
+</ReaderLayout>

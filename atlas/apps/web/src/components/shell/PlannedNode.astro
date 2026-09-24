@@ -1,0 +1,217 @@
+---
+/**
+ * Page for a node the manifest lists but whose manuscript does not exist yet.
+ * It shows the plan from docs/atlas-manifest.json (book_plan.md): title, part,
+ * artifact, prerequisites, planned sections, and position in the tree — with
+ * an honest status line. No placeholder prose is generated.
+ */
+import type { GraphNode, NodePlan } from '@atlas/core';
+import ReaderLayout from '../../layouts/ReaderLayout.astro';
+import { getGraph } from '../../lib/atlas.ts';
+import { stateLabel } from '../../lib/format.ts';
+import { modeLinks } from '../../lib/modes.ts';
+import { ancestorsOf, childrenOf, enclosing, identityLine, nodeOf, orderNeighbours } from '../../lib/nodes.ts';
+import Breadcrumbs from './Breadcrumbs.astro';
+import ChapterNav from './ChapterNav.astro';
+import ModeTabs from './ModeTabs.astro';
+
+interface Props {
+  readonly node: GraphNode;
+}
+
+const { node } = Astro.props;
+const graph = await getGraph();
+
+const ancestors = ancestorsOf(graph, node.id);
+const chapter = enclosing(graph, node.id, 'chapter');
+const part = enclosing(graph, node.id, 'part');
+const parent = nodeOf(graph, node.parent);
+const plan: NodePlan | null = node.plan ?? chapter?.plan ?? null;
+const partOutcome = part?.plan?.outcome ?? null;
+const siblings = parent === null ? [] : childrenOf(graph, parent);
+const children = childrenOf(graph, node);
+const { prev, next } = orderNeighbours(graph, node.id);
+const chapterNumber = chapter !== null && chapter.number !== null ? Number.parseInt(chapter.number, 10) : null;
+
+const links = modeLinks({
+  graph,
+  url: node.url,
+  chapter: chapterNumber !== null && Number.isFinite(chapterNumber) ? chapterNumber : null,
+  referencesAnchor: null,
+  hasCompare: false,
+});
+
+const crumbs = ancestors.map((ancestor) => ({ title: ancestor.shortTitle, number: ancestor.number, url: ancestor.url }));
+const pageTitle = node.number === null ? node.title : `${node.number} ${node.title}`;
+const planSections = node.entityType === 'chapter' ? (plan?.sections ?? []) : [];
+const toRef = (item: GraphNode | null) => (item === null ? null : { title: item.title, number: item.number, url: item.url });
+/** A grouping node (e.g. `ms.frontmatter`) has no file of its own by design; it is an index, not a planned manuscript. */
+const isGrouping = node.entityType === 'frontmatter' && children.length > 0;
+const hasPlanFacts = part !== null || (chapter !== null && chapter.id !== node.id) || plan !== null;
+const description = isGrouping
+  ? `${pageTitle}: index of The Model Stack listing its contents.`
+  : `${pageTitle}: planned node of The Model Stack. Manuscript in preparation; the page shows the book plan.`;
+---
+
+<ReaderLayout
+  title={pageTitle}
+  description={description}
+  canonicalPath={node.url}
+  currentId={node.id}
+  domain={node.domain}
+  rail={false}
+>
+  <Breadcrumbs crumbs={crumbs} current={node.shortTitle} />
+  <article class="sh-article sh-planned" data-node-id={node.id}>
+    <header class="sh-page-header">
+      <p class="sh-identity">{identityLine(graph, node)}</p>
+      <h1 class="sh-page-title">
+        {node.number !== null && <span class="sh-title-num">{node.number}</span>}
+        {node.title}
+      </h1>
+      {
+        isGrouping ? (
+          <p class="sh-meta-line">Index node: this grouping has no page of its own; its contents are listed below.</p>
+        ) : (
+          <p class="sh-status-line">
+            <span class="sh-status-mark" aria-hidden="true" />
+            Manuscript in preparation. This page shows the book plan for this node; no prose has been written for it
+            in this edition.
+          </p>
+        )
+      }
+    </header>
+    <ModeTabs links={links} current="read" />
+
+    {!isGrouping && (
+    <section class="sh-section" aria-labelledby="plan-heading">
+      <h2 id="plan-heading">Plan</h2>
+      <dl class="sh-kv">
+        {
+          part !== null && (
+            <>
+              <dt>Part</dt>
+              <dd>
+                <a href={part.url}>
+                  {part.number !== null && <span class="sh-num">{part.number}</span>} {part.title}
+                </a>
+              </dd>
+            </>
+          )
+        }
+        {
+          partOutcome !== null && (
+            <>
+              <dt>Part outcome</dt>
+              <dd>{partOutcome}</dd>
+            </>
+          )
+        }
+        {
+          chapter !== null && chapter.id !== node.id && (
+            <>
+              <dt>Chapter</dt>
+              <dd>
+                <a href={chapter.url}>
+                  {chapter.number !== null && <span class="sh-num">{chapter.number}</span>} {chapter.title}
+                </a>
+              </dd>
+            </>
+          )
+        }
+        {
+          plan !== null && plan.artifact !== null && (
+            <>
+              <dt>Artifact</dt>
+              <dd>{plan.artifact}</dd>
+            </>
+          )
+        }
+        {
+          plan !== null && plan.prerequisitesText !== null && (
+            <>
+              <dt>Prerequisites</dt>
+              <dd>{plan.prerequisitesText}</dd>
+            </>
+          )
+        }
+        <dt>State</dt>
+        <dd>{stateLabel(node.state)}{!hasPlanFacts && ' · the plan records no further detail for this node'}</dd>
+      </dl>
+    </section>
+    )}
+
+    {
+      planSections.length > 0 && (
+        <section class="sh-section" aria-labelledby="planned-sections-heading">
+          <h2 id="planned-sections-heading">Planned sections</h2>
+          <ol class="sh-index-list">
+            {planSections.map((section) => {
+              const target = graph.nodes[section.id];
+              return (
+                <li class:list={['sh-index-row', { 'sh-index-row--planned': target?.hasManuscript !== true }]}>
+                  <span class="sh-num">{section.number}</span>
+                  {target !== undefined ? <a href={target.url}>{section.title}</a> : <span>{section.title}</span>}
+                </li>
+              );
+            })}
+          </ol>
+        </section>
+      )
+    }
+
+    <section class="sh-section" aria-labelledby="position-heading">
+      <h2 id="position-heading">Position in the tree</h2>
+      {
+        parent !== null && (
+          <p class="sh-position-parent">
+            Within{' '}
+            <a href={parent.url}>
+              {parent.number !== null && <span class="sh-num">{parent.number}</span>} {parent.title}
+            </a>
+          </p>
+        )
+      }
+      {
+        siblings.length > 0 && (
+          <ol class="sh-index-list">
+            {siblings.map((sibling) => (
+              <li
+                class:list={[
+                  'sh-index-row',
+                  { 'sh-index-row--planned': !sibling.hasManuscript, 'sh-index-row--current': sibling.id === node.id },
+                ]}
+              >
+                <span class="sh-num">{sibling.number ?? ''}</span>
+                {sibling.id === node.id ? (
+                  <span aria-current="page">{sibling.title}</span>
+                ) : (
+                  <a href={sibling.url}>{sibling.title}</a>
+                )}
+              </li>
+            ))}
+          </ol>
+        )
+      }
+      {
+        children.length > 0 && planSections.length === 0 && (
+          <>
+            <h3>Contains</h3>
+            <ol class="sh-index-list">
+              {children.map((child) => (
+                <li class:list={['sh-index-row', { 'sh-index-row--planned': !child.hasManuscript }]}>
+                  <span class="sh-num">{child.number ?? ''}</span>
+                  <a href={child.url}>{child.title}</a>
+                </li>
+              ))}
+            </ol>
+          </>
+        )
+      }
+    </section>
+
+    <footer class="sh-article-end">
+      <ChapterNav prev={toRef(prev)} next={toRef(next)} />
+    </footer>
+  </article>
+</ReaderLayout>

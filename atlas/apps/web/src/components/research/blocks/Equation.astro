@@ -1,0 +1,74 @@
+---
+/**
+ * Display equation as a research object (UI_UX §16).
+ *
+ *   (5.4) │            Q = n W_Q, …                         ¶ · TeX · inspect · ▸ run
+ *         │ L   layers        S   tokens per sequence       H_kv  KV heads …
+ *
+ * - The number hangs at the left in the domain accent and is the anchor link.
+ * - The math is centred between hairlines; long equations scroll inside the frame.
+ * - Tools appear on hover/focus: copy link, copy TeX, inspect variables in the
+ *   rail, and — when a rail calculator executes this equation — "run", which
+ *   jumps to that instrument (the equation and its executable form are linked).
+ * - The `where …` clause is a variable legend laid out as a grid (symbol in
+ *   serif italic, meaning in sans); rows carry `data-eq-var` so hovering a
+ *   symbol lights it in the equation and in the rail inspector.
+ */
+import type { EquationBlock } from '@atlas/core';
+import { inlineToText } from '@atlas/core';
+import Inline from '../Inline.astro';
+import { actionAttrs, depthAttrs, equationAttrs, eqVarAttrs, inspectEquationAttrs } from '../lib/dom.ts';
+
+interface Props {
+  block: EquationBlock;
+}
+
+const { block } = Astro.props;
+const number = block.number;
+const label = number === null ? 'Display equation' : `Equation ${number}`;
+const numberAttrs = number === null ? {} : equationAttrs(number);
+const note = block.variables.length === 0 && block.note !== null && block.note.length > 0 ? block.note : null;
+const noteHasWhere = note !== null && /^\s*where\b/iu.test(inlineToText(note));
+const runAnchor = number === null ? null : (Astro.locals.equationRunners?.get(number) ?? null);
+---
+
+<div class:list={['rb-eq', { 'rb-eq--numbered': number !== null }]} id={block.anchor ?? undefined} {...numberAttrs} {...depthAttrs(block.depth)}>
+  <div class="rb-eq__frame">
+    {
+      number !== null && (
+        <p class="rb-eq__label">
+          {block.anchor !== null ? (
+            <a class="rb-eq__num" href={`#${block.anchor}`} {...actionAttrs('copy-link')} title={`Copy a link to Eq. ${number}`}>
+              <span class="rb-vh">Equation </span>({number})
+            </a>
+          ) : (
+            <span class="rb-eq__num">({number})</span>
+          )}
+        </p>
+      )
+    }
+    <div class="rb-eq__math" tabindex="0" role="group" aria-label={label} set:html={block.html} />
+    <p class="rb-eq__tools">
+      <button type="button" class="rb-tool" data-action="copy-tex" data-tex={block.tex} title="Copy the TeX source">TeX</button>
+      {number !== null && block.variables.length > 0 && (
+        <button type="button" class="rb-tool" {...inspectEquationAttrs(number)} title="Pin the variables in the context rail">inspect</button>
+      )}
+      {runAnchor !== null && (
+        <a class="rb-tool rb-tool--run" href={`#${runAnchor}`} title="Open the executable instrument for this equation">▸ run</a>
+      )}
+    </p>
+  </div>
+  {
+    block.variables.length > 0 && (
+      <dl class="rb-eq__legend" aria-label={`Variables of ${label}`}>
+        {block.variables.map((variable) => (
+          <div class="rb-eq__var" {...eqVarAttrs(variable.symbol)}>
+            <dt>{variable.symbol}</dt>
+            <dd>{variable.meaning}</dd>
+          </div>
+        ))}
+      </dl>
+    )
+  }
+  {note !== null && <p class="rb-eq__note">{!noteHasWhere && <Fragment>where </Fragment>}<Inline nodes={note} /></p>}
+</div>

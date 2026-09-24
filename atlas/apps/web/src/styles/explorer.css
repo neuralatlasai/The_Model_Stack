@@ -1,0 +1,1347 @@
+/*
+ * Stack Explorer (home): the book as one dependency map. Colours are tokens:
+ * "builds on" = architecture ink blue, "unlocks" = oxblood accent, routes =
+ * inference green. Motion is state transition only (≤ 300 ms, UI_UX §58),
+ * disabled under reduced motion by the token layer.
+ */
+
+.sx {
+  --sx-up: var(--domain-architecture);
+  --sx-down: var(--accent);
+  --sx-route: var(--domain-inference);
+  margin: 1.25rem 0 var(--gap-section);
+}
+
+.sx-head {
+  display: grid;
+  gap: 0.35rem;
+  max-width: 62rem;
+  margin-bottom: 1rem;
+}
+
+.sx-title {
+  margin: 0;
+  font-size: var(--fs-h2);
+}
+
+.sx-lede {
+  margin: 0;
+  max-width: 44rem;
+  font-size: 17.5px;
+  line-height: 1.5;
+  color: var(--ink-2);
+}
+
+.sx-body {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 320px;
+  gap: 1.5rem;
+  align-items: start;
+  padding-block: 0.75rem;
+  border-block: 1.5px solid var(--ink);
+}
+
+@media (max-width: 1099.98px) {
+  .sx-body {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+
+.sx-map {
+  min-width: 0;
+  overflow-x: auto;
+  position: relative;
+}
+
+.sx-svg {
+  display: block;
+  width: 100%;
+  min-width: 640px;
+  height: auto;
+  overflow: visible;
+}
+
+.sx-volume__band {
+  fill: none;
+}
+
+.sx-volume__label,
+.sx-volume__label a {
+  font: 600 10.5px var(--font-mono);
+  letter-spacing: 0.1em;
+  fill: var(--ink-3);
+}
+
+.sx-volume__label a:hover {
+  fill: var(--accent);
+}
+
+.sx-lane {
+  --domain: var(--domain-local, var(--accent));
+}
+
+.sx-lane__rule {
+  stroke: var(--rule);
+  stroke-width: 1;
+}
+
+.sx-lane__num {
+  font: 600 11px var(--font-mono);
+  fill: var(--domain);
+}
+
+.sx-lane__title {
+  font: 12.5px var(--font-sans);
+  fill: var(--ink-2);
+}
+
+.sx-lane__link:hover .sx-lane__title,
+.sx-lane__link:focus-visible .sx-lane__title {
+  fill: var(--accent);
+}
+
+.sx a,
+.sx-svg a {
+  text-decoration: none;
+}
+
+.sx-edge {
+  fill: none;
+  stroke: var(--ink-3);
+  stroke-width: 0.8;
+  opacity: 0.065;
+  transition:
+    opacity var(--t-graph) ease,
+    stroke var(--t-graph) ease,
+    stroke-width var(--t-graph) ease;
+}
+
+.sx-svg.has-focus .sx-edge,
+.sx-svg.has-route .sx-edge {
+  opacity: 0.025;
+}
+
+.sx-svg.has-focus .sx-edge.is-up {
+  stroke: var(--sx-up);
+  opacity: 0.42;
+}
+
+.sx-svg.has-focus .sx-edge.is-down {
+  stroke: var(--sx-down);
+  opacity: 0.42;
+}
+
+.sx-svg.has-focus .sx-edge.is-direct {
+  opacity: 0.95;
+  stroke-width: 1.6;
+}
+
+.sx-node {
+  cursor: pointer;
+  outline: none;
+  transition: opacity var(--t-graph) ease;
+}
+
+.sx-node__hit {
+  fill: transparent;
+}
+
+.sx-node__dot {
+  fill: var(--paper);
+  stroke: var(--ink-3);
+  stroke-width: 1.2;
+  transform-box: fill-box;
+  transform-origin: center;
+  transition:
+    transform var(--t-state) ease,
+    stroke var(--t-state) ease,
+    fill var(--t-state) ease;
+}
+
+.sx-node--written .sx-node__dot {
+  fill: var(--accent);
+  stroke: var(--accent);
+}
+
+.sx-node__num {
+  font: 600 9.5px var(--font-mono);
+  text-anchor: middle;
+  fill: var(--ink-2);
+  pointer-events: none;
+}
+
+.sx-node--written .sx-node__num {
+  fill: var(--paper);
+}
+
+.sx-node__label {
+  font: 9.5px var(--font-sans);
+  text-anchor: middle;
+  fill: var(--ink-3);
+  pointer-events: none;
+  transition: fill var(--t-state) ease;
+}
+
+.sx-node:hover .sx-node__dot,
+.sx-node:focus-visible .sx-node__dot,
+.sx-node.is-focus .sx-node__dot {
+  transform: scale(1.3);
+  stroke: var(--ink);
+  stroke-width: 2;
+}
+
+.sx-node:focus-visible .sx-node__hit {
+  stroke: var(--focus);
+  stroke-width: 1.5;
+}
+
+.sx-svg.has-focus .sx-node:not(.is-focus, .is-up, .is-down),
+.sx-svg.has-route .sx-node:not(.is-route) {
+  opacity: 0.24;
+}
+
+.sx-node.is-up .sx-node__dot {
+  stroke: var(--sx-up);
+  stroke-width: 2.2;
+}
+
+.sx-node.is-down .sx-node__dot {
+  stroke: var(--sx-down);
+  stroke-width: 2.2;
+}
+
+.sx-node.is-direct .sx-node__label,
+.sx-node.is-focus .sx-node__label,
+.sx-node.is-route .sx-node__label {
+  fill: var(--ink);
+}
+
+.sx-node.is-route .sx-node__dot {
+  stroke: var(--sx-route);
+  stroke-width: 2.2;
+}
+
+.sx-node.is-peek .sx-node__dot {
+  transform: scale(1.45);
+  stroke: var(--ink);
+}
+
+.sx-route__path {
+  fill: none;
+  stroke: var(--sx-route);
+  stroke-width: 2;
+  stroke-linejoin: round;
+  opacity: 0.85;
+}
+
+.sx-badge circle {
+  fill: var(--sx-route);
+}
+
+.sx-badge text {
+  font: 600 8px var(--font-mono);
+  text-anchor: middle;
+  fill: var(--paper);
+}
+
+/* Readout: the explorer's instrument panel. */
+.sx-panel {
+  display: grid;
+  gap: 1rem;
+  min-width: 0;
+}
+
+.sx-readout {
+  padding: 0.85rem 1rem 0.9rem;
+  border: 1px solid var(--rule-strong);
+  background: var(--paper-raised);
+  font-family: var(--font-mono);
+  font-size: 12px;
+}
+
+.sx-readout__kicker {
+  margin: 0 0 0.45rem;
+  padding-bottom: 0.45rem;
+  border-bottom: 1px solid var(--rule);
+  font-size: 10.5px;
+  font-weight: 600;
+  letter-spacing: 0.1em;
+  color: var(--ink-2);
+}
+
+.sx-readout__title {
+  margin: 0;
+  font: 500 20px/1.25 var(--font-serif);
+  color: var(--ink);
+}
+
+.sx-readout__summary {
+  min-height: 4.2em;
+  margin: 0.35rem 0 0.6rem;
+  font: 15px/1.45 var(--font-serif);
+  color: var(--ink-2);
+}
+
+.sx-readout__rows {
+  margin: 0;
+}
+
+.sx-readout__rows > div {
+  display: flex;
+  align-items: baseline;
+  gap: 0.5rem;
+  padding: 0.12rem 0;
+}
+
+.sx-readout__rows dt {
+  display: flex;
+  flex: 1;
+  gap: 0.5rem;
+  color: var(--ink-3);
+}
+
+.sx-readout__rows dt::after {
+  content: '';
+  flex: 1;
+  min-width: 1rem;
+  border-bottom: 1px dotted var(--rule-strong);
+  transform: translateY(-0.28em);
+}
+
+.sx-readout__rows dd {
+  margin: 0;
+  color: var(--ink);
+}
+
+.sx-readout__links {
+  display: grid;
+  gap: 0.35rem;
+  margin: 0.6rem 0 0;
+}
+
+.sx-links__group {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 0.25rem;
+}
+
+.sx-links__label {
+  min-width: 5.5rem;
+  font-size: 10.5px;
+  letter-spacing: 0.06em;
+  color: var(--ink-3);
+}
+
+.sx-links__group a {
+  display: inline-block;
+  min-width: 24px;
+  padding: 0.05rem 0.25rem;
+  border: 1px solid var(--rule-strong);
+  font-size: 11px;
+  text-align: center;
+  text-decoration: none;
+  color: var(--ink-2);
+}
+
+.sx-links__group a.is-written {
+  border-color: var(--accent);
+  color: var(--accent);
+}
+
+.sx-links__group a:hover,
+.sx-links__group a:focus-visible {
+  background: var(--accent-wash);
+  color: var(--accent);
+}
+
+.sx-readout__legend {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.2rem 0.8rem;
+  align-items: center;
+  margin: 0.7rem 0 0;
+  font-size: 10.5px;
+  color: var(--ink-3);
+}
+
+.sx-key {
+  display: inline-block;
+  width: 16px;
+  height: 0;
+  margin-right: 0.3rem;
+  border-top: 2px solid;
+  vertical-align: middle;
+}
+
+.sx-key--up {
+  border-color: var(--sx-up);
+}
+
+.sx-key--down {
+  border-color: var(--sx-down);
+}
+
+.sx-key--route {
+  border-color: var(--sx-route);
+}
+
+.sx-routes__head {
+  margin: 0 0 0.35rem;
+  font: 600 10.5px var(--font-mono);
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--ink-3);
+}
+
+.sx-routes__list {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  border-top: 1px solid var(--rule);
+}
+
+.sx-route-btn {
+  display: flex;
+  justify-content: space-between;
+  gap: 0.5rem;
+  width: 100%;
+  min-height: 32px;
+  padding: 0.35rem 0.4rem 0.35rem 0.6rem;
+  border: 0;
+  border-bottom: 1px solid var(--rule);
+  border-left: 2px solid transparent;
+  background: none;
+  text-align: start;
+  font: 13px/1.3 var(--font-sans);
+  color: var(--ink-2);
+  transition:
+    border-color var(--t-hover) ease,
+    color var(--t-hover) ease,
+    background-color var(--t-hover) ease;
+}
+
+.sx-route-btn:hover,
+.sx-route-btn:focus-visible,
+.sx-route-btn[aria-pressed='true'] {
+  border-left-color: var(--sx-route);
+  background: var(--paper-raised);
+  color: var(--ink);
+}
+
+.sx-route-btn[aria-pressed='true'] .sx-route-btn__label {
+  font-weight: 600;
+}
+
+.sx-route-btn__count {
+  flex: none;
+  font: 11px var(--font-mono);
+  color: var(--ink-3);
+}
+
+/* Lineage strip under the map: a dot plot of every dated lineage entry. */
+.sx-timeline {
+  --sx-anc: var(--ink-3);
+  --sx-opt: var(--domain-hardware);
+  --sx-alt: var(--ev-inference);
+  --sx-sup: var(--rule-strong);
+  --sx-fro: var(--accent);
+  margin-top: 1rem;
+  padding-top: 0.75rem;
+  border-top: 1px solid var(--rule);
+}
+
+.sx-timeline__head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 0.4rem 1.25rem;
+  margin-bottom: 0.35rem;
+}
+
+.sx-timeline__title {
+  margin: 0;
+  font: 600 10.5px var(--font-mono);
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--ink-2);
+}
+
+.sx-timeline__count {
+  margin-inline-start: 0.6rem;
+  font-weight: 400;
+  letter-spacing: 0.02em;
+  text-transform: none;
+  color: var(--ink-3);
+}
+
+.sx-timeline__chips {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.15rem 0.35rem;
+}
+
+.sx-tl-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  min-block-size: 26px;
+  padding: 0 0.5rem;
+  background: none;
+  border: 1px solid transparent;
+  border-radius: 2px;
+  font: 11.5px var(--font-sans);
+  color: var(--ink-2);
+  cursor: pointer;
+}
+
+.sx-tl-chip:hover,
+.sx-tl-chip:focus-visible {
+  border-color: var(--rule-strong);
+  color: var(--ink);
+}
+
+.sx-tl-chip[aria-pressed='true'] {
+  border-color: var(--ink-2);
+  color: var(--ink);
+}
+
+.sx-tl-chip__dot {
+  inline-size: 7px;
+  block-size: 7px;
+  border-radius: 50%;
+  background: var(--sx-rel);
+}
+
+.sx-tl-chip__n {
+  font: 10.5px var(--font-mono);
+  color: var(--ink-3);
+}
+
+.sx-timeline__all {
+  margin-inline-start: 0.4rem;
+  font: 11.5px var(--font-sans);
+  color: var(--accent);
+  text-decoration: none;
+}
+
+.sx-timeline__all:hover {
+  text-decoration: underline;
+}
+
+.sx-timeline__svg {
+  display: block;
+  width: 100%;
+  height: auto;
+  overflow: visible;
+}
+
+.sx-timeline__col {
+  fill: transparent;
+}
+
+.sx-timeline__years a:hover .sx-timeline__col {
+  fill: color-mix(in oklab, var(--ink) 4%, transparent);
+}
+
+.sx-timeline__guide {
+  stroke: var(--ink-3);
+  stroke-width: 1;
+  stroke-dasharray: 2 3;
+  opacity: 0;
+  pointer-events: none;
+}
+
+.sx-timeline__guide.is-on {
+  opacity: 1;
+}
+
+.sx-timeline__axis {
+  stroke: var(--ink-2);
+  stroke-width: 1;
+}
+
+.sx-timeline__break {
+  fill: none;
+  stroke: var(--ink-3);
+  stroke-width: 1;
+}
+
+.sx-timeline__tick {
+  font: 10.5px var(--font-mono);
+  text-anchor: middle;
+  fill: var(--ink-3);
+  pointer-events: none;
+}
+
+/* Relation colours: one custom property per relation, used by dots, chips, and readout tags. */
+.sx-tl--anc { --sx-rel: var(--sx-anc); }
+.sx-tl--opt { --sx-rel: var(--sx-opt); }
+.sx-tl--alt { --sx-rel: var(--sx-alt); }
+.sx-tl--sup { --sx-rel: var(--sx-sup); }
+.sx-tl--fro { --sx-rel: var(--sx-fro); }
+
+.sx-tl {
+  cursor: pointer;
+  outline: none;
+}
+
+.sx-tl__hit {
+  fill: transparent;
+}
+
+.sx-tl__dot {
+  fill: var(--sx-rel);
+  transition:
+    opacity var(--t-state) ease,
+    r var(--t-state) ease;
+}
+
+/* Dimming: a focused chapter keeps its thread; a year keeps its column; a relation keeps its dots. */
+.sx.has-focus .sx-tl:not(.is-lit) .sx-tl__dot,
+.sx.has-route .sx-tl .sx-tl__dot,
+.sx-timeline__svg.has-year .sx-tl:not(.is-year) .sx-tl__dot,
+.sx-timeline__svg.has-rel[data-rel='anc'] .sx-tl:not(.sx-tl--anc) .sx-tl__dot,
+.sx-timeline__svg.has-rel[data-rel='opt'] .sx-tl:not(.sx-tl--opt) .sx-tl__dot,
+.sx-timeline__svg.has-rel[data-rel='alt'] .sx-tl:not(.sx-tl--alt) .sx-tl__dot,
+.sx-timeline__svg.has-rel[data-rel='sup'] .sx-tl:not(.sx-tl--sup) .sx-tl__dot,
+.sx-timeline__svg.has-rel[data-rel='fro'] .sx-tl:not(.sx-tl--fro) .sx-tl__dot {
+  opacity: 0.16;
+}
+
+.sx-tl.is-lit .sx-tl__dot {
+  r: 3.9;
+}
+
+.sx-tl.is-focus .sx-tl__dot,
+.sx-tl:focus-visible .sx-tl__dot {
+  r: 5.4;
+  stroke: var(--ink);
+  stroke-width: 1.2;
+  opacity: 1;
+}
+
+.sx-timeline__readout {
+  min-block-size: 2.7em;
+  margin: 0.15rem 0 0;
+  font: 12.5px/1.45 var(--font-sans);
+  color: var(--ink-2);
+}
+
+.sx-timeline__hint {
+  color: var(--ink-3);
+}
+
+.sx-timeline__readout b {
+  font-weight: 600;
+  color: var(--ink);
+}
+
+.sx-timeline__work {
+  font-family: var(--font-serif);
+  font-size: 14px;
+}
+
+.sx-timeline__readout a {
+  color: var(--accent);
+}
+
+.sx-timeline__rel {
+  font: 11px var(--font-mono);
+  color: var(--ink-2);
+}
+
+.sx-timeline__rel::before {
+  content: '';
+  display: inline-block;
+  inline-size: 7px;
+  block-size: 7px;
+  margin-inline-end: 0.3rem;
+  border-radius: 50%;
+  background: var(--sx-rel);
+  vertical-align: 0.05em;
+}
+
+
+/* ── Timeline: chronicle + live minimap (TimelineExplorer.astro) ──────────── */
+
+.tlx {
+  --tlx-anc: var(--ink-3);
+  --tlx-opt: var(--domain-hardware);
+  --tlx-alt: var(--ev-inference);
+  --tlx-sup: var(--rule-strong);
+  --tlx-fro: var(--accent);
+  margin-top: 1.25rem;
+}
+
+.tlx--anc { --tlx-rel: var(--tlx-anc); }
+.tlx--opt { --tlx-rel: var(--tlx-opt); }
+.tlx--alt { --tlx-rel: var(--tlx-alt); }
+.tlx--sup { --tlx-rel: var(--tlx-sup); }
+.tlx--fro { --tlx-rel: var(--tlx-fro); }
+
+/* Filters: relations and chapter threads, shared by chronicle and minimap. */
+.tlx-filters {
+  display: grid;
+  gap: 0.35rem;
+  padding-block: 0.7rem;
+  border-block: 1.5px solid var(--ink);
+}
+
+.tlx-filters__row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.2rem 0.3rem;
+}
+
+.tlx-filters__label {
+  min-inline-size: 5.5rem;
+  font: 600 10.5px var(--font-mono);
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--ink-3);
+}
+
+.tlx-chip,
+.tlx-thread {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  min-block-size: 28px;
+  padding: 0 0.55rem;
+  background: none;
+  border: 1px solid var(--rule);
+  border-radius: 2px;
+  font: 12px var(--font-sans);
+  color: var(--ink-2);
+  cursor: pointer;
+  transition:
+    border-color var(--t-hover) ease,
+    color var(--t-hover) ease,
+    opacity var(--t-hover) ease;
+}
+
+.tlx-chip:hover,
+.tlx-thread:hover,
+.tlx-chip:focus-visible,
+.tlx-thread:focus-visible {
+  border-color: var(--ink-2);
+  color: var(--ink);
+}
+
+.tlx-chip[aria-pressed='false'] {
+  opacity: 0.45;
+  text-decoration: line-through;
+  text-decoration-color: var(--ink-3);
+}
+
+.tlx-thread[aria-pressed='true'] {
+  border-color: var(--ink);
+  background: var(--accent-wash);
+  color: var(--ink);
+}
+
+.tlx-chip__glyph {
+  color: var(--tlx-rel);
+  font-size: 12px;
+}
+
+.tlx-chip__count {
+  font: 10.5px var(--font-mono);
+  color: var(--ink-3);
+}
+
+.tlx-thread__n {
+  font: 600 11px var(--font-mono);
+  color: var(--accent);
+}
+
+/* Two columns: the chronicle scrolls, the minimap stays. */
+.tlx-body {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 360px;
+  gap: 2.5rem;
+  align-items: start;
+}
+
+/* Chronicle */
+.tlc-year {
+  display: grid;
+  grid-template-columns: 4.5rem minmax(0, 1fr);
+  column-gap: 1rem;
+  padding-block: 0.6rem 0.4rem;
+  border-block-end: 1px solid var(--rule);
+  scroll-margin-top: calc(var(--sh-topbar-h, 52px) + 12px);
+}
+
+.tlc-year__label {
+  position: sticky;
+  top: calc(var(--sh-topbar-h, 52px) + 12px);
+  align-self: start;
+  margin: 0;
+  padding-block-start: 0.2rem;
+  font: 500 22px/1.1 var(--font-serif);
+  color: var(--ink);
+}
+
+.tlc-year__n {
+  display: block;
+  margin-top: 0.2rem;
+  font: 10.5px var(--font-mono);
+  color: var(--ink-3);
+}
+
+.tlc-entries {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.tlc-entry {
+  display: grid;
+  grid-template-columns: 1.1rem minmax(0, 1fr) auto;
+  column-gap: 0.5rem;
+  row-gap: 0.1rem;
+  padding: 0.45rem 0.5rem 0.5rem 0.35rem;
+  border-inline-start: 2px solid transparent;
+  scroll-margin-top: calc(var(--sh-topbar-h, 52px) + 80px);
+  transition:
+    background-color var(--t-hover) ease,
+    border-color var(--t-hover) ease,
+    opacity var(--t-state) ease;
+}
+
+.tlc-entry + .tlc-entry {
+  border-block-start: 1px dotted var(--rule);
+}
+
+.tlc-glyph {
+  grid-row: 1 / span 2;
+  padding-top: 0.2rem;
+  color: var(--tlx-rel);
+  font-size: 12px;
+}
+
+.tlc-work {
+  margin: 0;
+  font: 16.5px/1.35 var(--font-serif);
+  color: var(--ink);
+}
+
+.tlc-work a {
+  color: var(--ink);
+  text-decoration-color: var(--rule-strong);
+  text-underline-offset: 0.18em;
+}
+
+.tlc-work a:hover {
+  color: var(--accent);
+  text-decoration-color: currentColor;
+}
+
+.tlc-key {
+  margin-inline-start: 0.4rem;
+  font: 10.5px var(--font-mono);
+  color: var(--ink-3);
+}
+
+.tlc-owner {
+  grid-row: 1;
+  grid-column: 3;
+  align-self: start;
+  display: inline-flex;
+  gap: 0.3rem;
+  max-inline-size: 13rem;
+  padding: 0.1rem 0.4rem;
+  border: 1px solid var(--rule);
+  font: 11.5px/1.35 var(--font-sans);
+  color: var(--ink-2);
+  text-decoration: none;
+  white-space: nowrap;
+}
+
+.tlc-owner__n {
+  font: 600 11px/1.45 var(--font-mono);
+  color: var(--accent);
+}
+
+.tlc-owner__t {
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.tlc-owner:hover,
+.tlc-owner:focus-visible {
+  border-color: var(--accent);
+  color: var(--ink);
+}
+
+.tlc-meta {
+  grid-column: 2 / span 2;
+  margin: 0;
+  font: 12.5px/1.45 var(--font-sans);
+  color: var(--ink-3);
+}
+
+.tlc-rel {
+  font: 11px var(--font-mono);
+  color: var(--ink-2);
+}
+
+.tlc-note {
+  color: var(--ink-2);
+}
+
+/* Connected states */
+.tlx.has-thread .tlc-entry:not(.is-thread) {
+  opacity: 0.32;
+}
+
+.tlc-entry.is-thread {
+  border-inline-start-color: var(--rule-strong);
+}
+
+.tlc-entry.is-focus,
+.tlc-entry.is-current {
+  border-inline-start-color: var(--tlx-rel);
+  background: color-mix(in oklab, var(--accent-wash) 40%, transparent);
+}
+
+.tlc-entry.is-flash {
+  animation: tlc-flash 1.2s ease-out;
+}
+
+@keyframes tlc-flash {
+  from {
+    background: var(--accent-wash);
+  }
+}
+
+.tlc-entry[hidden],
+.tlc-year[hidden] {
+  display: none;
+}
+
+/* Minimap: the aside spans the whole chronicle so its content can stick. */
+.tlm {
+  align-self: stretch;
+}
+
+.tlm__sticky {
+  position: sticky;
+  top: calc(var(--sh-topbar-h, 52px) + 12px);
+  display: grid;
+  gap: 0.6rem;
+  max-block-size: calc(100vh - var(--sh-topbar-h, 52px) - 24px);
+}
+
+.tlm__head {
+  display: flex;
+  justify-content: space-between;
+  margin: 0;
+  font: 600 10.5px var(--font-mono);
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--ink-2);
+}
+
+.tlm__range {
+  font-weight: 400;
+  color: var(--ink-3);
+}
+
+.tlm__svg {
+  display: block;
+  inline-size: 100%;
+  block-size: auto;
+  max-block-size: calc(100vh - var(--sh-topbar-h, 52px) - 250px);
+  min-block-size: 0;
+}
+
+.tlm__lane-rule {
+  stroke: var(--rule);
+  stroke-width: 1;
+  stroke-dasharray: 1 3;
+}
+
+.tlm__lane-label {
+  font: 9.5px var(--font-mono);
+  fill: var(--ink-2);
+}
+
+.tlm__lane .tlm__lane-rule:first-child {
+  stroke: var(--rule);
+}
+
+.tlm__band {
+  fill: transparent;
+}
+
+.tlm__years a:hover .tlm__band {
+  fill: color-mix(in oklab, var(--ink) 5%, transparent);
+}
+
+.tlm__axis {
+  stroke: var(--ink-2);
+  stroke-width: 1;
+}
+
+.tlm__break {
+  fill: none;
+  stroke: var(--ink-3);
+}
+
+.tlm__tick {
+  font: 10px var(--font-mono);
+  text-anchor: end;
+  dominant-baseline: middle;
+  fill: var(--ink-3);
+  pointer-events: none;
+}
+
+.tlm__view {
+  fill: color-mix(in oklab, var(--accent) 5%, transparent);
+  stroke: color-mix(in oklab, var(--accent) 40%, transparent);
+  stroke-width: 1;
+  pointer-events: none;
+  transition:
+    y 180ms ease,
+    height 180ms ease;
+}
+
+.tlm__cursor {
+  stroke: var(--accent);
+  stroke-width: 1;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity var(--t-state) ease;
+}
+
+.tlm__cursor.is-on {
+  opacity: 0.8;
+}
+
+.tlm__mark {
+  cursor: pointer;
+  outline: none;
+}
+
+.tlm__hit {
+  fill: transparent;
+}
+
+.tlm__dot {
+  fill: var(--tlx-rel);
+  transition:
+    opacity var(--t-state) ease,
+    r var(--t-state) ease;
+}
+
+.tlm__mark.is-read .tlm__dot {
+  opacity: 1;
+}
+
+.tlm__svg.has-progress .tlm__mark:not(.is-read) .tlm__dot {
+  opacity: 0.4;
+}
+
+.tlx.has-thread .tlm__mark:not(.is-thread) .tlm__dot,
+.tlm__mark.is-filtered .tlm__dot {
+  opacity: 0.1;
+}
+
+.tlm__mark.is-thread .tlm__dot {
+  opacity: 1;
+}
+
+.tlm__mark.is-current .tlm__dot,
+.tlm__mark.is-focus .tlm__dot,
+.tlm__mark:focus-visible .tlm__dot {
+  r: 5;
+  stroke: var(--ink);
+  stroke-width: 1.3;
+  opacity: 1;
+}
+
+/* Fixed-geometry readout: never changes size between states. */
+.tlm__readout {
+  padding: 0.6rem 0.75rem;
+  border: 1px solid var(--rule-strong);
+  background: var(--paper-raised);
+}
+
+.tlm__readout-kicker {
+  margin: 0;
+  overflow: hidden;
+  font: 600 10.5px/1.4 var(--font-mono);
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+  color: var(--ink-2);
+}
+
+.tlm__readout-title {
+  display: -webkit-box;
+  block-size: 2.6em;
+  margin: 0.2rem 0 0.15rem;
+  overflow: hidden;
+  font: 500 15.5px/1.3 var(--font-serif);
+  color: var(--ink);
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+  line-clamp: 2;
+}
+
+.tlm__readout-meta {
+  display: -webkit-box;
+  block-size: 2.9em;
+  margin: 0;
+  overflow: hidden;
+  font: 12px/1.45 var(--font-sans);
+  color: var(--ink-3);
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+  line-clamp: 2;
+}
+
+.tlm__readout-meta a {
+  color: var(--accent);
+}
+
+.tlm__tally-head {
+  display: flex;
+  justify-content: space-between;
+  margin: 0 0 0.3rem;
+  font: 10.5px var(--font-mono);
+  color: var(--ink-3);
+}
+
+.tlm__bar {
+  display: flex;
+  block-size: 6px;
+  background: var(--rule);
+}
+
+.tlm__seg {
+  flex-basis: 0;
+  background: var(--tlx-rel);
+  transition: flex-grow 240ms ease;
+}
+
+.tlm__legend {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: 0;
+  margin: 0.45rem 0 0;
+  padding: 0;
+  list-style: none;
+  font: 11px/1.5 var(--font-mono);
+  color: var(--ink-3);
+}
+
+.tlm__legend li {
+  display: flex;
+  align-items: center;
+  gap: 0.3rem;
+}
+
+.tlm__legend-dot {
+  inline-size: 7px;
+  block-size: 7px;
+  border-radius: 50%;
+  background: var(--tlx-rel);
+}
+
+.tlm__legend-name {
+  display: flex;
+  flex: 1;
+  gap: 0.4rem;
+  overflow: hidden;
+  white-space: nowrap;
+}
+
+.tlm__legend-name::after {
+  content: '';
+  flex: 1;
+  border-bottom: 1px dotted var(--rule-strong);
+  transform: translateY(-0.3em);
+}
+
+.tlm__legend-n {
+  color: var(--ink);
+}
+
+@media (max-width: 1099.98px) {
+  .tlx-body {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .tlm {
+    order: -1;
+  }
+
+  .tlm__sticky {
+    position: static;
+    max-block-size: none;
+  }
+
+  .tlm__svg {
+    max-block-size: 420px;
+  }
+}
+
+@media (max-width: 640px) {
+  .tlc-year {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .tlc-year__label {
+    position: static;
+    display: flex;
+    gap: 0.6rem;
+    align-items: baseline;
+  }
+
+  .tlc-year__n {
+    display: inline;
+  }
+
+  .tlc-entry {
+    grid-template-columns: 1.1rem minmax(0, 1fr);
+  }
+
+  .tlc-owner {
+    grid-row: auto;
+    grid-column: 2;
+    justify-self: start;
+  }
+
+  .tlc-meta {
+    grid-column: 2;
+  }
+
+  .tlx-filters__label {
+    min-inline-size: 100%;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .tlm__view,
+  .tlm__seg,
+  .tlc-entry {
+    transition: none;
+  }
+
+  .tlc-entry.is-flash {
+    animation: none;
+  }
+}
+
+/* ── home listing ↔ dependency model (stack-explorer.ts connectListing) ─── */
+
+.sh-universe {
+  --sx-up: var(--domain-architecture);
+  --sx-down: var(--accent);
+}
+
+.sh-universe-key {
+  margin: 0 0 0.75rem;
+  font: 11.5px/1.4 var(--font-mono);
+  letter-spacing: 0.02em;
+  color: var(--ink-3);
+}
+
+.sh-universe-key__up,
+.sh-universe-key__down {
+  padding-block-end: 1px;
+  border-block-end: 2px solid var(--sx-up);
+  color: var(--ink-2);
+}
+
+.sh-universe-key__down {
+  border-color: var(--sx-down);
+}
+
+.sh-universe-chapter {
+  transition: opacity var(--t-hover) ease;
+}
+
+.sh-universe.has-focus .sh-universe-chapter:not(.is-focus, .is-up, .is-down) {
+  opacity: 0.34;
+}
+
+.sh-universe-chapter.is-up .sh-universe-chapter-num,
+.sh-universe-chapter.is-down .sh-universe-chapter-num,
+.sh-universe-chapter.is-focus .sh-universe-chapter-num {
+  font-weight: 600;
+}
+
+.sh-universe-chapter.is-up .sh-universe-chapter-num {
+  color: var(--sx-up);
+}
+
+.sh-universe-chapter.is-down .sh-universe-chapter-num {
+  color: var(--sx-down);
+}
+
+.sh-universe-chapter.is-direct .sh-universe-chapter-num {
+  text-decoration: underline;
+  text-decoration-thickness: 2px;
+  text-underline-offset: 3px;
+}
+
+.sh-universe-chapter.is-focus .sh-universe-chapter-num {
+  color: var(--ink);
+}
+
+.sh-universe-chapter[data-sx-degree]::after {
+  content: attr(data-sx-degree);
+  display: block;
+  padding: 0 0 0.25rem 2.35rem;
+  font: 11.5px/1.4 var(--font-mono);
+  color: var(--ink-3);
+}
+
+/* Fixed-geometry readout: every state (rest, chapter, route, lineage entry)
+   occupies the same box, so hovering anything never moves the layout under
+   the pointer (a growing panel pushed the lineage strip away and made it
+   flicker). Each field has a reserved, clamped height. */
+.sx-readout__kicker {
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+
+.sx-readout__title {
+  display: -webkit-box;
+  block-size: 2.5em;
+  overflow: hidden;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+  line-clamp: 2;
+}
+
+.sx-readout__summary {
+  display: -webkit-box;
+  block-size: 5.8em;
+  min-height: 0;
+  overflow: hidden;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 4;
+  line-clamp: 4;
+}
+
+.sx-readout__rows {
+  block-size: 5.9rem;
+  overflow: hidden;
+}
+
+.sx-readout__links {
+  block-size: 5.2rem;
+  overflow-y: auto;
+  align-content: start;
+}

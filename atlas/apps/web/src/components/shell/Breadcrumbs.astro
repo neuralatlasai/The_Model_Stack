@@ -1,0 +1,38 @@
+---
+/**
+ * Conceptual hierarchy (UI_UX §34): quiet, one line, every ancestor a link,
+ * the current node last and unlinked. Never a second navigation bar.
+ */
+interface Crumb {
+  readonly title: string;
+  readonly number: string | null;
+  readonly url: string;
+}
+
+interface Props {
+  readonly crumbs: readonly Crumb[];
+  readonly current: string;
+}
+
+const { crumbs, current } = Astro.props;
+---
+
+{
+  crumbs.length > 0 && (
+    <nav class="sh-crumbs" aria-label="Breadcrumb">
+      <ol class="sh-crumbs-list">
+        {crumbs.map((crumb) => (
+          <li class="sh-crumb">
+            <a href={crumb.url}>
+              {crumb.number !== null && <span class="sh-crumb-num">{crumb.number}</span>}
+              {crumb.title}
+            </a>
+          </li>
+        ))}
+        <li class="sh-crumb sh-crumb--current" aria-current="page">
+          {current}
+        </li>
+      </ol>
+    </nav>
+  )
+}

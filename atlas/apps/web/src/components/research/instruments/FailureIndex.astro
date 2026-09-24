@@ -1,0 +1,37 @@
+---
+/** Failure-mode index for the region: numbered names linking to each failure mode. */
+import type { PageData, RailInstrument, ResearchDocument } from '@atlas/core';
+import { instrumentAttrs } from '../lib/dom.ts';
+import { findBlock } from '../lib/walk.ts';
+import InstrumentHead from './InstrumentHead.astro';
+
+interface Props {
+  instrument: Extract<RailInstrument, { kind: 'failure-modes' }>;
+  doc: ResearchDocument;
+  pageData?: PageData | undefined;
+}
+
+const { instrument, doc } = Astro.props;
+const modes = instrument.anchors.flatMap((anchor) => {
+  const block = findBlock(doc, 'failure-mode', anchor);
+  return block === null ? [] : [{ anchor, name: block.name }];
+});
+---
+
+{
+  modes.length > 0 && (
+    <div class="rb-instrument rb-instrument--failure-modes" {...instrumentAttrs('failure-modes')}>
+      <InstrumentHead title="Failure-mode index" meta={String(modes.length)} />
+      <ol class="rb-fmi" role="list">
+        {modes.map((mode, index) => (
+          <li>
+            <a class="rb-fmi__link" href={`#${mode.anchor}`}>
+              <span class="rb-fmi__n">{String(index + 1).padStart(2, '0')}</span>
+              <span class="rb-fmi__name">{mode.name}</span>
+            </a>
+          </li>
+        ))}
+      </ol>
+    </div>
+  )
+}

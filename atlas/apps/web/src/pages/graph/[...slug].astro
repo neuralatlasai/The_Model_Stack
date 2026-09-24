@@ -1,0 +1,123 @@
+---
+/**
+ * Map mode for one node (UI_UX §13): the constrained semantic neighbourhood —
+ * prerequisites on the left, dependents on the right, siblings and
+ * alternatives above and below — laid out deterministically at build time
+ * (@atlas/visual layoutNeighbourhood, no force layout) and rendered as static
+ * SVG, followed by the same relations as navigable lists.
+ */
+import type { GetStaticPaths } from 'astro';
+import { isNodeId, neighbourhood, type NodeId } from '@atlas/core';
+import { layoutNeighbourhood } from '@atlas/visual';
+import { NeighbourhoodGraph } from '@atlas/visual/svg';
+import Breadcrumbs from '../../components/shell/Breadcrumbs.astro';
+import ModeTabs from '../../components/shell/ModeTabs.astro';
+import PageHeader from '../../components/shell/PageHeader.astro';
+import RelationList from '../../components/shell/RelationList.astro';
+import ReaderLayout from '../../layouts/ReaderLayout.astro';
+import { getGraph, getManifest } from '../../lib/atlas.ts';
+import { nodesWithCompare } from '../../lib/compare.ts';
+import { plural } from '../../lib/format.ts';
+import { modeLinks } from '../../lib/modes.ts';
+import { enclosing, identityLine } from '../../lib/nodes.ts';
+import { mapUrl, pathParam } from '../../lib/urls.ts';
+
+type Props = { readonly id: NodeId };
+
+export const getStaticPaths = (async () => {
+  const graph = await getGraph();
+  const seen = new Set<string>();
+  const paths: { params: { slug: string }; props: Props }[] = [];
+  for (const node of Object.values(graph.nodes)) {
+    if (node.id === 'ms.root' || !isNodeId(node.id)) continue;
+    const slug = pathParam(node.url);
+    if (slug === undefined || seen.has(slug)) continue;
+    seen.add(slug);
+    paths.push({ params: { slug }, props: { id: node.id } });
+  }
+  return paths;
+}) satisfies GetStaticPaths;
+
+const { id } = Astro.props;
+const [graph, manifest, withCompare] = await Promise.all([getGraph(), getManifest(), nodesWithCompare()]);
+const hood = neighbourhood(graph, id);
+if (hood === null) throw new Error(`graph/[...slug]: ${id} is not in the graph`);
+const { node } = hood;
+
+const scene = layoutNeighbourhood({
+  center: node,
+  prerequisites: hood.prerequisites,
+  dependents: hood.dependents,
+  siblings: hood.siblings,
+  alternatives: hood.alternatives,
+});
+
+const chapter = enclosing(graph, node.id, 'chapter');
+const chapterNumber = chapter !== null && chapter.number !== null ? Number.parseInt(chapter.number, 10) : Number.NaN;
+const links = modeLinks({
+  graph,
+  url: node.url,
+  chapter: Number.isFinite(chapterNumber) ? chapterNumber : null,
+  referencesAnchor: null,
+  hasCompare: withCompare.has(node.id),
+});
+const compiled = new Set<string>(manifest.documents);
+const crumbs = hood.ancestors.map((ancestor) => ({ title: ancestor.shortTitle, number: ancestor.number, url: mapUrl(ancestor.url) }));
+const total =
+  hood.prerequisites.length + hood.dependents.length + hood.siblings.length + hood.alternatives.length + hood.related.length;
+const title = node.number === null ? node.title : `${node.number} ${node.title}`;
+---
+
+<ReaderLayout
+  title={`Map · ${title}`}
+  description={`Neighbourhood of ${node.title} in The Model Stack: prerequisites, dependents, siblings, and alternatives.`}
+  canonicalPath={mapUrl(node.url)}
+  currentId={node.id}
+  domain={node.domain}
+  navKey="graph"
+>
+  <Breadcrumbs crumbs={[{ title: 'Graph', number: null, url: '/graph/' }, ...crumbs]} current={node.shortTitle} />
+  <article class="sh-article sh-map" data-node-id={node.id}>
+    <PageHeader
+      identity={`Map · ${identityLine(graph, node) || 'Reference'}`}
+      title={title}
+      meta={`${plural(total, 'related node')} · ${compiled.has(node.id) ? 'manuscript' : 'planned'}`}
+    />
+    <ModeTabs links={links} current="map" />
+
+    <div class="sh-wide sh-map-figure">
+      <NeighbourhoodGraph scene={scene} />
+    </div>
+
+    <section class="sh-section sh-map-text" aria-labelledby="relations-heading">
+      <h2 id="relations-heading">Relations</h2>
+      <RelationList
+        id="rel-prerequisites"
+        title="Prerequisites"
+        note="What must be understood first (declared learning dependencies)."
+        nodes={hood.prerequisites}
+      />
+      <RelationList
+        id="rel-dependents"
+        title="Enables"
+        note="Declared downstream nodes and nodes that list this one as a prerequisite."
+        nodes={hood.dependents}
+      />
+      <RelationList
+        id="rel-alternatives"
+        title="Alternatives"
+        note="Concept-level siblings: mechanisms that solve the same problem differently."
+        nodes={hood.alternatives}
+      />
+      <RelationList id="rel-siblings" title="Siblings" note="Same editorial parent." nodes={hood.siblings} />
+      <RelationList id="rel-children" title="Contains" note="Editorial children." nodes={hood.children} />
+      <RelationList
+        id="rel-related"
+        title="Related"
+        note="Non-dependency links: trade-offs and contrasts."
+        nodes={hood.related}
+      />
+      {total === 0 && hood.children.length === 0 && <p class="sh-empty">No typed relations are declared for this node.</p>}
+    </section>
+  </article>
+</ReaderLayout>

@@ -1,0 +1,40 @@
+---
+/**
+ * Versioning line (UI_UX §65): last updated, editorial status, edition, and
+ * compile date. Edition 1.0 records no revision history, and the line says so
+ * rather than offering a "View changes" link with nothing behind it.
+ */
+import type { EditorialStatus } from '@atlas/core';
+import { formatDay, isoDate, stateLabel } from '../../lib/format.ts';
+import { getManifest } from '../../lib/atlas.ts';
+
+interface Props {
+  readonly updatedAt: string;
+  readonly status: EditorialStatus;
+  readonly sourcePath: string | null;
+}
+
+const { updatedAt, status, sourcePath } = Astro.props;
+const manifest = await getManifest();
+const updatedIso = isoDate(updatedAt);
+const compiledIso = isoDate(manifest.compiledAt);
+---
+
+<p class="sh-revision">
+  <span>
+    Last updated{' '}
+    {updatedIso !== null ? <time datetime={updatedIso}>{formatDay(updatedAt)}</time> : updatedAt}
+  </span>
+  <span>Status: {stateLabel(status)}</span>
+  <span>Edition {manifest.edition}</span>
+  <span>
+    Compiled{' '}
+    {compiledIso !== null ? <time datetime={compiledIso}>{formatDay(manifest.compiledAt)}</time> : manifest.compiledAt}
+  </span>
+  {sourcePath !== null && (
+    <span>
+      Source <code>docs/{sourcePath}</code>
+    </span>
+  )}
+  <span>Revision history: not recorded in this edition</span>
+</p>

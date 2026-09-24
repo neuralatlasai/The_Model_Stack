@@ -1,0 +1,123 @@
+---
+/**
+ * Reading page for one compiled document: breadcrumbs, the header anatomy
+ * (web-blocks DocumentHeader: identity line, title, thesis, metadata line),
+ * the mode strip, lead blocks, every region, the revision line, reading-order
+ * navigation, and the PageData island. The rail carries the minimap and the
+ * scroll-bound instruments (web-blocks RailPanel renders all bindings as
+ * `data-rail-for` groups; the client shows ≤3 for the active region).
+ */
+import { domainOfPart, PAGE_DATA_ELEMENT_ID, inlineToText, type ResearchDocument } from '@atlas/core';
+import Blocks from '../research/Blocks.astro';
+import DocumentHeader from '../research/DocumentHeader.astro';
+import Minimap from '../research/Minimap.astro';
+import RailPanel from '../research/RailPanel.astro';
+import RailTrack from '../research/RailTrack.astro';
+import MiniStack from '../research/MiniStack.astro';
+import { getStackModel } from '../../lib/stack.ts';
+import ChapterGlance from '../research/ChapterGlance.astro';
+import CitationTimeline from '../research/CitationTimeline.astro';
+import RegionView from '../research/RegionView.astro';
+import ReaderLayout from '../../layouts/ReaderLayout.astro';
+import { buildPageData, getGraph, getManifest, getRegistry } from '../../lib/atlas.ts';
+import { nodesWithCompare } from '../../lib/compare.ts';
+import { squash } from '../../lib/format.ts';
+import { jsonForHtml } from '../../lib/json.ts';
+import { documentJsonLd } from '../../lib/jsonld.ts';
+import { modeLinks } from '../../lib/modes.ts';
+import { presentDocument } from '../../lib/presentation.ts';
+import Breadcrumbs from './Breadcrumbs.astro';
+import ChapterNav from './ChapterNav.astro';
+import ModeTabs from './ModeTabs.astro';
+import RevisionLine from './RevisionLine.astro';
+
+interface Props {
+  readonly doc: ResearchDocument;
+}
+
+const { doc } = Astro.props;
+const [graph, registry, manifest, withCompare] = await Promise.all([
+  getGraph(),
+  getRegistry(),
+  getManifest(),
+  nodesWithCompare(),
+]);
+const pageData = await buildPageData(doc);
+const presentation = presentDocument(doc);
+const stackModel = doc.meta.chapter === null && doc.meta.entityType !== 'part' ? null : await getStackModel();
+// Part pages focus the mini map on the part's six chapters.
+const partFocus = doc.meta.entityType === 'part' && stackModel !== null ? (stackModel.parts.find((part) => part.n === doc.meta.part) ?? null) : null;
+// Equation → rail calculator linkage, read by blocks/Equation.astro ("▸ run").
+Astro.locals.equationRunners = new Map(
+  doc.figures.flatMap((figure) =>
+    figure.spec.kind === 'calculator' && figure.spec.spec.equation !== undefined
+      ? [[figure.spec.spec.equation, figure.anchor] as const]
+      : [],
+  ),
+);
+
+const node = graph.nodes[doc.meta.id];
+const domain = node?.domain ?? domainOfPart(doc.meta.part);
+const referencesRegion = doc.regions.find((region) => region.role === 'references') ?? null;
+const hasCompare = withCompare.has(doc.meta.id);
+const links = modeLinks({
+  graph,
+  url: doc.route.url,
+  chapter: doc.meta.chapter,
+  referencesAnchor: referencesRegion?.anchor ?? null,
+  hasCompare,
+});
+
+const thesis = doc.header.thesis === null ? '' : squash(inlineToText(doc.header.thesis));
+const pageTitle = doc.header.number === null ? doc.header.title : `${doc.header.number} ${doc.header.title}`;
+const description = thesis !== '' ? thesis : node?.summary ?? doc.header.title;
+const jsonLd = documentJsonLd({ doc, graph, registry, site: Astro.site, edition: manifest.edition });
+---
+
+<ReaderLayout
+  title={pageTitle}
+  description={description}
+  canonicalPath={doc.route.url}
+  currentId={doc.meta.id}
+  domain={domain}
+  rail={true}
+  depthControl={true}
+  jsonLd={jsonLd}
+>
+  <Breadcrumbs crumbs={doc.route.breadcrumbs} current={doc.header.title} />
+  <article class="sh-article" data-node-id={doc.meta.id}>
+    <DocumentHeader doc={doc} />
+    <ModeTabs links={links} current="read" />
+    {doc.meta.entityType === 'chapter' && <ChapterGlance doc={doc} graph={graph} registry={registry} />}
+    {doc.meta.entityType === 'references' && <CitationTimeline doc={doc} references={registry.references} />}
+    {doc.lead.length > 0 && <Blocks blocks={doc.lead} />}
+    {presentation.main.map((region) => <RegionView region={region} doc={doc} ordinal={presentation.ordinals.get(region.anchor) ?? null} />)}
+    {
+      presentation.apparatus.length > 0 && (
+        <div class="sh-apparatus">
+          <p class="sh-apparatus__head">
+            <span class="sh-apparatus__title">Research apparatus</span>
+            <span class="sh-apparatus__note">how this chapter is sourced, routed, and audited</span>
+          </p>
+          {presentation.apparatus.map((region) => (
+            <RegionView region={region} doc={doc} ordinal={presentation.ordinals.get(region.anchor) ?? null} />
+          ))}
+        </div>
+      )
+    }
+    <footer class="sh-article-end">
+      <RevisionLine updatedAt={doc.meta.updatedAt} status={doc.meta.editorialStatus} sourcePath={doc.sourcePath} />
+      <ChapterNav prev={doc.route.prev} next={doc.route.next} />
+    </footer>
+  </article>
+  <script is:inline type="application/json" id={PAGE_DATA_ELEMENT_ID} set:html={jsonForHtml(pageData)} />
+  <Fragment slot="rail">
+    <RailTrack doc={doc} regions={[...presentation.main, ...presentation.apparatus]} ordinals={presentation.ordinals} />
+    {stackModel !== null && doc.meta.chapter !== null && <MiniStack model={stackModel} focus={doc.meta.chapter} />}
+    {stackModel !== null && partFocus !== null && (
+      <MiniStack model={stackModel} focus={partFocus.chapters} label={`Part ${partFocus.numeral} · ${partFocus.title}`} />
+    )}
+    <RailPanel doc={doc} pageData={pageData} ordinals={presentation.ordinals} />
+    <Minimap doc={doc} outline={presentation.outline} ordinals={presentation.ordinals} />
+  </Fragment>
+</ReaderLayout>

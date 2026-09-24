@@ -1,0 +1,44 @@
+---
+/**
+ * Terms defined in the region. Each carries `data-term` so the client can
+ * open the glossary entry in the rail inspector; without JS it jumps to the
+ * definition on this page.
+ */
+import type { PageData, RailInstrument, ResearchDocument } from '@atlas/core';
+import { termAnchor } from '@atlas/core';
+import { instrumentAttrs, termAttrs } from '../lib/dom.ts';
+import { findDefinition } from '../lib/walk.ts';
+import InstrumentHead from './InstrumentHead.astro';
+
+interface Props {
+  instrument: Extract<RailInstrument, { kind: 'terms' }>;
+  doc: ResearchDocument;
+  pageData?: PageData | undefined;
+}
+
+const { instrument, doc, pageData } = Astro.props;
+const terms = instrument.slugs.map((slug) => {
+  const definition = findDefinition(doc, slug);
+  const entry = pageData?.terms[slug];
+  return {
+    slug,
+    term: definition?.term ?? entry?.term ?? slug,
+    anchor: definition?.anchor ?? termAnchor(slug),
+  };
+});
+---
+
+{
+  terms.length > 0 && (
+    <div class="rb-instrument rb-instrument--terms" {...instrumentAttrs('terms')}>
+      <InstrumentHead title="Terms defined here" meta={String(terms.length)} />
+      <ul class="rb-terms" role="list">
+        {terms.map((term) => (
+          <li>
+            <a class="rb-terms__link" href={`#${term.anchor}`} {...termAttrs(term.slug)}>{term.term}</a>
+          </li>
+        ))}
+      </ul>
+    </div>
+  )
+}

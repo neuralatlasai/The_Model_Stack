@@ -1,0 +1,24 @@
+---
+/**
+ * Inline expansion (UI_UX §30): `<details>` in place, no modal, no routing.
+ * The summary reads "▸ Derivation of Eq. 5.3" in sans; the body is indented
+ * against a lineage hairline and may itself hold structured objects.
+ */
+import type { ExpansionBlock } from '@atlas/core';
+import Blocks from '../Blocks.astro';
+import Inline from '../Inline.astro';
+import { depthAttrs } from '../lib/dom.ts';
+
+interface Props {
+  block: ExpansionBlock;
+}
+
+const { block } = Astro.props;
+---
+
+<details class={`rb-expand rb-expand--${block.variant}`} id={block.anchor ?? undefined} {...depthAttrs(block.depth)}>
+  <summary class="rb-expand__summary"><span class="rb-expand__caret" aria-hidden="true">▸</span><span class="rb-expand__label"><Inline nodes={block.summary} /></span></summary>
+  <div class="rb-expand__body">
+    <Blocks blocks={block.blocks} />
+  </div>
+</details>

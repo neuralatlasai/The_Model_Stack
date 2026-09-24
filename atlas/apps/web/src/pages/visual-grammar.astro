@@ -1,0 +1,778 @@
+---
+/**
+ * Visual grammar reference (docs/VISUAL_GRAMMAR.md): every node and edge
+ * primitive, one realistic figure of every kind, and the live rail instruments
+ * with their scroll-driven states. The kind examples are the grammar's own
+ * YAML, parsed with core `FigureSpecSchema`, laid out with `layoutFigure`, and
+ * drawn by `<Figure>` from @atlas/visual/svg, so this page is both the
+ * renderer's review canvas and the authors' reference.
+ *
+ * The state stepper under each live instrument is a demonstration driver for
+ * the DOM contract (`data-states`, `data-vg-key`, `data-vg-value`,
+ * `data-vg-frac` / `--vg-frac`, `data-vg-cursor`); the reader's rail drives the
+ * same attributes from scroll position.
+ */
+import { parse as parseYaml } from 'yaml';
+import { EDGE_KINDS, FigureSpecSchema, NODE_KINDS, type CompiledFigure, type EdgeKind, type NodeKind } from '@atlas/core';
+import { describeFigure, layoutFigure } from '@atlas/visual';
+import { EdgeSpecimen, Figure, NodeSpecimen } from '@atlas/visual/svg';
+import { figureHostProps, type FigureHostProps } from '../components/research/lib/figure-host.ts';
+import PageHeader from '../components/shell/PageHeader.astro';
+import ReaderLayout from '../layouts/ReaderLayout.astro';
+import grammarSource from '../../../../../docs/VISUAL_GRAMMAR.md?raw';
+
+const grammar = grammarSource.replace(/\r\n?/gu, '\n');
+
+/** The grammar's per-kind `spec:` examples (§5.1–5.12), with the YAML quoting the flow mappings need. */
+function kindExamples(): Map<string, unknown> {
+  const out = new Map<string, unknown>();
+  const headings = [...grammar.matchAll(/^### (5\.\d+) `([a-z-]+)`\s*$/gmu)];
+  headings.forEach((heading, index) => {
+    const start = heading.index;
+    const next = headings[index + 1]?.index ?? grammar.indexOf('\n## 6.', start);
+    const section = grammar.slice(start, next < 0 ? undefined : next);
+    const yaml = /```yaml\n([\s\S]*?)```/u.exec(section)?.[1];
+    if (yaml === undefined) return;
+    // YAML flow mappings need these values quoted; and the §5.6 dot matrix must show the legend's
+    // 4·D² : 8·D² split, one third of 48 = 16 filled (the grammar text says 12; reported upstream).
+    const fixed = yaml
+      .replace('label: Adam m, v,', 'label: "Adam m, v",')
+      .replace('note: on-chip, per SM', 'note: "on-chip, per SM"')
+      .replace('note: off-chip, device-wide', 'note: "off-chip, device-wide"')
+      .replace(/(type: dots[\s\S]*?filled:) 12(?!\d)/u, '$1 16');
+    const parsed: unknown = parseYaml(fixed);
+    if (typeof parsed === 'object' && parsed !== null && 'spec' in parsed) out.set(heading[2] ?? '', parsed.spec);
+  });
+  return out;
+}
+
+/** The complete calculator example of §4. */
+function calculatorExample(): unknown {
+  const body = /```figure\n([\s\S]*?)```/u.exec(grammar)?.[1];
+  return body === undefined ? null : (parseYaml(body) as unknown);
+}
+
+const problems: string[] = [];
+let ordinal = 0;
+
+async function compile(raw: unknown): Promise<CompiledFigure | null> {
+  const parsed = FigureSpecSchema.safeParse(raw);
+  if (!parsed.success) {
+    problems.push(parsed.error.issues.map((issue) => `${issue.path.join('.')}: ${issue.message}`).join('; '));
+    return null;
+  }
+  ordinal += 1;
+  const spec = parsed.data;
+  return {
+    id: spec.id,
+    number: `G.${ordinal}`,
+    anchor: `fig-g-${ordinal}`,
+    origin: 'authored',
+    placement: spec.placement,
+    regionAnchor: 'grammar',
+    spec,
+    scene: await layoutFigure(spec),
+    evidence: spec.evidence,
+    sources: spec.source,
+    text: `${spec.alt}\n${describeFigure(spec)}`,
+  };
+}
+
+interface KindCopy {
+  readonly kind: string;
+  readonly question: string;
+  readonly title: string;
+  readonly caption: string;
+  readonly alt: string;
+  readonly placement?: 'inline' | 'wide';
+  readonly source?: string | readonly string[];
+  readonly evidence?: string;
+}
+
+const KINDS: readonly KindCopy[] = [
+  {
+    kind: 'diagram',
+    question: 'What connects to what, and in which direction does information flow?',
+    title: 'Where the score tensor comes from',
+    caption:
+      'The emphasised edge is the step that creates a [B, H, T, T] tensor from [B, T, D] inputs; the dashed dependency names the bytes it costs in device memory.',
+    alt: 'Diagram, left to right: the normalised stream [B, T, D] feeds the QKV projection (6·D² FLOPs per token), whose QKᵀ/√Dh product creates the scores tensor [B, H, T, T]; the scores depend on HBM inside one accelerator for B·H·T²·b bytes.',
+    source: 'DERIVED:eq-5.8',
+  },
+  {
+    kind: 'tensor-flow',
+    question: 'What shape does the data have at each step, and what does each step cost?',
+    title: 'Shapes through one attention block',
+    caption: 'Only the score product changes the shape class, from [B, H, T, Dh] to [B, H, T, T]; every weight-bearing step costs a multiple of D² per token.',
+    alt: 'Tensor flow of one attention block: [B, T, D] to [B, T, 3, H, Dh] by the packed QKV projection, to [B, H, T, T] by QKᵀ/√Dh, to [B, H, T, Dh] by softmax·V, and back to [B, T, D] by merging heads and W_O.',
+    source: 'DERIVED:eq-5.4',
+  },
+  {
+    kind: 'systems-trace',
+    question: 'Where do latency, memory, compute, communication, and failure live along a request or step?',
+    title: 'Mixed-precision step, first two stages',
+    caption: 'The cast is a memory-bound pass over the weights; the GEMM is where the tensor cores run and where the activations saved for backward are born.',
+    alt: 'Systems trace with two stages: casting master weights to operands costs one pass over W, adds two bytes per parameter, and overflows if unscaled; the forward GEMM is tensor-core bound and saves activations.',
+    source: 'DERIVED:eq-5.8',
+  },
+  {
+    kind: 'memory-stack',
+    question: 'What occupies memory, and how do the parts compare to a budget?',
+    title: 'Training state of a 7B-parameter model',
+    caption: 'Weights are only one eighth of the training state; Adam’s moments alone are half, and the stack overflows an 80 GiB device before any activation is stored.',
+    alt: 'Memory stack for mixed-precision Adam at N = 7 billion parameters: BF16 weights 13 GiB, BF16 gradients 13 GiB, FP32 master weights 26.1 GiB, Adam moments 52.2 GiB, 104 GiB in total against an illustrative 80 GiB device.',
+    source: 'DERIVED:eq-5.8',
+  },
+  {
+    kind: 'stat-panel',
+    question: 'What is the state of the configuration being discussed?',
+    title: 'Reference configuration',
+    caption: 'One third of every block’s parameters sit in attention and two thirds in the feed-forward network; the dot matrix shows the split at 48 dots.',
+    alt: 'Stat panel for the reference configuration in BF16: 12 layers, 84.9 million non-embedding parameters and 38.6 million embedding parameters; 16 of 48 dots mark attention parameters (4·D² per layer) against FFN parameters (8·D² per layer).',
+    source: 'DERIVED:eq-5.4',
+  },
+  {
+    kind: 'lineage',
+    question: 'Where did this come from, and what is the current frontier?',
+    title: 'Lineage of exact attention kernels',
+    caption: 'The 2017 block is the ancestor; the 2022 kernel changed where the scores live, not what they are, and the frontier is kernels specialised to one accelerator generation.',
+    alt: 'Lineage: 2017 Transformer (P01), conceptual ancestor; 2022 FlashAttention (P19), engineering optimisation; 2025 and later, hardware-specialised attention kernels, current frontier.',
+    source: ['P01', 'P19'],
+    evidence: 'PAPER-REPORTED',
+  },
+  {
+    kind: 'cycle',
+    question: 'Which stages feed back into which?',
+    title: 'The model lifecycle as a cycle',
+    caption: 'Two loops close the lifecycle: usage data returns to the corpus, and evaluation ablations return to pretraining. Neither is a pipeline stage.',
+    alt: 'Cycle: Data, Pretrain, Post-train, Evaluate, Deploy in a column; feedback from Deploy to Data labelled usage data, and from Evaluate to Pretrain labelled ablations.',
+    source: 'DERIVED:eq-5.8',
+  },
+  {
+    kind: 'matrix',
+    question: 'Which pairs interact?',
+    title: 'Causal mask at T = 8',
+    caption: 'Row 5 attends to keys 0 to 5; summing the rows gives T(T+1)/2 = 36 admitted pairs of 64, a fraction that tends to one half as T grows.',
+    alt: 'Causal mask, 8 by 8: query position i admits key positions j ≤ i; 36 of 64 pairs admitted; the cell at row 5, column 2 is highlighted.',
+    source: 'DERIVED:eq-5.5',
+  },
+  {
+    kind: 'chart',
+    question: 'How does one quantity scale with another?',
+    title: 'Score bytes against one activation tensor',
+    caption: 'On log axes the score matrix climbs twice as steeply as a [B, T, D] activation; at T = 8192 it is 64 times larger, the ratio T/Dh.',
+    alt: 'Line chart on log2 axes, T from 512 to 131,072: scores B·H·T²·b grow from 16 MiB to 1 TiB per layer, one [B, T, D] tensor from 4 MiB to 1 GiB; at T = 8192 the ratio is 64.',
+    source: 'DERIVED:eq-5.8',
+  },
+  {
+    kind: 'hierarchy',
+    question: 'Through which physical or logical levels does work descend?',
+    title: 'Execution topology of one attention call',
+    caption: 'Work descends from the model to the fabric; the emphasised level, HBM, is where the materialised score tensor lives and where its bytes are paid.',
+    alt: 'Hierarchy, top down: Model; Operations (GEMM, softmax, norm); Kernel; SM; SRAM or shared memory (on-chip, per SM); HBM (off-chip, device-wide, emphasised); NVLink or fabric.',
+    source: 'DERIVED:eq-5.8',
+  },
+  {
+    kind: 'compare',
+    question: 'On a stated evaluation axis, how do alternatives differ?',
+    title: 'Key-value head sharing',
+    caption: 'Only the cache rows differ; the objective row is identical across all three, which is why head sharing is a memory decision rather than a modelling one.',
+    alt: 'Comparison of MHA, GQA and MQA on KV bytes per token: KV heads H_q, H_kv < H_q, and 1; KV bytes per token per layer 2·H_q·d_h·b, 2·H_kv·d_h·b, 2·d_h·b; the objective is unchanged in all three.',
+    source: 'DERIVED:eq-5.8',
+    placement: 'wide',
+  },
+];
+
+const examples = kindExamples();
+const kindFigures: Array<{ copy: KindCopy; figure: CompiledFigure | null }> = [];
+for (const [index, copy] of KINDS.entries()) {
+  const spec = examples.get(copy.kind);
+  const figure =
+    spec === undefined
+      ? null
+      : await compile({
+          id: `fig-5.${index + 1}`,
+          kind: copy.kind,
+          title: copy.title,
+          caption: copy.caption,
+          placement: copy.placement ?? 'inline',
+          evidence: copy.evidence ?? 'MATHEMATICALLY-DERIVED',
+          source: copy.source ?? 'DERIVED:eq-5.8',
+          alt: copy.alt,
+          spec,
+        });
+  kindFigures.push({ copy, figure });
+}
+const calculatorFigure = await compile(calculatorExample());
+
+/* A realistic diagram with groups and one emphasised path. */
+const decoderBlock = await compile({
+  id: 'fig-5.20',
+  kind: 'diagram',
+  title: 'One pre-norm decoder block',
+  placement: 'wide',
+  caption:
+    'The residual stream (emphasised) crosses the block unchanged in shape; each sublayer reads a normalised copy and adds its result back. The KV cache is the only state that outlives the step.',
+  evidence: 'MATHEMATICALLY-DERIVED',
+  source: ['DERIVED:eq-5.4', 'DERIVED:eq-5.8'],
+  alt: 'Diagram of one pre-norm decoder block, left to right: the residual stream [B, T, D] enters an attention sublayer (RMSNorm, QKV projection at 6·D² FLOPs per token, causal attention at 4·T·D FLOPs per token, with the KV cache appended and read), is added back, then enters a feed-forward sublayer (RMSNorm, SwiGLU FFN at 6·D·F FLOPs per token) and is added back again to leave as [B, T, D].',
+  spec: {
+    direction: 'LR',
+    nodes: [
+      { id: 'x', kind: 'tensor', label: 'residual stream', sub: '[B, T, D]' },
+      { id: 'n1', kind: 'process', label: 'RMSNorm', group: 'attn' },
+      { id: 'qkv', kind: 'process', label: 'QKV projection', sub: '6·D² FLOPs/token', group: 'attn' },
+      { id: 'kv', kind: 'memory', label: 'KV cache', sub: '[L, B, S, H_kv, Dh]', group: 'attn' },
+      { id: 'sdpa', kind: 'process', label: 'causal attention', sub: '4·T·D FLOPs/token', group: 'attn' },
+      { id: 'a1', kind: 'process', label: 'residual add' },
+      { id: 'n2', kind: 'process', label: 'RMSNorm', group: 'ffn' },
+      { id: 'ffn', kind: 'process', label: 'SwiGLU FFN', sub: '6·D·F FLOPs/token', group: 'ffn' },
+      { id: 'a2', kind: 'process', label: 'residual add' },
+      { id: 'y', kind: 'tensor', label: 'block output', sub: '[B, T, D]', emphasis: true },
+    ],
+    edges: [
+      { from: 'x', to: 'n1' },
+      { from: 'n1', to: 'qkv' },
+      { from: 'qkv', to: 'kv', kind: 'dependency', label: 'append K, V' },
+      { from: 'qkv', to: 'sdpa', label: 'Q' },
+      { from: 'kv', to: 'sdpa', kind: 'dependency', label: 'read S keys' },
+      { from: 'sdpa', to: 'a1' },
+      { from: 'x', to: 'a1', kind: 'emphasis', label: 'skip' },
+      { from: 'a1', to: 'n2' },
+      { from: 'n2', to: 'ffn' },
+      { from: 'ffn', to: 'a2' },
+      { from: 'a1', to: 'a2', kind: 'emphasis' },
+      { from: 'a2', to: 'y', kind: 'emphasis' },
+    ],
+    groups: [
+      { id: 'attn', label: 'attention sublayer' },
+      { id: 'ffn', label: 'feed-forward sublayer' },
+    ],
+  },
+});
+
+/* Live rail instruments: the same figures a chapter binds to its regions, with scroll states. */
+const liveStat = await compile({
+  id: 'fig-5.30',
+  kind: 'stat-panel',
+  title: 'Reference configuration',
+  placement: 'rail',
+  caption: 'The panel follows the section: the configuration, then a deeper and wider model, then a longer context. Parameter rows scale with L·D², the cache row with T.',
+  evidence: 'MATHEMATICALLY-DERIVED',
+  source: 'DERIVED:eq-5.4',
+  alt: 'Stat panel in BF16 at L = 12, D = 768, V = 50,257, T = 1,024: 84.9 million non-embedding and 38.6 million embedding parameters, 236 MiB of weights and a 36 MiB KV cache per sequence; attention holds 16 of 48 parameter dots.',
+  spec: {
+    header: 'REFERENCE CONFIG · BF16',
+    variables: { L: 12, D: 768, V: 50257, T: 1024 },
+    rows: [
+      { key: 'layers L', formula: 'L', format: 'integer' },
+      { key: 'model width D', formula: 'D', format: 'integer' },
+      { key: 'non-embedding params', formula: '12*L*D^2', format: 'params' },
+      { key: 'embedding params', formula: 'V*D', format: 'params' },
+      { key: 'weights', formula: '2*(12*L*D^2 + V*D)', format: 'bytes' },
+      { key: 'KV cache / sequence', formula: '2*L*T*D*2', format: 'bytes', note: 'K and V, every layer' },
+    ],
+    glyph: {
+      type: 'dots',
+      total: 48,
+      filled: 16,
+      legend: [
+        { marker: 'filled', label: 'attention params', value: '4·D²/layer' },
+        { marker: 'hollow', label: 'FFN params', value: '8·D²/layer' },
+      ],
+    },
+  },
+  states: [
+    { anchor: 'formulation', label: 'L 12 · D 768', highlight: ['layers L', 'model width D'], note: 'The reference configuration of §5.1: twelve layers at width 768.' },
+    {
+      anchor: 'mechanism',
+      label: 'L 24 · D 1024',
+      variables: { L: 24, D: 1024 },
+      highlight: ['non-embedding params', 'weights'],
+      note: 'Twice the depth and 4/3 the width multiply 12·L·D² by 3.6.',
+    },
+    { anchor: 'costs', label: 'T = 8K', variables: { T: 8192 }, highlight: ['KV cache / sequence'], note: 'Eight times the context, eight times the cache; the weights do not move.' },
+  ],
+});
+
+const liveStack = await compile({
+  id: 'fig-5.31',
+  kind: 'memory-stack',
+  title: 'Mixed-precision Adam state',
+  placement: 'rail',
+  caption: 'Sixteen bytes per parameter before activations: the budget line is crossed between 5B and 7B parameters.',
+  evidence: 'MATHEMATICALLY-DERIVED',
+  source: 'DERIVED:eq-5.8',
+  alt: 'Memory stack of mixed-precision Adam, 16 bytes per parameter: BF16 weights and gradients at 2 bytes each, an FP32 master copy at 4 bytes and Adam moments at 8 bytes, against an illustrative 80 GiB device.',
+  spec: {
+    format: 'bytes',
+    variables: { N: 1.3e9 },
+    bars: [
+      {
+        label: 'per model',
+        segments: [
+          { label: 'BF16 weights', kind: 'tensor', formula: '2*N' },
+          { label: 'BF16 gradients', kind: 'tensor', formula: '2*N' },
+          { label: 'FP32 master', kind: 'memory', formula: '4*N' },
+          { label: 'Adam m, v', kind: 'memory', formula: '8*N' },
+        ],
+      },
+    ],
+    budget: { label: 'illustrative 80 GiB device', formula: '80*2^30' },
+  },
+  states: [
+    { anchor: 'formulation', label: 'N = 1.3B', highlight: ['per model/BF16 weights'], note: 'At 1.3B parameters the weights are one eighth of the state.' },
+    { anchor: 'mechanism', label: 'N = 5B', variables: { N: 5e9 }, highlight: ['per model/Adam m, v'], note: 'Adam’s two moments are half the stack at any N.' },
+    { anchor: 'costs', label: 'N = 7B', variables: { N: 7e9 }, highlight: ['per model', 'budget'], note: 'At 7B the state alone overflows the device.' },
+  ],
+});
+
+const liveChart = await compile({
+  id: 'fig-5.32',
+  kind: 'chart',
+  title: 'Score bytes per layer',
+  placement: 'rail',
+  caption: 'The cursor follows the section’s worked context lengths; the gap between the lines is T/Dh.',
+  evidence: 'MATHEMATICALLY-DERIVED',
+  source: 'DERIVED:eq-5.8',
+  alt: 'Log–log chart of bytes per layer against sequence length: the score matrix B·H·T²·b against one [B, T, D] activation, with B = 1, H = 32, D = 4096, b = 2.',
+  spec: {
+    type: 'line',
+    x: { label: 'sequence length T', scale: 'log2', format: 'tokens', domain: [512, 131072] },
+    y: { label: 'bytes per layer', scale: 'log2', format: 'bytes' },
+    variables: { B: 1, H: 32, D: 4096, b: 2 },
+    series: [
+      { id: 'scores', label: 'scores B·H·T²·b', formula: 'B*H*x^2*b', sample: { from: 512, to: 131072, count: 9 }, emphasis: true },
+      { id: 'act', label: 'one [B,T,D] tensor', formula: 'B*x*D*b', sample: { from: 512, to: 131072, count: 9 }, dashed: true },
+    ],
+  },
+  states: [
+    { anchor: 'formulation', label: 'T = 2K', variables: { x: 2048 }, highlight: ['scores'], note: 'At T = 2K the scores are 16× one activation.' },
+    { anchor: 'mechanism', label: 'T = 8K', variables: { x: 8192 }, highlight: ['scores'], note: 'At T = 8K the ratio is T/Dh = 64.' },
+    { anchor: 'costs', label: 'T = 32K', variables: { x: 32768 }, highlight: ['scores', 'act'], note: 'At T = 32K one layer’s scores need 64 GiB.' },
+  ],
+});
+
+const liveHier = await compile({
+  id: 'fig-5.33',
+  kind: 'hierarchy',
+  title: 'Where attention’s bytes live',
+  placement: 'rail',
+  caption: 'The lit level is the one the section is costing.',
+  evidence: 'MATHEMATICALLY-DERIVED',
+  source: 'DERIVED:eq-5.8',
+  alt: 'Hierarchy from model to fabric: model, kernel, SM, SRAM on-chip, HBM off-chip, NVLink; the lit level changes with the section.',
+  spec: {
+    levels: [
+      { label: 'Model', kind: 'model' },
+      { label: 'Kernel', kind: 'process', note: 'one fused launch' },
+      { label: 'SM', kind: 'hardware' },
+      { label: 'SRAM', kind: 'memory', note: 'on-chip, per SM' },
+      { label: 'HBM', kind: 'memory', note: 'off-chip, device-wide' },
+      { label: 'NVLink', kind: 'flow', note: 'between devices' },
+    ],
+  },
+  states: [
+    { anchor: 'formulation', label: 'naive', highlight: ['HBM'], note: 'The naive kernel writes [B, H, T, T] to HBM.' },
+    { anchor: 'mechanism', label: 'tiled', highlight: ['SRAM', 'Kernel'], note: 'The tiled kernel keeps each score tile in SRAM.' },
+    { anchor: 'costs', label: 'sharded', highlight: ['NVLink'], note: 'Across devices, heads are sharded and only outputs move.' },
+  ],
+});
+
+const live = [liveStat, liveStack, liveChart, liveHier].filter((figure): figure is CompiledFigure => figure !== null);
+
+/* Host inputs the reader passes too: node links and the calculator's server-rendered KaTeX. */
+const hosts = new Map<string, FigureHostProps>();
+for (const figure of [...kindFigures.map((entry) => entry.figure), calculatorFigure, decoderBlock, ...live]) {
+  if (figure !== null) hosts.set(figure.anchor, await figureHostProps(figure));
+}
+const host = (figure: CompiledFigure): FigureHostProps => hosts.get(figure.anchor) ?? { nodeHref: () => null, tex: {} };
+
+const NODE_EXAMPLES: Readonly<Record<NodeKind, readonly [string, string | null, string]>> = {
+  node: ['tokenizer', null, 'A generic concept or component'],
+  process: ['QKV projection', '6·D² FLOPs/token', 'An operation that transforms inputs'],
+  state: ['decode step', null, 'A condition that persists or changes'],
+  tensor: ['scores', '[B, H, T, T]', 'A typed array with a shape'],
+  memory: ['KV cache', '[L, B, S, H_kv, Dh]', 'Storage with capacity'],
+  dataset: ['pretraining corpus', 'dedup snapshot', 'A corpus, split, or data snapshot'],
+  model: ['reference model', 'L = 12, D = 768', 'A parameterised model or checkpoint'],
+  objective: ['cross-entropy', null, 'A loss, reward, or training target'],
+  metric: ['time to first token', 'ms', 'A measured quantity'],
+  hardware: ['tensor core', 'per SM', 'A physical unit'],
+  flow: ['all-to-all', 'expert dispatch', 'A named transfer or stream'],
+  dependency: ['tokenizer vocab', 'V = 50,257', 'A required external input'],
+  branch: ['prefill or decode', null, 'A decision or fork'],
+  feedback: ['usage data', null, 'A loop that returns information upstream'],
+  boundary: ['one accelerator', null, 'A trust, device, or process boundary'],
+};
+
+const EDGE_EXAMPLES: Readonly<Record<EdgeKind, readonly [string, string]>> = {
+  flow: ['[B, T, D]', 'Data or control moves forward: solid hairline, arrowhead.'],
+  dependency: ['reads W', 'Requires, reads, or is computed from: dashed hairline.'],
+  feedback: ['usage data', 'Information returns to an earlier stage: rounded return path.'],
+  emphasis: ['QKᵀ/√Dh', 'The argument’s main path: heavier stroke in the domain accent. At most one per figure.'],
+};
+const PREFIX = (kind: NodeKind): string => `[${kind.charAt(0).toUpperCase()}${kind.slice(1)}]`;
+---
+
+<ReaderLayout
+  title="Visual grammar"
+  description="Every primitive and figure kind of the Research Atlas visual grammar, drawn by the renderer from the grammar's own examples."
+  canonicalPath="/visual-grammar/"
+  currentId={null}
+  domain="architecture"
+>
+  <PageHeader
+    identity="Research Atlas / Visual grammar"
+    title="Visual grammar"
+    lede="Fifteen node primitives, four edges, twelve figure kinds, and the live rail instruments, drawn by the renderer from the examples in docs/VISUAL_GRAMMAR.md."
+    meta="Edition 1.0 · primitives fixed across the book · every figure numbered, captioned, sourced, and readable as text"
+  />
+
+  {problems.length > 0 && (
+    <section class="vgr-problems" aria-label="Examples that failed to parse">
+      {problems.map((problem) => <p>{problem}</p>)}
+    </section>
+  )}
+
+  <section class="sh-section vgr-section" aria-labelledby="vgr-primitives" data-kind="primitives">
+    <h2 id="vgr-primitives">Node primitives</h2>
+    <p class="vgr-lede">One glyph per kind, the same in every diagram, cycle, hierarchy, and concept map. Mermaid label prefixes map onto these kinds.</p>
+    <div class="vgr-table-scroll" role="region" aria-label="Node primitives" tabindex="0">
+      <table class="vgr-specimens">
+        <thead>
+          <tr>
+            <th scope="col">glyph</th>
+            <th scope="col">kind</th>
+            <th scope="col">means</th>
+          </tr>
+        </thead>
+        <tbody>
+          {NODE_KINDS.map((kind) => {
+            const [label, sub, meaning] = NODE_EXAMPLES[kind];
+            return (
+              <tr data-kind={`node-${kind}`}>
+                <td class="vgr-specimens__glyph">
+                  <NodeSpecimen kind={kind} label={label} sub={sub} />
+                </td>
+                <th scope="row">
+                  <code>{kind}</code>
+                  <span class="vgr-prefix">{PREFIX(kind)}</span>
+                </th>
+                <td>{meaning}</td>
+              </tr>
+            );
+          })}
+        </tbody>
+      </table>
+    </div>
+  </section>
+
+  <section class="sh-section vgr-section" aria-labelledby="vgr-edges" data-kind="edges">
+    <h2 id="vgr-edges">Edge primitives</h2>
+    <div class="vgr-table-scroll" role="region" aria-label="Edge primitives" tabindex="0">
+      <table class="vgr-specimens vgr-specimens--edges">
+        <tbody>
+          {EDGE_KINDS.map((kind) => (
+            <tr data-kind={`edge-${kind}`}>
+              <td class="vgr-specimens__glyph">
+                <EdgeSpecimen kind={kind} label={EDGE_EXAMPLES[kind][0]} />
+              </td>
+              <th scope="row">
+                <code>{kind}</code>
+              </th>
+              <td>{EDGE_EXAMPLES[kind][1]}</td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
+    </div>
+  </section>
+
+  <section class="sh-section vgr-section" aria-labelledby="vgr-kinds">
+    <h2 id="vgr-kinds">Figure kinds</h2>
+    <p class="vgr-lede">Each kind answers one question. The examples are the grammar’s own YAML, parsed, laid out, and drawn exactly as a chapter would draw them.</p>
+    {
+      kindFigures.map(({ copy, figure }) => (
+        <section class:list={['vgr-kind', { 'vgr-kind--wide': copy.placement === 'wide' }]} data-kind={copy.kind} aria-labelledby={`vgr-kind-${copy.kind}`}>
+          <h3 id={`vgr-kind-${copy.kind}`} class="vgr-kind__head">
+            <code>{copy.kind}</code>
+            <span class="vgr-kind__question">{copy.question}</span>
+          </h3>
+          {figure === null ? <p class="vgr-missing">Example did not parse.</p> : <Figure figure={figure} nodeHref={host(figure).nodeHref} {...host(figure).tex} />}
+        </section>
+      ))
+    }
+    <section class="vgr-kind" data-kind="calculator" aria-labelledby="vgr-kind-calculator">
+      <h3 id="vgr-kind-calculator" class="vgr-kind__head">
+        <code>calculator</code>
+        <span class="vgr-kind__question">What happens to this equation’s value when I change a variable?</span>
+      </h3>
+      <div class="vgr-rail-sample">
+        {calculatorFigure === null ? <p class="vgr-missing">Example did not parse.</p> : <Figure figure={calculatorFigure} {...host(calculatorFigure).tex} />}
+      </div>
+    </section>
+    <section class="vgr-kind vgr-kind--wide" data-kind="diagram-groups" aria-labelledby="vgr-kind-diagram-groups">
+      <h3 id="vgr-kind-diagram-groups" class="vgr-kind__head">
+        <code>diagram</code>
+        <span class="vgr-kind__question">Groups, dependencies, and one emphasised path.</span>
+      </h3>
+      {decoderBlock !== null && <Figure figure={decoderBlock} />}
+    </section>
+  </section>
+
+  <section class="sh-section vgr-section" aria-labelledby="vgr-live">
+    <h2 id="vgr-live">Live instruments</h2>
+    <p class="vgr-lede">
+      Rail figures carry scroll states. As the reader crosses a region, the instrument lights the parts that region discusses, recomputes its numbers, and replaces its state line. The stepper under each instrument drives the same contract by hand.
+    </p>
+    <div class="vgr-live">
+      {
+        live.map((figure) => (
+          <div class="vgr-live__item" data-kind={`live-${figure.spec.kind}`}>
+            <div class="vgr-rail-sample">
+              <Figure figure={figure} {...host(figure).tex} />
+            </div>
+            <div class="vgr-stepper" role="group" aria-label={`States of ${figure.spec.title}`} data-vgr-for={figure.anchor}>
+              {figure.spec.states.map((state, index) => (
+                <button type="button" class="vgr-stepper__btn" data-vgr-state={String(index)} aria-pressed={index === 0 ? 'true' : 'false'}>
+                  <span class="vgr-stepper__anchor">{state.anchor}</span>
+                  <span class="vgr-stepper__label">{state.label ?? `state ${index + 1}`}</span>
+                </button>
+              ))}
+            </div>
+          </div>
+        ))
+      }
+    </div>
+  </section>
+</ReaderLayout>
+
+<script>
+  /*
+   * Demonstration driver for the live-instrument DOM contract. The reader's
+   * rail applies states from scroll position with the same steps:
+   *   1. lit parts:  root.has-lit; [data-vg-key] ∈ highlight → .is-lit
+   *   2. values:     [data-vg-value="key"].textContent = values[key].text
+   *   3. fractions:  [data-vg-frac="key"].style --vg-frac = values[key].frac
+   *   4. chart:      [data-vg-cursor].is-on when the state sets x
+   *   5. header:     [data-vg-state-label], [data-vg-state-note]
+   */
+  interface StateValue {
+    readonly text: string;
+    readonly frac?: number;
+  }
+  interface ResolvedState {
+    readonly label: string | null;
+    readonly note: string | null;
+    readonly highlight: readonly string[];
+    readonly variables: Readonly<Record<string, number>>;
+    readonly values: Readonly<Record<string, StateValue>>;
+  }
+
+  function applyState(root: HTMLElement, state: ResolvedState): void {
+    const lit = new Set(state.highlight);
+    root.classList.toggle('has-lit', lit.size > 0);
+    for (const part of root.querySelectorAll<HTMLElement | SVGElement>('[data-vg-key]')) {
+      part.classList.toggle('is-lit', lit.has(part.getAttribute('data-vg-key') ?? ''));
+    }
+    for (const [key, value] of Object.entries(state.values)) {
+      const selector = CSS.escape(key);
+      for (const element of root.querySelectorAll(`[data-vg-value="${selector}"]`)) element.textContent = value.text;
+      if (value.frac !== undefined) {
+        for (const element of root.querySelectorAll<HTMLElement | SVGElement>(`[data-vg-frac="${selector}"]`)) element.style.setProperty('--vg-frac', String(value.frac));
+      }
+    }
+    const cursor = root.querySelector('[data-vg-cursor]');
+    if (cursor !== null) cursor.classList.toggle('is-on', Object.hasOwn(state.variables, 'x'));
+    const label = root.querySelector('[data-vg-state-label]');
+    if (label !== null) label.textContent = state.label ?? '';
+    const note = root.querySelector('[data-vg-state-note]');
+    if (note !== null) note.textContent = state.note ?? '';
+  }
+
+  for (const stepper of document.querySelectorAll<HTMLElement>('[data-vgr-for]')) {
+    const root = document.getElementById(stepper.dataset['vgrFor'] ?? '');
+    const raw = root?.getAttribute('data-states');
+    if (root === null || root === undefined || raw === null || raw === undefined) continue;
+    const states = JSON.parse(raw) as ResolvedState[];
+    for (const button of stepper.querySelectorAll<HTMLButtonElement>('[data-vgr-state]')) {
+      button.addEventListener('click', () => {
+        const state = states[Number(button.dataset['vgrState'])];
+        if (state === undefined) return;
+        applyState(root, state);
+        for (const other of stepper.querySelectorAll('[data-vgr-state]')) other.setAttribute('aria-pressed', other === button ? 'true' : 'false');
+      });
+    }
+  }
+</script>
+
+<style>
+  .vgr-section > h2 {
+    font-family: var(--font-serif);
+    font-size: var(--fs-h2);
+    font-weight: 400;
+  }
+  .vgr-lede {
+    margin: 0 0 var(--gap-argument);
+    font-family: var(--font-serif);
+    font-size: var(--fs-body);
+    line-height: var(--lh-body);
+    color: var(--ink-2);
+  }
+  .vgr-problems p {
+    font-family: var(--font-mono);
+    font-size: var(--fs-meta);
+    color: var(--accent);
+  }
+
+  /* specimen tables: booktabs, glyph first */
+  .vgr-table-scroll {
+    position: relative;
+    max-width: var(--measure);
+    overflow-x: auto;
+  }
+  .vgr-specimens {
+    width: 100%;
+    border-collapse: collapse;
+    border-top: 1px solid var(--rule-strong);
+    border-bottom: 1px solid var(--rule-strong);
+    font-family: var(--font-sans);
+    font-size: var(--fs-tech);
+    color: var(--ink-2);
+  }
+  .vgr-specimens thead th {
+    padding: 0.45rem 1rem 0.4rem 0;
+    border-bottom: 1px solid var(--rule);
+    font-size: var(--fs-meta);
+    font-weight: 500;
+    font-variant-caps: all-small-caps;
+    letter-spacing: 0.06em;
+    text-align: left;
+    color: var(--ink-3);
+  }
+  .vgr-specimens tbody th,
+  .vgr-specimens tbody td {
+    padding: 0.2rem 1rem 0.2rem 0;
+    border-bottom: 1px solid var(--rule);
+    vertical-align: middle;
+    text-align: left;
+    font-size: var(--fs-tech);
+    font-weight: 400;
+    letter-spacing: normal;
+    text-transform: none;
+    color: var(--ink-2);
+  }
+  .vgr-specimens tbody th {
+    white-space: nowrap;
+  }
+  .vgr-specimens tbody tr:last-child > * {
+    border-bottom: 0;
+  }
+  .vgr-specimens__glyph {
+    width: 1%;
+    white-space: nowrap;
+  }
+  .vgr-specimens code {
+    display: block;
+    font-family: var(--font-mono);
+    font-size: 13px;
+    color: var(--ink);
+  }
+  .vgr-prefix {
+    font-family: var(--font-mono);
+    font-size: 11.5px;
+    color: var(--ink-3);
+  }
+
+  /* kind sections */
+  .vgr-kind {
+    margin-top: var(--gap-section);
+    max-width: var(--measure);
+  }
+  .vgr-kind--wide {
+    max-width: var(--analysis);
+  }
+  .vgr-kind__head {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: baseline;
+    gap: 0.2rem 0.8rem;
+    margin: 0 0 0.25rem;
+    font-family: var(--font-sans);
+    font-size: var(--fs-tech);
+    font-weight: 400;
+  }
+  .vgr-kind__head code {
+    font-family: var(--font-mono);
+    font-size: 13px;
+    letter-spacing: 0.02em;
+    color: var(--domain);
+  }
+  .vgr-kind__question {
+    font-family: var(--font-serif);
+    font-style: italic;
+    font-size: 17px;
+    color: var(--ink-2);
+  }
+  .vgr-missing {
+    color: var(--accent);
+  }
+
+  /* a column at rail width, as in the reader's context rail */
+  .vgr-rail-sample {
+    max-width: var(--rail-w);
+  }
+  .vgr-live {
+    display: flex;
+    flex-wrap: wrap;
+    gap: var(--gap-argument) 3rem;
+    align-items: flex-start;
+  }
+  .vgr-live__item {
+    flex: 0 1 var(--rail-w);
+    min-width: 0;
+  }
+  .vgr-stepper {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0;
+    margin-top: 0.5rem;
+    border: 1px solid var(--rule-strong);
+  }
+  .vgr-stepper__btn {
+    flex: 1 1 0;
+    display: grid;
+    gap: 0.05rem;
+    padding: 0.3rem 0.5rem;
+    border: 0;
+    border-left: 1px solid var(--rule);
+    background: none;
+    font: inherit;
+    text-align: left;
+    color: var(--ink-2);
+    cursor: pointer;
+  }
+  .vgr-stepper__btn:first-child {
+    border-left: 0;
+  }
+  .vgr-stepper__btn[aria-pressed='true'] {
+    background: var(--accent-wash);
+    color: var(--accent);
+  }
+  .vgr-stepper__btn:focus-visible {
+    outline: 2px solid var(--focus);
+    outline-offset: -2px;
+  }
+  .vgr-stepper__anchor {
+    font-family: var(--font-sans);
+    font-size: 11px;
+    font-variant-caps: all-small-caps;
+    letter-spacing: 0.06em;
+    color: var(--ink-3);
+  }
+  .vgr-stepper__label {
+    font-family: var(--font-mono);
+    font-size: 12px;
+  }
+</style>

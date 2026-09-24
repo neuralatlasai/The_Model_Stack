@@ -1,0 +1,460 @@
+---
+/**
+ * Paper object (UI_UX §19, §80): one cited work as a connected object
+ * (lib/paper-model.ts; client paper-page.ts; styles paper.css).
+ *
+ *   header    identity, authors · venue, verification status, primary links
+ *   where     an 11 × 6 chapter grid: chapters that cite the work lit, dot
+ *             weight = citing pages in that chapter; a fixed readout names
+ *             the chapter under the pointer and lists its citing sections
+ *   alongside the works most often cited on the same pages (overlap of the
+ *             registry's citing-page ids), each with its shared pages; pointing
+ *             at one lights those chapters in the grid
+ *   lineage   timeline entries that cite this key, linked to `/timeline/#tl-{i}`
+ *   used for  per chapter: what the book uses the work for, the pages citing
+ *             it, and when the source was accessed — the complete text form
+ *
+ * Bibliographic text comes once from the registry (UI_UX §67).
+ */
+import type { GetStaticPaths } from 'astro';
+import { EVIDENCE_CLASS, inlineToText, type CitationKey } from '@atlas/core';
+import Breadcrumbs from '../../components/shell/Breadcrumbs.astro';
+import PageHeader from '../../components/shell/PageHeader.astro';
+import Inline from '../../components/research/Inline.astro';
+import ReaderLayout from '../../layouts/ReaderLayout.astro';
+import { getGraph, getRegistry } from '../../lib/atlas.ts';
+import { formatDay, isoDate } from '../../lib/format.ts';
+import { jsonForHtml } from '../../lib/json.ts';
+import { paperJsonLd } from '../../lib/jsonld.ts';
+import { buildPaperModel } from '../../lib/paper-model.ts';
+import { getStackModel } from '../../lib/stack.ts';
+import { paperParam } from '../../lib/urls.ts';
+import '../../styles/paper.css';
+
+type Props = { readonly key: CitationKey };
+
+export const getStaticPaths = (async () => {
+  const registry = await getRegistry();
+  return registry.references.map((record) => ({ params: { key: paperParam(record.key) }, props: { key: record.key } }));
+}) satisfies GetStaticPaths;
+
+const { key } = Astro.props;
+const [registry, graph, stack] = await Promise.all([getRegistry(), getGraph(), getStackModel()]);
+const record = registry.references.find((entry) => entry.key === key);
+if (record === undefined) throw new Error(`papers/[key]: ${key} missing from the registry`);
+
+const model = buildPaperModel(record, graph, registry, stack);
+const statusClass = record.status === 'UNVERIFIED' ? EVIDENCE_CLASS.UNVERIFIED : 'source';
+const firstPage = record.citedBy.map((id) => graph.nodes[id]).find((node) => node !== undefined);
+const citedChapters = model.chapters.filter((chapter) => chapter.pages.length > 0);
+const byN = new Map(model.chapters.map((chapter) => [chapter.n, chapter]));
+const s = (n: number, one: string, many = `${one}s`): string => `${String(n)} ${n === 1 ? one : many}`;
+
+// "2026-09-20 (abs page)" → { day: "20 Sep 2026", iso: "2026-09-20", detail: "abs page" }
+const accessedParts = (accessed: string | null) => {
+  if (accessed === null) return null;
+  const iso = isoDate(accessed);
+  const detail = accessed.replace(/^\d{4}-\d{2}-\d{2}\s*/u, '').replace(/^\((.*)\)$/u, '$1');
+  return { iso, day: iso === null ? accessed : formatDay(iso), detail: iso === null ? '' : detail };
+};
+
+// ── the chapter grid (SVG user units) ─────────────────────────────────────────
+const W = 318;
+const X0 = 46;
+const DX = 50;
+const LANE = 25;
+const VOL_GAP = 11;
+const TOP = 8;
+const dots: { n: number; number: string; short: string; title: string; url: string; written: boolean; x: number; y: number }[] = [];
+const laneRows: { numeral: string; title: string; url: string; y: number }[] = [];
+let gy = TOP;
+for (const volume of model.lanes) {
+  for (const lane of volume) {
+    const y = gy + LANE / 2;
+    laneRows.push({ numeral: lane.numeral, title: lane.title, url: lane.url, y });
+    lane.chapters.forEach((chapter, index) => dots.push({ ...chapter, x: X0 + index * DX, y }));
+    gy += LANE;
+  }
+  gy += VOL_GAP;
+}
+const H = gy - VOL_GAP + TOP;
+const radius = (pages: number): number => Math.min(11.5, 4.8 + 2.2 * Math.sqrt(pages));
+const litOrder = dots.filter((dot) => byN.has(dot.n)).map((dot) => dot.n);
+const firstLit = litOrder[0];
+
+const maxShared = Math.max(1, ...model.cocited.map((work) => work.shared.length));
+const top = [...citedChapters].sort((a, b) => b.pages.length - a.pages.length || a.n - b.n)[0];
+const accessedDays = [...new Set(record.uses.map((use) => accessedParts(use.accessed)?.day).filter((day): day is string => day !== undefined))];
+const restTitle =
+  model.pages === 0
+    ? model.chapters.length === 0
+      ? 'Not yet cited on any page'
+      : `Used in ${s(model.chapters.length, 'chapter')}; no page cites it directly`
+    : `Cited on ${s(model.pages, 'page')} in ${s(citedChapters.length, 'chapter')}`;
+const restText = [
+  top === undefined ? null : `Most cited in chapter ${top.number}, ${top.short} (${s(top.pages.length, 'page')}).`,
+  `Uses recorded in ${s(record.uses.length, 'chapter')}${accessedDays.length > 0 ? `; source accessed ${accessedDays.join(', ')}` : ''}.`,
+  model.otherPages.length > 0 ? `${s(model.otherPages.length, 'citing page')} outside the chapters.` : null,
+]
+  .filter((part) => part !== null)
+  .join(' ');
+
+const clientModel = {
+  key: record.key,
+  pages: model.pages,
+  chapters: model.chapters.map((chapter) => ({
+    n: chapter.n,
+    number: chapter.number,
+    title: chapter.title,
+    url: chapter.url,
+    pages: chapter.pages.map((page) => ({ label: page.label, title: page.title, url: page.url })),
+    uses: chapter.uses.map((use) => use.usedFor),
+    accessed: chapter.uses.map((use) => accessedParts(use.accessed)?.day ?? null).filter((day): day is string => day !== null),
+  })),
+  cocited: model.cocited.map((work) => ({
+    key: work.key,
+    work: work.work,
+    chapters: work.chapters,
+    shared: work.shared.map((page) => ({ label: page.label, title: page.title, url: page.url })),
+  })),
+  lineage: model.lineage.map((entry) => ({
+    index: entry.index,
+    year: entry.year,
+    relation: entry.relation,
+    work: entry.work,
+    note: inlineToText(entry.note),
+    chapter: entry.chapter,
+  })),
+};
+---
+
+<ReaderLayout
+  title={`${record.key} · ${record.work}`}
+  description={`${record.work} — ${record.authors}, ${record.venue}. Cited by ${String(record.citedBy.length)} pages of The Model Stack.`}
+  canonicalPath={record.atlasUrl}
+  currentId={null}
+  navKey="papers"
+  jsonLd={paperJsonLd(record, Astro.site)}
+>
+  <Breadcrumbs crumbs={[{ title: 'Papers', number: null, url: '/papers/' }]} current={record.key} />
+  <article class="sh-article pp" data-paper-page>
+    <PageHeader
+      identity={`${record.spine ? 'Spine paper' : 'Chapter reference'} · ${record.type} · ${record.key}`}
+      title={record.work}
+      meta={`${record.authors} · ${record.venue}`}
+    >
+      <div class="pp-facts">
+        <span class="pp-status" data-evidence-class={statusClass} data-status={record.status === 'UNVERIFIED' ? 'unv' : 'ok'}>
+          <i aria-hidden="true"></i>{record.status}
+        </span>
+        <span class="pp-facts__n">{s(model.pages, 'citing page')}</span>
+        <span class="pp-facts__n">{s(citedChapters.length, 'chapter')}</span>
+        <span class="pp-facts__n">{s(model.lineage.length, 'lineage entry', 'lineage entries')}</span>
+        <span class="pp-facts__n">{s(model.cocitedTotal, 'work', 'works')} cited alongside</span>
+      </div>
+      <ul class="pp-actions">
+        {
+          record.url !== null ? (
+            <li>
+              <a href={record.url} rel="external">
+                Open paper
+              </a>
+            </li>
+          ) : (
+            <li class="pp-actions__missing">No primary URL could be attributed (UNVERIFIED)</li>
+          )
+        }
+        {
+          record.code !== null && (
+            <li>
+              <a href={record.code} rel="external">
+                Official code
+              </a>
+            </li>
+          )
+        }
+        {
+          firstPage !== undefined && (
+            <li>
+              <a href={firstPage.url}>First citing page</a>
+            </li>
+          )
+        }
+      </ul>
+    </PageHeader>
+
+    <section class="pp-where" aria-labelledby="pp-where-title" data-pp-root>
+      <div class="pp-grid">
+        <figure class="pp-map">
+          <figcaption class="pp-head">
+            <span class="pp-head__title" id="pp-where-title">Where it is used</span>
+            <span class="pp-head__note">66 chapters · dot size = citing pages</span>
+          </figcaption>
+          <svg
+            class="pp-svg"
+            viewBox={`0 0 ${String(W)} ${String(H)}`}
+            role="group"
+            aria-label={`Chapters of the book: ${String(citedChapters.length)} cite ${record.key}. Arrow keys step through them; Enter opens a chapter.`}
+            data-pp-svg
+          >
+            {
+              laneRows.map((lane) => (
+                <g class="pp-lane">
+                  <line x1={X0 - 14} x2={W - 8} y1={lane.y} y2={lane.y} />
+                  <text x="4" y={lane.y + 3.6}>
+                    {lane.numeral}
+                    <title>
+                      Part {lane.numeral} — {lane.title}
+                    </title>
+                  </text>
+                </g>
+              ))
+            }
+            {
+              dots.map((dot) => {
+                const chapter = byN.get(dot.n);
+                if (chapter === undefined) {
+                  return (
+                    <circle class:list={['pp-dot--quiet', { 'is-written': dot.written }]} cx={dot.x} cy={dot.y} r="2.8">
+                      <title>
+                        {dot.number} {dot.short} — does not cite {record.key}
+                      </title>
+                    </circle>
+                  );
+                }
+                const pages = chapter.pages.length;
+                const r = pages === 0 ? 5 : radius(pages);
+                return (
+                  <a
+                    class:list={['pp-dot', { 'is-use-only': pages === 0 }]}
+                    href={chapter.url}
+                    data-pp-n={dot.n}
+                    tabindex={dot.n === firstLit ? 0 : -1}
+                    aria-label={`${dot.number} ${dot.title}: ${pages === 0 ? 'use recorded, no citing page' : s(pages, 'citing page')}`}
+                  >
+                    <circle class="pp-dot__hit" cx={dot.x} cy={dot.y} r={Math.max(r + 3, 10)} />
+                    <circle class="pp-dot__disc" cx={dot.x} cy={dot.y} r={r} />
+                    {pages > 1 && (
+                      <text class="pp-dot__n" x={dot.x} y={dot.y + 3.2}>
+                        {pages}
+                      </text>
+                    )}
+                    <text class="pp-dot__label" x={dot.x} y={dot.y - r - 3}>
+                      {dot.number}
+                    </text>
+                  </a>
+                );
+              })
+            }
+          </svg>
+          <p class="pp-legend" aria-hidden="true">
+            <span><i class="pp-key pp-key--lit"></i>cites it</span>
+            <span><i class="pp-key pp-key--use"></i>use recorded, no citing page</span>
+            <span><i class="pp-key pp-key--quiet is-written"></i>written</span>
+            <span><i class="pp-key pp-key--quiet"></i>planned</span>
+          </p>
+        </figure>
+
+        <div class="pp-readout" aria-live="polite" data-pp-readout>
+          <p class="pp-ro__kicker" data-pp-kicker>Where it is used</p>
+          <p class="pp-ro__title" data-pp-title>{restTitle}</p>
+          <p class="pp-ro__text" data-pp-text>{restText}</p>
+          <p class="pp-ro__listhead" data-pp-listhead><span>Chapters</span><span>citing pages</span></p>
+          <ol class="pp-ro__list" data-pp-list>
+            {
+              model.chapters.slice(0, 6).map((chapter) => (
+                <li class="pp-ro__item">
+                  <a href={chapter.url} tabindex="-1">
+                    <span class="pp-ro__num">{chapter.number}</span>
+                    <span class="pp-ro__text2">{chapter.short}</span>
+                    <span class="pp-ro__val">{chapter.pages.length > 0 ? chapter.pages.length : 'use only'}</span>
+                  </a>
+                </li>
+              ))
+            }
+          </ol>
+          <p class="pp-ro__foot" data-pp-foot>{model.chapters.length > 6 ? `+${String(model.chapters.length - 6)} more chapters — see “Used for” below` : ''}</p>
+        </div>
+
+        <div class="pp-co" aria-labelledby="pp-co-title">
+          <p class="pp-head">
+            <span class="pp-head__title" id="pp-co-title">Cited alongside</span>
+            <span class="pp-head__note">shared citing pages</span>
+          </p>
+          {
+            model.cocited.length === 0 ? (
+              <p class="pp-empty">No other work is cited on the same pages.</p>
+            ) : (
+              <ol class="pp-co__list" data-pp-co-list>
+                {model.cocited.map((work) => (
+                  <li>
+                    <a class="pp-co__row" href={work.url} data-pp-co={work.key} aria-label={`${work.key} ${work.work}: ${s(work.shared.length, 'shared page')}`}>
+                      <span class:list={['pp-co__key', { 'is-spine': work.spine }]}>{work.key}</span>
+                      <span class="pp-co__work">{work.work}</span>
+                      <span class="pp-co__bar" aria-hidden="true">
+                        <i style={`inline-size:${String(Math.round((work.shared.length / maxShared) * 100))}%`} />
+                      </span>
+                      <span class="pp-co__n">{work.shared.length}</span>
+                    </a>
+                  </li>
+                ))}
+              </ol>
+            )
+          }
+          {
+            model.cocitedTotal > model.cocited.length && (
+              <p class="pp-co__more">
+                {model.cocitedTotal - model.cocited.length} more works share at least one page · <a href="/papers/">all papers</a>
+              </p>
+            )
+          }
+        </div>
+      </div>
+
+      {
+        model.lineage.length > 0 && (
+          <div class="pp-lineage" aria-labelledby="pp-lin-title">
+            <p class="pp-head">
+              <span class="pp-head__title" id="pp-lin-title">In the lineage</span>
+              <span class="pp-head__note">
+                {s(model.lineage.length, 'timeline entry cites', 'timeline entries cite')} {record.key}
+              </span>
+            </p>
+            <ol class="pp-lin__list">
+              {model.lineage.map((entry) => (
+                <li class={`pp-lin pp-rel--${entry.relationKey}`} data-pp-lin={entry.index}>
+                  <a class="pp-lin__year" href={`/timeline/#tl-${String(entry.index)}`} aria-label={`${entry.year}, ${entry.relation}: ${entry.work} — open on the timeline`}>
+                    {entry.year}
+                  </a>
+                  <span class="pp-lin__rel">
+                    <i aria-hidden="true" />
+                    {entry.relation}
+                  </span>
+                  <span class="pp-lin__body">
+                    <span class="pp-lin__work">{entry.work}</span>
+                    {entry.note.length > 0 && (
+                      <span class="pp-lin__note">
+                        <Inline nodes={entry.note} />
+                      </span>
+                    )}
+                  </span>
+                  {entry.owner !== null ? (
+                    <a class="pp-lin__owner" href={entry.owner.url}>
+                      {entry.owner.number !== null && <span>{entry.owner.number}</span>} {entry.owner.title}
+                    </a>
+                  ) : (
+                    <span class="pp-lin__owner">—</span>
+                  )}
+                </li>
+              ))}
+            </ol>
+          </div>
+        )
+      }
+
+      <div class="pp-uses" aria-labelledby="pp-uses-title">
+        <p class="pp-head">
+          <span class="pp-head__title" id="pp-uses-title">Used for</span>
+          <span class="pp-head__note">what each chapter draws from it · the pages that cite it · when the source was checked</span>
+        </p>
+        {
+          model.chapters.length === 0 && model.otherPages.length === 0 ? (
+            <p class="pp-empty">No chapter records a use for this work, and no page cites it.</p>
+          ) : (
+            <table class="pp-table">
+              <caption class="sh-visually-hidden">
+                Chapters that use or cite {record.key}
+              </caption>
+              <colgroup>
+                <col class="pp-col--ch" />
+                <col />
+                <col class="pp-col--pages" />
+                <col class="pp-col--acc" />
+              </colgroup>
+              <thead>
+                <tr>
+                  <th scope="col">Chapter</th>
+                  <th scope="col">What it is used for</th>
+                  <th scope="col">Citing pages</th>
+                  <th scope="col">Accessed</th>
+                </tr>
+              </thead>
+              <tbody>
+                {model.chapters.map((chapter) => (
+                  <tr class="pp-row" data-pp-row={chapter.n}>
+                    <th scope="row" class="pp-row__ch">
+                      <a href={chapter.url}>
+                        <span class="pp-row__num">{chapter.number}</span>
+                        <span class="pp-row__title">{chapter.title}</span>
+                      </a>
+                    </th>
+                    <td class="pp-row__use">
+                      {chapter.uses.length === 0 ? (
+                        <span class="pp-muted">No use recorded in the chapter's references — cited on the pages listed.</span>
+                      ) : (
+                        chapter.uses.map((use) => <p>{use.usedFor}</p>)
+                      )}
+                    </td>
+                    <td class="pp-row__pages">
+                      {chapter.pages.length === 0 ? (
+                        <span class="pp-muted">none</span>
+                      ) : (
+                        chapter.pages.map((page) => (
+                          <a class="pp-chip" href={page.url} title={page.title}>
+                            {page.label}
+                          </a>
+                        ))
+                      )}
+                    </td>
+                    <td class="pp-row__acc">
+                      {chapter.uses.length === 0 ? (
+                        <span class="pp-muted">—</span>
+                      ) : (
+                        chapter.uses.map((use) => {
+                          const parts = accessedParts(use.accessed);
+                          return parts === null ? (
+                            <span class="pp-unv">not accessed — UNVERIFIED</span>
+                          ) : (
+                            <span class="pp-acc">
+                              {parts.iso !== null ? <time datetime={parts.iso}>{parts.day}</time> : parts.day}
+                              {parts.detail !== '' && <span class="pp-acc__detail">{parts.detail}</span>}
+                            </span>
+                          );
+                        })
+                      )}
+                    </td>
+                  </tr>
+                ))}
+                {model.otherPages.length > 0 && (
+                  <tr class="pp-row">
+                    <th scope="row" class="pp-row__ch">
+                      <span class="pp-row__title">Outside the chapters</span>
+                    </th>
+                    <td class="pp-row__use">
+                      <span class="pp-muted">Front matter or appendices cite it.</span>
+                    </td>
+                    <td class="pp-row__pages">
+                      {model.otherPages.map((page) => (
+                        <a class="pp-chip" href={page.url} title={page.title}>
+                          {page.title}
+                        </a>
+                      ))}
+                    </td>
+                    <td class="pp-row__acc">
+                      <span class="pp-muted">—</span>
+                    </td>
+                  </tr>
+                )}
+              </tbody>
+            </table>
+          )
+        }
+      </div>
+
+      <script is:inline type="application/json" data-pp-model set:html={jsonForHtml(clientModel)} />
+    </section>
+    <p class="pp-back">
+      <a href="/papers/">← All {registry.references.length} papers</a>
+    </p>
+  </article>
+</ReaderLayout>

@@ -1,0 +1,34 @@
+---
+/**
+ * The observation layer (UI_UX §41): four labelled rows so commentary is
+ * never visually indistinguishable from source evidence. Evidence-class
+ * tints touch only the labels (claims/evidence: source; inference; unknown: gap).
+ */
+import type { ObservationLayerBlock } from '@atlas/core';
+import { OBSERVATION_PART_TITLES, OBSERVATION_PARTS } from '@atlas/core';
+import Inline from '../Inline.astro';
+import { depthAttrs } from '../lib/dom.ts';
+import { EVIDENCE_GLYPH, OBSERVATION_PART_CLASS } from '../lib/grammar.ts';
+
+interface Props {
+  block: ObservationLayerBlock;
+}
+
+const { block } = Astro.props;
+const rows = OBSERVATION_PARTS.flatMap((part) => {
+  const content = block.parts[part];
+  const cls = OBSERVATION_PART_CLASS[part];
+  return content === null ? [] : [{ part, content, cls, glyph: EVIDENCE_GLYPH[cls], title: OBSERVATION_PART_TITLES[part] }];
+});
+---
+
+<dl class="rb-obs" id={block.anchor ?? undefined} {...depthAttrs(block.depth)}>
+  {
+    rows.map((row) => (
+      <div class={`rb-obs__row rb-obs__row--${row.part}`}>
+        <dt class={`rb-obs__label rb-ev--${row.cls}`}><span class="rb-obs__glyph" aria-hidden="true">{row.glyph}</span>{row.title}</dt>
+        <dd class="rb-obs__text"><Inline nodes={row.content} /></dd>
+      </div>
+    ))
+  }
+</dl>

@@ -1,0 +1,44 @@
+---
+/**
+ * Depth control (UI_UX §29): a segmented control of plain links
+ * (`?depth=…`), so depth survives in the URL and works without JavaScript.
+ *
+ * The selected segment is styled from <html data-depth> (set before paint by
+ * the bootstrap script), so it is correct on first paint on every page.
+ * `aria-current` marks the server default; the client
+ * (data-action="set-depth") moves it, updates <html data-depth> in place,
+ * persists STORAGE_KEYS.depth and dispatches EVENTS.depth. Links carry
+ * aria-current rather than aria-pressed: aria-pressed is only valid on buttons.
+ */
+import { DEFAULT_DEPTH, DEPTH_DESCRIPTIONS, DEPTH_LABELS, DEPTHS, type Depth } from '@atlas/core';
+
+/** Compact labels for mid-width top bars; the full label stays the accessible name. */
+const SHORT: Readonly<Record<Depth, string>> = {
+  overview: 'Ovw',
+  technical: 'Tech',
+  research: 'Res',
+  implementation: 'Impl',
+};
+---
+
+<nav class="sh-depth" aria-label="Reading depth">
+  <ul class="sh-depth-list">
+    {
+      DEPTHS.map((depth) => (
+        <li>
+          <a
+            class="sh-depth-option"
+            href={`?depth=${depth}`}
+            data-action="set-depth"
+            data-depth-option={depth}
+            aria-current={depth === DEFAULT_DEPTH ? 'true' : undefined}
+            title={`${DEPTH_LABELS[depth]} — ${DEPTH_DESCRIPTIONS[depth]}`}
+          >
+            <span class="sh-depth-full">{DEPTH_LABELS[depth]}</span>
+            <span class="sh-depth-short" aria-hidden="true">{SHORT[depth]}</span>
+          </a>
+        </li>
+      ))
+    }
+  </ul>
+</nav>

@@ -1,0 +1,13 @@
+---
+/** Thematic break: a hairline, never ornament. */
+import type { RuleBlock } from '@atlas/core';
+import { depthAttrs } from '../lib/dom.ts';
+
+interface Props {
+  block: RuleBlock;
+}
+
+const { block } = Astro.props;
+---
+
+<hr class="rb-rule" id={block.anchor ?? undefined} {...depthAttrs(block.depth)} />

@@ -1,0 +1,41 @@
+---
+/**
+ * Differential sibling strip (UI_UX §14): each alternative with the one line
+ * that matters — its changed primitive — linking to the full differential.
+ */
+import type { PageData, RailInstrument, ResearchDocument } from '@atlas/core';
+import Inline from '../Inline.astro';
+import { instrumentAttrs } from '../lib/dom.ts';
+import { findBlock } from '../lib/walk.ts';
+import InstrumentHead from './InstrumentHead.astro';
+
+interface Props {
+  instrument: Extract<RailInstrument, { kind: 'siblings' }>;
+  doc: ResearchDocument;
+  pageData?: PageData | undefined;
+}
+
+const { instrument, doc } = Astro.props;
+const siblings = instrument.anchors.flatMap((anchor) => {
+  const block = findBlock(doc, 'sibling', anchor);
+  return block === null ? [] : [{ anchor, block }];
+});
+---
+
+{
+  siblings.length > 0 && (
+    <div class="rb-instrument rb-instrument--siblings" {...instrumentAttrs('siblings')}>
+      <InstrumentHead title="Siblings · differential" meta={String(siblings.length)} />
+      <ol class="rb-sibi" role="list">
+        {siblings.map(({ anchor, block }) => (
+          <li class="rb-sibi__item">
+            <a class="rb-sibi__name" href={`#${anchor}`}>{block.name}</a>
+            {block.differential.changedPrimitive !== null && (
+              <p class="rb-sibi__prim"><Inline nodes={block.differential.changedPrimitive} /></p>
+            )}
+          </li>
+        ))}
+      </ol>
+    </div>
+  )
+}

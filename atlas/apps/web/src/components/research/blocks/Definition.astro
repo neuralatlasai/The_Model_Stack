@@ -1,0 +1,22 @@
+---
+/**
+ * Definition (`> **Definition — term.** …`), only in the owning chapter.
+ * The term is set in small caps against a left hairline, with a quiet
+ * "defined here" marker; the root carries the glossary anchor `term-<slug>`.
+ */
+import type { DefinitionBlock } from '@atlas/core';
+import { termAnchor } from '@atlas/core';
+import Inline from '../Inline.astro';
+import { depthAttrs } from '../lib/dom.ts';
+
+interface Props {
+  block: DefinitionBlock;
+}
+
+const { block } = Astro.props;
+const anchor = block.anchor ?? termAnchor(block.termSlug);
+---
+
+<div class="rb-def" id={anchor} {...depthAttrs(block.depth)}>
+  <p class="rb-def__text"><span class="rb-def__head"><dfn class="rb-def__term">{block.term}</dfn><span class="rb-def__marker">defined here</span></span><Inline nodes={block.content} /></p>
+</div>

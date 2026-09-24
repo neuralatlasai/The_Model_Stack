@@ -1,0 +1,44 @@
+---
+/**
+ * Evidence profile: the region's evidence-label counts as a dot-matrix glyph
+ * (one shape-coded dot per labelled statement) above a dotted-leader legend
+ * with right-aligned counts. The glyph is decorative; the legend is the data.
+ */
+import type { PageData, RailInstrument, ResearchDocument } from '@atlas/core';
+import EvidenceMark from '../inline/EvidenceMark.astro';
+import { instrumentAttrs } from '../lib/dom.ts';
+import { evidenceDots, orderedCounts } from '../lib/grammar.ts';
+import InstrumentHead from './InstrumentHead.astro';
+
+interface Props {
+  instrument: Extract<RailInstrument, { kind: 'evidence' }>;
+  doc: ResearchDocument;
+  pageData?: PageData | undefined;
+}
+
+const { instrument } = Astro.props;
+const entries = orderedCounts(instrument.counts);
+const { dots, scale, total } = evidenceDots(instrument.counts);
+---
+
+{
+  entries.length > 0 && (
+    <div class="rb-instrument rb-instrument--evidence" {...instrumentAttrs('evidence')}>
+      <InstrumentHead title="Evidence profile" meta={`${total} labelled`} />
+      <p class="rb-dots" aria-hidden="true">
+        {dots.map((dot) => (
+          <span class={`rb-dot rb-ev--${dot.cls}`}>{dot.glyph}</span>
+        ))}
+      </p>
+      <dl class="rb-kv rb-kv--legend">
+        {entries.map((entry) => (
+          <div class="rb-kv__row">
+            <dt class="rb-kv__key"><EvidenceMark label={entry.marker.label} /></dt>
+            <dd class="rb-kv__value">{entry.count}</dd>
+          </div>
+        ))}
+      </dl>
+      {scale > 1 && <p class="rb-instrument__note">1 dot ≈ {scale} statements</p>}
+    </div>
+  )
+}

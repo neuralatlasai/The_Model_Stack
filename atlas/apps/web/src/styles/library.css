@@ -1,0 +1,1452 @@
+/*
+ * Library: the manuscript as an instrument (components/shell/LibraryExplorer.astro,
+ * client library-explorer.ts). Manuscript map (11 part rows × 6
+ * chapter tiles × 6 section cells), a fixed-geometry sticky readout, and a
+ * condensed ledger. Encoding shared by map and ledger:
+ *   tile / row colour   the part's research domain (--d)
+ *   solid tile          chapter written;  hollow tile = planned
+ *   filled cell         section drafted;  outlined cell = planned
+ *   blue ring / bar     builds on (upstream);  oxblood = unlocks (downstream)
+ * Layout follows the component's own width (container queries), so the
+ * tree, rail, and viewport never have to be known here.
+ */
+
+.lib {
+  --lib-up: var(--domain-architecture);
+  --lib-down: var(--accent);
+  /* Defaults live on the root so any ancestor class (row, part, tile) can rebind them. */
+  --d: var(--ink-2);
+  --cell-fill: var(--d);
+  --cell-empty: var(--rule-strong);
+  --tile-h: 62px;
+  --label-w: 128px;
+  --tile-gap: 5px;
+  --panel-w: 292px;
+
+  container: lib / inline-size;
+  margin-top: 1.1rem;
+  border-top: 1.5px solid var(--ink);
+  padding-top: 0.7rem;
+}
+
+.lib a {
+  text-decoration: none;
+}
+
+.lib [data-domain='foundations'] { --d: var(--domain-foundations); }
+.lib [data-domain='data'] { --d: var(--domain-data); }
+.lib [data-domain='architecture'] { --d: var(--domain-architecture); }
+.lib [data-domain='training'] { --d: var(--domain-training); }
+.lib [data-domain='hardware'] { --d: var(--domain-hardware); }
+.lib [data-domain='post-training'] { --d: var(--domain-post-training); }
+.lib [data-domain='inference'] { --d: var(--domain-inference); }
+.lib [data-domain='serving'] { --d: var(--domain-serving); }
+.lib [data-domain='agents'] { --d: var(--domain-agents); }
+.lib [data-domain='embodied'] { --d: var(--domain-embodied); }
+.lib [data-domain='evaluation'] { --d: var(--domain-evaluation); }
+
+/* ── body: map + ledger | sticky readout ─────────────────────────────────── */
+
+.lib-body {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) var(--panel-w);
+  grid-template-areas:
+    'map panel'
+    'ledger panel';
+  column-gap: 1.75rem;
+  align-items: start;
+}
+
+.lib-main {
+  display: contents;
+}
+
+.lib-map {
+  grid-area: map;
+  min-inline-size: 0;
+  margin: 0;
+}
+
+.lib-ledger {
+  grid-area: ledger;
+  min-inline-size: 0;
+}
+
+.lib-panel {
+  grid-area: panel;
+  align-self: stretch;
+  min-inline-size: 0;
+}
+
+/* ── the manuscript map ──────────────────────────────────────────────────── */
+
+.lib-map__head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 0.2rem 1rem;
+  margin: 0 0 0.1rem;
+}
+
+.lib-map__title {
+  font: 600 10.5px var(--font-mono);
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--ink-2);
+}
+
+.lib-map__note {
+  font: 11px var(--font-mono);
+  color: var(--ink-3);
+}
+
+.lib-lens {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.2rem 0.3rem;
+  margin: 0.45rem 0 0.1rem;
+}
+
+.lib-lens__label {
+  margin-inline-end: 0.3rem;
+  font: 600 10px var(--font-mono);
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--ink-3);
+}
+
+.lib-lens__chip {
+  display: inline-flex;
+  align-items: baseline;
+  gap: 0.35rem;
+  min-block-size: 26px;
+  padding: 0.2rem 0.5rem;
+  background: none;
+  border: 1px solid var(--rule);
+  border-radius: 2px;
+  font: 11.5px var(--font-sans);
+  color: var(--ink-2);
+  cursor: pointer;
+  transition:
+    border-color var(--t-hover) ease,
+    color var(--t-hover) ease,
+    background-color var(--t-hover) ease;
+}
+
+.lib-lens__chip:hover,
+.lib-lens__chip:focus-visible,
+.lib-lens__chip.is-on {
+  border-color: var(--ink-3);
+  color: var(--ink);
+}
+
+.lib-lens__chip:focus-visible {
+  outline: 2px solid var(--focus);
+  outline-offset: 1px;
+}
+
+.lib-lens__chip[aria-pressed='true'] {
+  border-color: var(--ink);
+  background: var(--accent-wash);
+  color: var(--ink);
+}
+
+.lib-lens__n {
+  font: 10.5px var(--font-mono);
+  color: var(--ink-3);
+}
+
+.lib-grid {
+  position: relative;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+}
+
+.lib-vol {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: var(--tile-gap);
+}
+
+.lib-vol__head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 0.75rem;
+  max-width: none;
+  margin: 0.85rem 0 0.15rem;
+  padding-bottom: 0.3rem;
+  border-bottom: 1px solid var(--rule);
+  font: 600 10px var(--font-mono);
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--ink-3);
+}
+
+.lib-vol__head a {
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+  color: var(--ink-2);
+}
+
+.lib-vol__head a:hover {
+  color: var(--accent);
+}
+
+.lib-vol__stat {
+  flex: none;
+  font-weight: 400;
+  letter-spacing: 0.04em;
+}
+
+.lib-row {
+  display: grid;
+  grid-template-columns: var(--label-w) repeat(6, minmax(0, 1fr));
+  gap: var(--tile-gap);
+  transition: opacity var(--t-state) ease;
+}
+
+.lib-row__label {
+  display: grid;
+  grid-template-columns: 1.7rem minmax(0, 1fr);
+  grid-template-rows: minmax(0, 1fr) auto auto;
+  column-gap: 0.15rem;
+  block-size: var(--tile-h);
+  padding: 0.3rem 0.4rem 0.35rem 0;
+  color: var(--ink-2);
+}
+
+.lib-row__num {
+  font: 600 11px/1.35 var(--font-mono);
+  color: var(--d);
+}
+
+.lib-row__title {
+  display: -webkit-box;
+  align-self: start;
+  max-block-size: 2.5em;
+  overflow: hidden;
+  font: 11.5px/1.25 var(--font-sans);
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+  line-clamp: 2;
+}
+
+.lib-row__meter {
+  grid-column: 1 / -1;
+  display: block;
+  block-size: 2px;
+  margin-block: 0 0.2rem;
+  background: var(--rule);
+}
+
+.lib-row__meter > i {
+  display: block;
+  block-size: 100%;
+  background: var(--d);
+}
+
+.lib-row__stat {
+  grid-column: 1 / -1;
+  font: 10px/1.2 var(--font-mono);
+  white-space: nowrap;
+  color: var(--ink-3);
+}
+
+.lib-row__label:hover .lib-row__title,
+.lib-row.is-part .lib-row__title {
+  color: var(--accent);
+}
+
+/* Tiles. Written = solid part colour; planned = hollow. */
+.lib-tile {
+  --tile-bg: var(--paper);
+  --tile-border: color-mix(in oklab, var(--d) 34%, var(--rule));
+  --tile-ink: var(--ink-3);
+  --tile-num: var(--d);
+  --cell-fill: var(--d);
+  --cell-empty: var(--rule-strong);
+
+  position: relative;
+  z-index: 1;
+  min-inline-size: 0;
+  block-size: var(--tile-h);
+  padding: 0.35rem 0.45rem 0;
+  border: 1px solid var(--tile-border);
+  background: var(--tile-bg);
+  color: var(--tile-ink);
+  outline: 0 solid transparent;
+  outline-offset: 2px;
+  transition:
+    opacity var(--t-state) ease,
+    outline-color var(--t-state) ease,
+    background-color var(--t-state) ease;
+}
+
+.lib-tile.is-written {
+  --tile-bg: var(--d);
+  --tile-border: var(--d);
+  --tile-ink: color-mix(in oklab, var(--paper) 88%, var(--d));
+  --tile-num: var(--paper);
+  --cell-fill: var(--paper);
+  --cell-empty: color-mix(in oklab, var(--paper) 42%, var(--d));
+}
+
+.lib-tile.has-draft {
+  --tile-border: color-mix(in oklab, var(--d) 70%, var(--rule));
+  --tile-ink: var(--ink-2);
+}
+
+.lib-tile__link,
+.lib-tile__link:hover,
+.lib-tile__link:focus {
+  display: flex;
+  flex-direction: column;
+  gap: 0.15rem;
+  color: inherit;
+  outline: none;
+}
+
+.lib-tile__link::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+}
+
+.lib-tile__n {
+  font: 600 12px/1 var(--font-mono);
+  color: var(--tile-num);
+}
+
+.lib-tile__t {
+  display: -webkit-box;
+  overflow: hidden;
+  font: 10.5px/1.2 var(--font-sans);
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+  line-clamp: 2;
+}
+
+.lib-tile__m {
+  position: absolute;
+  inset-block-start: 0.35rem;
+  inset-inline-end: 0.45rem;
+  font: 10px/1.2 var(--font-mono);
+  color: var(--tile-ink);
+  opacity: 0.85;
+  pointer-events: none;
+}
+
+.lib-tile__m > span {
+  display: none;
+}
+
+.lib-tile__m > [data-m='words'] {
+  display: inline;
+}
+
+.lib-tile__hop {
+  position: absolute;
+  inset-block-start: 0.25rem;
+  inset-inline-end: 0.3rem;
+  display: none;
+  padding: 0.05rem 0.2rem;
+  background: var(--paper);
+  font: 600 10px/1.2 var(--font-mono);
+  pointer-events: none;
+}
+
+.lib-tile__cells,
+.lib-tile__lens {
+  position: absolute;
+  inset-inline: 0.45rem;
+  inset-block-end: 0.4rem;
+  z-index: 1;
+}
+
+.lib-tile__cells {
+  display: grid;
+  grid-template-columns: repeat(6, minmax(0, 1fr));
+  gap: 2px;
+}
+
+.lib-tile__none {
+  grid-column: 1 / -1;
+  font: 9.5px var(--font-mono);
+  color: var(--ink-3);
+}
+
+.lib-cell {
+  position: relative;
+  display: block;
+  block-size: 8px;
+  border: 1px solid var(--cell-empty);
+  transition:
+    background-color var(--t-state) ease,
+    border-color var(--t-state) ease,
+    transform var(--t-hover) ease;
+}
+
+.lib-cell.is-written {
+  background: var(--cell-fill);
+  border-color: var(--cell-fill);
+}
+
+/* A larger hit area than the drawn cell (cells are 8 px tall). */
+.lib-tile .lib-cell::before {
+  content: '';
+  position: absolute;
+  inset: -5px -1px -4px;
+}
+
+.lib-cell:hover,
+.lib-cell.is-on {
+  outline: 1.5px solid var(--ink);
+  outline-offset: 1px;
+}
+
+.lib-tile.is-written .lib-cell:hover,
+.lib-tile.is-written .lib-cell.is-on {
+  outline-color: var(--paper);
+}
+
+.lib-cell:focus-visible {
+  outline: 2px solid var(--focus);
+  outline-offset: 1px;
+}
+
+.lib-tile__lens {
+  display: none;
+  block-size: 8px;
+  background: var(--cell-empty);
+  opacity: 0.6;
+}
+
+.lib-tile__lens > i {
+  display: block;
+  inline-size: calc(var(--lv, 0) * 100%);
+  block-size: 100%;
+  background: var(--cell-fill);
+}
+
+.lib-tile:hover {
+  outline: 1px solid var(--ink-3);
+}
+
+.lib-tile:has(.lib-tile__link:focus-visible) {
+  outline: 2px solid var(--focus);
+  outline-offset: 2px;
+}
+
+/* Focus: the chapter, what it builds on (blue), what it unlocks (oxblood). */
+.lib-grid.has-focus .lib-tile:not(.is-focus, .is-up, .is-down),
+.lib-grid.has-part .lib-row:not(.is-part) .lib-tile {
+  opacity: 0.22;
+}
+
+.lib-grid.has-part .lib-row:not(.is-part) .lib-row__label {
+  opacity: 0.45;
+}
+
+.lib-tile.is-focus {
+  outline: 2px solid var(--ink);
+}
+
+.lib-tile.is-up {
+  outline: 1px solid var(--lib-up);
+}
+
+.lib-tile.is-down {
+  outline: 1px solid var(--lib-down);
+}
+
+.lib-tile.is-up.is-direct,
+.lib-tile.is-down.is-direct {
+  outline-width: 2.5px;
+}
+
+.lib-grid.has-focus .lib-tile__m {
+  visibility: hidden;
+}
+
+.lib-grid.has-focus .lib-tile:is(.is-up, .is-down) .lib-tile__hop {
+  display: block;
+}
+
+.lib-tile.is-up .lib-tile__hop {
+  color: var(--lib-up);
+}
+
+.lib-tile.is-down .lib-tile__hop {
+  color: var(--lib-down);
+}
+
+.lib-tile.is-peek {
+  outline: 2.5px solid var(--ink);
+  opacity: 1 !important;
+}
+
+/* Direct links, drawn over the map while a chapter is focused. */
+.lib-links {
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+  inline-size: 100%;
+  block-size: 100%;
+  overflow: visible;
+  pointer-events: none;
+}
+
+.lib-links path {
+  fill: none;
+  stroke-width: 1.6;
+  stroke-linecap: round;
+}
+
+.lib-links .is-up {
+  stroke: var(--lib-up);
+}
+
+.lib-links .is-down {
+  stroke: var(--lib-down);
+}
+
+.lib-links circle {
+  stroke: var(--paper);
+  stroke-width: 1.5;
+}
+
+.lib-links circle.is-up {
+  fill: var(--lib-up);
+}
+
+.lib-links circle.is-down {
+  fill: var(--lib-down);
+}
+
+/* Lenses: pointing at a stat re-reads every tile in that measure. */
+.lib[data-lens='words'] .lib-tile { --lv: var(--w); }
+.lib[data-lens='figures'] .lib-tile { --lv: var(--f); }
+.lib[data-lens='equations'] .lib-tile { --lv: var(--e); }
+.lib[data-lens='works'] .lib-tile { --lv: var(--r); }
+
+.lib:is([data-lens='words'], [data-lens='figures'], [data-lens='equations'], [data-lens='works']) .lib-tile__cells {
+  visibility: hidden;
+}
+
+.lib:is([data-lens='words'], [data-lens='figures'], [data-lens='equations'], [data-lens='works']) .lib-tile__lens {
+  display: block;
+}
+
+.lib:is([data-lens='figures'], [data-lens='equations'], [data-lens='works']) .lib-tile__m > [data-m='words'] {
+  display: none;
+}
+
+.lib[data-lens='figures'] .lib-tile__m > [data-m='figures'],
+.lib[data-lens='equations'] .lib-tile__m > [data-m='equations'],
+.lib[data-lens='works'] .lib-tile__m > [data-m='works'] {
+  display: inline;
+}
+
+.lib:is([data-lens='words'], [data-lens='figures'], [data-lens='equations'], [data-lens='works']) .lib-tile__m {
+  font-weight: 600;
+  opacity: 1;
+}
+
+.lib[data-lens='words'] .lib-tile[data-zero~='w'],
+.lib[data-lens='figures'] .lib-tile[data-zero~='f'],
+.lib[data-lens='equations'] .lib-tile[data-zero~='e'],
+.lib[data-lens='works'] .lib-tile[data-zero~='r'],
+.lib[data-lens='chapters'] .lib-tile.is-planned {
+  opacity: 0.3;
+}
+
+.lib[data-lens='sections'] .lib-tile {
+  --tile-bg: var(--paper);
+  --tile-border: var(--rule);
+  --tile-ink: var(--ink-3);
+  --tile-num: var(--ink-3);
+  --cell-fill: var(--d);
+  --cell-empty: var(--rule);
+}
+
+.lib[data-lens='sections'] .lib-cell.is-written {
+  outline: 1px solid var(--d);
+  outline-offset: 1px;
+}
+
+/* ── readout (fixed geometry: every line has a reserved, clamped height) ── */
+
+.lib-readout {
+  position: sticky;
+  top: calc(var(--sh-topbar-h, 52px) + 14px);
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  margin-top: 1.35rem;
+  padding: 0.8rem 0.95rem 0.85rem;
+  border: 1px solid var(--rule-strong);
+  background: var(--paper-raised);
+}
+
+.lib-readout > p,
+.lib-readout > dl,
+.lib-readout > ol {
+  max-width: none;
+  margin: 0;
+  overflow: hidden;
+}
+
+.lib-ro__kicker {
+  block-size: calc(1.4em + 0.5rem + 1px);
+  padding-bottom: 0.5rem;
+  margin-bottom: 0.5rem !important;
+  border-bottom: 1px solid var(--rule);
+  font: 600 10.5px/1.4 var(--font-mono);
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+  color: var(--ink-2);
+}
+
+.lib-ro__title {
+  display: -webkit-box;
+  block-size: 2.5em;
+  font: 500 19px/1.25 var(--font-serif);
+  color: var(--ink);
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+  line-clamp: 2;
+}
+
+.lib-ro__state {
+  block-size: 1.5em;
+  margin-top: 0.3rem !important;
+  font: 11px/1.5 var(--font-mono);
+  white-space: nowrap;
+  text-overflow: ellipsis;
+  color: var(--ink-2);
+}
+
+.lib-ro__thesis {
+  display: -webkit-box;
+  block-size: 7.25em;
+  margin-top: 0.35rem !important;
+  font: 14.5px/1.45 var(--font-serif);
+  color: var(--ink-2);
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 5;
+  line-clamp: 5;
+}
+
+.lib-ro__rows {
+  display: grid;
+  grid-template-rows: repeat(4, 1.55em);
+  margin-top: 0.6rem !important;
+  font: 11px/1.55 var(--font-mono);
+}
+
+.lib-ro__rows > div {
+  display: flex;
+  align-items: baseline;
+  gap: 0.5rem;
+  min-inline-size: 0;
+}
+
+.lib-ro__rows dt {
+  display: flex;
+  flex: 1;
+  gap: 0.5rem;
+  min-inline-size: 0;
+  white-space: nowrap;
+  color: var(--ink-3);
+}
+
+.lib-ro__rows dt::after {
+  content: '';
+  flex: 1;
+  min-inline-size: 0.75rem;
+  border-bottom: 1px dotted var(--rule-strong);
+  transform: translateY(-0.28em);
+}
+
+.lib-ro__rows dd {
+  margin: 0;
+  white-space: nowrap;
+  color: var(--ink);
+}
+
+.lib-ro__rows dd a {
+  color: var(--accent);
+  text-decoration: underline;
+  text-decoration-color: var(--rule-strong);
+  text-underline-offset: 0.18em;
+}
+
+.lib-ro__rows dd a:hover {
+  text-decoration-color: currentcolor;
+}
+
+.lib-ro__listhead {
+  display: flex;
+  justify-content: space-between;
+  gap: 0.5rem;
+  block-size: calc(1.4em + 0.8rem + 1px);
+  margin-top: 0.7rem !important;
+  padding-top: 0.55rem;
+  border-top: 1px solid var(--rule);
+  font: 600 10px/1.4 var(--font-mono);
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  white-space: nowrap;
+  color: var(--ink-3);
+}
+
+.lib-ro__listhead > :last-child {
+  font-weight: 400;
+  letter-spacing: 0.04em;
+}
+
+.lib-ro__list {
+  display: grid;
+  grid-template-rows: repeat(6, 21px);
+  padding: 0;
+  list-style: none;
+}
+
+.lib-ro__item {
+  display: grid;
+  grid-template-columns: 22px 2.1rem minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 0.4rem;
+  min-inline-size: 0;
+  padding-inline: 0.2rem;
+  font: 12px/1.2 var(--font-sans);
+  color: var(--ink-2);
+}
+
+.lib-ro__item:has(> .lib-key) {
+  grid-template-columns: 20px minmax(0, 1fr);
+}
+
+.lib-ro__item.is-on {
+  background: var(--accent-wash);
+  box-shadow: inset 2px 0 0 var(--accent);
+  color: var(--ink);
+}
+
+.lib-ro__item.is-planned {
+  color: var(--ink-3);
+}
+
+.lib-ro__num {
+  font: 600 10.5px var(--font-mono);
+  color: var(--ink-3);
+}
+
+.lib-ro__itemtext {
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+
+.lib-ro__val {
+  font: 10.5px var(--font-mono);
+  color: var(--ink-3);
+}
+
+.lib-ro__cell {
+  display: block;
+  inline-size: 12px;
+  block-size: 8px;
+  border: 1px solid var(--rule-strong);
+}
+
+.lib-ro__cell.is-written {
+  background: var(--d, var(--ink-2));
+  border-color: var(--d, var(--ink-2));
+}
+
+.lib-ro__cell.is-part {
+  inline-size: 22px;
+  background: linear-gradient(to right, var(--d) var(--fill, 0%), transparent var(--fill, 0%));
+  border-color: var(--d);
+}
+
+.lib-ro__links {
+  display: grid;
+  grid-template-rows: repeat(2, 24px);
+  block-size: calc(48px + 0.6rem);
+  padding-top: 0.6rem;
+  font: 11px var(--font-mono);
+}
+
+.lib-links__group {
+  display: flex;
+  align-items: center;
+  gap: 0.2rem;
+  min-inline-size: 0;
+  overflow: hidden;
+  white-space: nowrap;
+}
+
+.lib-links__label {
+  flex: none;
+  inline-size: 4.9rem;
+  font-size: 10.5px;
+  color: var(--ink-3);
+}
+
+.lib-links__group a,
+.lib-links__more {
+  flex: none;
+  min-inline-size: 23px;
+  padding: 0.05rem 0.2rem;
+  border: 1px solid var(--rule-strong);
+  font-size: 10.5px;
+  text-align: center;
+  color: var(--ink-2);
+}
+
+.lib-links__more {
+  border-style: dotted;
+  color: var(--ink-3);
+}
+
+.lib-links__group a.is-up {
+  border-color: var(--lib-up);
+  color: var(--lib-up);
+}
+
+.lib-links__group a.is-down {
+  border-color: var(--lib-down);
+  color: var(--lib-down);
+}
+
+.lib-links__group a:hover,
+.lib-links__group a:focus-visible {
+  background: var(--paper);
+  outline: none;
+  box-shadow: inset 0 -2px 0 currentcolor;
+}
+
+.lib-links__none {
+  font-size: 10.5px;
+  color: var(--ink-3);
+}
+
+/* Legend keys (readout at rest). */
+.lib-key {
+  display: block;
+  inline-size: 16px;
+  block-size: 10px;
+  border: 1px solid var(--ink-3);
+}
+
+.lib-key--tile-written {
+  background: var(--domain-data);
+  border-color: var(--domain-data);
+}
+
+.lib-key--tile-planned {
+  border-color: color-mix(in oklab, var(--domain-data) 34%, var(--rule));
+}
+
+.lib-key--cell-written {
+  inline-size: 12px;
+  block-size: 7px;
+  background: var(--domain-data);
+  border-color: var(--domain-data);
+}
+
+.lib-key--cell-planned {
+  inline-size: 12px;
+  block-size: 7px;
+  border-color: var(--rule-strong);
+}
+
+.lib-key--up,
+.lib-key--down {
+  border-width: 2px;
+}
+
+.lib-key--up {
+  border-color: var(--lib-up);
+}
+
+.lib-key--down {
+  border-color: var(--lib-down);
+}
+
+/* ── ledger ──────────────────────────────────────────────────────────────── */
+
+.lib-ledger {
+  --c-n: 2.4rem;
+  --c-strip: 6.9rem;
+  --c-words: 7.4rem;
+  --c-fe: 4.4rem;
+  --c-state: 5.4rem;
+  --cols: var(--c-n) minmax(0, 1fr) var(--c-strip) var(--c-words) var(--c-fe) var(--c-state);
+
+  margin-top: 2.25rem;
+  scroll-margin-top: calc(var(--sh-topbar-h, 52px) + 12px);
+}
+
+.lib-ledger__head {
+  position: sticky;
+  top: var(--sh-topbar-h, 52px);
+  z-index: 3;
+  padding-top: 0.4rem;
+  background: var(--paper);
+  border-bottom: 1px solid var(--ink);
+}
+
+.lib-ledger__title {
+  max-width: none;
+  margin: 0 0 0.45rem;
+  font: 600 10.5px var(--font-mono);
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--ink-2);
+}
+
+.lib-ledger__cols {
+  display: grid;
+  grid-template-columns: var(--cols);
+  max-width: none;
+  margin: 0;
+  padding-block: 0 0.3rem;
+  font: 600 9.5px var(--font-mono);
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--ink-3);
+}
+
+.lib-ledger__cols > span {
+  padding-inline: 0.45rem;
+}
+
+.lib-ledger__cols > span:nth-child(4),
+.lib-ledger__cols > span:nth-child(5) {
+  text-align: end;
+}
+
+.lib-lvol__title {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 0.2rem 1rem;
+  max-width: none;
+  margin: 1.6rem 0 0;
+  font: 600 10.5px var(--font-mono);
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--ink-2);
+}
+
+.lib-lvol__title a {
+  color: var(--ink);
+}
+
+.lib-lvol__title a:hover {
+  color: var(--accent);
+}
+
+.lib-lvol__stat {
+  font-weight: 400;
+  letter-spacing: 0.03em;
+  text-transform: none;
+  color: var(--ink-3);
+}
+
+.lib-part {
+  margin-top: 0.9rem;
+  scroll-margin-top: calc(var(--sh-topbar-h, 52px) + 64px);
+  transition: opacity var(--t-state) ease;
+}
+
+.lib-part__head {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: baseline;
+  gap: 0.1rem 1rem;
+  padding: 0.4rem 0.45rem 0.45rem;
+  border-top: 2px solid var(--d);
+  background: color-mix(in oklab, var(--d) 5%, var(--paper));
+}
+
+.lib-part__title {
+  max-width: none;
+  margin: 0;
+  font: 500 17.5px/1.3 var(--font-serif);
+}
+
+.lib-part__title a {
+  color: var(--ink);
+}
+
+.lib-part__title a:hover {
+  color: var(--accent);
+}
+
+.lib-part__num {
+  margin-inline-end: 0.35rem;
+  font: 600 10.5px var(--font-mono);
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--d);
+}
+
+.lib-part__progress {
+  display: flex;
+  align-items: center;
+  gap: 0.55rem;
+  max-width: none;
+  margin: 0;
+  font: 10.5px var(--font-mono);
+  white-space: nowrap;
+  color: var(--ink-3);
+}
+
+.lib-part__segs {
+  display: inline-grid;
+  grid-template-columns: repeat(6, 9px);
+  gap: 2px;
+}
+
+.lib-part__segs > i {
+  display: block;
+  block-size: 9px;
+  border: 1px solid color-mix(in oklab, var(--d) 45%, var(--rule));
+}
+
+.lib-part__segs > i.is-written {
+  background: var(--d);
+  border-color: var(--d);
+}
+
+.lib-part__segs > i.has-draft {
+  background: linear-gradient(to top, var(--d) 50%, transparent 50%);
+  border-color: var(--d);
+}
+
+.lib-part__outcome {
+  grid-column: 1 / -1;
+  max-width: none;
+  margin: 0;
+  font: 12px/1.4 var(--font-sans);
+  color: var(--ink-3);
+}
+
+.lib-col--n { inline-size: var(--c-n); }
+.lib-col--strip { inline-size: var(--c-strip); }
+.lib-col--words { inline-size: var(--c-words); }
+.lib-col--fe { inline-size: var(--c-fe); }
+.lib-col--state { inline-size: var(--c-state); }
+
+.lib-table {
+  inline-size: 100%;
+  border-collapse: collapse;
+  table-layout: fixed;
+  font: 13px/1.35 var(--font-sans);
+}
+
+.lib-ch > td {
+  padding: 0.42rem 0.45rem 0.45rem;
+  border-bottom: 1px solid var(--rule);
+  vertical-align: top;
+  transition:
+    background-color var(--t-hover) ease,
+    opacity var(--t-state) ease;
+}
+
+.lib-ch__n {
+  font: 600 11.5px/1.6 var(--font-mono);
+  color: var(--d);
+}
+
+.lib-ch__main {
+  min-inline-size: 0;
+}
+
+.lib-ch__title {
+  display: block;
+  font: 15.5px/1.3 var(--font-serif);
+  color: var(--ink);
+}
+
+.lib-ch.is-planned .lib-ch__title {
+  color: var(--ink-2);
+}
+
+.lib-ch__title:hover,
+.lib-ch__title:focus-visible {
+  color: var(--accent);
+  text-decoration: underline;
+  text-decoration-color: var(--rule-strong);
+  text-underline-offset: 0.16em;
+}
+
+.lib-ch__thesis {
+  display: block;
+  overflow: hidden;
+  margin-top: 0.1rem;
+  font: 12px/1.45 var(--font-sans);
+  white-space: nowrap;
+  text-overflow: ellipsis;
+  color: var(--ink-3);
+}
+
+.lib-ch__thesis--none {
+  font-style: italic;
+  opacity: 0.8;
+}
+
+.lib-ch__strip {
+  white-space: nowrap;
+}
+
+.lib-strip {
+  display: inline-grid;
+  grid-template-columns: repeat(6, 10px);
+  gap: 2px;
+  vertical-align: -1px;
+}
+
+.lib-strip .lib-cell {
+  block-size: 12px;
+  border-color: color-mix(in oklab, var(--d) 30%, var(--rule-strong));
+}
+
+.lib-strip .lib-cell.is-written {
+  background: var(--d);
+  border-color: var(--d);
+}
+
+.lib-ch__count {
+  margin-inline-start: 0.4rem;
+  font: 10.5px var(--font-mono);
+  color: var(--ink-3);
+}
+
+.lib-ch__words {
+  white-space: nowrap;
+  text-align: end;
+}
+
+.lib-bar {
+  display: inline-block;
+  inline-size: 2.6rem;
+  block-size: 4px;
+  margin-inline-end: 0.4rem;
+  vertical-align: 2px;
+  background: var(--rule);
+}
+
+.lib-bar > i {
+  display: block;
+  block-size: 100%;
+  background: var(--d);
+}
+
+.lib-ch__num,
+.lib-ch__fe {
+  font: 11.5px/1.6 var(--font-mono);
+  font-variant-numeric: tabular-nums;
+  color: var(--ink-2);
+}
+
+.lib-ch__fe {
+  white-space: nowrap;
+  text-align: end;
+}
+
+.lib-ch__state {
+  font: 11px/1.6 var(--font-mono);
+  white-space: nowrap;
+  color: var(--ink-3);
+}
+
+.lib-ch.is-written .lib-ch__state {
+  color: var(--ink);
+}
+
+.lib-state-key {
+  display: inline-block;
+  inline-size: 7px;
+  block-size: 7px;
+  margin-inline-end: 0.35rem;
+  border: 1.3px solid var(--d);
+  border-radius: 50%;
+  vertical-align: 0;
+}
+
+.lib-ch.is-written .lib-state-key {
+  background: var(--d);
+}
+
+.lib-ch:hover > td {
+  background: color-mix(in oklab, var(--accent-wash) 45%, transparent);
+}
+
+/* Connected: the focused chapter and everything it builds on / unlocks. */
+.lib-ledger.has-focus .lib-ch:not(.is-focus, .is-up, .is-down) > td {
+  opacity: 0.4;
+}
+
+.lib-ch.is-focus > td {
+  background: var(--accent-wash);
+}
+
+.lib-ch.is-focus > td:first-child {
+  box-shadow: inset 3px 0 0 var(--ink);
+}
+
+.lib-ch.is-up > td:first-child {
+  box-shadow: inset 2px 0 0 var(--lib-up);
+}
+
+.lib-ch.is-down > td:first-child {
+  box-shadow: inset 2px 0 0 var(--lib-down);
+}
+
+.lib-ch.is-direct > td:first-child::after {
+  content: attr(data-hop);
+  display: block;
+  font: 600 9.5px var(--font-mono);
+}
+
+.lib-ch.is-up.is-direct > td:first-child {
+  box-shadow: inset 3px 0 0 var(--lib-up);
+}
+
+.lib-ch.is-down.is-direct > td:first-child {
+  box-shadow: inset 3px 0 0 var(--lib-down);
+}
+
+.lib-ledger.has-part .lib-part:not(.is-part) {
+  opacity: 0.4;
+}
+
+/* ── shelf ───────────────────────────────────────────────────────────────── */
+
+.lib-shelf {
+  margin-top: 2.5rem;
+}
+
+.lib-shelf__title {
+  max-width: none;
+  margin: 0 0 0.4rem;
+  padding-bottom: 0.4rem;
+  border-bottom: 1px solid var(--ink);
+  font: 600 10.5px var(--font-mono);
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--ink-2);
+}
+
+.lib-shelf__list {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  column-gap: 1.75rem;
+  max-width: none;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.lib-shelf__item {
+  display: grid;
+  grid-template-columns: 1.4rem minmax(0, 1fr) auto;
+  align-items: baseline;
+  gap: 0.5rem;
+  padding: 0.35rem 0.2rem;
+  border-bottom: 1px solid var(--rule);
+  font: 13.5px/1.35 var(--font-sans);
+}
+
+.lib-shelf__num {
+  font: 600 11px var(--font-mono);
+  color: var(--ink-3);
+}
+
+.lib-shelf__item a {
+  color: var(--ink);
+}
+
+.lib-shelf__item.is-planned a {
+  color: var(--ink-2);
+}
+
+.lib-shelf__item a:hover {
+  color: var(--accent);
+}
+
+.lib-shelf__meta {
+  font: 10.5px var(--font-mono);
+  white-space: nowrap;
+  color: var(--ink-3);
+}
+
+/* ── responsive (component width) ────────────────────────────────────────── */
+
+@container lib (max-width: 979.98px) {
+  .lib-body {
+    --label-w: 104px;
+    --panel-w: 268px;
+
+    column-gap: 1.25rem;
+  }
+
+  .lib-row__title {
+    font-size: 11px;
+  }
+
+  .lib-ledger {
+    --c-n: 2.1rem;
+    --c-words: 4.6rem;
+    --c-fe: 0px;
+    --cols: var(--c-n) minmax(0, 1fr) var(--c-strip) var(--c-words) var(--c-state);
+  }
+
+  .lib-ch__words .lib-bar {
+    display: none;
+  }
+
+  .lib-ch > .lib-ch__fe {
+    padding: 0;
+    overflow: hidden;
+    visibility: hidden;
+  }
+
+  .lib-ledger__cols > span:nth-child(5) {
+    display: none;
+  }
+}
+
+@container lib (max-width: 759.98px) {
+  .lib-body {
+    grid-template-columns: minmax(0, 1fr);
+    grid-template-areas:
+      'map'
+      'panel'
+      'ledger';
+  }
+
+  .lib-readout {
+    position: static;
+  }
+
+  .lib-shelf__list {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+
+@container lib (max-width: 560px) {
+  .lib-body {
+    --tile-h: 40px;
+    --tile-gap: 4px;
+  }
+
+  .lib-lens__chip {
+    padding-inline: 0.4rem;
+  }
+
+  .lib-row {
+    grid-template-columns: repeat(6, minmax(0, 1fr));
+    row-gap: 3px;
+  }
+
+  .lib-row__label {
+    grid-column: 1 / -1;
+    grid-template-columns: 1.8rem minmax(0, 1fr) auto;
+    grid-template-rows: auto;
+    align-items: baseline;
+    block-size: auto;
+    padding: 0.35rem 0 0;
+  }
+
+  .lib-row__title {
+    display: block;
+    white-space: nowrap;
+    text-overflow: ellipsis;
+  }
+
+  .lib-row__meter {
+    display: none;
+  }
+
+  .lib-row__stat {
+    grid-column: auto;
+  }
+
+  .lib-tile {
+    padding: 0.25rem 0.3rem 0;
+  }
+
+  .lib-tile__t,
+  .lib-tile__m {
+    display: none;
+  }
+
+  .lib-tile__cells,
+  .lib-tile__lens {
+    inset-inline: 0.3rem;
+    inset-block-end: 0.3rem;
+    gap: 1px;
+  }
+
+  .lib-cell {
+    block-size: 6px;
+  }
+
+  .lib-ledger {
+    --c-n: 1.9rem;
+    --c-strip: 5.3rem;
+    --c-words: 0px;
+    --c-state: 0px;
+    --cols: var(--c-n) minmax(0, 1fr) var(--c-strip);
+  }
+
+  .lib-ch > :is(.lib-ch__words, .lib-ch__state) {
+    padding: 0;
+    overflow: hidden;
+    visibility: hidden;
+  }
+
+  .lib-ledger__cols > span:nth-child(4),
+  .lib-ledger__cols > span:nth-child(6) {
+    display: none;
+  }
+
+  .lib-strip {
+    grid-template-columns: repeat(6, 8px);
+  }
+
+  .lib-ch__count {
+    display: block;
+    margin: 0.15rem 0 0;
+  }
+
+  .lib-part__head {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .lib-part__progress {
+    white-space: normal;
+    flex-wrap: wrap;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .lib-tile,
+  .lib-cell,
+  .lib-row,
+  .lib-ch > td,
+  .lib-part {
+    transition: none;
+  }
+}

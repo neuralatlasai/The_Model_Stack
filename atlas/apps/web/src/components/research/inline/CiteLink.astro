@@ -1,0 +1,26 @@
+---
+/**
+ * A citation token: small-caps key in the accent, linking to the paper
+ * object page. The client intercepts `data-cite` to open the rail inspector
+ * so the reader stays anchored (UI_UX §19, §31); without JS it navigates.
+ */
+import type { CitationKey } from '@atlas/core';
+import { citeAttrs } from '../lib/dom.ts';
+import { citeHref } from '../lib/site.ts';
+
+interface Props {
+  citeKey: CitationKey;
+  /** False when the key has no reference record; rendered as quiet text, never a dead link. */
+  resolved?: boolean;
+}
+
+const { citeKey, resolved = true } = Astro.props;
+---
+
+{
+  resolved ? (
+    <a class="rb-cite" href={citeHref(citeKey)} {...citeAttrs(citeKey)}>{citeKey}</a>
+  ) : (
+    <span class="rb-cite rb-cite--missing" title="Not in the reference registry">{citeKey}</span>
+  )
+}

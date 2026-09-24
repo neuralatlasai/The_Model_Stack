@@ -1,0 +1,46 @@
+---
+/**
+ * Equation index (UI_UX §16, §61): every numbered equation of the book as a
+ * research object — rendered, anchored ("Equation 7 in the KV-cache section"
+ * is one click away), and connected to every other equation that shares its
+ * notation. The symbol threads, readout, filters, and grouped index are one
+ * component (EquationsExplorer.astro); the index is the complete text form.
+ * KaTeX HTML is trusted compiler output (rendered with trust: false).
+ */
+import EquationsExplorer from '../components/shell/EquationsExplorer.astro';
+import PageHeader from '../components/shell/PageHeader.astro';
+import ReaderLayout from '../layouts/ReaderLayout.astro';
+import { getGraph, getRegistry } from '../lib/atlas.ts';
+import { grouped } from '../lib/format.ts';
+import { equationSymbols, symbolThreads } from '../lib/symbol-threads.ts';
+import '../styles/equations.css';
+
+const [registry, graph] = await Promise.all([getRegistry(), getGraph()]);
+const chapters = new Set(registry.equations.map((equation) => equation.number.split('.')[0])).size;
+const read = registry.equations.map((equation) => ({ number: equation.number, chapter: equation.number.split('.')[0] ?? '', symbols: equationSymbols(equation) }));
+const distinct = new Set(read.flatMap((equation) => equation.symbols.map((symbol) => symbol.key))).size;
+const shared = symbolThreads(read).length;
+const declared = registry.equations.reduce((sum, equation) => sum + equation.variables.length, 0);
+---
+
+<ReaderLayout
+  title="Equations"
+  description="Every numbered equation in The Model Stack, rendered, with its symbols, their declared meanings, and the equations that share them."
+  canonicalPath="/equations/"
+  currentId={null}
+>
+  <PageHeader
+    identity="Research Atlas / Equations"
+    title="Equations"
+    lede="Every numbered equation, where it lives, what its symbols mean, and which other equations share its notation."
+    meta={`${grouped(registry.equations.length)} equations · ${grouped(chapters)} chapters · ${grouped(distinct)} distinct symbols, ${grouped(shared)} shared by two or more · ${grouped(declared)} declared variables`}
+  />
+
+  {
+    registry.equations.length === 0 ? (
+      <p class="sh-empty">No numbered equations are compiled in this bundle.</p>
+    ) : (
+      <EquationsExplorer equations={registry.equations} graph={graph} />
+    )
+  }
+</ReaderLayout>

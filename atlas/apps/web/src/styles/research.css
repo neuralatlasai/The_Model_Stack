@@ -1,0 +1,3128 @@
+/*
+ * research.css — typographic grammar of research objects (`rb-` prefix).
+ *
+ * Owned by web-blocks. Consumes the shared tokens defined in tokens.css
+ * (web-shell) and never defines colours, fonts, or sizes of its own: every
+ * value below is a token, a unitless ratio, or a small rem/ch offset.
+ * Each research object gets its own grammar — rules and type, not boxes
+ * (UI_UX §6, §50). Vertical rhythm follows UI_UX §49: --gap-section between
+ * regions, --gap-argument between arguments, --gap-related within a run.
+ *
+ * Sections:
+ *   1 depth control · 2 utilities · 3 flow and measure · 4 headings
+ *   5 document header · 6 prose and inline objects · 7 lists, quotes, rules
+ *   8 data tables · 9 definition, claim, assumption, observation, proposition
+ *   10 equations · 11 inline expansion · 12 algorithms · 13 code
+ *   14 traces and figures · 15 experiments and grids · 16 failure modes
+ *   17 open questions · 18 notes · 19 observation layer · 20 siblings
+ *   21 context rail · 22 minimap · 23 print
+ */
+
+/* ── 1 depth control (UI_UX §29) ─────────────────────────────────────────
+ * Cumulative layers of one document: overview ⊂ technical ⊂ research ⊂
+ * implementation. No `data-depth` on <html> shows everything (the default
+ * depth is implementation). */
+
+html[data-depth='overview'] [data-depth-min='technical'],
+html[data-depth='overview'] [data-depth-min='research'],
+html[data-depth='overview'] [data-depth-min='implementation'],
+html[data-depth='technical'] [data-depth-min='research'],
+html[data-depth='technical'] [data-depth-min='implementation'],
+html[data-depth='research'] [data-depth-min='implementation'] {
+  display: none !important;
+}
+
+/* ── 2 utilities ─────────────────────────────────────────────────────── */
+
+.rb-vh {
+  position: absolute !important;
+  inline-size: 1px;
+  block-size: 1px;
+  margin: -1px;
+  padding: 0;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+  border: 0;
+}
+
+:where(.rb-region, .rb-flow, .rb-header, .rb-rail, .rb-minimap)
+  :is(a, button, summary, [tabindex='0']):focus-visible {
+  outline: 2px solid var(--focus);
+  outline-offset: 2px;
+}
+
+/* A small-caps lead-in word ("Claim", "Complexity", "Caveat"). */
+.rb-lead {
+  font-variant-caps: all-small-caps;
+  letter-spacing: 0.05em;
+  font-weight: 600;
+  font-style: normal;
+  color: var(--ink-2);
+}
+
+/* Evidence-class tints: glyphs and labels only, never surfaces. */
+.rb-ev--source {
+  color: var(--ev-source);
+}
+.rb-ev--inference {
+  color: var(--ev-inference);
+}
+.rb-ev--gap {
+  color: var(--ev-gap);
+}
+.rb-ev--measurement {
+  color: var(--ink-2);
+}
+
+/* ── 3 flow and measure (UI_UX §70) ──────────────────────────────────────
+ * A region (or `.rb-flow`, for the lead blocks before the first H2) spans
+ * the centre column; its children sit at the reading measure, centred;
+ * `.rb-wide` children break out to analysis width. */
+
+.rb-region,
+.rb-flow {
+  font-family: var(--font-serif);
+  font-size: var(--fs-body);
+  line-height: var(--lh-body);
+  color: var(--ink);
+  font-kerning: normal;
+}
+
+.rb-region {
+  container-type: inline-size;
+  margin-block: var(--gap-section) 0;
+}
+
+.rb-region > *,
+.rb-flow > * {
+  max-inline-size: var(--measure);
+  margin-inline: auto;
+}
+
+.rb-region > .rb-wide,
+.rb-flow > .rb-wide {
+  max-inline-size: min(var(--analysis), 100%);
+}
+
+.rb-region > * + *,
+.rb-flow > * + * {
+  margin-block-start: var(--gap-argument);
+}
+
+/* Lead blocks (before the first H2) render directly in the article, which
+ * carries the DOM-contract `data-node-id`; they take the same measure. */
+:where([data-node-id]) > :where([data-depth-min]):not([data-region]) {
+  max-inline-size: var(--measure);
+  margin-inline: auto;
+}
+
+:where([data-node-id]) > :where([data-depth-min].rb-wide):not([data-region]) {
+  max-inline-size: min(var(--analysis), 100%);
+}
+
+:where([data-node-id]) > :where([data-depth-min]):not([data-region]) + :where([data-depth-min]):not([data-region]) {
+  margin-block-start: var(--gap-argument);
+}
+
+/* Runs of related objects sit closer than separate arguments. */
+.rb-def + .rb-def,
+.rb-claim + .rb-claim,
+.rb-p + .rb-list,
+.rb-eq + .rb-eq {
+  margin-block-start: var(--gap-related);
+}
+
+/* ── 4 headings ──────────────────────────────────────────────────────── */
+
+.rb-region__title {
+  position: relative;
+  display: flex;
+  align-items: baseline;
+  gap: 0.6rem;
+  margin-block: 0;
+  padding-block-start: var(--gap-related);
+  border-block-start: 1px solid var(--rule);
+  font-family: var(--font-serif);
+  font-size: var(--fs-h2);
+  font-weight: 500;
+  line-height: 1.2;
+  font-variant-caps: all-small-caps;
+  letter-spacing: 0.04em;
+  color: var(--ink);
+}
+
+/* The role ordinal: a section identifier in the domain accent (UI_UX §46). */
+.rb-region__ordinal {
+  font-family: var(--font-mono);
+  font-size: var(--fs-meta);
+  font-weight: 400;
+  font-variant-caps: normal;
+  font-variant-numeric: tabular-nums;
+  letter-spacing: 0;
+  color: var(--domain, var(--accent));
+}
+
+@container (min-width: 900px) {
+  .rb-region__ordinal {
+    position: absolute;
+    inset-inline-end: calc(100% + 1rem);
+    inset-block-start: var(--gap-related);
+    line-height: calc(var(--fs-h2) * 1.2);
+  }
+}
+
+.rb-h {
+  margin-block-end: 0;
+  font-family: var(--font-serif);
+  line-height: 1.25;
+  color: var(--ink);
+}
+
+.rb-h3 {
+  font-size: var(--fs-h3);
+  font-weight: 500;
+}
+
+.rb-h4 {
+  font-size: var(--fs-body);
+  font-weight: 600;
+}
+
+.rb-h5,
+.rb-h6 {
+  font-size: var(--fs-body);
+  font-style: italic;
+  font-weight: 500;
+}
+
+.rb-region > .rb-h,
+.rb-region > .rb-experiment,
+.rb-flow > .rb-h {
+  margin-block-start: calc(var(--gap-argument) + var(--gap-related));
+}
+
+.rb-h .rb-icode {
+  font-size: 0.85em;
+}
+
+.rb-anchor {
+  font-family: var(--font-sans);
+  font-size: var(--fs-meta);
+  font-weight: 400;
+  font-style: normal;
+  font-variant-caps: normal;
+  color: var(--ink-3);
+  text-decoration: none;
+  opacity: 0;
+  transition: opacity var(--t-hover) ease;
+}
+
+:is(.rb-region__title, .rb-h):hover .rb-anchor,
+.rb-anchor:focus-visible {
+  opacity: 1;
+}
+
+.rb-anchor:hover {
+  color: var(--accent);
+}
+
+/* ── 5 document header (UI_UX §9) ────────────────────────────────────── */
+
+.rb-header {
+  max-inline-size: var(--measure);
+  margin-inline: auto;
+  padding-block: var(--gap-argument) 0;
+  font-family: var(--font-serif);
+  color: var(--ink);
+}
+
+.rb-header__identity {
+  margin: 0 0 var(--gap-related);
+  font-family: var(--font-sans);
+  font-size: var(--fs-meta);
+  font-variant-caps: all-small-caps;
+  letter-spacing: 0.06em;
+  color: var(--domain, var(--ink-2));
+}
+
+.rb-header__title {
+  margin: 0;
+  font-size: var(--fs-h1);
+  font-weight: 500;
+  line-height: 1.12;
+  text-wrap: balance;
+}
+
+.rb-header__number {
+  margin-inline-end: 0.35em;
+  font-weight: 400;
+  font-variant-numeric: lining-nums tabular-nums;
+  color: var(--domain, var(--accent));
+}
+
+.rb-header__thesis {
+  margin: var(--gap-argument) 0 0;
+  font-size: var(--fs-h3);
+  line-height: 1.45;
+  color: var(--ink-2);
+  text-wrap: pretty;
+}
+
+.rb-header__meta {
+  margin: var(--gap-argument) 0 0;
+  padding-block-start: var(--gap-related);
+  border-block-start: 1px solid var(--rule);
+  font-family: var(--font-sans);
+  font-size: var(--fs-meta);
+  line-height: 1.5;
+  font-variant-numeric: tabular-nums;
+  color: var(--ink-3);
+}
+
+/* ── 6 prose and inline objects ──────────────────────────────────────── */
+
+.rb-p {
+  margin-block: 0;
+  hyphens: auto;
+  overflow-wrap: break-word;
+  text-wrap: pretty;
+}
+
+.rb-link {
+  color: var(--accent);
+  text-decoration-line: underline;
+  text-decoration-thickness: 1px;
+  text-decoration-color: var(--rule-strong);
+  text-underline-offset: 0.18em;
+  transition:
+    color var(--t-hover) ease,
+    text-decoration-color var(--t-hover) ease;
+}
+
+.rb-link:hover {
+  color: var(--accent-hover);
+  text-decoration-color: currentColor;
+}
+
+/* A link to a planned node: present, muted, never broken. */
+.rb-planned {
+  color: var(--ink-2);
+  text-decoration-style: dotted;
+}
+
+.rb-planned:hover {
+  color: var(--accent);
+}
+
+.rb-link--ext::after {
+  content: '↗';
+  content: '↗' / '';
+  display: inline-block;
+  margin-inline-start: 0.15em;
+  font-family: var(--font-sans);
+  font-size: 0.7em;
+  color: var(--ink-3);
+}
+
+.rb-icode {
+  padding-inline: 0.1em;
+  font-family: var(--font-mono);
+  font-size: var(--fs-tech);
+  font-variant-ligatures: none;
+  color: var(--ink-2);
+  overflow-wrap: break-word;
+}
+
+.rb-math > .katex {
+  font-size: 1.08em;
+}
+
+/* Citation key: superscript-like small sans in the accent (UI_UX §19). */
+.rb-cite {
+  position: relative;
+  inset-block-start: -0.4em;
+  padding-inline: 0.08em;
+  font-family: var(--font-sans);
+  font-size: var(--fs-meta);
+  font-style: normal;
+  font-weight: 500;
+  font-variant-numeric: lining-nums tabular-nums;
+  letter-spacing: 0.04em;
+  line-height: 1;
+  white-space: nowrap;
+  color: var(--accent);
+  text-decoration: none;
+}
+
+a.rb-cite:hover {
+  color: var(--accent-hover);
+  text-decoration: underline;
+  text-underline-offset: 0.15em;
+}
+
+.rb-cite--missing {
+  color: var(--ink-3);
+}
+
+/* Evidence label: a quiet marker, not a badge (UI_UX §20). */
+.rb-label {
+  font-family: var(--font-sans);
+  font-size: var(--fs-meta);
+  font-style: normal;
+  font-weight: 500;
+  letter-spacing: 0.05em;
+  white-space: nowrap;
+  color: var(--ink-2);
+}
+
+.rb-label__glyph {
+  position: relative;
+  inset-block-start: -0.05em;
+  margin-inline-end: 0.25em;
+  font-size: 0.8em;
+}
+
+.rb-label--source .rb-label__glyph {
+  color: var(--ev-source);
+}
+.rb-label--inference .rb-label__glyph {
+  color: var(--ev-inference);
+}
+.rb-label--gap .rb-label__glyph {
+  color: var(--ev-gap);
+}
+.rb-label--measurement .rb-label__glyph {
+  color: var(--ink-2);
+}
+
+.rb-xref {
+  color: var(--accent);
+  text-decoration: none;
+  border-block-end: 1px dotted var(--rule-strong);
+  transition: color var(--t-hover) ease;
+}
+
+.rb-xref:hover {
+  color: var(--accent-hover);
+  border-block-end-color: currentColor;
+}
+
+.rb-xref--missing {
+  color: inherit;
+  border: 0;
+}
+
+/* ── 7 lists, quotes, rules ──────────────────────────────────────────── */
+
+.rb-list {
+  margin-block: 0;
+  padding-inline-start: 1.4em;
+}
+
+.rb-list--bullet {
+  list-style-type: '–  ';
+}
+
+.rb-li::marker {
+  font-family: var(--font-sans);
+  font-size: var(--fs-tech);
+  font-variant-numeric: tabular-nums;
+  color: var(--ink-3);
+}
+
+.rb-li + .rb-li,
+.rb-li > * + * {
+  margin-block-start: calc(var(--gap-related) / 2);
+}
+
+.rb-li--task {
+  display: flex;
+  align-items: baseline;
+  gap: 0.5em;
+  list-style-type: none;
+}
+
+.rb-li__check {
+  font-family: var(--font-sans);
+  color: var(--ink-3);
+}
+
+.rb-quote {
+  padding-inline-start: 1.25rem;
+  border-inline-start: 1px solid var(--rule-strong);
+  font-style: italic;
+  color: var(--ink-2);
+}
+
+.rb-quote > * + * {
+  margin-block-start: var(--gap-related);
+}
+
+.rb-rule {
+  block-size: 0;
+  border: 0;
+  border-block-start: 1px solid var(--rule);
+}
+
+/* ── 8 data tables (UI_UX §51) ───────────────────────────────────────
+ * Booktabs grammar: a heavy rule above and below, a light rule under the
+ * header, hairlines between rows, no vertical rules, no fills. Cells wrap;
+ * only long unbreakable strings (URLs, identifiers) may break anywhere.
+ * Genuinely wide tables scroll inside their own region with a sticky first
+ * column; the page itself never scrolls sideways. */
+
+.rb-table {
+  font-family: var(--font-sans);
+  font-size: 14.5px;
+  line-height: 1.45;
+  color: var(--ink);
+}
+
+.rb-table__scroll {
+  overflow-x: auto;
+  overscroll-behavior-inline: contain;
+  border-block: 1.5px solid var(--ink);
+  scrollbar-width: thin;
+  scrollbar-color: var(--rule-strong) transparent;
+}
+
+.rb-table__scroll:focus-visible {
+  outline: 2px solid var(--focus);
+  outline-offset: 3px;
+}
+
+.rb-table--tall .rb-table__scroll {
+  max-block-size: 72vh;
+  overflow-y: auto;
+}
+
+.rb-table__table {
+  inline-size: 100%;
+  border-collapse: collapse;
+  font-variant-numeric: lining-nums tabular-nums;
+}
+
+.rb-table th,
+.rb-table td {
+  padding: 0.6rem 1rem 0.6rem 0;
+  vertical-align: top;
+  text-align: start;
+  border-block-end: 1px solid var(--rule);
+  overflow-wrap: break-word;
+}
+
+.rb-table :is(th, td):last-child {
+  padding-inline-end: 0;
+}
+
+.rb-table td {
+  max-inline-size: 28rem;
+}
+
+.rb-table a,
+.rb-table code {
+  overflow-wrap: anywhere;
+}
+
+.rb-table thead th {
+  position: sticky;
+  inset-block-start: 0;
+  z-index: 1;
+  padding-block: 0.7rem 0.5rem;
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  white-space: nowrap;
+  color: var(--ink-2);
+  background: var(--paper);
+  border-block-end: 1px solid var(--ink-2);
+}
+
+.rb-table tbody tr:last-child > * {
+  border-block-end: 0;
+}
+
+.rb-table tbody tr {
+  transition: background-color var(--t-hover) ease;
+}
+
+.rb-table tbody tr:hover > * {
+  background: var(--paper-raised);
+}
+
+.rb-table .rb-row-head {
+  font-weight: 600;
+  color: var(--ink);
+}
+
+.rb-table .rb-al-right {
+  text-align: end;
+}
+
+.rb-table .rb-al-center {
+  text-align: center;
+}
+
+.rb-table tbody .rb-num {
+  font-family: var(--font-mono);
+  font-size: var(--fs-code);
+  white-space: nowrap;
+}
+
+.rb-table tbody .rb-col-key {
+  font-family: var(--font-mono);
+  font-size: 13.5px;
+  color: var(--ink);
+  white-space: nowrap;
+}
+
+.rb-table code {
+  font-size: 13px;
+}
+
+.rb-link--url {
+  font-family: var(--font-mono);
+  font-size: 12.5px;
+  text-decoration-style: dotted;
+}
+
+.rb-link--url::after {
+  display: none;
+}
+
+/* Sticky first column once a table breaks out and may scroll sideways. */
+.rb-table.rb-wide :is(th, td):first-child {
+  position: sticky;
+  inset-inline-start: 0;
+  background: var(--paper);
+}
+
+.rb-table.rb-wide tbody tr:hover > :first-child {
+  background: var(--paper-raised);
+}
+
+.rb-table.rb-wide thead th:first-child {
+  z-index: 2;
+}
+
+/* Position in the book: a compact relation grid, relations as row heads. */
+.rb-table--position .rb-row-head {
+  inline-size: 9.5rem;
+  padding-block-start: 0.75rem;
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  white-space: nowrap;
+  color: var(--ink-3);
+}
+
+/* Reference-stack coverage: a ledger. Readable column widths; scroll, not squeeze. */
+.rb-table--stack-coverage .rb-table__table {
+  min-inline-size: 62rem;
+}
+
+.rb-table--stack-coverage tbody td {
+  font-size: 13.5px;
+}
+
+.rb-table--stack-coverage tbody .rb-col-emph {
+  font-family: var(--font-mono);
+  font-size: 12px;
+  color: var(--domain, var(--ink-2));
+}
+
+.rb-table--stack-coverage :is(th, td):nth-child(4) {
+  min-inline-size: 18rem;
+}
+
+/* Reference tables (references.md): key column as an identifier, work in serif. */
+.rb-table--references .rb-table__table {
+  min-inline-size: 64rem;
+}
+
+.rb-table--references tbody td:nth-child(3) {
+  font-family: var(--font-serif);
+  font-size: 16px;
+  line-height: 1.35;
+  min-inline-size: 14rem;
+}
+
+/* ── 9 definition, claim, assumption, observation, proposition ───────── */
+
+.rb-def {
+  padding-inline-start: 1.1rem;
+  border-inline-start: 1px solid var(--rule-strong);
+  transition: border-color var(--t-state) ease;
+}
+
+.rb-def:target {
+  border-inline-start-color: var(--accent);
+}
+
+.rb-def__text {
+  margin: 0;
+}
+
+.rb-def__head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 1rem;
+  margin-block-end: 0.1rem;
+}
+
+.rb-def__term {
+  font-style: normal;
+  font-weight: 600;
+  font-variant-caps: all-small-caps;
+  letter-spacing: 0.05em;
+  color: var(--ink);
+}
+
+.rb-def__marker {
+  font-family: var(--font-sans);
+  font-size: var(--fs-meta);
+  font-variant-caps: all-small-caps;
+  letter-spacing: 0.06em;
+  white-space: nowrap;
+  color: var(--ink-3);
+}
+
+.rb-claim__text {
+  margin: 0;
+}
+
+/* Claim-level provenance: a trailing line, led by a short rule. */
+.rb-claim__prov {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 0.15rem 0.6rem;
+  margin: 0.3rem 0 0;
+  font-family: var(--font-sans);
+  font-size: var(--fs-meta);
+  line-height: 1.5;
+  color: var(--ink-3);
+}
+
+.rb-claim__prov::before {
+  content: '';
+  align-self: center;
+  inline-size: 1.25rem;
+  border-block-start: 1px solid var(--rule-strong);
+}
+
+.rb-claim__prov .rb-cite {
+  inset-block-start: 0;
+}
+
+.rb-claim__src + .rb-claim__src::before {
+  content: '·';
+  margin-inline-end: 0.6rem;
+}
+
+.rb-claim__doc {
+  font-family: var(--font-mono);
+}
+
+.rb-asm__text,
+.rb-observation__text {
+  margin: 0;
+}
+
+.rb-asm__lead {
+  color: var(--ink-2);
+}
+
+.rb-asm__sens {
+  margin: 0.3rem 0 0;
+  padding-inline-start: 1.1rem;
+  color: var(--ink-2);
+}
+
+.rb-asm__arrow {
+  font-family: var(--font-sans);
+  font-size: var(--fs-meta);
+  font-variant-caps: all-small-caps;
+  letter-spacing: 0.05em;
+  white-space: nowrap;
+  color: var(--ink-3);
+}
+
+.rb-prop__stmt {
+  margin: 0;
+}
+
+.rb-prop__head {
+  font-weight: 600;
+  font-variant-caps: all-small-caps;
+  letter-spacing: 0.05em;
+  color: var(--ink);
+}
+
+.rb-prop__body {
+  font-style: italic;
+}
+
+.rb-prop > .rb-expand {
+  margin-block-start: var(--gap-related);
+}
+
+/* ── 10 equations (UI_UX §16) ────────────────────────────────────────
+ * An equation is a research object, not a line of prose: the number hangs at
+ * the left in the domain accent, the math sits centred between hairlines,
+ * tools appear on hover, and the variable legend is a readable grid. */
+
+.rb-eq {
+  --eq-num-w: 4.25rem;
+}
+
+.rb-eq__frame {
+  position: relative;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  align-items: center;
+  padding-block: 0.85rem;
+  border-block: 1px solid var(--rule);
+  transition: border-color var(--t-state) ease;
+}
+
+.rb-eq--numbered .rb-eq__frame {
+  grid-template-columns: var(--eq-num-w) minmax(0, 1fr);
+}
+
+.rb-eq:hover .rb-eq__frame,
+.rb-eq:focus-within .rb-eq__frame,
+.rb-eq:target .rb-eq__frame {
+  border-color: var(--rule-strong);
+}
+
+.rb-eq:target .rb-eq__frame {
+  background: linear-gradient(to right, var(--accent-wash), transparent 60%);
+}
+
+.rb-eq__label {
+  grid-column: 1;
+  margin: 0;
+  align-self: center;
+}
+
+.rb-eq__num {
+  font-family: var(--font-mono);
+  font-size: 14px;
+  font-variant-numeric: tabular-nums;
+  color: var(--domain, var(--accent));
+  text-decoration: none;
+  white-space: nowrap;
+}
+
+a.rb-eq__num:hover {
+  text-decoration: underline;
+  text-underline-offset: 0.2em;
+}
+
+.rb-eq__math {
+  grid-column: 1;
+  min-inline-size: 0;
+  padding-block: 0.15rem;
+  overflow-x: auto;
+  overflow-y: hidden;
+  text-align: center;
+  scrollbar-width: thin;
+}
+
+.rb-eq--numbered .rb-eq__math {
+  grid-column: 2;
+}
+
+.rb-eq__math .katex-display {
+  margin: 0;
+}
+
+/* KaTeX sets display math at 1.21 × the 19 px body; ~20 px keeps long
+ * equations inside the measure without looking smaller than the prose. */
+.rb-eq__math .katex {
+  font-size: 1.06em;
+}
+
+.rb-eq__math:focus-visible {
+  outline: 2px solid var(--focus);
+  outline-offset: 4px;
+}
+
+.rb-eq__tools {
+  position: absolute;
+  inset-block-start: 0.2rem;
+  inset-inline-end: 0;
+  display: flex;
+  gap: 0.6rem;
+  margin: 0;
+  opacity: 0;
+  transition: opacity var(--t-hover) ease;
+}
+
+.rb-eq:hover .rb-eq__tools,
+.rb-eq:focus-within .rb-eq__tools {
+  opacity: 1;
+}
+
+.rb-tool {
+  padding: 0.05rem 0;
+  font-family: var(--font-mono);
+  font-size: 10.5px;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  text-decoration: none;
+  color: var(--ink-3);
+  cursor: pointer;
+  background: none;
+  border: 0;
+  appearance: none;
+}
+
+.rb-tool:hover,
+.rb-tool:focus-visible {
+  color: var(--accent);
+}
+
+/* The executable form of an equation is always visible, not only on hover. */
+.rb-tool--run {
+  color: var(--domain, var(--accent));
+}
+
+.rb-eq__tools:has(.rb-tool--run) {
+  opacity: 1;
+}
+
+.rb-eq__tools:has(.rb-tool--run) .rb-tool:not(.rb-tool--run) {
+  opacity: 0;
+  transition: opacity var(--t-hover) ease;
+}
+
+.rb-eq:hover .rb-eq__tools .rb-tool,
+.rb-eq:focus-within .rb-eq__tools .rb-tool {
+  opacity: 1;
+}
+
+/* Variable legend: symbol in serif italic, meaning in sans, as a grid. */
+.rb-eq__legend {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(13.5rem, 1fr));
+  gap: 0.15rem 1.5rem;
+  margin: 0.6rem 0 0;
+  padding-inline-start: 0;
+  font-family: var(--font-sans);
+  font-size: 13.5px;
+  line-height: 1.4;
+}
+
+.rb-eq--numbered .rb-eq__legend {
+  padding-inline-start: var(--eq-num-w);
+}
+
+.rb-eq__var {
+  display: grid;
+  grid-template-columns: minmax(2.2rem, auto) minmax(0, 1fr);
+  column-gap: 0.6rem;
+  align-items: baseline;
+  padding: 0.12rem 0.3rem;
+  border-radius: 2px;
+  transition: background-color var(--t-hover) ease;
+}
+
+.rb-eq__var dt {
+  font-family: var(--font-serif);
+  font-size: 17px;
+  font-style: italic;
+  color: var(--ink);
+  white-space: nowrap;
+}
+
+.rb-eq__var dd {
+  margin: 0;
+  color: var(--ink-2);
+}
+
+.rb-eq__var:hover {
+  background: var(--accent-wash);
+}
+
+.rb-eq__note {
+  margin: 0.55rem 0 0;
+  font-family: var(--font-sans);
+  font-size: 13.5px;
+  line-height: 1.5;
+  color: var(--ink-2);
+}
+
+.rb-eq--numbered .rb-eq__note {
+  padding-inline-start: var(--eq-num-w);
+}
+
+/* Symbol ↔ variable-row cross-highlight (client equations.ts sets is-var-hit). */
+[data-eq-var].is-var-hit,
+:is(.rb-eq, .rb-eqi) .katex-html .is-var-hit {
+  color: var(--accent);
+  background: var(--accent-wash);
+}
+
+/* Rail inspector variable table (kept for .rb-eqi). */
+.rb-vars {
+  margin-block-start: 0.2rem;
+  border-collapse: collapse;
+}
+
+.rb-vars th,
+.rb-vars td {
+  padding: 0.1rem 0.9rem 0.1rem 0;
+  font-weight: 400;
+  text-align: start;
+  vertical-align: baseline;
+}
+
+.rb-vars th code {
+  font-family: var(--font-mono);
+  font-size: var(--fs-code);
+  color: var(--ink);
+}
+
+@media (max-width: 719.98px) {
+  .rb-eq {
+    --eq-num-w: 3rem;
+  }
+
+  .rb-eq--numbered .rb-eq__frame {
+    grid-template-columns: var(--eq-num-w) minmax(0, 1fr);
+  }
+
+  .rb-eq--numbered .rb-eq__legend,
+  .rb-eq--numbered .rb-eq__note {
+    padding-inline-start: 0;
+  }
+}
+
+/* ── 11 inline expansion (UI_UX §30) ─────────────────────────────────── */
+
+.rb-expand__summary {
+  display: flex;
+  align-items: baseline;
+  gap: 0.5rem;
+  inline-size: fit-content;
+  padding-block: 0.2rem;
+  list-style: none;
+  cursor: pointer;
+  font-family: var(--font-sans);
+  font-size: var(--fs-tech);
+  color: var(--ink-2);
+  transition: color var(--t-hover) ease;
+}
+
+.rb-expand__summary::-webkit-details-marker {
+  display: none;
+}
+
+.rb-expand__summary:hover {
+  color: var(--accent);
+}
+
+.rb-expand__caret {
+  display: inline-block;
+  color: var(--ink-3);
+  transition: transform var(--t-state) ease;
+}
+
+.rb-expand[open] > .rb-expand__summary .rb-expand__caret {
+  transform: rotate(90deg);
+}
+
+/* Expanded content hangs from a lineage hairline (UI_UX §50). */
+.rb-expand__body {
+  margin-block-start: var(--gap-related);
+  margin-inline-start: 0.3rem;
+  padding-inline-start: 1.1rem;
+  border-inline-start: 1px solid var(--rule);
+}
+
+.rb-expand__body > * + * {
+  margin-block-start: var(--gap-related);
+}
+
+/* ── 12 algorithms (UI_UX §17) ───────────────────────────────────────── */
+
+.rb-alg {
+  padding-block-end: var(--gap-related);
+  font-family: var(--font-mono);
+  font-size: var(--fs-code);
+  line-height: 1.6;
+  color: var(--ink);
+  border-block: 1px solid var(--rule-strong);
+}
+
+.rb-alg__head {
+  padding-block: 0.4rem;
+  font-family: var(--font-serif);
+  font-size: var(--fs-body);
+  font-variant-caps: all-small-caps;
+  letter-spacing: 0.04em;
+  border-block-end: 1px solid var(--rule);
+}
+
+.rb-alg__num {
+  font-weight: 600;
+}
+
+.rb-alg__sep {
+  color: var(--ink-3);
+}
+
+.rb-alg__io {
+  display: grid;
+  grid-template-columns: max-content minmax(0, 1fr);
+  gap: 0.1rem 1rem;
+  margin: var(--gap-related) 0;
+}
+
+.rb-alg__io-row {
+  display: contents;
+}
+
+.rb-alg__io dt {
+  padding-block-start: 0.15em;
+  font-family: var(--font-sans);
+  font-size: var(--fs-meta);
+  font-weight: 600;
+  font-variant-caps: all-small-caps;
+  letter-spacing: 0.06em;
+  color: var(--ink-3);
+}
+
+.rb-alg__io dd {
+  display: flex;
+  flex-direction: column;
+  margin: 0;
+  color: var(--ink-2);
+  overflow-wrap: anywhere;
+}
+
+.rb-alg__body {
+  overflow-x: auto;
+  padding-block-start: 0.3rem;
+  border-block-start: 1px dotted var(--rule);
+}
+
+.rb-alg__lines {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.rb-alg__row {
+  display: grid;
+  grid-template-columns: 3ch minmax(0, 1fr);
+  column-gap: 1.5ch;
+  transition: background-color var(--t-state) ease;
+}
+
+.rb-alg__row:target,
+.rb-alg__row.is-highlight {
+  background: var(--accent-wash);
+}
+
+.rb-alg__ln {
+  text-align: end;
+  font-variant-numeric: tabular-nums;
+  color: var(--ink-3);
+  user-select: none;
+}
+
+.rb-alg__row:target .rb-alg__ln,
+.rb-alg__row.is-highlight .rb-alg__ln {
+  color: var(--accent);
+}
+
+.rb-alg__code {
+  display: flex;
+  flex-direction: column;
+  min-inline-size: 0;
+}
+
+.rb-alg__line {
+  display: flex;
+  justify-content: space-between;
+  gap: 2ch;
+}
+
+.rb-alg__src {
+  font: inherit;
+  white-space: pre;
+}
+
+.rb-alg__comment {
+  flex-shrink: 0;
+  text-align: end;
+  white-space: pre;
+  color: var(--ink-3);
+}
+
+@container (max-width: 640px) {
+  .rb-alg__line {
+    flex-direction: column;
+    gap: 0;
+  }
+
+  .rb-alg__comment {
+    padding-inline-start: 2ch;
+    text-align: start;
+    white-space: pre-wrap;
+  }
+}
+
+.rb-alg__trailer {
+  display: flex;
+  flex-direction: column;
+  margin-block-start: var(--gap-related);
+  padding-block-start: 0.3rem;
+  color: var(--ink-2);
+  border-block-start: 1px dotted var(--rule);
+}
+
+.rb-alg__trailer-line {
+  font: inherit;
+  white-space: pre-wrap;
+}
+
+.rb-alg__cx {
+  margin: var(--gap-related) 0 0;
+  font-family: var(--font-sans);
+  font-size: var(--fs-tech);
+  line-height: 1.5;
+  color: var(--ink-2);
+}
+
+/* ── 13 code ─────────────────────────────────────────────────────────── */
+
+.rb-code {
+  border-block-start: 1px solid var(--rule-strong);
+}
+
+.rb-code__bar {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  padding-block: 0.3rem;
+  font-family: var(--font-mono);
+  font-size: var(--fs-meta);
+  color: var(--ink-3);
+}
+
+.rb-code__lang {
+  font-variant-caps: all-small-caps;
+  letter-spacing: 0.06em;
+}
+
+.rb-code__copy {
+  padding: 0;
+  font: inherit;
+  color: var(--ink-3);
+  cursor: pointer;
+  background: none;
+  border: 0;
+  appearance: none;
+}
+
+.rb-code__copy:hover {
+  color: var(--accent);
+}
+
+.rb-code__body,
+.rb-code__body pre {
+  margin: 0;
+}
+
+.rb-code pre {
+  padding: 0.9rem 1rem;
+  overflow-x: auto;
+  font-family: var(--font-mono);
+  font-size: var(--fs-code);
+  line-height: 1.55;
+  tab-size: 4;
+  background: var(--paper-sunk);
+}
+
+/* Shiki dual theme: our surface, the theme's token colours. */
+.rb-code .shiki {
+  background-color: var(--paper-sunk) !important;
+}
+
+.rb-code .shiki span {
+  color: var(--shiki-light);
+}
+
+:root[data-theme='dark'] .rb-code .shiki,
+:root[data-theme='dark'] .rb-code .shiki span {
+  color: var(--shiki-dark) !important;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme='light']) .rb-code .shiki,
+  :root:not([data-theme='light']) .rb-code .shiki span {
+    color: var(--shiki-dark) !important;
+  }
+}
+
+/* ── 14 traces and figures ───────────────────────────────────────────── */
+
+.rb-trace {
+  overflow-x: auto;
+}
+
+/* Rail-placed figure: a marker in the column on desktop, the full figure
+ * below the rail breakpoint (the rail is a sheet there, UI_UX §56–57). */
+.rb-figmark {
+  display: none;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 0.1rem 0.6rem;
+  margin: 0;
+  padding-block: 0.35rem;
+  font-family: var(--font-sans);
+  font-size: var(--fs-meta);
+  color: var(--ink-3);
+  border-block: 1px dotted var(--rule);
+}
+
+.rb-figmark__glyph {
+  color: var(--domain, var(--accent));
+}
+
+.rb-figmark__label {
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+  color: var(--ink-2);
+}
+
+.rb-figmark__title {
+  color: var(--ink-2);
+}
+
+.rb-figmark__where {
+  font-variant-caps: all-small-caps;
+  letter-spacing: 0.05em;
+}
+
+/* 1024 px: the rail becomes an in-flow column (web-shell ReaderLayout, client DESKTOP_MIN_WIDTH). */
+@media (min-width: 1024px) {
+  .rb-figure--rail .rb-figmark {
+    display: flex;
+  }
+
+  .rb-figure--rail .rb-figure__inline {
+    display: none;
+  }
+}
+
+/* ── 15 experiments and definition grids (UI_UX §42) ─────────────────── */
+
+.rb-experiment {
+  padding-block-start: var(--gap-related);
+  border-block-start: 1px solid var(--rule);
+}
+
+.rb-experiment__title {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 0.1rem 0.5rem;
+  margin: 0;
+}
+
+.rb-experiment__num {
+  font-weight: 600;
+  font-variant-caps: all-small-caps;
+  letter-spacing: 0.05em;
+  color: var(--domain, var(--ink));
+}
+
+.rb-experiment__sep {
+  color: var(--ink-3);
+}
+
+.rb-experiment__status {
+  margin: 0.35rem 0 0;
+  font-family: var(--font-mono);
+  font-size: var(--fs-meta);
+  font-variant-caps: all-small-caps;
+  letter-spacing: 0.06em;
+  color: var(--ev-gap);
+}
+
+.rb-experiment__glyph {
+  margin-inline-end: 0.75ch;
+}
+
+.rb-experiment__grid {
+  margin-block-start: var(--gap-related);
+}
+
+.rb-grid {
+  display: grid;
+  grid-template-columns: minmax(7.5rem, 11rem) minmax(0, 1fr);
+  margin: 0;
+  font-family: var(--font-sans);
+  font-size: var(--fs-tech);
+  line-height: 1.5;
+}
+
+.rb-grid__row {
+  display: contents;
+}
+
+.rb-grid__key,
+.rb-grid__value {
+  padding-block: 0.4rem;
+  border-block-start: 1px solid var(--rule);
+}
+
+.rb-grid__row:first-child > * {
+  border-block-start: 0;
+}
+
+.rb-grid__key {
+  padding-inline-end: 1rem;
+  font-size: var(--fs-meta);
+  font-weight: 600;
+  font-variant-caps: all-small-caps;
+  letter-spacing: 0.05em;
+  line-height: 1.9;
+  color: var(--ink-3);
+}
+
+.rb-grid__value {
+  margin: 0;
+  color: var(--ink);
+}
+
+.rb-grid__value > * + * {
+  margin-block-start: var(--gap-related);
+}
+
+@container (max-width: 560px) {
+  .rb-grid {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .rb-grid__key {
+    padding-block-end: 0;
+  }
+
+  .rb-grid__value {
+    padding-block-start: 0.1rem;
+    border-block-start: 0;
+  }
+
+  .rb-grid__row:first-child > .rb-grid__key {
+    border-block-start: 0;
+  }
+}
+
+/* ── 16 failure modes ────────────────────────────────────────────────── */
+
+.rb-fm__name {
+  display: flex;
+  align-items: baseline;
+  gap: 0.75rem;
+  margin: 0;
+  font-weight: 600;
+  font-variant-caps: all-small-caps;
+  letter-spacing: 0.05em;
+  color: var(--ink);
+}
+
+.rb-fm__name::after {
+  content: '';
+  flex: 1;
+  border-block-start: 1px solid var(--rule);
+  transform: translateY(-0.3em);
+}
+
+.rb-fm:target .rb-fm__title {
+  color: var(--accent);
+}
+
+.rb-fm__grid {
+  margin-block-start: 0.2rem;
+}
+
+/* ── 17 open questions ───────────────────────────────────────────────── */
+
+.rb-oq {
+  padding-inline-start: 1.1rem;
+  border-inline-start: 1px dotted var(--ev-gap);
+}
+
+.rb-oq__label {
+  margin: 0;
+  font-family: var(--font-sans);
+  font-size: var(--fs-meta);
+  font-weight: 600;
+  font-variant-caps: all-small-caps;
+  letter-spacing: 0.06em;
+  color: var(--ev-gap);
+}
+
+.rb-oq__glyph {
+  margin-inline-end: 0.75ch;
+  font-family: var(--font-mono);
+}
+
+.rb-oq__question {
+  margin: 0.2rem 0 0;
+  font-style: italic;
+}
+
+.rb-oq__settle {
+  margin: 0.3rem 0 0;
+  color: var(--ink-2);
+}
+
+/* ── 18 notes ────────────────────────────────────────────────────────── */
+
+.rb-note__text {
+  margin: 0;
+}
+
+.rb-note--historical {
+  font-size: var(--fs-tech);
+  font-style: italic;
+  color: var(--ink-2);
+}
+
+.rb-note--caveat,
+.rb-note--implementation {
+  padding-inline-start: 1.1rem;
+  border-inline-start: 1px solid var(--rule-strong);
+}
+
+/* Warnings are reserved for correctness and safety: the one accent rule. */
+.rb-note--warning {
+  padding-inline-start: 1.1rem;
+  border-inline-start: 2px solid var(--accent);
+}
+
+.rb-note--warning .rb-lead {
+  color: var(--accent);
+}
+
+.rb-note--further-reading {
+  font-family: var(--font-sans);
+  font-size: var(--fs-tech);
+  line-height: 1.5;
+  color: var(--ink-2);
+}
+
+.rb-note__impl {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.2rem 0.75rem;
+  margin: 0 0 0.2rem;
+  font-family: var(--font-mono);
+  font-size: var(--fs-meta);
+  color: var(--ink-2);
+}
+
+.rb-note__impl-id {
+  color: var(--domain, var(--ink));
+}
+
+.rb-note__impl-id + .rb-note__version::before {
+  content: '·';
+  margin-inline-end: 0.75rem;
+  color: var(--ink-3);
+}
+
+/* ── 19 observation layer (UI_UX §41) ────────────────────────────────── */
+
+.rb-obs {
+  display: grid;
+  grid-template-columns: 11rem minmax(0, 1fr);
+  margin: 0;
+}
+
+.rb-obs__row {
+  display: contents;
+}
+
+.rb-obs__label,
+.rb-obs__text {
+  padding-block: 0.6rem;
+  border-block-start: 1px solid var(--rule);
+}
+
+.rb-obs__row:first-child > * {
+  border-block-start-color: var(--rule-strong);
+}
+
+.rb-obs__label {
+  padding-inline-end: 1rem;
+  font-family: var(--font-sans);
+  font-size: var(--fs-meta);
+  font-weight: 600;
+  font-variant-caps: all-small-caps;
+  letter-spacing: 0.06em;
+  line-height: 1.35;
+  padding-block-start: calc(0.6rem + 0.35em);
+}
+
+.rb-obs__glyph {
+  margin-inline-end: 0.45em;
+}
+
+.rb-obs__text {
+  margin: 0;
+}
+
+@container (max-width: 600px) {
+  .rb-obs {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .rb-obs__text {
+    padding-block-start: 0.15rem;
+    border-block-start: 0;
+  }
+}
+
+/* ── 20 siblings (UI_UX §14) ─────────────────────────────────────────── */
+
+.rb-sib {
+  padding-block-start: var(--gap-related);
+  border-block-start: 1px solid var(--rule);
+}
+
+.rb-sib__name {
+  margin: 0;
+  font-weight: 600;
+  font-variant-caps: all-small-caps;
+  letter-spacing: 0.04em;
+}
+
+.rb-sib:target .rb-sib__name {
+  color: var(--accent);
+}
+
+.rb-sib__prim {
+  margin: 0.2rem 0 0;
+}
+
+.rb-sib__prim-label {
+  margin-inline-end: 0.4rem;
+  font-family: var(--font-sans);
+  font-size: var(--fs-meta);
+  font-weight: 600;
+  font-variant-caps: all-small-caps;
+  letter-spacing: 0.06em;
+  color: var(--domain, var(--accent));
+}
+
+.rb-sib__prim-value {
+  font-weight: 500;
+}
+
+.rb-sib__grid {
+  margin-block-start: var(--gap-related);
+}
+
+/* The strip: the alternatives drawn as a branch in type. */
+.rb-sibstrip {
+  font-family: var(--font-mono);
+  font-size: var(--fs-code);
+  line-height: 1.7;
+  color: var(--ink-2);
+}
+
+.rb-sibstrip__self {
+  margin: 0;
+  font-family: var(--font-serif);
+  font-size: var(--fs-body);
+  font-variant-caps: all-small-caps;
+  letter-spacing: 0.04em;
+  color: var(--ink);
+}
+
+.rb-sibstrip__list {
+  margin: 0;
+  padding-inline-start: 1ch;
+  list-style: none;
+}
+
+.rb-sibstrip__item {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  column-gap: 1ch;
+}
+
+.rb-sibstrip__branch {
+  color: var(--rule-strong);
+}
+
+.rb-sibstrip__name {
+  font-family: var(--font-sans);
+  font-size: var(--fs-tech);
+  font-weight: 600;
+  color: var(--ink);
+  text-decoration: none;
+}
+
+a.rb-sibstrip__name:hover {
+  color: var(--accent);
+}
+
+.rb-sibstrip__prim {
+  font-size: var(--fs-meta);
+  color: var(--ink-3);
+}
+
+/* ── 21 context rail (UI_UX §10; AI 2040 instrument panel) ───────────── */
+
+.rb-rail {
+  font-family: var(--font-mono);
+  font-size: var(--fs-meta);
+  line-height: 1.5;
+  font-variant-numeric: tabular-nums;
+  color: var(--ink-2);
+}
+
+.rb-rail__inspector {
+  margin-block-end: var(--gap-argument);
+  padding-block: 0.75rem;
+  border-block: 1px solid var(--rule-strong);
+}
+
+.rb-rail__inspector:empty {
+  display: none;
+}
+
+/* Only one group is visible at a time (client rail.ts); without JS they stack, separated by a rule. */
+.rb-rail-group + .rb-rail-group {
+  margin-block-start: 0;
+}
+
+.rb-rail-group + .rb-rail-group:not([hidden]) {
+  padding-block-start: 0.5rem;
+}
+
+.rb-rail-group[hidden] + .rb-rail-group:not([hidden]) {
+  padding-block-start: 0;
+}
+
+.rb-rail-group__state {
+  display: flex;
+  align-items: baseline;
+  gap: 1ch;
+  margin: 0 0 0.5rem;
+  font-variant-caps: all-small-caps;
+  letter-spacing: 0.08em;
+  color: var(--ink-3);
+}
+
+.rb-rail-group__ordinal {
+  color: var(--domain, var(--accent));
+}
+
+.rb-rail-group__label {
+  flex: 1;
+  color: var(--ink);
+}
+
+.rb-instrument {
+  padding-block: 0.6rem 0.9rem;
+  border-block-start: 1px solid var(--rule-strong);
+}
+
+.rb-instrument__head {
+  display: flex;
+  justify-content: space-between;
+  gap: 1ch;
+  margin: 0 0 0.5rem;
+  font-variant-caps: all-small-caps;
+  letter-spacing: 0.08em;
+  color: var(--ink-3);
+}
+
+.rb-instrument__title {
+  color: var(--ink-2);
+}
+
+.rb-instrument__note,
+.rb-instrument__legend {
+  margin: 0.5rem 0 0;
+  color: var(--ink-3);
+}
+
+.rb-instrument__legend {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.2rem 1.5ch;
+}
+
+.rb-instrument--figure > * {
+  max-inline-size: 100%;
+}
+
+/* Key/value rows with dotted leaders and right-aligned values. */
+.rb-kv {
+  margin: 0;
+}
+
+.rb-kv__row {
+  display: flex;
+  align-items: baseline;
+  transition: background-color var(--t-hover) ease;
+}
+
+.rb-kv__row + .rb-kv__row {
+  margin-block-start: 0.1rem;
+}
+
+.rb-kv__key {
+  display: flex;
+  flex: 1 1 auto;
+  align-items: baseline;
+  min-inline-size: 0;
+  white-space: nowrap;
+  color: var(--ink);
+}
+
+.rb-kv__key::after {
+  content: '';
+  flex: 1 1 1ch;
+  min-inline-size: 1ch;
+  margin-inline: 0.6ch;
+  border-block-end: 1px dotted var(--rule-strong);
+  transform: translateY(-0.3em);
+}
+
+.rb-kv__value {
+  max-inline-size: 65%;
+  margin: 0;
+  text-align: end;
+  color: var(--ink-2);
+}
+
+.rb-kv code {
+  font: inherit;
+  color: var(--ink);
+}
+
+.rb-kv__row[data-eq-var]:hover {
+  background: var(--accent-wash);
+}
+
+.rb-kv--legend .rb-label {
+  font-size: inherit;
+}
+
+/* Equation variable inspector. */
+.rb-eqi + .rb-eqi {
+  margin-block-start: 0.9rem;
+  padding-block-start: 0.6rem;
+  border-block-start: 1px dotted var(--rule);
+}
+
+.rb-eqi__head {
+  margin: 0;
+}
+
+.rb-eqi__num {
+  display: inline-block;
+  min-block-size: 24px;
+  color: var(--accent);
+  text-decoration: none;
+}
+
+.rb-eqi__math {
+  margin-block: 0.2rem 0.5rem;
+  overflow-x: auto;
+  overflow-y: hidden;
+  color: var(--ink);
+}
+
+.rb-eqi__math .katex-display {
+  margin: 0;
+}
+
+/* Position: prerequisites · siblings · downstream. */
+.rb-pos__self {
+  margin: 0 0 0.5rem;
+  color: var(--ink);
+}
+
+.rb-pos__here {
+  margin-inline-end: 1ch;
+  color: var(--domain, var(--accent));
+}
+
+.rb-pos__group + .rb-pos__group {
+  margin-block-start: 0.6rem;
+}
+
+.rb-pos__label {
+  display: flex;
+  justify-content: space-between;
+  margin: 0;
+  font-variant-caps: all-small-caps;
+  letter-spacing: 0.08em;
+  color: var(--ink-3);
+  border-block-end: 1px dotted var(--rule);
+}
+
+.rb-pos__list,
+.rb-sibi,
+.rb-cites,
+.rb-fmi,
+.rb-terms {
+  margin: 0.2rem 0 0;
+  padding: 0;
+  list-style: none;
+}
+
+.rb-pos__link,
+.rb-fmi__link {
+  display: flex;
+  align-items: center;
+  gap: 1ch;
+  min-block-size: 24px;
+  color: var(--ink-2);
+  text-decoration: none;
+}
+
+.rb-pos__link:hover,
+.rb-fmi__link:hover {
+  color: var(--accent);
+}
+
+.rb-pos__num,
+.rb-fmi__n {
+  flex-shrink: 0;
+  min-inline-size: 4ch;
+  color: var(--ink-3);
+}
+
+.rb-pos__title,
+.rb-fmi__name {
+  overflow: hidden;
+  font-family: var(--font-sans);
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.rb-pos__more {
+  margin: 0.15rem 0 0;
+  color: var(--ink-3);
+}
+
+/* Differential sibling strip. */
+.rb-sibi__item + .rb-sibi__item {
+  margin-block-start: 0.45rem;
+}
+
+.rb-sibi__name {
+  display: inline-block;
+  min-block-size: 24px;
+  font-family: var(--font-sans);
+  font-weight: 600;
+  color: var(--ink);
+  text-decoration: none;
+}
+
+.rb-sibi__name:hover {
+  color: var(--accent);
+}
+
+.rb-sibi__prim {
+  margin: 0;
+  padding-inline-start: 1.5ch;
+  color: var(--ink-2);
+  border-inline-start: 1px solid var(--rule);
+}
+
+/* Citation stack. */
+.rb-cites__link {
+  display: grid;
+  grid-template-columns: 6ch minmax(0, 1fr) auto;
+  column-gap: 1ch;
+  padding-block: 0.3rem;
+  color: var(--ink-2);
+  text-decoration: none;
+  border-block-end: 1px dotted var(--rule);
+}
+
+.rb-cites__key {
+  grid-row: 1 / span 2;
+  color: var(--accent);
+}
+
+.rb-cites__work {
+  font-family: var(--font-sans);
+  color: var(--ink);
+}
+
+.rb-cites__venue {
+  grid-column: 2;
+  color: var(--ink-3);
+}
+
+.rb-cites__status {
+  grid-column: 3;
+  grid-row: 1;
+  color: var(--ink-3);
+}
+
+.rb-cites__link:hover .rb-cites__work {
+  color: var(--accent);
+}
+
+/* Evidence profile: a dot matrix, one shape-coded dot per labelled statement. */
+.rb-dots {
+  display: grid;
+  grid-template-columns: repeat(16, 1fr);
+  gap: 2px;
+  max-inline-size: 18rem;
+  margin: 0 0 0.5rem;
+  line-height: 1;
+}
+
+.rb-dot {
+  text-align: center;
+}
+
+/* Failure-mode index and defined terms. */
+.rb-terms__link {
+  display: inline-block;
+  min-block-size: 24px;
+  font-family: var(--font-serif);
+  font-size: var(--fs-tech);
+  font-variant-caps: all-small-caps;
+  letter-spacing: 0.05em;
+  color: var(--ink);
+  text-decoration: none;
+}
+
+.rb-terms__link:hover {
+  color: var(--accent);
+}
+
+/* ── 22 minimap (UI_UX §12) ──────────────────────────────────────────── */
+
+.rb-minimap {
+  font-family: var(--font-sans);
+  font-size: var(--fs-meta);
+  line-height: 1.4;
+  color: var(--ink-3);
+}
+
+.rb-minimap__list {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  border-inline-start: 1px solid var(--rule);
+}
+
+.rb-minimap__entry {
+  position: relative;
+}
+
+.rb-minimap__link {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  min-block-size: 24px;
+  padding-inline-start: 0.75rem;
+  color: var(--ink-2);
+  text-decoration: none;
+  transition: color var(--t-hover) ease;
+}
+
+.rb-minimap__tick {
+  position: absolute;
+  inset-inline-start: -1px;
+  inset-block-start: 12px;
+  inline-size: 0.45rem;
+  border-block-start: 1px solid var(--rule-strong);
+}
+
+.rb-minimap__link:hover,
+.rb-minimap__sublink:hover,
+.rb-minimap__marker:hover {
+  color: var(--accent);
+}
+
+/* The active region: a solid bar on the lineage rule (client minimap.ts). */
+.rb-minimap__link.is-active,
+.rb-minimap__link[aria-current='location'] {
+  font-weight: 600;
+  color: var(--ink);
+}
+
+.rb-minimap__link.is-active::before,
+.rb-minimap__link[aria-current='location']::before {
+  content: '';
+  position: absolute;
+  inset-block-start: 2px;
+  inset-inline-start: -2px;
+  inline-size: 3px;
+  block-size: 20px;
+  background: var(--domain, var(--accent));
+}
+
+.rb-minimap__sublink.is-in-region,
+.rb-minimap__marker.is-in-region {
+  color: var(--ink-2);
+}
+
+/* Reading progress fills the lineage rule (client writes --progress, 0..1). */
+.rb-minimap {
+  position: relative;
+}
+
+.rb-minimap__progress {
+  position: absolute;
+  inset-block: 0;
+  inset-inline-start: 0;
+  inline-size: 1px;
+  background: var(--rule-strong);
+  transform: scaleY(var(--progress, 0));
+  transform-origin: top;
+  transition: transform var(--t-state) linear;
+}
+
+.rb-minimap__sub,
+.rb-minimap__markers {
+  margin: 0;
+  padding-inline-start: 1.6rem;
+  list-style: none;
+}
+
+.rb-minimap__sublink {
+  display: inline-flex;
+  align-items: center;
+  min-block-size: 24px;
+  color: var(--ink-3);
+  text-decoration: none;
+}
+
+.rb-minimap__markers {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0 0.1rem;
+}
+
+.rb-minimap__marker {
+  display: inline-grid;
+  place-items: center;
+  min-inline-size: 24px;
+  min-block-size: 24px;
+  font-family: var(--font-mono);
+  color: var(--ink-3);
+  text-decoration: none;
+}
+
+/* ── 22b section index, folded text equivalents, apparatus ──────────── */
+
+/* Section index: the chapter's table of contents as a numbered progression. */
+.rb-secidx {
+  margin: var(--gap-related) auto 0;
+  padding: 0;
+  list-style: none;
+  border-block: 1.5px solid var(--ink);
+}
+
+.rb-secidx__item {
+  display: grid;
+  grid-template-columns: 4.25rem minmax(0, 1fr);
+  column-gap: 0.75rem;
+  padding-block: 0.95rem 1rem;
+}
+
+.rb-secidx__item + .rb-secidx__item {
+  border-block-start: 1px solid var(--rule);
+}
+
+.rb-secidx__head {
+  display: contents;
+}
+
+.rb-secidx__num {
+  grid-row: 1 / span 3;
+  padding-block-start: 0.2rem;
+  font-family: var(--font-mono);
+  font-size: 15px;
+  font-weight: 500;
+  color: var(--domain, var(--accent));
+}
+
+.rb-secidx__title {
+  font-family: var(--font-serif);
+  font-size: 23px;
+  line-height: 1.25;
+  color: var(--ink);
+  text-decoration: none;
+}
+
+a.rb-secidx__title:hover {
+  color: var(--accent);
+}
+
+.rb-secidx__change {
+  grid-column: 2;
+  margin: 0.3rem 0 0;
+  font-family: var(--font-serif);
+  font-size: 17px;
+  line-height: 1.5;
+  color: var(--ink-2);
+}
+
+.rb-secidx__labels {
+  grid-column: 2;
+  margin: 0.35rem 0 0;
+  font-size: var(--fs-meta);
+  color: var(--ink-3);
+}
+
+/* Concept-map text equivalent: present for screen readers and on request, not a second copy of the figure. */
+.rb-textequiv {
+  margin-block-start: var(--gap-related);
+  font-size: var(--fs-tech);
+}
+
+.rb-textequiv__summary {
+  display: inline-flex;
+  align-items: baseline;
+  gap: 0.45em;
+  cursor: pointer;
+  list-style: none;
+  font-family: var(--font-sans);
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--ink-3);
+}
+
+.rb-textequiv__summary::-webkit-details-marker {
+  display: none;
+}
+
+.rb-textequiv__summary::before {
+  content: '+';
+  font-family: var(--font-mono);
+  color: var(--accent);
+}
+
+.rb-textequiv[open] > .rb-textequiv__summary::before {
+  content: '−';
+}
+
+.rb-textequiv[open] > .rb-textequiv__summary {
+  margin-block-end: var(--gap-related);
+}
+
+.rb-textequiv .rb-list {
+  font-size: 16px;
+}
+
+/* Research apparatus (chapter pages): sourcing, routing, status — last, set compactly. */
+.sh-apparatus {
+  margin-block-start: calc(var(--gap-section) * 1.4);
+  padding-block-start: 1rem;
+  border-block-start: 1.5px solid var(--ink);
+}
+
+.sh-apparatus__head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 0.3rem 1rem;
+  max-inline-size: var(--measure);
+  margin: 0 auto;
+  font-family: var(--font-sans);
+}
+
+.sh-apparatus__title {
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--ink);
+}
+
+.sh-apparatus__note {
+  font-size: var(--fs-meta);
+  color: var(--ink-3);
+}
+
+.sh-apparatus .rb-region {
+  margin-block-start: var(--gap-argument);
+  font-size: 16.5px;
+}
+
+.sh-apparatus .rb-region__title {
+  font-size: 19px;
+}
+
+/* ── 22c rail as an instrument panel; minimap refinements ─────────────── */
+
+.rb-rail-group__state {
+  margin: 0 0 0.25rem;
+  padding-block-end: 0.45rem;
+  font-family: var(--font-mono);
+  font-size: 11px;
+  font-variant-caps: normal;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  border-block-end: 1.5px solid var(--ink);
+}
+
+.rb-rail-group__ordinal {
+  font-weight: 600;
+}
+
+.rb-rail-group__label {
+  font-weight: 600;
+  color: var(--ink);
+}
+
+.rb-rail-group__count {
+  color: var(--ink-3);
+}
+
+.rb-instrument:first-of-type {
+  border-block-start: 0;
+}
+
+.rb-instrument__head {
+  font-family: var(--font-mono);
+  font-size: 10.5px;
+  font-variant-caps: normal;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+}
+
+/* The minimap follows the instruments, separated by a heavy rule. */
+.rb-rail + .rb-minimap {
+  margin-block-start: var(--gap-section);
+  padding-block-start: 0.6rem;
+  border-block-start: 1.5px solid var(--ink);
+}
+
+.rb-minimap__head {
+  margin: 0 0 0.5rem;
+  font-family: var(--font-mono);
+  font-size: 11px;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--ink-3);
+}
+
+.rb-minimap__link {
+  gap: 0.5rem;
+  font-size: 13px;
+}
+
+.rb-minimap__title {
+  flex: 1 1 auto;
+  min-inline-size: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.rb-minimap__ord {
+  flex: none;
+  font-family: var(--font-mono);
+  font-size: 11px;
+  color: var(--ink-3);
+}
+
+.rb-minimap__count {
+  flex: none;
+  font-family: var(--font-mono);
+  font-size: 10.5px;
+  color: var(--ink-3);
+}
+
+.rb-minimap__markers {
+  display: none;
+  gap: 0.15rem 0.6rem;
+  padding: 0.1rem 0 0.35rem 2.35rem;
+}
+
+.rb-minimap__entry:has(> .rb-minimap__link.is-active) > .rb-minimap__markers,
+.rb-minimap__entry:has(> .rb-minimap__link[aria-current='location']) > .rb-minimap__markers {
+  display: flex;
+}
+
+.rb-minimap__marker {
+  display: inline-block;
+  min-inline-size: 0;
+  min-block-size: 22px;
+  font-size: 11px;
+  line-height: 22px;
+  color: var(--ink-3);
+  white-space: nowrap;
+}
+
+.rb-minimap__marker--figure,
+.rb-minimap__marker--equation {
+  color: var(--ink-2);
+}
+
+/* ── 22d record lists (ledger tables) and rail overflow ──────────────── */
+
+.rb-records {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  border-block: 1.5px solid var(--ink);
+  font-family: var(--font-sans);
+}
+
+.rb-records__item {
+  padding-block: 0.85rem 0.95rem;
+}
+
+.rb-records__item + .rb-records__item {
+  border-block-start: 1px solid var(--rule);
+}
+
+.rb-records__head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 0.2rem 0.8rem;
+  margin: 0;
+}
+
+.rb-records__kicker {
+  font-family: var(--font-mono);
+  font-size: 12px;
+  letter-spacing: 0.02em;
+  color: var(--domain, var(--accent));
+}
+
+.rb-records__title {
+  font-family: var(--font-serif);
+  font-size: 19px;
+  line-height: 1.3;
+  color: var(--ink);
+}
+
+.rb-records--stack-coverage .rb-records__title {
+  font-family: var(--font-mono);
+  font-size: 14.5px;
+}
+
+.rb-records__sub {
+  margin: 0.15rem 0 0;
+  font-size: 13px;
+  color: var(--ink-3);
+}
+
+.rb-records--stack-coverage .rb-records__sub {
+  font-family: var(--font-mono);
+  font-size: 11.5px;
+  color: var(--domain, var(--ink-2));
+}
+
+.rb-records__body {
+  margin: 0.4rem 0 0;
+  font-size: 14.5px;
+  line-height: 1.5;
+  color: var(--ink-2);
+}
+
+.rb-records__meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.25rem 1.4rem;
+  margin: 0.5rem 0 0;
+  font-size: 12px;
+  color: var(--ink-3);
+}
+
+.rb-records__field {
+  display: flex;
+  gap: 0.4rem;
+  min-inline-size: 0;
+  max-inline-size: 100%;
+}
+
+.rb-records__field dt {
+  font-size: 10.5px;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--ink-3);
+}
+
+.rb-records__field dd {
+  margin: 0;
+  min-inline-size: 0;
+  overflow-wrap: anywhere;
+  color: var(--ink-2);
+}
+
+/* Rail: flex rows must be allowed to shrink so long titles ellipsize inside the column. */
+.rb-rail,
+.rb-rail * {
+  min-inline-size: 0;
+}
+
+.rb-pos__title,
+.rb-fmi__name,
+.rb-cites__work {
+  min-inline-size: 0;
+}
+
+.rb-pos__link {
+  max-inline-size: 100%;
+}
+
+/* ── 22e "now reading" track (rail head) ────────────────────────────── */
+
+.rb-track {
+  position: sticky;
+  inset-block-start: -1.25rem;
+  z-index: 2;
+  margin: -1.25rem -1.25rem 1.1rem;
+  padding: 1.1rem 1.25rem 0.7rem;
+  background: var(--paper);
+  border-block-end: 1.5px solid var(--ink);
+  font-family: var(--font-mono);
+  font-size: 11px;
+  letter-spacing: 0.06em;
+  color: var(--ink-2);
+}
+
+.rb-track__head {
+  display: flex;
+  align-items: baseline;
+  gap: 0.6rem;
+  margin: 0 0 0.55rem;
+  text-transform: uppercase;
+}
+
+.rb-track__id {
+  flex: none;
+  font-weight: 600;
+  color: var(--domain, var(--accent));
+}
+
+.rb-track__title {
+  flex: 1 1 auto;
+  min-inline-size: 0;
+  overflow: hidden;
+  font-weight: 600;
+  color: var(--ink);
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.rb-track__pct {
+  flex: none;
+  font-variant-numeric: tabular-nums;
+  color: var(--ink-3);
+}
+
+.rb-track__ticks {
+  display: flex;
+  gap: 3px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.rb-track__cell {
+  flex: 1 1 0;
+  min-inline-size: 0;
+}
+
+.rb-track__tick {
+  display: block;
+  block-size: 18px;
+  position: relative;
+}
+
+.rb-track__tick::before {
+  content: '';
+  position: absolute;
+  inset: 7px 0;
+  background: var(--rule);
+  transition:
+    background-color var(--t-state) ease,
+    inset var(--t-state) ease;
+}
+
+.rb-track__tick.is-read::before {
+  background: var(--ink-3);
+}
+
+.rb-track__tick.is-current::before {
+  inset: 4px 0;
+  background: var(--domain, var(--accent));
+}
+
+.rb-track__tick:hover::before,
+.rb-track__tick:focus-visible::before {
+  inset: 4px 0;
+  background: var(--ink-2);
+}
+
+.rb-track__tick:focus-visible {
+  outline: 2px solid var(--focus);
+  outline-offset: 1px;
+}
+
+.rb-track__now {
+  display: flex;
+  gap: 0.6rem;
+  margin: 0.35rem 0 0;
+  font-size: 11.5px;
+  color: var(--ink);
+}
+
+.rb-track__ord {
+  color: var(--domain, var(--accent));
+}
+
+.rb-track__label {
+  min-inline-size: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* The per-region state line is now carried by the track; keep the group header compact. */
+.rb-track ~ .rb-rail .rb-rail-group__state {
+  display: none;
+}
+
+/* ── 22f chapter at a glance; citation timeline (derived page images) ─ */
+
+.rb-glance,
+.rb-ctl {
+  max-inline-size: var(--measure);
+  margin: var(--gap-argument) auto 0;
+  padding-block: 0.8rem 0.9rem;
+  border-block: 1.5px solid var(--ink);
+  font-family: var(--font-mono);
+  font-size: 12px;
+  color: var(--ink-2);
+}
+
+.rb-glance__head,
+.rb-ctl__head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 0.2rem 1rem;
+  margin-block-end: 0.6rem;
+}
+
+.rb-glance__kicker,
+.rb-ctl__kicker {
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--ink);
+}
+
+.rb-glance__note,
+.rb-ctl__note {
+  font-size: 11px;
+  color: var(--ink-3);
+}
+
+.rb-glance__table {
+  inline-size: 100%;
+  border-collapse: collapse;
+  font-variant-numeric: tabular-nums;
+}
+
+.rb-glance__table th,
+.rb-glance__table td {
+  padding: 0.3rem 0.35rem;
+  border-block-end: 1px dotted var(--rule);
+  text-align: start;
+  vertical-align: middle;
+}
+
+.rb-glance__table thead th {
+  font-size: 10.5px;
+  font-weight: 500;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--ink-3);
+  border-block-end: 1px solid var(--ink-2);
+}
+
+.rb-glance__sec {
+  inline-size: 44%;
+}
+
+.rb-glance__sec a {
+  display: flex;
+  gap: 0.6rem;
+  align-items: baseline;
+  color: var(--ink);
+  text-decoration: none;
+}
+
+.rb-glance__sec a:hover .rb-glance__title {
+  color: var(--accent);
+}
+
+.rb-glance__num {
+  flex: none;
+  min-inline-size: 2.2rem;
+  color: var(--domain, var(--accent));
+}
+
+.rb-glance__title {
+  font-family: var(--font-sans);
+  font-size: 13px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.rb-glance__dots {
+  display: inline-flex;
+  flex-wrap: wrap;
+  gap: 3px;
+  max-inline-size: 5.4rem;
+  min-block-size: 24px;
+  align-items: center;
+  text-decoration: none;
+}
+
+.rb-glance__dot {
+  inline-size: 7px;
+  block-size: 7px;
+  border-radius: 50%;
+  background: var(--accent);
+  transition: transform var(--t-hover) ease;
+}
+
+.rb-glance__dots:hover .rb-glance__dot {
+  transform: scale(1.25);
+  background: var(--domain, var(--accent));
+}
+
+.rb-glance__more {
+  font-size: 10.5px;
+  color: var(--ink-3);
+}
+
+.rb-glance__none {
+  color: var(--rule-strong);
+}
+
+.rb-glance tbody tr:hover > * {
+  background: var(--paper-raised);
+}
+
+.rb-glance tr.is-planned .rb-glance__title {
+  color: var(--ink-3);
+}
+
+.rb-glance tfoot th,
+.rb-glance tfoot td {
+  border-block-end: 0;
+  padding-block-start: 0.45rem;
+  color: var(--ink);
+  font-weight: 600;
+}
+
+/* Citation timeline */
+.rb-ctl__plot {
+  position: relative;
+  block-size: 7.5rem;
+  margin: 0.4rem 0.6rem 1.6rem;
+  border-block-end: 1px solid var(--ink-2);
+}
+
+.rb-ctl__col {
+  position: absolute;
+  inset-block-end: 2px;
+  inset-inline-start: var(--x);
+  display: flex;
+  flex-direction: column-reverse;
+  align-items: center;
+  translate: -50% 0;
+}
+
+.rb-ctl__mark {
+  display: grid;
+  place-items: center;
+  inline-size: 18px;
+  block-size: 16px;
+  font-size: 12px;
+  line-height: 1;
+  color: var(--accent);
+  text-decoration: none;
+  transition: transform var(--t-hover) ease;
+}
+
+.rb-ctl__mark:hover,
+.rb-ctl__mark:focus-visible {
+  transform: scale(1.35);
+  color: var(--domain, var(--accent));
+}
+
+.rb-ctl__mark--report {
+  color: var(--ev-inference);
+}
+
+.rb-ctl__mark--doc {
+  color: var(--ev-source);
+}
+
+.rb-ctl__mark--repo {
+  color: var(--ev-gap);
+}
+
+.rb-ctl__mark--other {
+  color: var(--ink-3);
+}
+
+.rb-ctl__axis {
+  position: absolute;
+  inset-inline: 0;
+  inset-block-start: 100%;
+}
+
+.rb-ctl__tick {
+  position: absolute;
+  inset-inline-start: var(--x);
+  padding-block-start: 0.3rem;
+  font-size: 10.5px;
+  color: var(--ink-3);
+  translate: -50% 0;
+}
+
+.rb-ctl__legend {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.2rem 1.2rem;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  font-size: 11px;
+  color: var(--ink-3);
+}
+
+.rb-ctl__glyph {
+  display: inline-block;
+  margin-inline-end: 0.35rem;
+}
+
+/* ── 23 print (UI_UX §75) ────────────────────────────────────────────── */
+
+@media print {
+  .rb-anchor,
+  .rb-eq__link,
+  .rb-eq__tools,
+  .rb-code__copy,
+  .rb-figmark,
+  .rb-rail__inspector,
+  .rb-minimap,
+  .rb-expand__caret,
+  .rb-eq__where-summary::before {
+    display: none !important;
+  }
+
+  .rb-figure--rail .rb-figure__inline {
+    display: block !important;
+  }
+
+  .rb-region > *,
+  .rb-flow > * {
+    max-inline-size: none;
+  }
+
+  .rb-table__scroll,
+  .rb-alg__body,
+  .rb-eq__math,
+  .rb-trace,
+  .rb-code pre {
+    max-block-size: none !important;
+    overflow: visible !important;
+  }
+
+  .rb-code pre,
+  .rb-alg__src,
+  .rb-alg__comment {
+    white-space: pre-wrap;
+  }
+
+  .rb-table thead th,
+  .rb-table.rb-wide :is(th, td):first-child {
+    position: static;
+  }
+
+  .rb-eq,
+  .rb-alg,
+  .rb-def,
+  .rb-claim,
+  .rb-fm,
+  .rb-sib,
+  .rb-obs__row,
+  .rb-grid__row,
+  .rb-figure {
+    break-inside: avoid;
+  }
+
+  .rb-region__title,
+  .rb-h {
+    break-after: avoid;
+  }
+
+  .rb-link,
+  .rb-xref,
+  .rb-cite {
+    color: inherit;
+    text-decoration: none;
+  }
+
+  .rb-link--ext::after {
+    content: ' (' attr(href) ')';
+    font-size: 0.8em;
+  }
+}
+
+/* Separate rule: browsers without ::details-content drop only this block.
+ * The client also opens every <details> on `beforeprint`. */
+@media print {
+  details::details-content {
+    content-visibility: visible;
+    block-size: auto;
+  }
+}
+
+/* Chapter at a glance on narrow screens: numbers carry the rows; the grid may scroll, the page never does. */
+@media (max-width: 719.98px) {
+  .rb-glance {
+    overflow-x: auto;
+  }
+
+  .rb-glance__title {
+    display: none;
+  }
+
+  .rb-glance__sec {
+    inline-size: auto;
+  }
+
+  .rb-glance__dots {
+    max-inline-size: 3.6rem;
+  }
+}
+
+/*
+ * Scroll containers are also containing blocks: visually hidden labels
+ * (position: absolute) inside a table or figure would otherwise resolve
+ * against an ancestor outside the scroller, escape its clip, and widen the page.
+ */
+.rb-table__scroll,
+.rb-glance,
+.rb-eq__math,
+.vg-figure__body {
+  position: relative;
+}
+
+/* ── mini stack map (rail head on chapter pages) ─────────────────────────── */
+
+.sx-mini {
+  margin: 0 0 1rem;
+  font-family: var(--font-mono);
+}
+
+.sx-mini__head {
+  display: flex;
+  justify-content: space-between;
+  gap: 0.5rem;
+  margin-bottom: 0.3rem;
+  font-size: 10.5px;
+  font-weight: 600;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--ink-2);
+}
+
+.sx-mini__counts {
+  font-weight: 400;
+  letter-spacing: 0.02em;
+  text-transform: none;
+  color: var(--ink-3);
+}
+
+.sx-mini__up {
+  color: var(--domain-architecture);
+}
+
+.sx-mini__down {
+  color: var(--accent);
+}
+
+.sx-mini__svg {
+  display: block;
+  width: 100%;
+  height: auto;
+  overflow: visible;
+}
+
+.sx-mini__lane line {
+  stroke: var(--rule);
+  stroke-width: 1;
+}
+
+.sx-mini__lane text {
+  font: 600 8.5px var(--font-mono);
+  fill: var(--ink-3);
+}
+
+.sx-mini__svg a {
+  text-decoration: none;
+}
+
+.sx-mini__edges path {
+  fill: none;
+  stroke-width: 1.1;
+  opacity: 0.8;
+}
+
+.sx-mini__edges .is-up {
+  stroke: var(--domain-architecture);
+}
+
+.sx-mini__edges .is-down {
+  stroke: var(--accent);
+}
+
+.sx-mini__node circle {
+  fill: var(--paper);
+  stroke: var(--rule-strong);
+  stroke-width: 1;
+  transform-box: fill-box;
+  transform-origin: center;
+  transition:
+    transform var(--t-hover) ease,
+    stroke var(--t-hover) ease;
+}
+
+.sx-mini__node.is-written circle {
+  fill: var(--ink-3);
+  stroke: var(--ink-3);
+}
+
+.sx-mini__node.is-up circle {
+  stroke: var(--domain-architecture);
+  stroke-width: 1.6;
+}
+
+.sx-mini__node.is-down circle {
+  stroke: var(--accent);
+  stroke-width: 1.6;
+}
+
+.sx-mini__node.is-up.is-written circle {
+  fill: var(--domain-architecture);
+}
+
+.sx-mini__node.is-down.is-written circle {
+  fill: var(--accent);
+}
+
+.sx-mini__node.is-other circle {
+  opacity: 0.55;
+}
+
+.sx-mini__node.is-focus circle {
+  fill: var(--domain, var(--accent));
+  stroke: var(--ink);
+  stroke-width: 1.8;
+}
+
+.sx-mini__node:hover circle,
+.sx-mini__node:focus-visible circle {
+  transform: scale(1.5);
+  stroke: var(--ink);
+  opacity: 1;
+}
+
+/* Peek: the dot under the pointer and its own direct links. */
+.sx-mini__svg.has-peek .sx-mini__node:not(.is-peek, .is-peek-up, .is-peek-down) circle,
+.sx-mini__svg.has-peek .sx-mini__edges path {
+  opacity: 0.22;
+}
+
+.sx-mini__node.is-peek-up circle {
+  stroke: var(--domain-architecture);
+  stroke-width: 2.2;
+  opacity: 1;
+}
+
+.sx-mini__node.is-peek-down circle {
+  stroke: var(--accent);
+  stroke-width: 2.2;
+  opacity: 1;
+}
+
+.sx-mini__edges .is-inside {
+  stroke: var(--ink-3);
+}
+
+.sx-mini__readout {
+  min-height: 1.4em;
+  margin: 0.25rem 0 0;
+  overflow: hidden;
+  font-size: 11px;
+  color: var(--ink);
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* Section index ↔ at-a-glance cross-lighting (client chapter-links.ts). */
+.rb-secidx__item {
+  transition: box-shadow var(--t-hover) ease, background-color var(--t-hover) ease;
+}
+
+/* Lit = the same section pointed at in the other view: a margin rule plus a
+   faint wash, strong enough to find, quiet enough to keep reading through. */
+.rb-secidx__item.is-lit {
+  box-shadow: inset 2px 0 0 var(--accent);
+  background: color-mix(in oklab, var(--accent-wash) 45%, transparent);
+}
+
+.rb-secidx__item.is-lit .rb-secidx__num {
+  color: var(--accent);
+}
+
+.rb-glance tbody tr.is-lit > * {
+  background: color-mix(in oklab, var(--accent-wash) 45%, transparent);
+}
+
+.rb-glance tbody tr.is-lit > :first-child {
+  box-shadow: inset 2px 0 0 var(--accent);
+}
+
+.rb-glance tbody tr.is-lit .rb-glance__dot {
+  transform: scale(1.25);
+}

@@ -1,0 +1,36 @@
+---
+/**
+ * Library: the manuscript as an instrument — every volume, part, chapter, and
+ * section with its editorial state, in one connected map, a stat band, a
+ * fixed readout, and a condensed ledger (components/shell/LibraryExplorer.astro,
+ * client library-explorer.ts). Front matter and appendices follow.
+ */
+import LibraryExplorer from '../components/shell/LibraryExplorer.astro';
+import PageHeader from '../components/shell/PageHeader.astro';
+import ReaderLayout from '../layouts/ReaderLayout.astro';
+import { getGraph, getRegistry } from '../lib/atlas.ts';
+import { grouped } from '../lib/format.ts';
+import { buildLibraryModel } from '../lib/library-model.ts';
+import { getStackModel } from '../lib/stack.ts';
+import '../styles/library.css';
+
+const [graph, registry, stack] = await Promise.all([getGraph(), getRegistry(), getStackModel()]);
+const model = buildLibraryModel(graph, registry, stack);
+const { totals } = model;
+---
+
+<ReaderLayout
+  title="Library"
+  description="Every volume, part, chapter, and section of The Model Stack with its editorial state and manuscript coverage, as one connected map."
+  canonicalPath="/library/"
+  currentId={null}
+  navKey="library"
+>
+  <PageHeader
+    identity="Research Atlas / Library"
+    title="Library"
+    lede="Where the writing stands, section by section — and what each chapter builds on and unlocks."
+    meta={`${String(totals.chaptersWritten)} of ${String(totals.chapters)} chapters written · ${String(totals.sectionsWritten)} of ${String(totals.sections)} sections drafted · ${grouped(totals.words)} words`}
+  />
+  <LibraryExplorer model={model} edges={stack.edges.length} />
+</ReaderLayout>

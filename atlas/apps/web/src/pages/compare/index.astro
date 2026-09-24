@@ -1,0 +1,74 @@
+---
+/**
+ * Compare index: every node with authored sibling differentials, by chapter
+ * (fragment `#ch-05` is where a chapter page's Compare mode lands).
+ */
+import { isNodeId, type GraphNode, type ResearchDocument } from '@atlas/core';
+import PageHeader from '../../components/shell/PageHeader.astro';
+import ReaderLayout from '../../layouts/ReaderLayout.astro';
+import { getDocument, getGraph } from '../../lib/atlas.ts';
+import { nodesWithCompare, siblingBlocks } from '../../lib/compare.ts';
+import { grouped } from '../../lib/format.ts';
+import { enclosing, nodesOfType } from '../../lib/nodes.ts';
+import { chapterFragment, compareUrl } from '../../lib/urls.ts';
+
+const [graph, ids] = await Promise.all([getGraph(), nodesWithCompare()]);
+const docs: ResearchDocument[] = [];
+for (const id of ids) docs.push(await getDocument(id));
+const order = new Map(graph.order.map((id, index) => [id, index]));
+docs.sort((a, b) => (order.get(a.meta.id) ?? Number.MAX_SAFE_INTEGER) - (order.get(b.meta.id) ?? Number.MAX_SAFE_INTEGER));
+
+interface ChapterGroup {
+  readonly chapter: GraphNode;
+  readonly docs: ResearchDocument[];
+}
+const groups: ChapterGroup[] = [];
+for (const chapter of nodesOfType(graph, 'chapter')) {
+  const members = docs.filter((doc) => isNodeId(doc.meta.id) && enclosing(graph, doc.meta.id, 'chapter')?.id === chapter.id);
+  if (members.length > 0) groups.push({ chapter, docs: members });
+}
+const fragmentOf = (chapter: GraphNode): string => {
+  const number = chapter.number === null ? Number.NaN : Number.parseInt(chapter.number, 10);
+  return Number.isFinite(number) ? chapterFragment(number) : chapter.id;
+};
+const alternatives = docs.reduce((sum, doc) => sum + siblingBlocks(doc).length, 0);
+---
+
+<ReaderLayout
+  title="Compare"
+  description="Sibling differentials across The Model Stack: for each mechanism, what its alternatives change and why they exist."
+  canonicalPath="/compare/"
+  currentId={null}
+>
+  <PageHeader
+    identity="Research Atlas / Compare"
+    title="Compare"
+    lede="For each mechanism, its alternatives side by side on one axis: what each changes and why it exists. Differences are emphasised; nothing is ranked."
+    meta={`${grouped(docs.length)} nodes · ${grouped(alternatives)} authored differentials`}
+  />
+
+  {
+    groups.length === 0 ? (
+      <p class="sh-empty">No compiled node carries sibling differentials yet.</p>
+    ) : (
+      groups.map((group) => (
+        <section class="sh-section" id={fragmentOf(group.chapter)} aria-labelledby={`cmp-${fragmentOf(group.chapter)}`}>
+          <h2 id={`cmp-${fragmentOf(group.chapter)}`}>
+            <a href={group.chapter.url}>
+              <span class="sh-num">{group.chapter.number}</span> {group.chapter.title}
+            </a>
+          </h2>
+          <ol class="sh-index-list">
+            {group.docs.map((doc) => (
+              <li class="sh-index-row sh-index-row--wrap">
+                <span class="sh-num">{doc.header.number ?? ''}</span>
+                <a href={compareUrl(doc.route.url)}>{doc.header.title}</a>
+                <span class="sh-index-meta">{siblingBlocks(doc).map((sibling) => sibling.name).join(' · ')}</span>
+              </li>
+            ))}
+          </ol>
+        </section>
+      ))
+    )
+  }
+</ReaderLayout>

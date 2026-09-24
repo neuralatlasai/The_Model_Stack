@@ -1,0 +1,40 @@
+---
+/**
+ * One relation group of a node's neighbourhood as a navigable text list — the
+ * accessible twin of the map (UI_UX §60: graphs are never the only
+ * representation). Each entry links to the node and to its own map.
+ */
+import type { GraphNode } from '@atlas/core';
+import { mapUrl } from '../../lib/urls.ts';
+
+interface Props {
+  readonly id: string;
+  readonly title: string;
+  readonly note: string;
+  readonly nodes: readonly GraphNode[];
+}
+
+const { id, title, note, nodes } = Astro.props;
+---
+
+{
+  nodes.length > 0 && (
+    <section class="sh-relation" aria-labelledby={id}>
+      <h3 id={id} class="sh-relation-title">
+        {title} <span class="sh-count">{nodes.length}</span>
+      </h3>
+      <p class="sh-relation-note">{note}</p>
+      <ol class="sh-index-list">
+        {nodes.map((node) => (
+          <li class:list={['sh-index-row', { 'sh-index-row--planned': !node.hasManuscript }]} data-domain={node.domain}>
+            <span class="sh-num">{node.number ?? ''}</span>
+            <a href={node.url}>{node.title}</a>
+            <a class="sh-index-aside" href={mapUrl(node.url)} aria-label={`Map of ${node.title}`}>
+              map
+            </a>
+          </li>
+        ))}
+      </ol>
+    </section>
+  )
+}

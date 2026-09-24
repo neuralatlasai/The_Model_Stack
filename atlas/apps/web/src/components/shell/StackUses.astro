@@ -1,0 +1,57 @@
+---
+/**
+ * "What chapters take from it": rows of a chapter's Reference-stack coverage
+ * table (CONTENT_CONTRACT §3 item 13) that name one system or lab, with the
+ * sections that use it and the evidence label the chapter assigned. The first
+ * row of each chapter carries its fragment (`#ch-05`), which is where the
+ * Labs and Systems instruments link a chapter mark.
+ */
+import type { AtlasGraph, StackUse } from '@atlas/core';
+import Inline from '../research/Inline.astro';
+import { enclosing } from '../../lib/nodes.ts';
+import { chapterFragment } from '../../lib/urls.ts';
+
+interface Props {
+  readonly uses: readonly StackUse[];
+  readonly graph: AtlasGraph;
+}
+
+const { uses, graph } = Astro.props;
+const anchored = new Set<string>();
+const fragmentFor = (nodeId: StackUse['nodeId']): string | undefined => {
+  const number = enclosing(graph, nodeId, 'chapter')?.number;
+  if (number === undefined || number === null) return undefined;
+  const fragment = chapterFragment(Number.parseInt(number, 10));
+  if (anchored.has(fragment)) return undefined;
+  anchored.add(fragment);
+  return fragment;
+};
+---
+
+<dl class="sh-uses">
+  {
+    uses.map((use) => {
+      const node = graph.nodes[use.nodeId];
+      return (
+        <div class="sh-use" id={fragmentFor(use.nodeId)}>
+          <dt>
+            {node !== undefined ? (
+              <a href={node.url}>
+                {node.number !== null && <span class="sh-num">{node.number}</span>} {node.title}
+              </a>
+            ) : (
+              <span class="sh-mono">{use.nodeId}</span>
+            )}
+          </dt>
+          <dd>
+            <Inline nodes={use.what} />
+          </dd>
+          <dd class="sh-meta-line">
+            {use.sections !== '' && <span>Sections {use.sections}</span>}
+            {use.label !== '' && <span class="sh-use-label">{use.label}</span>}
+          </dd>
+        </div>
+      );
+    })
+  }
+</dl>

@@ -1,0 +1,83 @@
+---
+/**
+ * The context rail as an instrument panel (UI_UX §10, AI 2040 grammar):
+ * one `data-rail-for` group per region binding (≤ 3 instruments each), each
+ * opened by a state line naming the region it serves. The client (rail.ts)
+ * sets `hidden` on every group but the active region's; without JS every
+ * group stays visible, so rail figures are never lost. The root carries
+ * `data-rail`; an empty, hidden `data-rail-inspector` slot sits first and the
+ * client fills and reveals it when a citation, term, or equation is pinned.
+ */
+import type { PageData, ResearchDocument } from '@atlas/core';
+import RailInstrument from './RailInstrument.astro';
+import { jsonForHtml } from '../../lib/json.ts';
+import { railForAttrs, railInspectorAttrs, railRootAttrs } from './lib/dom.ts';
+import { roleLabel, roleOrdinal } from './lib/grammar.ts';
+
+interface Props {
+  doc: ResearchDocument;
+  pageData: PageData;
+  /** Display ordinals from the page's presentation order (lib/presentation.ts). */
+  ordinals?: ReadonlyMap<string, string>;
+}
+
+const { doc, pageData, ordinals } = Astro.props;
+const titles = new Map(doc.regions.map((region) => [region.anchor, region.title]));
+
+/*
+ * Live instruments (VISUAL_GRAMMAR §6.1): rail figures with `states` render once, above the
+ * per-region groups, and stay while the reader is in any of their regions; the client
+ * (live-instruments.ts) shows them and applies the state of the active region.
+ */
+const liveFigures = doc.figures.filter((figure) => figure.placement === 'rail' && figure.spec.states.length > 0);
+const liveIds = new Set<string>(liveFigures.map((figure) => figure.id));
+const live = liveFigures.map((figure) => ({
+  figure,
+  anchors: [...new Set([figure.spec.anchor ?? figure.regionAnchor, ...figure.spec.states.map((state) => state.anchor)])],
+}));
+
+const groups = doc.rail
+  .map((binding) => ({
+    ...binding,
+    instruments: binding.instruments.filter((instrument) => !(instrument.kind === 'figure' && liveIds.has(instrument.figureId))),
+  }))
+  .filter((binding) => binding.instruments.length > 0)
+  .map((binding) => ({
+    binding,
+    ordinal: ordinals?.get(binding.regionAnchor) ?? roleOrdinal(binding.role),
+    label: roleLabel(binding.role, titles.get(binding.regionAnchor) ?? binding.regionAnchor),
+  }));
+---
+
+<div class="rb-rail" {...railRootAttrs()}>
+  <div class="rb-rail__inspector" hidden {...railInspectorAttrs()}></div>
+  {
+    live.length > 0 && (
+      <div class="rb-rail__live" data-live-instruments>
+        {live.map(({ figure, anchors }) => (
+          <div class="rb-live" data-live-figure={figure.id} data-live-anchors={anchors.join(' ')}>
+            <RailInstrument instrument={{ kind: 'figure', figureId: figure.id }} doc={doc} pageData={pageData} />
+            <script is:inline type="application/json" data-live-spec set:html={jsonForHtml(figure.spec)} />
+          </div>
+        ))}
+      </div>
+    )
+  }
+  {
+    groups.map(({ binding, ordinal, label }) => (
+      <div class="rb-rail-group" {...railForAttrs(binding.regionAnchor)}>
+        <p class="rb-rail-group__state">
+          {ordinal !== null && <span class="rb-rail-group__ordinal">{ordinal}</span>}
+          <span class="rb-rail-group__label">{label}</span>
+          <span class="rb-rail-group__count">
+            {binding.instruments.length}
+            <span class="rb-vh"> instruments</span>
+          </span>
+        </p>
+        {binding.instruments.map((instrument) => (
+          <RailInstrument instrument={instrument} doc={doc} pageData={pageData} />
+        ))}
+      </div>
+    ))
+  }
+</div>

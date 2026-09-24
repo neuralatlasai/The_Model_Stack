@@ -1,0 +1,86 @@
+---
+/**
+ * System object (UI_UX §82): stack layer and rank from the reference stack,
+ * its documentation and code surfaces, the nodes that list it as an
+ * implementation, and what each chapter takes from it.
+ */
+import type { GetStaticPaths } from 'astro';
+import type { GraphNode, ImplId } from '@atlas/core';
+import Breadcrumbs from '../../components/shell/Breadcrumbs.astro';
+import PageHeader from '../../components/shell/PageHeader.astro';
+import StackUses from '../../components/shell/StackUses.astro';
+import ReaderLayout from '../../layouts/ReaderLayout.astro';
+import { getGraph, getRegistry } from '../../lib/atlas.ts';
+
+type Props = { readonly id: ImplId };
+
+export const getStaticPaths = (async () => {
+  const registry = await getRegistry();
+  return registry.systems.map((system) => ({ params: { name: system.id.slice('impl.'.length) }, props: { id: system.id } }));
+}) satisfies GetStaticPaths;
+
+const { id } = Astro.props;
+const [registry, graph] = await Promise.all([getRegistry(), getGraph()]);
+const system = registry.systems.find((entry) => entry.id === id);
+if (system === undefined) throw new Error(`systems/[name]: ${id} missing from the registry`);
+const usedBy = system.usedBy.map((nodeId) => graph.nodes[nodeId]).filter((node): node is GraphNode => node !== undefined);
+const identity = ['System', system.layer ?? 'layer not stated', system.rank === null ? null : `rank ${String(system.rank)}`]
+  .filter((part): part is string => part !== null)
+  .join(' · ');
+---
+
+<ReaderLayout
+  title={system.name}
+  description={`${system.name} (${system.layer ?? 'reference-stack system'}): where The Model Stack analyses it and what each chapter takes from it.`}
+  canonicalPath={system.atlasUrl}
+  currentId={null}
+  navKey="systems"
+>
+  <Breadcrumbs crumbs={[{ title: 'Systems', number: null, url: '/systems/' }]} current={system.name} />
+  <article class="sh-article">
+    <PageHeader identity={identity} title={system.name} meta={`Identifier ${system.id}`}>
+      {
+        system.surfaces.length > 0 && (
+          <ul class="sh-actions">
+            {system.surfaces.map((surface) => (
+              <li>
+                <a href={surface.url} rel="external">
+                  {surface.label}
+                </a>
+              </li>
+            ))}
+          </ul>
+        )
+      }
+    </PageHeader>
+
+    <section class="sh-section" aria-labelledby="takes-heading">
+      <h2 id="takes-heading">What chapters take from it</h2>
+      {
+        system.uses.length === 0 ? (
+          <p class="sh-empty">No chapter's reference-stack coverage table names this system yet.</p>
+        ) : (
+          <StackUses uses={system.uses} graph={graph} />
+        )
+      }
+    </section>
+
+    <section class="sh-section" aria-labelledby="usedby-heading">
+      <h2 id="usedby-heading">Listed as an implementation by</h2>
+      {
+        usedBy.length === 0 ? (
+          <p class="sh-empty">No node lists this system in its implementations.</p>
+        ) : (
+          <ol class="sh-index-list">
+            {usedBy.map((node) => (
+              <li class="sh-index-row">
+                <span class="sh-num">{node.number ?? ''}</span>
+                <a href={node.url}>{node.title}</a>
+              </li>
+            ))}
+          </ol>
+        )
+      }
+    </section>
+  </article>
+</ReaderLayout>

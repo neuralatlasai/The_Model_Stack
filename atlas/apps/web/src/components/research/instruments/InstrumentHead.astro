@@ -1,0 +1,14 @@
+---
+/** Instrument header in the AI 2040 panel grammar: small-caps mono title left, state value right. */
+interface Props {
+  title: string;
+  meta?: string | undefined;
+}
+
+const { title, meta } = Astro.props;
+---
+
+<p class="rb-instrument__head">
+  <span class="rb-instrument__title">{title}</span>
+  {meta !== undefined && <span class="rb-instrument__meta">{meta}</span>}
+</p>

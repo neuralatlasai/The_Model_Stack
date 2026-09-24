@@ -1,0 +1,16 @@
+---
+/**
+ * A sequence of research blocks. Nested containers (list items, quotes,
+ * expansions, proofs, experiment fields) render their children through here.
+ */
+import type { Block as BlockNode } from '@atlas/core';
+import Block from './Block.astro';
+
+interface Props {
+  blocks: readonly BlockNode[];
+}
+
+const { blocks } = Astro.props;
+---
+
+{blocks.map((block) => <Block block={block} />)}

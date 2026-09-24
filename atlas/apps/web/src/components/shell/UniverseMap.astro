@@ -1,0 +1,76 @@
+---
+/**
+ * The knowledge universe as a typographic map (UI_UX §36, §83–84): three
+ * volumes → eleven parts → sixty-six chapters. Part rows carry a domain tick;
+ * chapters with manuscripts are strong links, planned chapters are muted and
+ * reveal their plan artifact on hover or focus (always present for assistive
+ * technology). No cards, no grid of boxes: rows and hairlines.
+ */
+import type { AtlasGraph, GraphNode } from '@atlas/core';
+import { childrenOf, nodesOfType } from '../../lib/nodes.ts';
+
+interface Props {
+  readonly graph: AtlasGraph;
+}
+
+const { graph } = Astro.props;
+const volumes = nodesOfType(graph, 'volume');
+const partsOf = (volume: GraphNode): GraphNode[] => childrenOf(graph, volume).filter((child) => child.entityType === 'part');
+const chaptersOf = (part: GraphNode): GraphNode[] => childrenOf(graph, part).filter((child) => child.entityType === 'chapter');
+const outcomeOf = (part: GraphNode): string | null => part.plan?.outcome ?? null;
+const artifactOf = (chapter: GraphNode): string | null => chapter.plan?.artifact ?? null;
+---
+
+<div class="sh-universe">
+  <p class="sh-universe-key" aria-hidden="true">
+    Point at a chapter to see its dependencies across the book:
+    <span class="sh-universe-key__up">builds on</span> · <span class="sh-universe-key__down">unlocks</span>
+  </p>
+  {
+    volumes.map((volume) => (
+      <section class="sh-universe-volume" aria-labelledby={`uv-${volume.id}`}>
+        <h2 class="sh-universe-volume-title" id={`uv-${volume.id}`}>
+          <a href={volume.url}>
+            <span class="sh-universe-volume-num">Volume {volume.number}</span>
+            <span>{volume.title}</span>
+          </a>
+        </h2>
+        {partsOf(volume).map((part) => {
+          const chapters = chaptersOf(part);
+          const written = chapters.filter((chapter) => chapter.hasManuscript).length;
+          return (
+            <div class="sh-universe-part" data-domain={part.domain} data-part-link={part.id}>
+              <div class="sh-universe-part-head">
+                <h3 class="sh-universe-part-title">
+                  <a href={part.url}>
+                    <span class="sh-universe-part-num">Part {part.number}</span>
+                    <span>{part.title}</span>
+                  </a>
+                </h3>
+                {outcomeOf(part) !== null && <p class="sh-universe-outcome">{outcomeOf(part)}</p>}
+                <p class="sh-universe-count">
+                  {written} of {chapters.length} written
+                </p>
+              </div>
+              <ol class="sh-universe-chapters">
+                {chapters.map((chapter) => (
+                  <li class:list={['sh-universe-chapter', { 'sh-universe-chapter--planned': !chapter.hasManuscript }]}>
+                    <a href={chapter.url} data-chapter-link={chapter.id}>
+                      <span class="sh-universe-chapter-num">{chapter.number}</span>
+                      <span class="sh-universe-chapter-title">{chapter.title}</span>
+                      {!chapter.hasManuscript && (
+                        <span class="sh-universe-plan">
+                          Planned{artifactOf(chapter) !== null ? ` · artifact: ${artifactOf(chapter) ?? ''}` : ''}
+                        </span>
+                      )}
+                    </a>
+                  </li>
+                ))}
+              </ol>
+            </div>
+          );
+        })}
+      </section>
+    ))
+  }
+</div>

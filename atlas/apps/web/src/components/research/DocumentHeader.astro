@@ -1,0 +1,30 @@
+---
+/**
+ * Compact, research-oriented header (UI_UX §9, CONTENT_CONTRACT §3 items 1–4):
+ * identity line, number + title, one-sentence thesis, meta line. No hero; the
+ * first viewport goes to content. Sections derive the identity line from
+ * breadcrumbs and the meta line from document stats.
+ */
+import type { ResearchDocument } from '@atlas/core';
+import Inline from './Inline.astro';
+import { derivedMetaLine, identityLine, sentenceCase } from './lib/header.ts';
+
+interface Props {
+  doc: ResearchDocument;
+}
+
+const { doc } = Astro.props;
+const { header } = doc;
+const identity = identityLine(doc);
+const thesis = header.thesis === null ? null : sentenceCase(header.thesis);
+---
+
+<header class="rb-header">
+  {identity !== null && <p class="rb-header__identity">{identity}</p>}
+  <h1 class="rb-header__title">
+    {header.number !== null && <span class="rb-header__number">{header.number}</span>}
+    <span class="rb-header__text">{header.title}</span>
+  </h1>
+  {thesis !== null && <p class="rb-header__thesis"><Inline nodes={thesis} /></p>}
+  <p class="rb-header__meta">{header.metaLine !== null ? <Inline nodes={header.metaLine} /> : derivedMetaLine(doc)}</p>
+</header>

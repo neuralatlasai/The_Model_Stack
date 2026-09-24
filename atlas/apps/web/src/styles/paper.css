@@ -1,0 +1,804 @@
+/*
+ * Paper page (pages/papers/[key].astro, client paper-page.ts): one cited work
+ * as a connected object. Encoding:
+ *   lit dot       a chapter citing the work; area grows with its citing pages
+ *   ring          a chapter that records a use but has no citing page
+ *   quiet dot     every other chapter (filled = written, hollow = planned)
+ *   ink ring      pages shared with the co-cited work under the pointer
+ * Layout follows the instrument's own width (container queries).
+ */
+
+.pp {
+  --pp-lit: var(--accent);
+  --pp-shared: var(--ink);
+  --pp-rel: var(--ink-3);
+}
+
+.pp a {
+  text-decoration: none;
+}
+
+/* ── header facts ────────────────────────────────────────────────────────── */
+
+.pp-facts {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.25rem 0.9rem;
+  margin-top: 0.55rem;
+  font: 11.5px/1.5 var(--font-mono);
+  color: var(--ink-3);
+}
+
+.pp-facts__n + .pp-facts__n::before {
+  content: '·';
+  margin-inline-end: 0.9rem;
+  color: var(--rule-strong);
+}
+
+.pp-status {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  padding: 0.05rem 0.45rem;
+  border: 1px solid var(--ev-source);
+  color: var(--ev-source);
+}
+
+.pp-status > i {
+  inline-size: 7px;
+  block-size: 7px;
+  border-radius: 50%;
+  background: currentcolor;
+}
+
+.pp-status[data-status='unv'] {
+  border-style: dashed;
+  border-color: var(--accent);
+  color: var(--accent);
+}
+
+.pp-status[data-status='unv'] > i {
+  background: none;
+  border: 1.3px dashed currentcolor;
+}
+
+.pp-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.3rem 1.2rem;
+  margin: 0.6rem 0 0;
+  padding: 0;
+  list-style: none;
+  font: 13.5px var(--font-sans);
+}
+
+.pp-actions a {
+  color: var(--accent);
+  border-bottom: 1px solid var(--rule-strong);
+}
+
+.pp-actions a:hover {
+  border-bottom-color: currentcolor;
+}
+
+.pp-actions__missing {
+  color: var(--ink-3);
+}
+
+/* ── the instrument ──────────────────────────────────────────────────────── */
+
+.pp-where {
+  container: pp / inline-size;
+  margin-top: 1.4rem;
+  padding-top: 0.8rem;
+  border-top: 1.5px solid var(--ink);
+}
+
+.pp-grid {
+  display: grid;
+  grid-template-columns: 318px minmax(0, 1fr) 330px;
+  grid-template-areas: 'map readout co';
+  gap: 1.6rem;
+  align-items: start;
+}
+
+.pp-head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 0.15rem 0.8rem;
+  max-width: none;
+  margin: 0 0 0.45rem;
+}
+
+.pp-head__title {
+  font: 600 10.5px var(--font-mono);
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--ink-2);
+}
+
+.pp-head__note {
+  font: 10.5px var(--font-mono);
+  color: var(--ink-3);
+}
+
+.pp-empty {
+  margin: 0;
+  font: 13px var(--font-sans);
+  color: var(--ink-3);
+}
+
+/* grid of chapters */
+.pp-map {
+  grid-area: map;
+  min-inline-size: 0;
+  margin: 0;
+}
+
+.pp-svg {
+  display: block;
+  inline-size: 100%;
+  block-size: auto;
+  overflow: visible;
+}
+
+.pp-lane line {
+  stroke: var(--rule);
+  stroke-width: 1;
+}
+
+.pp-lane text {
+  font: 600 9.5px var(--font-mono);
+  fill: var(--ink-3);
+}
+
+.pp-dot--quiet {
+  fill: none;
+  stroke: var(--rule-strong);
+  stroke-width: 1;
+}
+
+.pp-dot--quiet.is-written {
+  fill: var(--ink-3);
+  stroke: none;
+  opacity: 0.55;
+}
+
+.pp-dot {
+  cursor: pointer;
+  outline: none;
+  transition: opacity var(--t-state) ease;
+}
+
+.pp-dot__hit {
+  fill: transparent;
+}
+
+.pp-dot__disc {
+  fill: var(--pp-lit);
+  stroke: var(--paper);
+  stroke-width: 1.2;
+  transition:
+    stroke var(--t-state) ease,
+    stroke-width var(--t-state) ease;
+}
+
+.pp-dot.is-use-only .pp-dot__disc {
+  fill: var(--paper);
+  stroke: var(--pp-lit);
+  stroke-width: 1.6;
+  stroke-dasharray: 2.5 1.8;
+}
+
+.pp-dot__n {
+  font: 600 8.5px var(--font-mono);
+  text-anchor: middle;
+  fill: var(--paper);
+  pointer-events: none;
+}
+
+.pp-dot__label {
+  font: 600 8.5px var(--font-mono);
+  text-anchor: middle;
+  fill: var(--pp-lit);
+  pointer-events: none;
+}
+
+.pp-dot:hover .pp-dot__disc,
+.pp-dot:focus-visible .pp-dot__disc,
+.pp-dot.is-focus .pp-dot__disc {
+  stroke: var(--ink);
+  stroke-width: 2.2;
+}
+
+.pp-dot:focus-visible .pp-dot__hit {
+  stroke: var(--focus);
+  stroke-width: 1.5;
+}
+
+.pp-svg.has-focus .pp-dot:not(.is-focus, .is-shared),
+.pp-svg.has-co .pp-dot:not(.is-shared) {
+  opacity: 0.28;
+}
+
+.pp-dot.is-shared .pp-dot__disc {
+  stroke: var(--pp-shared);
+  stroke-width: 2.4;
+}
+
+.pp-legend {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.15rem 0.8rem;
+  max-width: none;
+  margin: 0.5rem 0 0;
+  font: 11px var(--font-sans);
+  color: var(--ink-3);
+}
+
+.pp-key {
+  display: inline-block;
+  inline-size: 8px;
+  block-size: 8px;
+  margin-inline-end: 0.3rem;
+  border-radius: 50%;
+  vertical-align: -0.02em;
+}
+
+.pp-key--lit {
+  background: var(--pp-lit);
+}
+
+.pp-key--use {
+  border: 1.4px dashed var(--pp-lit);
+}
+
+.pp-key--quiet {
+  inline-size: 6px;
+  block-size: 6px;
+  border: 1px solid var(--rule-strong);
+}
+
+.pp-key--quiet.is-written {
+  border: 0;
+  background: var(--ink-3);
+  opacity: 0.55;
+}
+
+/* readout: fixed geometry — every line has a reserved, clamped height */
+.pp-readout {
+  grid-area: readout;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  min-inline-size: 0;
+  padding: 0.75rem 0.95rem 0.8rem;
+  border: 1px solid var(--rule-strong);
+  background: var(--paper-raised);
+}
+
+.pp-readout > p,
+.pp-readout > ol {
+  max-width: none;
+  margin: 0;
+  overflow: hidden;
+}
+
+.pp-ro__kicker {
+  block-size: calc(1.4em + 0.45rem + 1px);
+  padding-bottom: 0.45rem;
+  border-bottom: 1px solid var(--rule);
+  font: 600 10.5px/1.4 var(--font-mono);
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+  color: var(--ink-2);
+}
+
+.pp-ro__title {
+  display: -webkit-box;
+  overflow-wrap: anywhere;
+  block-size: 2.5em;
+  margin-top: 0.5rem !important;
+  font: 500 18.5px/1.25 var(--font-serif);
+  color: var(--ink);
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+  line-clamp: 2;
+}
+
+.pp-ro__text {
+  display: -webkit-box;
+  block-size: 5.8em;
+  margin-top: 0.35rem !important;
+  font: 14px/1.45 var(--font-serif);
+  color: var(--ink-2);
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 4;
+  line-clamp: 4;
+}
+
+.pp-ro__listhead {
+  display: flex;
+  justify-content: space-between;
+  gap: 0.5rem;
+  block-size: calc(1.4em + 0.7rem + 1px);
+  margin-top: 0.5rem !important;
+  padding-top: 0.5rem;
+  border-top: 1px solid var(--rule);
+  font: 600 10px/1.4 var(--font-mono);
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  white-space: nowrap;
+  color: var(--ink-3);
+}
+
+.pp-ro__listhead > :last-child {
+  font-weight: 400;
+  letter-spacing: 0.04em;
+  text-transform: none;
+}
+
+.pp-ro__list {
+  display: grid;
+  grid-template-rows: repeat(6, 22px);
+  padding: 0;
+  list-style: none;
+}
+
+.pp-ro__item > a,
+.pp-ro__item > span {
+  display: grid;
+  grid-template-columns: 2.6rem minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 0.45rem;
+  block-size: 22px;
+  padding-inline: 0.25rem;
+  font: 12.5px/1.2 var(--font-sans);
+  color: var(--ink-2);
+}
+
+.pp-ro__item > a:hover {
+  background: var(--accent-wash);
+  color: var(--ink);
+}
+
+.pp-ro__num {
+  font: 600 10.5px var(--font-mono);
+  color: var(--accent);
+}
+
+.pp-ro__text2 {
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+
+.pp-ro__val {
+  font: 10.5px var(--font-mono);
+  color: var(--ink-3);
+}
+
+.pp-ro__foot {
+  block-size: 1.5em;
+  margin-top: 0.3rem !important;
+  font: 11px/1.5 var(--font-mono);
+  white-space: nowrap;
+  text-overflow: ellipsis;
+  color: var(--ink-3);
+}
+
+/* cited alongside */
+.pp-co {
+  grid-area: co;
+  min-inline-size: 0;
+}
+
+.pp-co__list {
+  max-width: none;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  border-top: 1px solid var(--rule-strong);
+}
+
+.pp-co__row {
+  display: grid;
+  grid-template-columns: 3.3rem minmax(0, 1fr) 2.4rem 1.3rem;
+  align-items: center;
+  gap: 0.45rem;
+  block-size: 42px;
+  padding: 0 0.3rem;
+  border-bottom: 1px solid var(--rule);
+  color: var(--ink-2);
+  transition: background-color var(--t-hover) ease;
+}
+
+.pp-co__row:hover,
+.pp-co__row:focus-visible,
+.pp-co__row.is-on {
+  background: var(--accent-wash);
+  color: var(--ink);
+  outline: none;
+  box-shadow: inset 2px 0 0 var(--ink);
+}
+
+.pp-co__key {
+  font: 600 11px var(--font-mono);
+  color: var(--accent);
+}
+
+.pp-co__key.is-spine::after {
+  content: '●';
+  margin-inline-start: 0.2rem;
+  font-size: 7px;
+  vertical-align: 2px;
+}
+
+.pp-co__work {
+  display: -webkit-box;
+  overflow-wrap: anywhere;
+  overflow: hidden;
+  font: 14px/1.2 var(--font-serif);
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+  line-clamp: 2;
+}
+
+.pp-co__bar {
+  block-size: 4px;
+  background: var(--rule);
+}
+
+.pp-co__bar > i {
+  display: block;
+  block-size: 100%;
+  background: var(--ink-3);
+}
+
+.pp-co__row:is(:hover, :focus-visible, .is-on) .pp-co__bar > i {
+  background: var(--ink);
+}
+
+.pp-co__n {
+  font: 11px var(--font-mono);
+  text-align: end;
+  color: var(--ink-3);
+}
+
+.pp-co__more {
+  max-width: none;
+  margin: 0.4rem 0 0;
+  font: 11px var(--font-mono);
+  color: var(--ink-3);
+}
+
+.pp-co__more a {
+  color: var(--accent);
+}
+
+/* ── lineage ─────────────────────────────────────────────────────────────── */
+
+.pp-lineage {
+  margin-top: 1.8rem;
+}
+
+.pp-lin__list {
+  max-width: none;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  border-top: 1px solid var(--rule-strong);
+}
+
+.pp-rel--anc { --pp-rel: var(--ink-3); }
+.pp-rel--opt { --pp-rel: var(--domain-hardware); }
+.pp-rel--alt { --pp-rel: var(--ev-inference); }
+.pp-rel--sup { --pp-rel: var(--rule-strong); }
+.pp-rel--fro { --pp-rel: var(--accent); }
+
+.pp-lin {
+  display: grid;
+  grid-template-columns: 3.6rem 10.5rem minmax(0, 1fr) minmax(0, 15rem);
+  align-items: baseline;
+  gap: 0.2rem 0.9rem;
+  padding: 0.5rem 0.3rem;
+  border-bottom: 1px solid var(--rule);
+  transition: background-color var(--t-hover) ease;
+}
+
+.pp-lin:hover,
+.pp-lin:focus-within {
+  background: color-mix(in oklab, var(--accent-wash) 55%, transparent);
+}
+
+.pp-lin__year {
+  font: 600 15px var(--font-mono);
+  color: var(--ink);
+}
+
+.pp-lin__year:hover,
+.pp-lin__year:focus-visible {
+  color: var(--accent);
+}
+
+.pp-lin__rel {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  font: 10.5px var(--font-mono);
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--ink-2);
+}
+
+.pp-lin__rel > i {
+  flex: none;
+  inline-size: 8px;
+  block-size: 8px;
+  border-radius: 50%;
+  background: var(--pp-rel);
+}
+
+.pp-lin__body {
+  display: grid;
+  gap: 0.1rem;
+  min-inline-size: 0;
+}
+
+.pp-lin__work {
+  font: 15px/1.3 var(--font-serif);
+  color: var(--ink);
+}
+
+.pp-lin__note {
+  font: 12.5px/1.45 var(--font-sans);
+  color: var(--ink-3);
+}
+
+.pp-lin__owner {
+  font: 12.5px/1.35 var(--font-sans);
+  color: var(--accent);
+}
+
+.pp-lin__owner > span {
+  font: 600 10.5px var(--font-mono);
+}
+
+/* ── used for ────────────────────────────────────────────────────────────── */
+
+.pp-uses {
+  margin-top: 1.8rem;
+}
+
+.pp-table {
+  inline-size: 100%;
+  border-collapse: collapse;
+  table-layout: fixed;
+  font: 13.5px/1.45 var(--font-sans);
+}
+
+.pp-col--ch {
+  inline-size: 15rem;
+}
+
+.pp-col--pages {
+  inline-size: 12rem;
+}
+
+.pp-col--acc {
+  inline-size: 9.5rem;
+}
+
+.pp-table thead th {
+  padding: 0.35rem 0.45rem;
+  border-top: 1px solid var(--rule-strong);
+  border-bottom: 1px solid var(--ink);
+  font: 600 9.5px var(--font-mono);
+  letter-spacing: 0.08em;
+  text-align: start;
+  text-transform: uppercase;
+  color: var(--ink-3);
+}
+
+.pp-row > * {
+  padding: 0.5rem 0.45rem;
+  border-bottom: 1px solid var(--rule);
+  vertical-align: top;
+  text-align: start;
+  transition: background-color var(--t-hover) ease;
+}
+
+.pp-row:hover > *,
+.pp-row.is-on > * {
+  background: color-mix(in oklab, var(--accent-wash) 50%, transparent);
+}
+
+.pp-row.is-on > :first-child {
+  box-shadow: inset 2px 0 0 var(--accent);
+}
+
+.pp-row__ch {
+  font: inherit;
+  letter-spacing: normal;
+  text-transform: none;
+}
+
+.pp-row__ch a {
+  display: grid;
+  grid-template-columns: 1.7rem minmax(0, 1fr);
+  gap: 0.2rem;
+}
+
+.pp-row__num {
+  font: 600 11px/1.9 var(--font-mono);
+  color: var(--accent);
+}
+
+.pp-row__title {
+  font: 15px/1.3 var(--font-serif);
+  color: var(--ink);
+}
+
+.pp-row__ch a:hover .pp-row__title {
+  color: var(--accent);
+}
+
+.pp-row__use {
+  color: var(--ink-2);
+  overflow-wrap: anywhere;
+}
+
+.pp-row__use p {
+  max-width: none;
+  margin: 0;
+}
+
+.pp-row__use p + p {
+  margin-top: 0.35rem;
+}
+
+.pp-row__pages {
+  line-height: 1.9;
+}
+
+.pp-chip {
+  display: inline-block;
+  min-inline-size: 26px;
+  margin: 0 3px 3px 0;
+  padding: 0 0.25rem;
+  border: 1px solid var(--rule-strong);
+  font: 10.5px/1.6 var(--font-mono);
+  text-align: center;
+  color: var(--ink-2);
+}
+
+.pp-chip:hover,
+.pp-chip:focus-visible {
+  border-color: var(--accent);
+  color: var(--accent);
+}
+
+.pp-row__acc {
+  font: 11px/1.5 var(--font-mono);
+  color: var(--ink-2);
+}
+
+.pp-acc {
+  display: block;
+}
+
+.pp-acc + .pp-acc {
+  margin-top: 0.35rem;
+}
+
+.pp-acc__detail {
+  display: block;
+  overflow-wrap: anywhere;
+  font-size: 10.5px;
+  color: var(--ink-3);
+}
+
+.pp-unv {
+  color: var(--accent);
+}
+
+.pp-muted {
+  font-size: 12.5px;
+  color: var(--ink-3);
+}
+
+.pp-back {
+  margin-top: 1.6rem;
+  font: 12px var(--font-mono);
+  color: var(--ink-3);
+}
+
+.pp-back a {
+  color: var(--accent);
+}
+
+/* ── responsive (instrument width) ───────────────────────────────────────── */
+
+@container pp (max-width: 919.98px) {
+  .pp-grid {
+    grid-template-columns: 300px minmax(0, 1fr);
+    grid-template-areas:
+      'map readout'
+      'co co';
+    gap: 1.2rem 1.4rem;
+  }
+
+  .pp-lin {
+    grid-template-columns: 3.4rem minmax(0, 1fr);
+  }
+
+  .pp-lin__rel,
+  .pp-lin__body,
+  .pp-lin__owner {
+    grid-column: 2;
+  }
+
+  .pp-col--ch {
+    inline-size: 11rem;
+  }
+
+  .pp-col--pages {
+    inline-size: 9rem;
+  }
+
+  .pp-col--acc {
+    inline-size: 7.5rem;
+  }
+}
+
+@container pp (max-width: 599.98px) {
+  .pp-grid {
+    grid-template-columns: minmax(0, 1fr);
+    grid-template-areas:
+      'map'
+      'readout'
+      'co';
+  }
+
+  .pp-map {
+    max-inline-size: 360px;
+  }
+
+  .pp-table,
+  .pp-table tbody,
+  .pp-table tr {
+    display: block;
+  }
+
+  .pp-table colgroup,
+  .pp-table thead {
+    display: none;
+  }
+
+  .pp-row {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr);
+    padding-block: 0.4rem;
+    border-bottom: 1px solid var(--rule);
+  }
+
+  .pp-row > * {
+    display: block;
+    padding: 0.15rem 0.2rem;
+    border: 0;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .pp-dot,
+  .pp-dot__disc,
+  .pp-co__row,
+  .pp-lin,
+  .pp-row > * {
+    transition: none;
+  }
+}

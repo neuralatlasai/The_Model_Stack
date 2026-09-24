@@ -1,0 +1,51 @@
+---
+/**
+ * Reading routes (UI_UX §38) as ordered traversals through existing chapters,
+ * taken from the compiled front-matter/reading-routes document — the content
+ * is not duplicated here, only projected: chapter numbers become links
+ * (manuscripts strong, planned chapters muted).
+ */
+import type { AtlasGraph, GraphNode } from '@atlas/core';
+import { nodesOfType } from '../../lib/nodes.ts';
+import { tokenizeRoute, type RouteTable } from '../../lib/reading-routes.ts';
+
+interface Props {
+  readonly graph: AtlasGraph;
+  readonly table: RouteTable;
+  readonly moreUrl: string;
+}
+
+const { graph, table, moreUrl } = Astro.props;
+const chaptersByNumber = new Map<number, GraphNode>();
+for (const chapter of nodesOfType(graph, 'chapter')) {
+  const number = chapter.number === null ? Number.NaN : Number.parseInt(chapter.number, 10);
+  if (Number.isFinite(number)) chaptersByNumber.set(number, chapter);
+}
+const chapterUrl = (chapter: number): string | null => chaptersByNumber.get(chapter)?.url ?? null;
+const written = (chapter: number): boolean => chaptersByNumber.get(chapter)?.hasManuscript === true;
+---
+
+<dl class="sh-routes">
+  {
+    table.rows.map((row) => (
+      <div class="sh-route">
+        <dt class="sh-route-label">{row.label}</dt>
+        <dd class="sh-route-path">
+          {tokenizeRoute(row.route, chapterUrl).map((token) =>
+            token.type === 'text' ? (
+              token.value
+            ) : token.url !== null ? (
+              <a class:list={['sh-route-chapter', { 'sh-route-chapter--planned': !written(token.chapter) }]} href={token.url}>
+                {token.value}
+              </a>
+            ) : (
+              token.value
+            ),
+          )}
+        </dd>
+        {row.why !== '' && <dd class="sh-route-why">{row.why}</dd>}
+      </div>
+    ))
+  }
+</dl>
+<p class="sh-more"><a href={moreUrl}>All routes and the integrated studies</a></p>

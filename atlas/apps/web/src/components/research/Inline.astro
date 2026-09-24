@@ -1,0 +1,44 @@
+---
+/**
+ * Inline research content (core inline.ts), recursive through Astro.self.
+ *
+ * - Text is escaped by template interpolation; only compiler-rendered KaTeX
+ *   (`math.html`, trusted) is set as HTML. Tokens such as `<bos>` stay text.
+ * - Links: node → atlas link; planned → muted link titled "planned";
+ *   external → rel="noopener", target not forced; unresolved → plain text.
+ * - Whitespace: every inline element sits on one line. Astro turns a line
+ *   break inside an element into a space, which would corrupt prose spacing.
+ */
+import type { Inline } from '@atlas/core';
+import CiteLink from './inline/CiteLink.astro';
+import EvidenceMark from './inline/EvidenceMark.astro';
+import { xrefAttrs } from './lib/dom.ts';
+import { inlineViews } from './lib/inline.ts';
+
+interface Props {
+  nodes: readonly Inline[];
+}
+
+const { nodes } = Astro.props;
+const views = inlineViews(nodes, import.meta.env.BASE_URL);
+---
+
+{
+  views.map((view) => (
+    <Fragment>
+      {view.kind === 'text' && view.value}
+      {view.kind === 'emphasis' && <em><Astro.self nodes={view.children} /></em>}
+      {view.kind === 'strong' && <strong><Astro.self nodes={view.children} /></strong>}
+      {view.kind === 'delete' && <del><Astro.self nodes={view.children} /></del>}
+      {view.kind === 'plain' && <Astro.self nodes={view.children} />}
+      {view.kind === 'code' && <code class="rb-icode">{view.value}</code>}
+      {view.kind === 'math' && <span class="rb-math" set:html={view.html} />}
+      {view.kind === 'link' && <a class={view.className} href={view.href} title={view.title} rel={view.rel} data-node={view.node}><Astro.self nodes={view.children} /></a>}
+      {view.kind === 'cite' && <CiteLink citeKey={view.key} resolved={view.resolved} />}
+      {view.kind === 'label' && <EvidenceMark label={view.label} />}
+      {view.kind === 'xref' && <a class="rb-xref" href={view.href} {...xrefAttrs(view.xref)}>{view.text}</a>}
+      {view.kind === 'xref-missing' && <span class="rb-xref rb-xref--missing">{view.text}</span>}
+      {view.kind === 'break' && <br />}
+    </Fragment>
+  ))
+}

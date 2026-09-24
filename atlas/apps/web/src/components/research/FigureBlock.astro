@@ -1,0 +1,62 @@
+---
+/**
+ * A figure in the reading column (VISUAL_GRAMMAR §4–6), drawn by
+ * `<Figure>` from @atlas/visual/svg: number, title, caption, source line,
+ * context, and text equivalent around the kind-specific visual.
+ *
+ * - inline / wide: the figure in place (wide breaks out to analysis width).
+ *   A calculator keeps the figure chrome and swaps its static visual for the
+ *   web-client island, hydrated only when it scrolls into view.
+ * - rail: on desktop the figure lives in the context rail, so the column
+ *   shows a compact marker; below the rail breakpoint (1024 px) the full
+ *   figure is drawn here instead, so narrow-screen readers still get it. The
+ *   canonical `#fig-5-4` fragment is this placeholder; the inline copy is
+ *   `fig-5-4--inline`, the rail copy `fig-5-4--rail` (lib/figure.ts).
+ */
+import type { CompiledFigure, Depth } from '@atlas/core';
+import { Figure } from '@atlas/visual/svg';
+import Calculator from '../../islands/Calculator.tsx';
+import { depthAttrs } from './lib/dom.ts';
+import { figureCopy, figureLabel, isCalculator } from './lib/figure.ts';
+import { figureHostProps } from './lib/figure-host.ts';
+
+interface Props {
+  figure: CompiledFigure;
+  /** Minimum reader depth; defaults to overview (figures are principal content). */
+  depth?: Depth;
+}
+
+const { figure, depth = 'overview' } = Astro.props;
+const rail = figure.placement === 'rail';
+const shown = rail ? figureCopy(figure, 'inline') : figure;
+const calculator = isCalculator(figure);
+const { nodeHref, tex } = await figureHostProps(figure);
+---
+
+<div
+  class:list={['rb-figure', `rb-figure--${figure.placement}`, { 'rb-wide': figure.placement === 'wide' }]}
+  id={rail ? figure.anchor : undefined}
+  {...depthAttrs(depth)}
+>
+  {
+    rail && (
+      <p class="rb-figmark">
+        <span class="rb-figmark__glyph" aria-hidden="true">▸</span>
+        <span class="rb-figmark__label">{figureLabel(figure)}</span>
+        <span class="rb-figmark__title">{figure.spec.title}</span>
+        <span class="rb-figmark__where">in the context rail</span>
+      </p>
+    )
+  }
+  <div class="rb-figure__inline">
+    {
+      calculator ? (
+        <Figure figure={shown} nodeHref={nodeHref}>
+          <Calculator client:visible figure={shown} {...tex} />
+        </Figure>
+      ) : (
+        <Figure figure={shown} nodeHref={nodeHref} />
+      )
+    }
+  </div>
+</div>

@@ -1,0 +1,35 @@
+---
+/** Failure mode: name in small caps against a hairline, then Symptom · Cause · Detection · Mitigation as a four-row grid. */
+import type { FailureModeBlock, Inline as InlineNode } from '@atlas/core';
+import Inline from '../Inline.astro';
+import { depthAttrs } from '../lib/dom.ts';
+
+interface Props {
+  block: FailureModeBlock;
+}
+
+const { block } = Astro.props;
+const rows: readonly (readonly [string, readonly InlineNode[] | null])[] = [
+  ['Symptom', block.symptom],
+  ['Cause', block.cause],
+  ['Detection', block.detection],
+  ['Mitigation', block.mitigation],
+];
+const present = rows.flatMap(([label, content]) => (content === null ? [] : [{ label, content }]));
+---
+
+<div class="rb-fm" id={block.anchor ?? undefined} {...depthAttrs(block.depth)}>
+  <p class="rb-fm__name"><span class="rb-vh">Failure mode: </span><span class="rb-fm__title">{block.name}</span></p>
+  {
+    present.length > 0 && (
+      <dl class="rb-grid rb-fm__grid">
+        {present.map((row) => (
+          <div class="rb-grid__row">
+            <dt class="rb-grid__key">{row.label}</dt>
+            <dd class="rb-grid__value"><Inline nodes={row.content} /></dd>
+          </div>
+        ))}
+      </dl>
+    )
+  }
+</div>

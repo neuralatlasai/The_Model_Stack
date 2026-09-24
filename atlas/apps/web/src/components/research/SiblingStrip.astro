@@ -1,0 +1,35 @@
+---
+/**
+ * Sibling strip for the Siblings region (UI_UX §14, §81): the current node
+ * and its alternatives as a small branch diagram in type, each alternative
+ * with its changed primitive, linking to the full differential below.
+ */
+import type { SiblingBlock } from '@atlas/core';
+import Inline from './Inline.astro';
+
+interface Props {
+  /** The page's own title, drawn as the trunk. */
+  self: string;
+  siblings: readonly SiblingBlock[];
+}
+
+const { self, siblings } = Astro.props;
+const last = siblings.length - 1;
+---
+
+<div class="rb-sibstrip">
+  <p class="rb-sibstrip__self"><span class="rb-vh">Alternatives to </span>{self}</p>
+  <ol class="rb-sibstrip__list" role="list">
+    {
+      siblings.map((sibling, index) => (
+        <li class="rb-sibstrip__item">
+          <span class="rb-sibstrip__branch" aria-hidden="true">{index === last ? '└─' : '├─'}</span>
+          {sibling.anchor !== null ? <a class="rb-sibstrip__name" href={`#${sibling.anchor}`}>{sibling.name}</a> : <span class="rb-sibstrip__name">{sibling.name}</span>}
+          {sibling.differential.changedPrimitive !== null && (
+            <span class="rb-sibstrip__prim"><Inline nodes={sibling.differential.changedPrimitive} /></span>
+          )}
+        </li>
+      ))
+    }
+  </ol>
+</div>

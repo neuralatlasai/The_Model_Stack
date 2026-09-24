@@ -1,0 +1,441 @@
+---
+/**
+ * Systems (UI_UX §82): the reference stack drawn as a stack — eight layers,
+ * accelerator at the bottom, serving at the top — with every implementation
+ * the reference stack lists placed in its layer, beside the book's 66
+ * chapters. The two sides are one instrument (client entity-explorer.ts):
+ *
+ *   point at a system   → the chapters that analyse it light, wires run to them,
+ *                         and the readout says what each chapter takes from it
+ *   point at a chapter  → the systems it analyses light, layer by layer
+ *   point at a layer    → its systems and every chapter touching it light
+ *
+ * Everything is server-rendered with real links; the ledger and the
+ * "By chapter" index are the text form of the diagram. "By chapter" keeps the
+ * `#ch-05` fragments that a node's Implementations mode links to.
+ *
+ * Evidence discipline: a chip is filled only when a *written* chapter names
+ * the system (coverage table or implementations list). A planned chapter
+ * whose plan names it is shown apart and never counted as use.
+ */
+import PageHeader from '../../components/shell/PageHeader.astro';
+import ReaderLayout from '../../layouts/ReaderLayout.astro';
+import { getGraph, getRegistry } from '../../lib/atlas.ts';
+import { buildSystemsModel, type SystemRow } from '../../lib/entity-model.ts';
+import { jsonForHtml } from '../../lib/json.ts';
+import { getStackModel } from '../../lib/stack.ts';
+import { chapterFragment } from '../../lib/urls.ts';
+import '../../styles/entities.css';
+
+const [registry, graph, stack] = await Promise.all([getRegistry(), getGraph(), getStackModel()]);
+const model = buildSystemsModel(graph, registry, stack);
+const systemByKey = new Map(model.systems.map((system) => [system.key, system]));
+const chapterList = Object.values(model.chapters).sort((a, b) => a.n - b.n);
+const writtenChapters = chapterList.filter((chapter) => chapter.written);
+const analysed = model.systems.filter((system) => system.chapters.length > 0);
+const idle = model.systems.length - analysed.length;
+const chapterNo = (n: number): string => model.chapters[String(n)]?.number ?? String(n).padStart(2, '0');
+
+// Stack bands, top (serving) to bottom (accelerator); an unstated layer, if any, sits below the floor.
+const bands = [...model.layers]
+  .filter((layer) => layer.systems.length > 0)
+  .sort((a, b) => (b.index === -1 ? -99 : b.index) - (a.index === -1 ? -99 : a.index))
+  .map((layer) => {
+    const systems = layer.systems.map((key) => systemByKey.get(key)).filter((system): system is SystemRow => system !== undefined);
+    const chapters = new Set(systems.flatMap((system) => system.chapters));
+    return { ...layer, systems, used: systems.filter((system) => system.chapters.length > 0).length, chapters: chapters.size };
+  });
+const layerTag = (index: number): string => (index === -1 ? 'L?' : `L${String(index + 1)}`);
+const weight = (count: number): number => (count === 0 ? 0 : count === 1 ? 1 : count <= 3 ? 2 : count <= 6 ? 3 : 4);
+
+// Systems per chapter (written chapters), and plan mentions (planned chapters).
+const systemsOf = new Map<number, SystemRow[]>();
+const plannedOf = new Map<number, SystemRow[]>();
+for (const system of model.systems) {
+  for (const n of system.chapters) systemsOf.set(n, [...(systemsOf.get(n) ?? []), system]);
+  for (const n of system.planned) plannedOf.set(n, [...(plannedOf.get(n) ?? []), system]);
+}
+const mostUsed = [...model.systems].sort((a, b) => b.chapters.length - a.chapters.length)[0];
+const widest = [...systemsOf.entries()].sort((a, b) => b[1].length - a[1].length)[0];
+const layersCovered = bands.filter((band) => band.index !== -1 && band.used > 0).length;
+const stackLayers = bands.filter((band) => band.index !== -1).length;
+
+// Chapter grid geometry (SVG user units): 11 part lanes × 6 chapter dots, volumes separated by a gap.
+const GW = 360;
+const GX0 = 54;
+const GDX = 56;
+const LANE = 25;
+const VOL_GAP = 10;
+const LANE_X0 = 30;
+const lanes: { part: (typeof model.parts)[number]; y: number }[] = [];
+let gy = 10;
+let previousVolume: number | null = null;
+for (const part of model.parts) {
+  if (previousVolume !== null && part.volume !== previousVolume) gy += VOL_GAP;
+  previousVolume = part.volume;
+  lanes.push({ part, y: gy + LANE / 2 });
+  gy += LANE;
+}
+const GH = gy + 6;
+const dotPos = new Map<number, { x: number; y: number }>();
+for (const lane of lanes) lane.part.chapters.forEach((n, index) => dotPos.set(n, { x: GX0 + index * GDX, y: lane.y }));
+
+// By-chapter index: chapters with systems (written) or plan mentions (planned); every other chapter keeps its fragment in one compact line.
+const byChapter = chapterList
+  .map((chapter) => ({
+    chapter,
+    systems: chapter.written ? (systemsOf.get(chapter.n) ?? []) : (plannedOf.get(chapter.n) ?? []),
+  }))
+  .filter((row) => row.systems.length > 0)
+  .map((row) => ({ ...row, systems: [...row.systems].sort((a, b) => a.layer - b.layer || (a.rank ?? 99) - (b.rank ?? 99)) }));
+const listed = new Set(byChapter.map((row) => row.chapter.n));
+const unlisted = chapterList.filter((chapter) => !listed.has(chapter.n));
+const whatFor = (system: SystemRow, n: number): string => {
+  const use = system.uses.find((candidate) => candidate.ch === n);
+  if (use !== undefined) return `§ ${use.sections} — ${use.what}`.slice(0, 280);
+  const listedIn = system.listedIn[String(n)];
+  return listedIn === undefined ? 'Listed among the chapter’s implementations' : `Listed as an implementation in § ${listedIn.join(', ')}`;
+};
+const layerName = (index: number): string => model.layers.find((layer) => layer.index === index)?.name ?? 'Layer not stated';
+---
+
+<ReaderLayout
+  title="Systems"
+  description="The reference-stack implementations The Model Stack analyses, drawn as a stack from accelerator to serving, with the chapters that use each."
+  canonicalPath="/systems/"
+  currentId={null}
+  navKey="systems"
+>
+  <PageHeader
+    identity="Research Atlas / Systems"
+    title="Systems"
+    lede="The reference stack, bottom-up: every implementation it lists, on the layer it occupies, wired to the chapters that analyse it."
+  >
+    <p class="en-meta">
+      <span><b>{model.systems.length}</b> systems</span>
+      <span><b>{stackLayers}</b> layers</span>
+      <span><b>{analysed.length}</b> analysed by a written chapter</span>
+      <span><b>{idle}</b> not yet</span>
+      <span><b>{writtenChapters.length}</b> of {chapterList.length} chapters written</span>
+    </p>
+  </PageHeader>
+
+  <section class="en en--systems" data-entity-explorer="systems" aria-labelledby="es-title">
+    <div class="en-bar">
+      <h2 class="en-title" id="es-title">The stack, bottom-up</h2>
+      <p class="en-hint">
+        <span class="en-hint__key" aria-hidden="true">◇</span> Point at a system, a layer, or a chapter — its connections light across
+        the stack and the book. Click to open. Arrow keys move; Esc clears.
+      </p>
+    </div>
+
+    <div class="en-body es-body" data-es-body>
+      <svg class="es-wires" aria-hidden="true" data-es-wires></svg>
+
+      <div class="es-stackwrap">
+        <p class="es-axis es-axis--top" aria-hidden="true">▲ toward the application</p>
+        <div class="es-stack" role="group" aria-label="Reference stack: systems by layer, serving at the top, accelerators at the bottom" data-es-stack>
+          {
+            bands.map((band, bandIndex) => (
+              <div class="es-band" data-es-band={band.index} data-used={band.used > 0 ? 'true' : 'false'}>
+                <button
+                  type="button"
+                  class="es-band__label"
+                  data-es-layer={band.index}
+                  tabindex="-1"
+                  aria-label={`${layerTag(band.index)} ${band.name}: ${String(band.systems.length)} systems, ${String(band.used)} analysed by a written chapter, ${String(band.chapters)} chapters touch this layer`}
+                >
+                  <span class="es-band__tag">{layerTag(band.index)}</span>
+                  <span class="es-band__name">{band.name}</span>
+                  <span class="es-band__meter" aria-hidden="true">
+                    {band.systems.map((system) => (
+                      <i class={system.chapters.length > 0 ? 'is-on' : undefined} data-es-meter={system.key} />
+                    ))}
+                    <span class="es-band__frac">
+                      {band.used}/{band.systems.length}
+                    </span>
+                  </span>
+                </button>
+                <ul class="es-chips" role="list">
+                  {band.systems.map((system, systemIndex) => (
+                    <li>
+                      <a
+                        class="es-chip"
+                        href={system.url}
+                        data-es-sys={system.key}
+                        data-w={weight(system.chapters.length)}
+                        tabindex={bandIndex === bands.length - 1 && systemIndex === 0 ? 0 : -1}
+                        aria-label={`${system.name}, ${layerTag(band.index)}. ${
+                          system.chapters.length === 0
+                            ? 'Not yet analysed by a written chapter'
+                            : `Analysed by ${String(system.chapters.length)} written ${system.chapters.length === 1 ? 'chapter' : 'chapters'}: ${system.chapters.map(chapterNo).join(', ')}`
+                        }${system.planned.length > 0 ? `; named in the plan of ${system.planned.map(chapterNo).join(', ')}` : ''}.`}
+                      >
+                        <span class="es-chip__name">{system.name}</span>
+                        {system.chapters.length > 0 && (
+                          <span class="es-chip__tally" aria-hidden="true">
+                            {system.chapters.map(() => (
+                              <i />
+                            ))}
+                          </span>
+                        )}
+                      </a>
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            ))
+          }
+        </div>
+        <p class="es-axis es-axis--bottom" aria-hidden="true">▼ toward silicon</p>
+      </div>
+
+      <div class="es-side">
+        <div class="en-readout es-readout" data-en-readout aria-live="polite">
+          <p class="en-ro__kicker" data-ro-kicker>Reference stack · {model.systems.length} systems · {stackLayers} layers</p>
+          <p class="en-ro__title" data-ro-title>{analysed.length} of {model.systems.length} systems are analysed by a written chapter</p>
+          <p class="en-ro__sub" data-ro-sub>
+            The other {idle} are hollow: only {writtenChapters.length} of {chapterList.length} chapters are written, so a gap is the book’s, not a
+            verdict on the system.
+          </p>
+          <dl class="en-ro__rows" data-ro-rows>
+            {
+              mostUsed !== undefined && (
+                <div>
+                  <dt>most analysed</dt>
+                  <dd>
+                    {mostUsed.name} · {mostUsed.chapters.length} ch
+                  </dd>
+                </div>
+              )
+            }
+            {
+              widest !== undefined && (
+                <div>
+                  <dt>widest chapter</dt>
+                  <dd>
+                    {chapterNo(widest[0])} · {widest[1].length} systems
+                  </dd>
+                </div>
+              )
+            }
+            <div>
+              <dt>layers covered</dt>
+              <dd>
+                {layersCovered} of {stackLayers}
+              </dd>
+            </div>
+          </dl>
+          <div class="en-ro__list" data-ro-list>
+            <p class="en-ro__legend">
+              <span class="es-key es-key--used" aria-hidden="true"><span>system</span><i></i><i></i><i></i></span>
+              analysed · one tick per written chapter
+            </p>
+            <p class="en-ro__legend">
+              <span class="es-key es-key--idle" aria-hidden="true">system</span>
+              not yet analysed by a written chapter
+            </p>
+            <p class="en-ro__legend">
+              <span class="es-key-meter" aria-hidden="true"><i class="is-on"></i><i class="is-on"></i><i></i></span>
+              layer meter · one square per system
+            </p>
+            <p class="en-ro__legend">
+              <svg class="es-key-dot" viewBox="0 0 20 20" aria-hidden="true"><circle cx="10" cy="10" r="7.5" class="is-w"></circle></svg>
+              written chapter
+              <svg class="es-key-dot" viewBox="0 0 20 20" aria-hidden="true"><circle cx="10" cy="10" r="7.5"></circle></svg>
+              planned chapter
+            </p>
+            <p class="en-ro__legend">
+              <span class="es-key-wire" aria-hidden="true"></span>
+              analysed in
+              <span class="es-key-wire is-plan" aria-hidden="true"></span>
+              <svg class="es-key-dot" viewBox="0 0 20 20" aria-hidden="true"><circle cx="10" cy="10" r="7.5" class="is-plan"></circle></svg>
+              named in a plan
+            </p>
+          </div>
+          <p class="en-ro__foot" data-ro-foot>Ledger and by-chapter index below</p>
+        </div>
+
+        <figure class="es-grid" aria-labelledby="es-grid-cap">
+          <figcaption class="es-grid__cap" id="es-grid-cap">
+            <span>The book · 11 parts × 6 chapters</span>
+            <span class="es-grid__count" data-es-gridcount>{writtenChapters.length} written</span>
+          </figcaption>
+          <svg class="es-grid__svg" viewBox={`0 0 ${String(GW)} ${String(GH)}`} role="group" aria-label="Chapters by part. Arrow keys move; Enter opens the chapter." data-es-grid>
+            {
+              lanes.map((lane) => (
+                <g class="es-lane" data-es-lane={lane.part.n}>
+                  <line class="es-lane__rule" x1={LANE_X0} x2={GW - 6} y1={lane.y} y2={lane.y} />
+                  <line class="es-lane__wire" x1={LANE_X0} x2={LANE_X0} y1={lane.y} y2={lane.y} data-es-lanewire={lane.part.n} />
+                  <a class="es-lane__num" href={lane.part.url} tabindex="-1" data-es-part={lane.part.n}>
+                    <rect class="es-lane__plate" x="-6" y={lane.y - 9} width={LANE_X0 + 4} height="18" />
+                    <text x="2" y={lane.y + 3.8}>
+                      {lane.part.numeral}
+                    </text>
+                    <title>
+                      Part {lane.part.numeral} — {lane.part.title}
+                    </title>
+                  </a>
+                </g>
+              ))
+            }
+            {
+              chapterList.map((chapter) => {
+                const p = dotPos.get(chapter.n);
+                if (p === undefined) return null;
+                const count = systemsOf.get(chapter.n)?.length ?? 0;
+                const plannedCount = plannedOf.get(chapter.n)?.length ?? 0;
+                return (
+                  <a
+                    class:list={['es-dot', chapter.written ? 'is-w' : 'is-p']}
+                    href={chapter.url}
+                    data-es-ch={chapter.n}
+                    tabindex={chapter.n === 1 ? 0 : -1}
+                    aria-label={`${chapter.number} ${chapter.title}. ${
+                      chapter.written
+                        ? `Written; analyses ${String(count)} ${count === 1 ? 'system' : 'systems'}`
+                        : plannedCount > 0
+                          ? `Planned; its plan names ${String(plannedCount)} ${plannedCount === 1 ? 'system' : 'systems'}`
+                          : 'Planned'
+                    }.`}
+                  >
+                    <circle class="es-dot__hit" cx={p.x} cy={p.y} r="13" />
+                    <circle class="es-dot__c" cx={p.x} cy={p.y} r="9.5" />
+                    <text class="es-dot__n" x={p.x} y={p.y + 3.3}>
+                      {chapter.number}
+                    </text>
+                  </a>
+                );
+              })
+            }
+          </svg>
+        </figure>
+      </div>
+    </div>
+
+    <script is:inline type="application/json" data-en-model set:html={jsonForHtml(model)} />
+  </section>
+
+  <section class="en-section" aria-labelledby="ledger">
+    <div class="en-section__head">
+      <h2 id="ledger">Ledger</h2>
+      <p class="en-section__note">
+        Every system, bottom of the stack first, in the reference stack’s order. Point at a row to light it in the stack above.
+      </p>
+    </div>
+    <div class="en-scroll">
+      <table class="es-ledger" data-es-ledger>
+        <caption class="sh-visually-hidden">
+          Systems by stack layer with their surfaces and the written chapters that analyse them
+        </caption>
+        <thead>
+          <tr>
+            <th scope="col" class="es-ledger__rank">#</th>
+            <th scope="col">System</th>
+            <th scope="col" class="es-ledger__surf">Surfaces</th>
+            <th scope="col">Written chapters</th>
+            <th scope="col" class="es-ledger__plan">Plan</th>
+          </tr>
+        </thead>
+        {
+          [...bands].reverse().map((band) => (
+            <tbody data-es-ledger-layer={band.index}>
+              <tr class="es-ledger__layer">
+                <th scope="rowgroup" colspan="5">
+                  <span class="es-ledger__tag">{layerTag(band.index)}</span> {band.name}
+                  <span class="es-ledger__frac">
+                    {band.used} of {band.systems.length} analysed
+                  </span>
+                </th>
+              </tr>
+              {band.systems.map((system) => (
+                <tr class:list={['es-ledger__row', { 'is-idle': system.chapters.length === 0 }]} data-es-row={system.key}>
+                  <td class="es-ledger__rank">{system.rank ?? '—'}</td>
+                  <th scope="row" class="es-ledger__name">
+                    <a href={system.url}>{system.name}</a>
+                  </th>
+                  <td class="es-ledger__surf">
+                    {system.surfaces.map((surface) => (
+                      <a class="en-surface" href={surface.url} rel="external">
+                        {surface.label}
+                      </a>
+                    ))}
+                  </td>
+                  <td class="es-ledger__chs">
+                    {system.chapters.length === 0 ? (
+                      <span class="es-ledger__none">not yet analysed</span>
+                    ) : (
+                      system.chapters.map((n) => (
+                        <a class="en-chap" href={model.chapters[String(n)]?.url} title={whatFor(system, n)}>
+                          {chapterNo(n)}
+                        </a>
+                      ))
+                    )}
+                  </td>
+                  <td class="es-ledger__plan">
+                    {system.planned.map((n) => (
+                      <a class="en-chap en-chap--plan" href={model.chapters[String(n)]?.url} title={`Planned chapter ${chapterNo(n)}: its plan names ${system.name}`}>
+                        {chapterNo(n)}
+                      </a>
+                    ))}
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          ))
+        }
+      </table>
+    </div>
+  </section>
+
+  <section class="en-section" aria-labelledby="by-chapter">
+    <div class="en-section__head">
+      <h2 id="by-chapter">By chapter</h2>
+      <p class="en-section__note">
+        The systems each written chapter analyses, by layer; planned chapters appear where their plan already names a system.
+      </p>
+    </div>
+    <ol class="es-bych" role="list">
+      {
+        byChapter.map((row) => (
+          <li class:list={['es-bych__row', { 'is-planned': !row.chapter.written }]} id={chapterFragment(row.chapter.n)}>
+            <a class="es-bych__ch" href={row.chapter.url}>
+              <span class="es-bych__num">{row.chapter.number}</span>
+              <span class="es-bych__title">{row.chapter.short}</span>
+            </a>
+            <span class="es-bych__count">
+              {row.chapter.written ? `${String(row.systems.length)} analysed` : `planned · plan names ${String(row.systems.length)}`}
+            </span>
+            <ul class="es-bych__sys" role="list">
+              {row.systems.map((system) => (
+                <li>
+                  <a href={system.url} title={`${layerTag(system.layer)} · ${layerName(system.layer)}`} data-es-link={system.key}>
+                    <span class="es-bych__layer">{layerTag(system.layer)}</span>
+                    {system.name}
+                  </a>
+                </li>
+              ))}
+            </ul>
+          </li>
+        ))
+      }
+    </ol>
+    <p class="es-bych__rest">
+      <span class="es-bych__restlabel">No system recorded yet</span>
+      {
+        unlisted.map((chapter) => (
+          <a
+            class:list={['en-chap', { 'en-chap--planned': !chapter.written }]}
+            id={chapterFragment(chapter.n)}
+            href={chapter.url}
+            title={`${chapter.number} ${chapter.title}${chapter.written ? '' : ' (planned)'}`}
+          >
+            {chapter.number}
+          </a>
+        ))
+      }
+    </p>
+  </section>
+
+  {registry.systems.length === 0 && <p class="sh-empty">No reference-stack systems are recorded in this bundle.</p>}
+</ReaderLayout>

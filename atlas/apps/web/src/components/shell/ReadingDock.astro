@@ -1,0 +1,33 @@
+---
+/**
+ * Below 1024 px the reading surface is TOP BAR · CONTENT · CONTEXT SHEET
+ * (UI_UX §56). This fixed dock keeps the two navigators one tap away while
+ * reading: Contents opens the knowledge tree (slide-in), Context opens the
+ * rail as a bottom sheet. Native popover invokers — no JavaScript required.
+ * Hidden by CSS at ≥1024 px, where the rail is a column and the tree toggle
+ * sits in the top bar.
+ */
+interface Props {
+  readonly hasTree: boolean;
+  readonly hasRail: boolean;
+}
+
+const { hasTree, hasRail } = Astro.props;
+---
+
+{
+  (hasTree || hasRail) && (
+    <div class="sh-dock">
+      {hasTree && (
+        <button type="button" class="sh-dock-button" popovertarget="knowledge-tree" data-action="toggle-tree">
+          Contents
+        </button>
+      )}
+      {hasRail && (
+        <button type="button" class="sh-dock-button" popovertarget="context-rail" data-action="toggle-rail">
+          Context
+        </button>
+      )}
+    </div>
+  )
+}

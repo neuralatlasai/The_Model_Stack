@@ -1,0 +1,47 @@
+---
+/**
+ * Reading-order neighbours at the end of an article (SiblingStrip / chapter
+ * navigation): previous and next along the book's linear order.
+ */
+interface RouteRef {
+  readonly title: string;
+  readonly number: string | null;
+  readonly url: string;
+}
+
+interface Props {
+  readonly prev: RouteRef | null;
+  readonly next: RouteRef | null;
+}
+
+const { prev, next } = Astro.props;
+---
+
+{
+  (prev !== null || next !== null) && (
+    <nav class="sh-pager" aria-label="Reading order">
+      {prev !== null ? (
+        <a class="sh-pager-link sh-pager-link--prev" href={prev.url} rel="prev">
+          <span class="sh-pager-dir">Previous</span>
+          <span class="sh-pager-title">
+            {prev.number !== null && <span class="sh-pager-num">{prev.number}</span>}
+            {prev.title}
+          </span>
+        </a>
+      ) : (
+        <span class="sh-pager-link sh-pager-link--empty" />
+      )}
+      {next !== null ? (
+        <a class="sh-pager-link sh-pager-link--next" href={next.url} rel="next">
+          <span class="sh-pager-dir">Next</span>
+          <span class="sh-pager-title">
+            {next.number !== null && <span class="sh-pager-num">{next.number}</span>}
+            {next.title}
+          </span>
+        </a>
+      ) : (
+        <span class="sh-pager-link sh-pager-link--empty" />
+      )}
+    </nav>
+  )
+}

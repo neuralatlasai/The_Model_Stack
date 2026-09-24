@@ -1,0 +1,197 @@
+/*
+ * Research Atlas design tokens — the single source of colour, type, spacing,
+ * width and motion for every UI layer (shell `sh-`, research blocks `rb-`,
+ * visual grammar `vg-`). Other stylesheets consume these; none redefine them.
+ *
+ * Light is a warm paper surface with an oxblood accent; dark is designed
+ * separately for low glare (not an inversion). Theme resolution:
+ *   <html data-theme="dark">                      → dark
+ *   <html data-theme="light">                     → light
+ *   no data-theme + prefers-color-scheme: dark    → dark
+ * Domain accents mark identifiers, edges, active states and series only.
+ */
+
+:root {
+  color-scheme: light;
+
+  /* surfaces and ink */
+  --paper: #fcfbf7;
+  --paper-raised: #f6f4ee;
+  --paper-sunk: #f1eee6;
+  --ink: #1b1a17;
+  --ink-2: #4a4740;
+  --ink-3: #6e6a60;
+  --rule: #ddd8cc;
+  --rule-strong: #bdb6a6;
+  --accent: #8b0000;
+  --accent-hover: #a3342b;
+  --accent-wash: #f4e9e4;
+  --focus: #8b0000;
+
+  /* evidence classes (source · inference · gap) */
+  --ev-source: #3e5c45;
+  --ev-inference: #5a4b7a;
+  --ev-gap: #8a5a2b;
+
+  /* research domains (UI_UX §46) */
+  --domain-foundations: #4a4740;
+  --domain-data: #7a3e1d;
+  --domain-architecture: #1f4e79;
+  --domain-training: #5b3a73;
+  --domain-hardware: #7a5a00;
+  --domain-post-training: #7d2e46;
+  --domain-inference: #2a623d;
+  --domain-serving: #1d5c5c;
+  --domain-agents: #3f4f8a;
+  --domain-embodied: #6b4e16;
+  --domain-evaluation: #54565a;
+  --domain-reference: #4a4740;
+
+  /* the current page's domain; body[data-domain] rebinds it */
+  --domain: var(--domain-reference);
+
+  /* figures (visual grammar) */
+  --fig-stroke: var(--ink-2);
+  --fig-fill: var(--paper);
+  --fig-fill-2: var(--paper-raised);
+  --fig-muted: var(--ink-3);
+  --fig-grid: var(--rule);
+  --fig-emphasis: var(--domain);
+
+  /* type families */
+  --font-serif: 'EB Garamond Variable', 'EB Garamond', Georgia, serif;
+  --font-sans: 'Inter Variable', Inter, system-ui, sans-serif;
+  --font-mono: 'IBM Plex Mono', ui-monospace, monospace;
+
+  /* type scale */
+  --fs-display: 48px;
+  --fs-h1: 38px;
+  --fs-h2: 29px;
+  --fs-h3: 22px;
+  --fs-body: 19px;
+  --fs-tech: 15px;
+  --fs-meta: 12.5px;
+  --fs-code: 14px;
+  --lh-body: 1.62;
+
+  /* semantic spacing (UI_UX §49) */
+  --gap-related: 0.75rem;
+  --gap-argument: 1.5rem;
+  --gap-section: 3.5rem;
+
+  /* widths (UI_UX §4, §70) */
+  --measure: 760px;
+  --analysis: 1120px;
+  --tree-w: 280px;
+  --rail-w: 340px;
+
+  /* motion (UI_UX §58) */
+  --t-hover: 100ms;
+  --t-state: 140ms;
+  --t-panel: 190ms;
+  --t-graph: 250ms;
+}
+
+/* Dark: designed separately — warm near-black, lifted desaturated accents. */
+:root[data-theme='dark'] {
+  color-scheme: dark;
+
+  --paper: #151412;
+  --paper-raised: #1c1b18;
+  --paper-sunk: #201e1b;
+  --ink: #e7e2d8;
+  --ink-2: #b9b2a5;
+  --ink-3: #8f887b;
+  --rule: #34312b;
+  --rule-strong: #4a463e;
+  --accent: #e0806f;
+  --accent-hover: #ec9a8b;
+  --accent-wash: #2a1b18;
+  --focus: #e0806f;
+
+  --ev-source: #8fbf9a;
+  --ev-inference: #b3a3d6;
+  --ev-gap: #d3a574;
+
+  --domain-foundations: #b9b2a5;
+  --domain-data: #d29a6e;
+  --domain-architecture: #8db4da;
+  --domain-training: #b79bd0;
+  --domain-hardware: #d6b35a;
+  --domain-post-training: #d98aa0;
+  --domain-inference: #86c29a;
+  --domain-serving: #7ec4c4;
+  --domain-agents: #9faee6;
+  --domain-embodied: #cdae6e;
+  --domain-evaluation: #aeb1b6;
+  --domain-reference: #b9b2a5;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme='light']) {
+    color-scheme: dark;
+
+    --paper: #151412;
+    --paper-raised: #1c1b18;
+    --paper-sunk: #201e1b;
+    --ink: #e7e2d8;
+    --ink-2: #b9b2a5;
+    --ink-3: #8f887b;
+    --rule: #34312b;
+    --rule-strong: #4a463e;
+    --accent: #e0806f;
+    --accent-hover: #ec9a8b;
+    --accent-wash: #2a1b18;
+    --focus: #e0806f;
+
+    --ev-source: #8fbf9a;
+    --ev-inference: #b3a3d6;
+    --ev-gap: #d3a574;
+
+    --domain-foundations: #b9b2a5;
+    --domain-data: #d29a6e;
+    --domain-architecture: #8db4da;
+    --domain-training: #b79bd0;
+    --domain-hardware: #d6b35a;
+    --domain-post-training: #d98aa0;
+    --domain-inference: #86c29a;
+    --domain-serving: #7ec4c4;
+    --domain-agents: #9faee6;
+    --domain-embodied: #cdae6e;
+    --domain-evaluation: #aeb1b6;
+    --domain-reference: #b9b2a5;
+  }
+}
+
+/* Page domain (set on <body data-domain> by the layout). */
+body[data-domain='foundations'] { --domain: var(--domain-foundations); }
+body[data-domain='data'] { --domain: var(--domain-data); }
+body[data-domain='architecture'] { --domain: var(--domain-architecture); }
+body[data-domain='training'] { --domain: var(--domain-training); }
+body[data-domain='hardware'] { --domain: var(--domain-hardware); }
+body[data-domain='post-training'] { --domain: var(--domain-post-training); }
+body[data-domain='inference'] { --domain: var(--domain-inference); }
+body[data-domain='serving'] { --domain: var(--domain-serving); }
+body[data-domain='agents'] { --domain: var(--domain-agents); }
+body[data-domain='embodied'] { --domain: var(--domain-embodied); }
+body[data-domain='evaluation'] { --domain: var(--domain-evaluation); }
+body[data-domain='reference'] { --domain: var(--domain-reference); }
+
+/*
+ * Custom properties inherit computed values, so a token that references
+ * --domain must be re-declared where --domain is rebound; otherwise figures
+ * would keep the root's reference accent.
+ */
+body {
+  --fig-emphasis: var(--domain);
+}
+
+/* Motion is functional only and disappears under reduced motion. */
+@media (prefers-reduced-motion: reduce) {
+  :root {
+    --t-hover: 0ms;
+    --t-state: 0ms;
+    --t-panel: 0ms;
+    --t-graph: 0ms;
+  }
+}

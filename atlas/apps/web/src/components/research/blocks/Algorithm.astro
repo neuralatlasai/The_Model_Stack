@@ -1,0 +1,77 @@
+---
+/**
+ * Algorithm (UI_UX §17) in the classic rule-framed float: small-caps head
+ * "Algorithm 5.2 — name"; INPUT/OUTPUT/STATE/INVARIANT as a two-column
+ * grid; numbered mono lines with a gutter, comments set right in ink-3; each
+ * numbered line is addressable as `alg-5-2-L3` so prose can highlight it;
+ * the trailer (termination, notes) and the complexity line close the frame.
+ */
+import type { AlgorithmBlock } from '@atlas/core';
+import Inline from '../Inline.astro';
+import { depthAttrs } from '../lib/dom.ts';
+import { algorithmRows, indented } from '../lib/objects.ts';
+
+interface Props {
+  block: AlgorithmBlock;
+}
+
+const { block } = Astro.props;
+const title = block.number === null ? 'Algorithm' : `Algorithm ${block.number}`;
+const ioFields: readonly (readonly [string, readonly string[]])[] = [
+  ['Input', block.input],
+  ['Output', block.output],
+  ['State', block.state],
+  ['Invariant', block.invariant],
+];
+const io = ioFields.filter(([, lines]) => lines.length > 0);
+const rows = algorithmRows(block);
+---
+
+<figure class="rb-alg" id={block.anchor ?? undefined} {...depthAttrs(block.depth)}>
+  <figcaption class="rb-alg__head"><span class="rb-alg__num">{title}</span>{block.name !== '' && <Fragment><span class="rb-alg__sep"> — </span><span class="rb-alg__name">{block.name}</span></Fragment>}</figcaption>
+  {
+    io.length > 0 && (
+      <dl class="rb-alg__io">
+        {io.map(([label, lines]) => (
+          <div class="rb-alg__io-row">
+            <dt>{label}</dt>
+            <dd>
+              {lines.map((line) => (
+                <span class="rb-alg__io-line">{line}</span>
+              ))}
+            </dd>
+          </div>
+        ))}
+      </dl>
+    )
+  }
+  <div class="rb-alg__body" tabindex="0" role="region" aria-label={`${title} steps`}>
+    <ol class="rb-alg__lines" role="list">
+      {
+        rows.map((row) => (
+          <li class="rb-alg__row" id={row.id ?? undefined}>
+            <span class="rb-alg__ln">{row.n ?? ''}</span>
+            <span class="rb-alg__code">
+              {row.lines.map((line) => (
+                <span class="rb-alg__line">
+                  <code class="rb-alg__src">{indented(line)}</code>
+                  {line.comment !== null && <span class="rb-alg__comment"># {line.comment}</span>}
+                </span>
+              ))}
+            </span>
+          </li>
+        ))
+      }
+    </ol>
+  </div>
+  {
+    block.trailer.length > 0 && (
+      <div class="rb-alg__trailer">
+        {block.trailer.map((line) => (
+          <code class="rb-alg__trailer-line">{line}</code>
+        ))}
+      </div>
+    )
+  }
+  {block.complexity !== null && <p class="rb-alg__cx"><span class="rb-lead">Complexity</span> <Inline nodes={block.complexity} /></p>}
+</figure>

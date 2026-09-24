@@ -1,0 +1,57 @@
+---
+/**
+ * Every node at its stable URL (manifest slugs, CONTENT_CONTRACT §1.1):
+ * compiled documents (volumes, parts, chapters, sections, verification,
+ * references, front matter, appendices) render through DocumentPage; nodes
+ * the manifest lists without a manuscript render their plan through
+ * PlannedNode. The atlas index (`ms.root`) is the home page, not a route here.
+ */
+import type { GetStaticPaths } from 'astro';
+import { isNodeId, type NodeId } from '@atlas/core';
+import DocumentPage from '../components/shell/DocumentPage.astro';
+import PlannedNode from '../components/shell/PlannedNode.astro';
+import { getGraph, getManifest, listDocuments, getDocument } from '../lib/atlas.ts';
+import { pathParam } from '../lib/urls.ts';
+
+type Props = { readonly kind: 'document' | 'planned'; readonly id: NodeId };
+
+export const getStaticPaths = (async () => {
+  // getStaticPaths runs in its own scope: constants it needs are declared inside it.
+  /** First path segments owned by atlas views; a node URL must never shadow them. */
+  const RESERVED = new Set(['graph', 'compare', 'papers', 'systems', 'labs', 'terms', 'library', 'timeline', 'evidence']);
+  const [manifest, graph, documents] = await Promise.all([getManifest(), getGraph(), listDocuments()]);
+  const compiled = new Set<string>(manifest.documents);
+  const seen = new Set<string>();
+  const paths: { params: { slug: string }; props: Props }[] = [];
+
+  const claim = (url: string): string | null => {
+    const slug = pathParam(url);
+    if (slug === undefined || seen.has(slug)) return null;
+    if (RESERVED.has(slug.split('/', 1)[0] ?? '')) return null;
+    seen.add(slug);
+    return slug;
+  };
+
+  for (const doc of documents) {
+    if (doc.meta.id === 'ms.root') continue;
+    const slug = claim(doc.route.url);
+    if (slug !== null) paths.push({ params: { slug }, props: { kind: 'document', id: doc.meta.id } });
+  }
+  for (const node of Object.values(graph.nodes)) {
+    if (compiled.has(node.id) || node.id === 'ms.root' || !isNodeId(node.id)) continue;
+    const slug = claim(node.url);
+    if (slug !== null) paths.push({ params: { slug }, props: { kind: 'planned', id: node.id } });
+  }
+  return paths;
+}) satisfies GetStaticPaths;
+
+const { kind, id } = Astro.props;
+const graph = await getGraph();
+const doc = kind === 'document' ? await getDocument(id) : null;
+const node = graph.nodes[id] ?? null;
+if (doc === null && node === null) {
+  throw new Error(`[...slug]: ${id} is neither a compiled document nor a graph node`);
+}
+---
+
+{doc !== null ? <DocumentPage doc={doc} /> : node !== null && <PlannedNode node={node} />}

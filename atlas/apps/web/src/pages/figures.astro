@@ -1,0 +1,36 @@
+---
+/**
+ * Figure index: every figure and rail instrument of the book as research
+ * objects (UI_UX §52), independently linkable. The coverage matrix, readout,
+ * filters, and ledger are one component (FiguresExplorer.astro); the ledger is
+ * the complete text form.
+ */
+import FiguresExplorer from '../components/shell/FiguresExplorer.astro';
+import PageHeader from '../components/shell/PageHeader.astro';
+import ReaderLayout from '../layouts/ReaderLayout.astro';
+import { getGraph } from '../lib/atlas.ts';
+import { collectFigures } from '../lib/figure-index.ts';
+import { grouped } from '../lib/format.ts';
+import '../styles/figures-index.css';
+
+const [figures, graph] = await Promise.all([collectFigures(), getGraph()]);
+const chapters = new Set(figures.map((figure) => figure.chapter)).size;
+const live = figures.filter((figure) => figure.states > 0).length;
+const rail = figures.filter((figure) => figure.placement === 'rail').length;
+---
+
+<ReaderLayout
+  title="Figures"
+  description="Every figure and rail instrument in The Model Stack, by chapter and by kind."
+  canonicalPath="/figures/"
+  currentId={null}
+>
+  <PageHeader
+    identity="Research Atlas / Figures"
+    title="Figures"
+    lede="Diagrams, instruments, and charts drawn in the atlas's visual grammar — which chapters use which kinds, and where each one serves the argument."
+    meta={`${grouped(figures.length)} figures · ${grouped(live)} live instruments · ${grouped(rail)} in the rail · ${grouped(chapters)} of 66 chapters`}
+  />
+
+  {figures.length === 0 ? <p class="sh-empty">No figures are compiled in this bundle.</p> : <FiguresExplorer figures={figures} graph={graph} />}
+</ReaderLayout>

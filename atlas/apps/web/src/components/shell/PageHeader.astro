@@ -1,0 +1,24 @@
+---
+/**
+ * Compact header for atlas views that are not compiled documents (library,
+ * papers, systems, map, compare, …): identity line in small-caps sans, serif
+ * title, optional one-sentence lede and metadata line. Same anatomy as a
+ * chapter header (UI_UX §9) so every page opens the same way.
+ */
+interface Props {
+  readonly identity: string;
+  readonly title: string;
+  readonly lede?: string;
+  readonly meta?: string;
+}
+
+const { identity, title, lede, meta } = Astro.props;
+---
+
+<header class="sh-page-header">
+  <p class="sh-identity">{identity}</p>
+  <h1 class="sh-page-title">{title}</h1>
+  {lede !== undefined && <p class="sh-lede">{lede}</p>}
+  {meta !== undefined && <p class="sh-meta-line">{meta}</p>}
+  <slot />
+</header>

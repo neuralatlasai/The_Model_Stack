@@ -1,0 +1,138 @@
+---
+/**
+ * "Where this sits" — the book's dependency map in miniature at the head of the
+ * context rail on every chapter, section, verification, references, and part
+ * page. Eleven part lanes × six chapter dots; the focus (one chapter, or a
+ * part's six) is ringed, its transitive prerequisites lit as "builds on" and
+ * its transitive dependents as "unlocks", with the direct links drawn. Every
+ * dot links to its chapter; hovering one names it and lights its own direct
+ * prerequisites and dependents (client mini-stack.ts).
+ *
+ * Server-rendered with the focus state already applied, so it is correct
+ * without JavaScript and before hydration.
+ */
+import type { StackModel } from '../../lib/stack.ts';
+
+interface Props {
+  model: StackModel;
+  /** One chapter, or every chapter of a part. */
+  focus: number | readonly number[];
+  /** Readout line at rest; defaults to the chapter's number and short title. */
+  label?: string;
+}
+
+const { model, focus: focusProp, label } = Astro.props;
+const focusSet = new Set(typeof focusProp === 'number' ? [focusProp] : focusProp);
+const focus = typeof focusProp === 'number' ? focusProp : (focusProp[0] ?? 0);
+const W = 300;
+const X0 = 46;
+const DX = 43;
+const LANE = 19;
+const VOL_GAP = 7;
+const TOP = 8;
+
+const pos = new Map<number, { x: number; y: number }>();
+const lanes: { numeral: string; title: string; y: number; url: string }[] = [];
+let y = TOP;
+for (const volume of model.volumes) {
+  for (const partNumber of volume.parts) {
+    const part = model.parts.find((candidate) => candidate.n === partNumber);
+    if (part === undefined) continue;
+    const ly = y + LANE / 2;
+    lanes.push({ numeral: part.numeral, title: part.title, y: ly, url: part.url });
+    part.chapters.forEach((n, index) => pos.set(n, { x: X0 + index * DX, y: ly }));
+    y += LANE;
+  }
+  y += VOL_GAP;
+}
+const H = y;
+
+const walk = (start: number, next: (n: number) => readonly number[]): Set<number> => {
+  const seen = new Set<number>();
+  const stack = [...next(start)];
+  while (stack.length > 0) {
+    const n = stack.pop();
+    if (n === undefined || seen.has(n)) continue;
+    seen.add(n);
+    stack.push(...next(n));
+  }
+  return seen;
+};
+const chapterOf = (n: number) => model.chapters[String(n)];
+const current = chapterOf(focus);
+const union = (next: (n: number) => readonly number[]): Set<number> => {
+  const all = new Set<number>();
+  for (const n of focusSet) for (const k of walk(n, next)) if (!focusSet.has(k)) all.add(k);
+  return all;
+};
+const up = union((n) => chapterOf(n)?.prereqs ?? []);
+const down = union((n) => chapterOf(n)?.unlocks ?? []);
+// Direct links touching the focus (for a part: edges entering, leaving, and inside it).
+const direct = [...focusSet].flatMap((f) => [
+  ...(chapterOf(f)?.prereqs ?? []).map((n) => [n, f] as const),
+  ...(chapterOf(f)?.unlocks ?? []).filter((n) => !focusSet.has(n)).map((n) => [f, n] as const),
+]);
+const restLabel = label ?? (current === undefined ? '' : `${current.number} · ${current.short}`);
+const path = (a: number, b: number): string | null => {
+  const p = pos.get(a);
+  const q = pos.get(b);
+  if (p === undefined || q === undefined) return null;
+  const dy = q.y - p.y;
+  if (Math.abs(dy) < 1) return `M${p.x} ${p.y - 5} C${p.x} ${p.y - 16}, ${q.x} ${q.y - 16}, ${q.x} ${q.y - 5}`;
+  return `M${p.x} ${p.y} C${p.x} ${p.y + dy / 2}, ${q.x} ${q.y - dy / 2}, ${q.x} ${q.y}`;
+};
+const chapters = Object.values(model.chapters).sort((a, b) => a.n - b.n);
+---
+
+{
+  current !== undefined && (
+    <figure class="sx-mini" data-mini-stack aria-labelledby="sx-mini-title">
+      <figcaption class="sx-mini__head" id="sx-mini-title">
+        <span>Where this sits</span>
+        <span class="sx-mini__counts">
+          <span class="sx-mini__up">{up.size} upstream</span> · <span class="sx-mini__down">{down.size} downstream</span>
+        </span>
+      </figcaption>
+      <svg class="sx-mini__svg" viewBox={`0 0 ${String(W)} ${String(H)}`} role="img" aria-label={`${focusSet.size > 1 ? restLabel : `Chapter ${current.number}`} in the book: builds on ${String(up.size)} chapters, unlocks ${String(down.size)}.`}>
+        {lanes.map((lane) => (
+          <g class="sx-mini__lane">
+            <line x1={X0 - 12} x2={W - 8} y1={lane.y} y2={lane.y} />
+            <a href={lane.url}>
+              <text x="2" y={lane.y + 3.5}>
+                {lane.numeral}
+                <title>Part {lane.numeral} — {lane.title}</title>
+              </text>
+            </a>
+          </g>
+        ))}
+        <g class="sx-mini__edges" aria-hidden="true">
+          {direct.map(([a, b]) => {
+            const d = path(a, b);
+            return d === null ? null : <path class={focusSet.has(a) ? (focusSet.has(b) ? 'is-inside' : 'is-down') : 'is-up'} d={d} />;
+          })}
+        </g>
+        {chapters.map((chapter) => {
+          const p = pos.get(chapter.n);
+          if (p === undefined) return null;
+          const state = focusSet.has(chapter.n) ? 'is-focus' : up.has(chapter.n) ? 'is-up' : down.has(chapter.n) ? 'is-down' : 'is-other';
+          return (
+            <a
+              class:list={['sx-mini__node', state, { 'is-written': chapter.written }]}
+              href={chapter.url}
+              data-mini-node={chapter.n}
+              data-mini-label={`${chapter.number} · ${chapter.short}${chapter.written ? '' : ' · planned'} — builds on ${String(chapter.prereqs.length)} · unlocks ${String(chapter.unlocks.length)}`}
+              data-mini-links={[...chapter.prereqs.map((n) => `u${String(n)}`), ...chapter.unlocks.map((n) => `d${String(n)}`)].join(' ')}
+              aria-label={`${chapter.number} ${chapter.title}`}
+              tabindex="-1"
+            >
+              <circle cx={p.x} cy={p.y} r={focusSet.has(chapter.n) ? (focusSet.size > 1 ? 5.6 : 6.5) : 4.6} />
+            </a>
+          );
+        })}
+      </svg>
+      <p class="sx-mini__readout" data-mini-readout data-default={restLabel}>
+        {restLabel}
+      </p>
+    </figure>
+  )
+}

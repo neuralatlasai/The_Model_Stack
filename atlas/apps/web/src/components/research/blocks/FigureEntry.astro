@@ -1,0 +1,13 @@
+---
+/** Adapts a `figure` block to FigureBlock (whose agreed props are `{ figure }`), carrying the block's depth. */
+import type { FigureBlock as FigureBlockNode } from '@atlas/core';
+import FigureBlock from '../FigureBlock.astro';
+
+interface Props {
+  block: FigureBlockNode;
+}
+
+const { block } = Astro.props;
+---
+
+<FigureBlock figure={block.figure} depth={block.depth} />

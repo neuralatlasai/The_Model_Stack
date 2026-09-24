@@ -1,0 +1,39 @@
+---
+/**
+ * An authored rail figure (VISUAL_GRAMMAR §6) with its full figure chrome.
+ * Calculators hydrate as the web-client island when the rail group becomes
+ * visible; every other kind is static SVG from @atlas/visual/svg. The copy's
+ * anchor is `fig-5-4--rail`, distinct from the reading-column copy.
+ */
+import type { PageData, RailInstrument, ResearchDocument } from '@atlas/core';
+import { Figure } from '@atlas/visual/svg';
+import Calculator from '../../../islands/Calculator.tsx';
+import { instrumentAttrs } from '../lib/dom.ts';
+import { figureCopy, isCalculator } from '../lib/figure.ts';
+import { figureHostProps } from '../lib/figure-host.ts';
+
+interface Props {
+  instrument: Extract<RailInstrument, { kind: 'figure' }>;
+  doc: ResearchDocument;
+  pageData?: PageData | undefined;
+}
+
+const { instrument, doc } = Astro.props;
+const figure = doc.figures.find((candidate) => candidate.id === instrument.figureId);
+const copy = figure === undefined ? null : figureCopy(figure, 'rail');
+const host = copy === null ? null : await figureHostProps(copy);
+---
+
+{
+  copy !== null && host !== null && (
+    <div class={`rb-instrument rb-instrument--figure rb-instrument--${copy.spec.kind}`} {...instrumentAttrs('figure')}>
+      {isCalculator(copy) ? (
+        <Figure figure={copy} nodeHref={host.nodeHref}>
+          <Calculator client:visible figure={copy} {...host.tex} />
+        </Figure>
+      ) : (
+        <Figure figure={copy} nodeHref={host.nodeHref} />
+      )}
+    </div>
+  )
+}

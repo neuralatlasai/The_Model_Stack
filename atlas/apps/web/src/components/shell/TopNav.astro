@@ -1,0 +1,73 @@
+---
+/**
+ * Global navigation (UI_UX §35): compact, one line on desktop. Wordmark,
+ * the core TOP_NAV destinations, then search, depth, and theme at the right.
+ *
+ * The knowledge-tree toggle appears only where the tree is off-canvas
+ * (1024–1439 px here; below 1024 px the fixed reading dock carries it). Both
+ * toggles are native popover invokers (`popovertarget`), so the navigator
+ * opens and closes without JavaScript; `data-action` lets the client add
+ * behaviour on top.
+ */
+import { TOP_NAV, type TopNavKey } from '@atlas/core';
+import DepthControl from './DepthControl.astro';
+import SearchTrigger from './SearchTrigger.astro';
+import ThemeToggle from './ThemeToggle.astro';
+
+interface Props {
+  readonly navKey: TopNavKey | null;
+  readonly hasTree: boolean;
+  readonly depthControl: boolean;
+}
+
+const { navKey, hasTree, depthControl } = Astro.props;
+---
+
+<header class="sh-topbar">
+  <div class="sh-topbar-inner">
+    {
+      hasTree && (
+        <button
+          type="button"
+          class="sh-icon-button sh-tree-toggle"
+          popovertarget="knowledge-tree"
+          data-action="toggle-tree"
+          aria-label="Knowledge tree"
+          title="Knowledge tree"
+        >
+          <svg class="sh-icon" viewBox="0 0 16 16" width="16" height="16" aria-hidden="true" focusable="false">
+            <path
+              d="M3 3.5h10M5.5 8H13M8 12.5h5M3 3.5v9h2.5M3 8h2.5"
+              fill="none"
+              stroke="currentColor"
+              stroke-width="1.2"
+              stroke-linecap="round"
+            />
+          </svg>
+        </button>
+      )
+    }
+    <a class="sh-wordmark" href="/" aria-label="The Model Stack — Research Atlas home">
+      <span class="sh-wordmark-title">The Model Stack</span>
+      <span class="sh-wordmark-sub">Research Atlas</span>
+    </a>
+    <nav class="sh-topnav" aria-label="Atlas">
+      <ul class="sh-topnav-list">
+        {
+          TOP_NAV.map((item) => (
+            <li>
+              <a class="sh-topnav-link" href={item.url} aria-current={item.key === navKey ? 'page' : undefined}>
+                {item.label}
+              </a>
+            </li>
+          ))
+        }
+      </ul>
+    </nav>
+    <div class="sh-tools">
+      <SearchTrigger />
+      {depthControl && <DepthControl />}
+      <ThemeToggle />
+    </div>
+  </div>
+</header>

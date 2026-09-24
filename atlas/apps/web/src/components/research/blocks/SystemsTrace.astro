@@ -1,0 +1,16 @@
+---
+/** Systems trace (`Systems trace` fenced block): stage × latency/memory/compute/communication/failure, at analysis width. */
+import type { SystemsTraceBlock } from '@atlas/core';
+import { SystemsTraceView } from '@atlas/visual/svg';
+import { depthAttrs } from '../lib/dom.ts';
+
+interface Props {
+  block: SystemsTraceBlock;
+}
+
+const { block } = Astro.props;
+---
+
+<div class="rb-trace rb-trace--systems rb-wide" id={block.anchor ?? undefined} {...depthAttrs(block.depth)}>
+  <SystemsTraceView block={block} />
+</div>

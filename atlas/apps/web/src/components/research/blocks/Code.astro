@@ -1,0 +1,30 @@
+---
+/**
+ * Code in a figure-like frame: language label and copy button in the top
+ * rule, Shiki dual-theme HTML (trusted compiler output) or escaped plain
+ * code when the language is not loaded.
+ */
+import type { CodeBlock } from '@atlas/core';
+import { actionAttrs, depthAttrs } from '../lib/dom.ts';
+
+interface Props {
+  block: CodeBlock;
+}
+
+const { block } = Astro.props;
+const lang = block.lang ?? 'text';
+---
+
+<figure class="rb-code" id={block.anchor ?? undefined} data-lang={lang} {...depthAttrs(block.depth)}>
+  <figcaption class="rb-code__bar">
+    <span class="rb-code__lang">{lang}</span>
+    <button type="button" class="rb-code__copy" {...actionAttrs('copy-code')}>copy</button>
+  </figcaption>
+  {
+    block.html !== null ? (
+      <div class="rb-code__body" set:html={block.html} />
+    ) : (
+      <pre class="rb-code__body rb-code__plain" tabindex="0"><code>{block.code}</code></pre>
+    )
+  }
+</figure>

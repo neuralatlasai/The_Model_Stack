@@ -1,0 +1,115 @@
+---
+/**
+ * Chapter at a glance: the chapter drawn as an instrument (AI 2040 dot
+ * grammar). Rows are the chapter's sections (plus verification), columns are
+ * the research objects they hold — figures, equations, algorithms,
+ * definitions, failure modes, experiments, sources — and each cell is a small
+ * dot matrix of that count. Every row links to its section, every cell to the
+ * first object of its kind there. Derived from the compiled registry, so it
+ * is unique to the chapter and never drifts from the text.
+ */
+import type { AtlasGraph, GraphNode, Registry, ResearchDocument } from '@atlas/core';
+import { href as siteHref } from './lib/site.ts';
+
+interface Props {
+  doc: ResearchDocument;
+  graph: AtlasGraph;
+  registry: Registry;
+}
+
+const { doc, graph, registry } = Astro.props;
+
+type Column = 'figure' | 'equation' | 'algorithm' | 'definition' | 'failure-mode' | 'experiment';
+const COLUMNS: readonly { readonly key: Column; readonly label: string; readonly short: string }[] = [
+  { key: 'figure', label: 'Figures', short: 'fig' },
+  { key: 'equation', label: 'Equations', short: 'eq' },
+  { key: 'algorithm', label: 'Algorithms', short: 'alg' },
+  { key: 'definition', label: 'Definitions', short: 'def' },
+  { key: 'failure-mode', label: 'Failure modes', short: 'fm' },
+  { key: 'experiment', label: 'Experiments', short: 'exp' },
+];
+const MAX_DOTS = 12;
+
+const rows: GraphNode[] = doc.meta.children
+  .map((id) => graph.nodes[id])
+  .filter((node): node is GraphNode => node !== undefined && (node.entityType === 'section' || node.entityType === 'verification'));
+
+interface Cell {
+  readonly count: number;
+  readonly href: string | null;
+}
+
+function cellFor(node: GraphNode, column: Column): Cell {
+  if (column === 'equation') {
+    const equations = registry.equations.filter((entry) => entry.nodeId === node.id);
+    return { count: equations.length, href: equations[0] === undefined ? null : siteHref(equations[0].url) };
+  }
+  const objects = registry.objects.filter((entry) => entry.nodeId === node.id && entry.kind === column);
+  return { count: objects.length, href: objects[0] === undefined ? null : siteHref(objects[0].url) };
+}
+
+const table = rows.map((node) => ({
+  node,
+  cells: COLUMNS.map((column) => ({ column, ...cellFor(node, column.key) })),
+  written: node.hasManuscript,
+}));
+const totals = COLUMNS.map((column) => table.reduce((sum, row) => sum + (row.cells.find((cell) => cell.column.key === column.key)?.count ?? 0), 0));
+const hasAny = totals.some((total) => total > 0);
+---
+
+{
+  table.length > 0 && hasAny && (
+    <figure class="rb-glance" aria-labelledby="glance-title">
+      <figcaption class="rb-glance__head" id="glance-title">
+        <span class="rb-glance__kicker">Chapter {doc.header.number} at a glance</span>
+        <span class="rb-glance__note">each dot is one research object; rows link to sections</span>
+      </figcaption>
+      <table class="rb-glance__table">
+        <thead>
+          <tr>
+            <th scope="col" class="rb-glance__sec">Section</th>
+            {COLUMNS.map((column) => (
+              <th scope="col" title={column.label}>
+                {column.short}
+              </th>
+            ))}
+          </tr>
+        </thead>
+        <tbody>
+          {table.map((row) => (
+            <tr class:list={{ 'is-planned': !row.written }}>
+              <th scope="row" class="rb-glance__sec">
+                <a href={siteHref(row.node.url)}>
+                  <span class="rb-glance__num">{row.node.number ?? ''}</span>
+                  <span class="rb-glance__title">{row.node.shortTitle}</span>
+                </a>
+              </th>
+              {row.cells.map((cell) => (
+                <td class="rb-glance__cell" title={`${String(cell.count)} ${cell.column.label.toLowerCase()} in ${row.node.shortTitle}`}>
+                  {cell.count > 0 && cell.href !== null ? (
+                    <a class="rb-glance__dots" href={cell.href} aria-label={`${String(cell.count)} ${cell.column.label.toLowerCase()} in ${row.node.shortTitle}`}>
+                      {Array.from({ length: Math.min(cell.count, MAX_DOTS) }, () => (
+                        <span class="rb-glance__dot" aria-hidden="true" />
+                      ))}
+                      {cell.count > MAX_DOTS && <span class="rb-glance__more">+{cell.count - MAX_DOTS}</span>}
+                    </a>
+                  ) : (
+                    <span class="rb-glance__none" aria-label="none">·</span>
+                  )}
+                </td>
+              ))}
+            </tr>
+          ))}
+        </tbody>
+        <tfoot>
+          <tr>
+            <th scope="row" class="rb-glance__sec">Chapter</th>
+            {totals.map((total) => (
+              <td class="rb-glance__total">{total}</td>
+            ))}
+          </tr>
+        </tfoot>
+      </table>
+    </figure>
+  )
+}

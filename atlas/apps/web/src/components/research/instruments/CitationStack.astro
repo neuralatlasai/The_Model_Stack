@@ -1,0 +1,70 @@
+---
+/**
+ * Citation stack (UI_UX §19, §31): the region's citations as key · short work
+ * title · venue · status glyph. Each entry carries `data-cite`, so the client
+ * opens the paper inspector in the rail instead of navigating.
+ */
+import type { CitationKey, PageData, RailInstrument, ResearchDocument } from '@atlas/core';
+import { citeAttrs, instrumentAttrs } from '../lib/dom.ts';
+import { referenceStatusGlyph } from '../lib/grammar.ts';
+import { truncate } from '../lib/objects.ts';
+import { citeHref } from '../lib/site.ts';
+import InstrumentHead from './InstrumentHead.astro';
+
+interface Props {
+  instrument: Extract<RailInstrument, { kind: 'citations' }>;
+  doc: ResearchDocument;
+  pageData?: PageData | undefined;
+}
+
+const { instrument, pageData } = Astro.props;
+
+interface StackEntry {
+  readonly key: CitationKey;
+  readonly work: string | null;
+  readonly venue: string | null;
+  readonly status: { readonly glyph: string; readonly name: string } | null;
+}
+
+const entries: StackEntry[] = instrument.keys.map((key) => {
+  const record = pageData?.references[key];
+  return record === undefined
+    ? { key, work: null, venue: null, status: null }
+    : { key, work: truncate(record.work, 72), venue: record.venue === '' ? null : truncate(record.venue, 40), status: referenceStatusGlyph(record.status) };
+});
+const legend = [...new Map(entries.flatMap((entry) => (entry.status === null ? [] : [[entry.status.name, entry.status] as const]))).values()];
+---
+
+{
+  entries.length > 0 && (
+    <div class="rb-instrument rb-instrument--citations" {...instrumentAttrs('citations')}>
+      <InstrumentHead title="Citation stack" meta={String(entries.length)} />
+      <ol class="rb-cites" role="list">
+        {entries.map((entry) => (
+          <li class="rb-cites__item">
+            <a class="rb-cites__link" href={citeHref(entry.key)} {...citeAttrs(entry.key)}>
+              <span class="rb-cites__key">{entry.key}</span>
+              <span class="rb-cites__work">{entry.work ?? 'Not in the reference registry'}</span>
+              {entry.venue !== null && <span class="rb-cites__venue">{entry.venue}</span>}
+              {entry.status !== null && (
+                <span class="rb-cites__status" title={entry.status.name}>
+                  <span aria-hidden="true">{entry.status.glyph}</span>
+                  <span class="rb-vh">{entry.status.name}</span>
+                </span>
+              )}
+            </a>
+          </li>
+        ))}
+      </ol>
+      {legend.length > 0 && (
+        <p class="rb-instrument__legend">
+          {legend.map((status) => (
+            <span class="rb-instrument__legend-item">
+              <span aria-hidden="true">{status.glyph}</span> {status.name}
+            </span>
+          ))}
+        </p>
+      )}
+    </div>
+  )
+}

@@ -1,0 +1,127 @@
+---
+/**
+ * Compare mode for one node (UI_UX §14–15): its authored sibling
+ * differentials side by side. Rows are the six differential questions
+ * (core SIBLING_FIELD_TITLES), columns are the alternatives; rows whose
+ * answers differ are emphasised and identical rows recede. The evaluation
+ * axis is stated first: what changes relative to this node's mechanism.
+ */
+import type { GetStaticPaths } from 'astro';
+import { type LinkTarget, type NodeId } from '@atlas/core';
+import Breadcrumbs from '../../components/shell/Breadcrumbs.astro';
+import ModeTabs from '../../components/shell/ModeTabs.astro';
+import PageHeader from '../../components/shell/PageHeader.astro';
+import Inline from '../../components/research/Inline.astro';
+import ReaderLayout from '../../layouts/ReaderLayout.astro';
+import { getDocument, getGraph } from '../../lib/atlas.ts';
+import { compareRows, nodesWithCompare, siblingBlocks } from '../../lib/compare.ts';
+import { plural } from '../../lib/format.ts';
+import { modeLinks } from '../../lib/modes.ts';
+import { compareUrl, pathParam } from '../../lib/urls.ts';
+
+type Props = { readonly id: NodeId };
+
+export const getStaticPaths = (async () => {
+  const ids = await nodesWithCompare();
+  const paths: { params: { slug: string }; props: Props }[] = [];
+  for (const id of ids) {
+    const doc = await getDocument(id);
+    const slug = pathParam(doc.route.url);
+    if (slug !== undefined) paths.push({ params: { slug }, props: { id } });
+  }
+  return paths;
+}) satisfies GetStaticPaths;
+
+const { id } = Astro.props;
+const [doc, graph] = await Promise.all([getDocument(id), getGraph()]);
+const siblings = siblingBlocks(doc);
+const rows = compareRows(siblings);
+const differing = rows.filter((row) => row.differs).length;
+const siblingsRegion = doc.regions.find((region) => region.role === 'siblings') ?? null;
+const referencesRegion = doc.regions.find((region) => region.role === 'references') ?? null;
+const links = modeLinks({
+  graph,
+  url: doc.route.url,
+  chapter: doc.meta.chapter,
+  referencesAnchor: referencesRegion?.anchor ?? null,
+  hasCompare: true,
+});
+const title = doc.header.number === null ? doc.header.title : `${doc.header.number} ${doc.header.title}`;
+const hrefOf = (target: LinkTarget | null): string | null => {
+  if (target === null) return null;
+  switch (target.type) {
+    case 'node':
+    case 'external':
+    case 'planned':
+      return target.href;
+    case 'unresolved':
+      return null;
+  }
+};
+const crumbs = [...doc.route.breadcrumbs, { id: doc.meta.id, title: doc.header.title, number: doc.header.number, url: doc.route.url }];
+---
+
+<ReaderLayout
+  title={`Compare · ${title}`}
+  description={`Sibling differentials of ${doc.header.title}: why each alternative exists and what it changes.`}
+  canonicalPath={compareUrl(doc.route.url)}
+  currentId={doc.meta.id}
+  domain={graph.nodes[doc.meta.id]?.domain ?? 'reference'}
+>
+  <Breadcrumbs crumbs={crumbs} current="Compare" />
+  <article class="sh-article sh-compare-page" data-node-id={doc.meta.id}>
+    <PageHeader
+      identity={`Compare · ${title}`}
+      title={`Alternatives to ${doc.header.title}`}
+      lede="Axis: what each alternative changes relative to this node's mechanism — its reason to exist, the assumption and objective it alters, the problem it solves, the failure it introduces, and the primitive it replaces. Not a ranking."
+      meta={`${plural(siblings.length, 'alternative')} · ${String(differing)} of ${String(rows.length)} questions differ`}
+    />
+    <ModeTabs links={links} current="compare" />
+
+    <div class="sh-wide">
+      <div class="sh-table-scroll">
+        <table class="sh-table sh-compare">
+          <caption>
+            Differential explanations authored in{' '}
+            {siblingsRegion !== null ? <a href={`${doc.route.url}#${siblingsRegion.anchor}`}>{siblingsRegion.title}</a> : 'Siblings'}
+            {' '}of {title}. Emphasised rows differ across alternatives.
+          </caption>
+          <thead>
+            <tr>
+              <th scope="col" class="sh-compare-corner">Question</th>
+              {
+                siblings.map((sibling) => {
+                  const href = hrefOf(sibling.target);
+                  return (
+                    <th scope="col" class="sh-compare-head">
+                      {href !== null ? <a href={href}>{sibling.name}</a> : sibling.name}
+                    </th>
+                  );
+                })
+              }
+            </tr>
+          </thead>
+          <tbody>
+            {
+              rows.map((row) => (
+                <tr class:list={['sh-compare-row', row.differs ? 'sh-compare-row--differs' : 'sh-compare-row--same']}>
+                  <th scope="row">
+                    {row.title}
+                    {!row.differs && row.answered > 1 && <span class="sh-compare-same">same for all</span>}
+                  </th>
+                  {row.cells.map((cell) => (
+                    <td>{cell === null ? <span class="sh-compare-missing">not stated</span> : <Inline nodes={cell} />}</td>
+                  ))}
+                </tr>
+              ))
+            }
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+    <p class="sh-more">
+      <a href={siblingsRegion !== null ? `${doc.route.url}#${siblingsRegion.anchor}` : doc.route.url}>Back to the reading</a>
+    </p>
+  </article>
+</ReaderLayout>

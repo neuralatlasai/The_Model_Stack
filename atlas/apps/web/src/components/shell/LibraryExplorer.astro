@@ -1,0 +1,380 @@
+---
+/**
+ * Library: the manuscript as an instrument (lib/library-model.ts).
+ *
+ *   lens     "read by": re-reads every tile in one measure (sections,
+ *            words, figures, equations, works cited); the readout ranks it
+ *   map      the book as one table: 3 volumes → 11 part rows × 6 chapter
+ *            tiles; every tile carries its 6 sections as cells, filled when
+ *            drafted — all 396 sections visible at once. Tiles take their
+ *            part's domain colour: solid = chapter written, hollow = planned
+ *   readout  a fixed-size panel beside map and ledger (sticky): the chapter's
+ *            thesis, state, measures, degree, and its sections; or a part's
+ *            chapters; or, at rest, where the writing stands
+ *   ledger   every chapter, part by part: title and thesis (one line),
+ *            section strip, relative words, figures · equations, state
+ *
+ * Connected (client library-explorer.ts): a tile, a cell, or a ledger row
+ * focuses its chapter everywhere — the chapters it builds on and unlocks
+ * light across map and ledger (transitive; direct links drawn and marked with
+ * their distance), and the readout names it. Server-rendered: every chapter,
+ * section, and part is a real link; the ledger is the complete text form.
+ */
+import { grouped } from '../../lib/format.ts';
+import { jsonForHtml } from '../../lib/json.ts';
+import { compactCount, type LibraryModel } from '../../lib/library-model.ts';
+
+interface Props {
+  model: LibraryModel;
+  edges: number;
+}
+
+const { model, edges } = Astro.props;
+const { totals } = model;
+const byN = new Map(model.chapters.map((chapter) => [chapter.n, chapter]));
+const partByN = new Map(model.parts.map((part) => [part.n, part]));
+const chaptersOf = (numbers: readonly number[]) => numbers.map((n) => byN.get(n)).filter((c) => c !== undefined);
+const partsOf = (numbers: readonly number[]) => numbers.map((n) => partByN.get(n)).filter((p) => p !== undefined);
+const pct = (value: number, max: number): string => `${String(Math.round((Math.max(0, value) / Math.max(1, max)) * 1000) / 10)}%`;
+const ratio = (value: number, max: number): string => String(Math.round((Math.max(0, value) / Math.max(1, max)) * 1000) / 1000);
+
+// At rest, the readout says where the writing stands — computed, part by part.
+const begun = model.parts.filter((part) => part.sectionsWritten > 0);
+const quiet = model.parts.filter((part) => part.sectionsWritten === 0);
+const quietRange =
+  quiet.length === 0
+    ? ''
+    : quiet.length === 1
+      ? `Part ${quiet[0]?.numeral ?? ''} is planned.`
+      : quiet.every((part, index) => index === 0 || part.n === (quiet[index - 1]?.n ?? 0) + 1)
+        ? `Parts ${quiet[0]?.numeral ?? ''}–${quiet.at(-1)?.numeral ?? ''} are planned.`
+        : `${String(quiet.length)} parts are planned.`;
+const standing = `${begun
+  .map((part) =>
+    part.written === part.chapters.length
+      ? `Part ${part.numeral} complete`
+      : part.written > 0
+        ? `Part ${part.numeral}: ${String(part.written)} of ${String(part.chapters.length)} chapters, ${String(part.sectionsWritten)} of ${String(part.sectionsTotal)} sections`
+        : `Part ${part.numeral}: ${String(part.sectionsWritten)} of ${String(part.sectionsTotal)} sections drafted`,
+  )
+  .join(' · ')}. ${quietRange}`;
+const partsUnderWay = begun.length;
+
+const clientModel = {
+  parts: model.parts.map((part) => ({
+    n: part.n,
+    numeral: part.numeral,
+    title: part.title,
+    domain: part.domain,
+    outcome: part.outcome ?? '',
+    chapters: part.chapters,
+    written: part.written,
+    sectionsWritten: part.sectionsWritten,
+    sectionsTotal: part.sectionsTotal,
+    words: part.words,
+  })),
+  chapters: model.chapters.map((chapter) => ({
+    n: chapter.n,
+    number: chapter.number,
+    title: chapter.title,
+    short: chapter.short,
+    url: chapter.url,
+    part: chapter.part,
+    written: chapter.written,
+    state: chapter.state,
+    summary: chapter.summary,
+    plan: chapter.plan,
+    words: chapter.words,
+    figures: chapter.figures,
+    equations: chapter.equations,
+    works: chapter.works,
+    prereqs: chapter.prereqs,
+    unlocks: chapter.unlocks,
+    sections: chapter.sections,
+  })),
+};
+
+const LENS_CHOICES = [
+  ['sections', 'sections', `${grouped(totals.sectionsWritten)}/${grouped(totals.sections)}`],
+  ['words', 'words', compactCount(totals.words)],
+  ['figures', 'figures', grouped(totals.figures)],
+  ['equations', 'equations', grouped(totals.equations)],
+  ['works', 'works cited', grouped(totals.references)],
+] as const;
+
+const LEGEND = [
+  ['tile-written', 'written chapter (part colour)'],
+  ['tile-planned', 'planned chapter'],
+  ['cell-written', 'drafted section'],
+  ['cell-planned', 'planned section'],
+  ['up', 'builds on · ↑n steps upstream'],
+  ['down', 'unlocks · ↓n steps downstream'],
+] as const;
+---
+
+<section class="lib" data-library-explorer data-lens="none" aria-label="The manuscript">
+  <div class="lib-body" data-lib-body>
+    <div class="lib-main">
+      <figure class="lib-map" aria-labelledby="lib-map-title">
+        <figcaption class="lib-map__head">
+          <span class="lib-map__title" id="lib-map-title">Manuscript map</span>
+          <span class="lib-map__note">one row per part · one tile per chapter · one cell per section</span>
+        </figcaption>
+        <div class="lib-lens" role="group" aria-label="Read the map by a measure" data-lib-lensbar>
+          <span class="lib-lens__label">Read by</span>
+          <button type="button" class="lib-lens__chip" data-lib-lens="none" aria-pressed="true">state</button>
+          {
+            LENS_CHOICES.map(([key, label, count]) => (
+              <button type="button" class="lib-lens__chip" data-lib-lens={key} aria-pressed="false">
+                {label} <span class="lib-lens__n">{count}</span>
+              </button>
+            ))
+          }
+        </div>
+        <div
+          class="lib-grid"
+          role="group"
+          aria-label={`${String(totals.chapters)} chapters in ${String(model.parts.length)} parts; ${String(totals.chaptersWritten)} written, ${String(totals.sectionsWritten)} of ${String(totals.sections)} sections drafted. Arrow keys move between chapters; Enter opens one.`}
+          data-lib-grid
+        >
+          {
+            model.volumes.map((volume) => (
+              <div class="lib-vol">
+                <p class="lib-vol__head">
+                  <a href={volume.url} tabindex="-1">
+                    Volume {volume.numeral} · {volume.title}
+                  </a>
+                  <span class="lib-vol__stat">
+                    {volume.written}/{volume.chapters} ch · {volume.sectionsWritten}/{volume.sectionsTotal} §
+                  </span>
+                </p>
+                {partsOf(volume.parts).map((part) => (
+                  <div class="lib-row" data-domain={part.domain} data-lib-part={part.n}>
+                    <a class="lib-row__label" href={`#lib-part-${String(part.n)}`} tabindex="-1" data-lib-partlink={part.n}>
+                      <span class="lib-row__num">{part.numeral}</span>
+                      <span class="lib-row__title">{part.title}</span>
+                      <span class="lib-row__meter" aria-hidden="true">
+                        <i style={`inline-size:${pct(part.sectionsWritten, part.sectionsTotal)}`} />
+                      </span>
+                      <span class="lib-row__stat">
+                        {part.sectionsWritten}/{part.sectionsTotal} § · {compactCount(part.words)}
+                      </span>
+                    </a>
+                    {chaptersOf(part.chapters).map((chapter) => (
+                      <div
+                        class:list={['lib-tile', chapter.written ? 'is-written' : 'is-planned', { 'has-draft': !chapter.written && chapter.sectionsWritten > 0 }]}
+                        data-lib-n={chapter.n}
+                        data-zero={[chapter.words === 0 ? 'w' : '', chapter.figures === 0 ? 'f' : '', chapter.equations === 0 ? 'e' : '', chapter.works === 0 ? 'r' : ''].join(' ').trim()}
+                        style={`--w:${ratio(chapter.words, totals.maxWords)};--f:${ratio(chapter.figures, totals.maxFigures)};--e:${ratio(chapter.equations, totals.maxEquations)};--r:${ratio(chapter.works, totals.maxWorks)}`}
+                      >
+                        <a
+                          class="lib-tile__link"
+                          href={chapter.url}
+                          tabindex={chapter.n === 1 ? 0 : -1}
+                          data-lib-tile={chapter.n}
+                          aria-label={`${chapter.number} ${chapter.title}. ${chapter.state}; ${String(chapter.sectionsWritten)} of ${String(chapter.sections.length)} sections drafted; ${grouped(chapter.words)} words. Builds on ${String(chapter.prereqs.length)}, unlocks ${String(chapter.unlocks.length)}.`}
+                        >
+                          <span class="lib-tile__n">{chapter.number}</span>
+                          <span class="lib-tile__t">{chapter.short}</span>
+                        </a>
+                        <span class="lib-tile__m" aria-hidden="true">
+                          <span data-m="words">{compactCount(chapter.words)}</span>
+                          <span data-m="figures">{chapter.figures > 0 ? chapter.figures : '—'}</span>
+                          <span data-m="equations">{chapter.equations > 0 ? chapter.equations : '—'}</span>
+                          <span data-m="works">{chapter.works > 0 ? chapter.works : '—'}</span>
+                        </span>
+                        <span class="lib-tile__hop" aria-hidden="true" data-lib-hop />
+                        <span class="lib-tile__cells">
+                          {chapter.sections.length === 0 ? (
+                            <span class="lib-tile__none">no sections planned</span>
+                          ) : (
+                            chapter.sections.map((section, index) => (
+                              <a
+                                class:list={['lib-cell', section.written ? 'is-written' : 'is-planned']}
+                                href={section.url}
+                                tabindex="-1"
+                                data-lib-s={index}
+                                aria-label={`${section.number} ${section.title} — ${section.written ? 'drafted' : 'planned'}`}
+                              />
+                            ))
+                          )}
+                        </span>
+                        <span class="lib-tile__lens" aria-hidden="true">
+                          <i />
+                        </span>
+                      </div>
+                    ))}
+                  </div>
+                ))}
+              </div>
+            ))
+          }
+          <svg class="lib-links" aria-hidden="true" data-lib-links></svg>
+        </div>
+      </figure>
+
+      <section class="lib-ledger" id="lib-ledger" aria-labelledby="lib-ledger-title">
+        <div class="lib-ledger__head">
+          <h2 class="lib-ledger__title" id="lib-ledger-title">Every chapter, part by part</h2>
+          <p class="lib-ledger__cols" aria-hidden="true">
+            <span>No.</span><span>Chapter · thesis</span><span>Sections</span><span>Words</span><span>Fig·Eq</span><span>State</span>
+          </p>
+        </div>
+        {
+          model.volumes.map((volume) => (
+            <div class="lib-lvol">
+              <h3 class="lib-lvol__title">
+                <a href={volume.url}>
+                  Volume {volume.numeral} · {volume.title}
+                </a>
+                <span class="lib-lvol__stat">
+                  {volume.written} of {volume.chapters} chapters written · {volume.sectionsWritten} of {volume.sectionsTotal} sections drafted
+                </span>
+              </h3>
+              {partsOf(volume.parts).map((part) => (
+                <div class="lib-part" id={`lib-part-${String(part.n)}`} data-domain={part.domain} data-lib-part={part.n}>
+                  <div class="lib-part__head">
+                    <h4 class="lib-part__title">
+                      <a href={part.url}>
+                        <span class="lib-part__num">Part {part.numeral}</span> {part.title}
+                      </a>
+                    </h4>
+                    <p class="lib-part__progress">
+                      <span class="lib-part__segs" aria-hidden="true">
+                        {chaptersOf(part.chapters).map((chapter) => (
+                          <i class:list={{ 'is-written': chapter.written, 'has-draft': !chapter.written && chapter.sectionsWritten > 0 }} />
+                        ))}
+                      </span>
+                      <span>
+                        {part.written}/{part.chapters.length} chapters · {part.sectionsWritten}/{part.sectionsTotal} sections · {grouped(part.words)} words
+                      </span>
+                    </p>
+                    {part.outcome !== null && <p class="lib-part__outcome">Outcome — {part.outcome}</p>}
+                  </div>
+                  <table class="lib-table">
+                    <caption class="sh-visually-hidden">
+                      Chapters of Part {part.numeral}, {part.title}
+                    </caption>
+                    <colgroup>
+                      <col class="lib-col lib-col--n" />
+                      <col class="lib-col lib-col--main" />
+                      <col class="lib-col lib-col--strip" />
+                      <col class="lib-col lib-col--words" />
+                      <col class="lib-col lib-col--fe" />
+                      <col class="lib-col lib-col--state" />
+                    </colgroup>
+                    <thead class="sh-visually-hidden">
+                      <tr>
+                        <th scope="col">No.</th>
+                        <th scope="col">Chapter and thesis</th>
+                        <th scope="col">Sections drafted</th>
+                        <th scope="col">Words</th>
+                        <th scope="col">Figures · equations</th>
+                        <th scope="col">State</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {chaptersOf(part.chapters).map((chapter) => (
+                        <tr class:list={['lib-ch', chapter.written ? 'is-written' : 'is-planned']} data-lib-n={chapter.n}>
+                          <td class="lib-ch__n">{chapter.number}</td>
+                          <td class="lib-ch__main">
+                            <a class="lib-ch__title" href={chapter.url} data-lib-row={chapter.n}>
+                              {chapter.title}
+                            </a>
+                            {chapter.summary !== '' ? (
+                              <span class="lib-ch__thesis">{chapter.summary}</span>
+                            ) : (
+                              <span class="lib-ch__thesis lib-ch__thesis--none">{chapter.plan !== '' ? `Planned artifact — ${chapter.plan}` : 'No thesis yet — the chapter is planned.'}</span>
+                            )}
+                          </td>
+                          <td class="lib-ch__strip">
+                            <span class="lib-strip" role="group" aria-label={`Sections of chapter ${chapter.number}: ${String(chapter.sectionsWritten)} of ${String(chapter.sections.length)} drafted`}>
+                              {chapter.sections.map((section, index) => (
+                                <a
+                                  class:list={['lib-cell', section.written ? 'is-written' : 'is-planned']}
+                                  href={section.url}
+                                  data-lib-s={index}
+                                  aria-label={`${section.number} ${section.title} — ${section.written ? 'drafted' : 'planned'}`}
+                                />
+                              ))}
+                            </span>
+                            <span class="lib-ch__count">
+                              {chapter.sectionsWritten}/{chapter.sections.length}
+                            </span>
+                          </td>
+                          <td class="lib-ch__words">
+                            <span class="lib-bar" aria-hidden="true">
+                              <i style={`inline-size:${pct(chapter.words, totals.maxWords)}`} />
+                            </span>
+                            <span class="lib-ch__num">{chapter.words > 0 ? grouped(chapter.words) : '—'}</span>
+                          </td>
+                          <td class="lib-ch__fe">
+                            {chapter.figures} · {chapter.equations}
+                          </td>
+                          <td class="lib-ch__state">
+                            <i class="lib-state-key" aria-hidden="true" />
+                            {chapter.written ? 'draft' : 'planned'}
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              ))}
+            </div>
+          ))
+        }
+      </section>
+    </div>
+
+    <aside class="lib-panel" aria-label="Library readout">
+      <div class="lib-readout" aria-live="polite" data-lib-readout>
+        <p class="lib-ro__kicker" data-lib-kicker>The manuscript, today</p>
+        <p class="lib-ro__title" data-lib-title>{totals.chaptersWritten} of {totals.chapters} chapters written</p>
+        <p class="lib-ro__state" data-lib-state>
+          {totals.sectionsWritten}/{totals.sections} sections drafted · {grouped(totals.words)} words
+        </p>
+        <p class="lib-ro__thesis" data-lib-thesis>{standing} Point at a chapter to read its thesis and trace what it builds on and unlocks.</p>
+        <dl class="lib-ro__rows" data-lib-rows>
+          <div><dt>figures · equations</dt><dd><a href="/figures/">{grouped(totals.figures)}</a> · <a href="/equations/">{grouped(totals.equations)}</a></dd></div>
+          <div><dt>works cited</dt><dd><a href="/papers/">{grouped(totals.references)}</a> · {totals.spine} spine</dd></div>
+          <div><dt>prerequisite links</dt><dd>{grouped(edges)}</dd></div>
+          <div><dt>parts under way</dt><dd>{partsUnderWay} / {model.parts.length}</dd></div>
+        </dl>
+        <p class="lib-ro__listhead" data-lib-listhead><span>Key</span><span></span></p>
+        <ol class="lib-ro__list" data-lib-list>
+          {
+            LEGEND.map(([key, label]) => (
+              <li class="lib-ro__item">
+                <i class={`lib-key lib-key--${key}`} aria-hidden="true" />
+                <span class="lib-ro__itemtext">{label}</span>
+              </li>
+            ))
+          }
+        </ol>
+        <p class="lib-ro__links" data-lib-links-out></p>
+      </div>
+    </aside>
+  </div>
+
+  {
+    model.shelf.length > 0 && (
+      <section class="lib-shelf" aria-labelledby="lib-shelf-title">
+        <h2 class="lib-shelf__title" id="lib-shelf-title">
+          Front matter and appendices
+        </h2>
+        <ol class="lib-shelf__list" role="list">
+          {model.shelf.map((item) => (
+            <li class:list={['lib-shelf__item', item.written ? 'is-written' : 'is-planned']}>
+              <span class="lib-shelf__num">{item.number ?? '·'}</span>
+              <a href={item.url}>{item.title}</a>
+              <span class="lib-shelf__meta">{item.written ? `${grouped(item.words)} words` : item.state}</span>
+            </li>
+          ))}
+        </ol>
+      </section>
+    )
+  }
+
+  <script is:inline type="application/json" data-lib-model set:html={jsonForHtml(clientModel)} />
+</section>

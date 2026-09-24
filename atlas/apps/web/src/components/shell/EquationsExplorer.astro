@@ -1,0 +1,258 @@
+---
+/**
+ * Equations (UI_UX §16, §61) as symbol threads plus one grouped, filterable
+ * index.
+ *
+ *   strip     one row per chapter; one cell per equation (cell → its entry)
+ *   readout   fixed-size: what the symbol, chapter, or equation under the
+ *             pointer holds and connects to
+ *   symbols   every symbol used by two or more equations, most used first
+ *   bar       a sticky barcode of all equations over the index: the thread
+ *             under the pointer, the equations in view, one status line
+ *   index     every equation by chapter: number and anchor, KaTeX, section,
+ *             and its symbols (declared meaning where the chapter gives one)
+ *
+ * Symbols are read from each equation's TeX (lib/symbol-threads.ts) and
+ * matched to the declared variables; nothing is guessed.
+ *
+ * Connected (client equations-explorer.ts): a symbol lights its thread in the
+ * strip, the bar, and the index; an equation lights the equations that share
+ * notation with it ("shares 3") and its chapter; a chapter lights its cells and
+ * its vocabulary. Clicks pin a chapter or a symbol as a filter; the search
+ * matches symbols (Greek spelled out too), meanings, sections, and numbers.
+ */
+import type { AtlasGraph, EquationIndexEntry, GraphNode } from '@atlas/core';
+import { equationSymbols, symbolSearchText, symbolThreads, type EquationSymbol } from '../../lib/symbol-threads.ts';
+import SymbolGlyph from './SymbolGlyph.astro';
+
+interface Props {
+  equations: readonly EquationIndexEntry[];
+  graph: AtlasGraph;
+}
+
+const { equations: raw, graph } = Astro.props;
+
+const chapterKey = (number: string): string => number.split('.')[0] ?? '';
+const order = (key: string): number => (key === 'N' ? 0 : Number.parseInt(key, 10) || 999);
+const compareNumber = (a: string, b: string): number => {
+  const [a1 = '', a2 = '0'] = a.split('.');
+  const [b1 = '', b2 = '0'] = b.split('.');
+  return order(a1) - order(b1) || Number(a2) - Number(b2);
+};
+
+interface Row {
+  readonly entry: EquationIndexEntry;
+  readonly chapter: string;
+  readonly symbols: readonly EquationSymbol[];
+  readonly where: string;
+}
+const rows: Row[] = [...raw]
+  .sort((a, b) => compareNumber(a.number, b.number))
+  .map((entry) => ({
+    entry,
+    chapter: chapterKey(entry.number),
+    symbols: equationSymbols(entry),
+    where: graph.nodes[entry.nodeId]?.shortTitle ?? '',
+  }));
+const threads = symbolThreads(rows.map((row) => ({ number: row.entry.number, chapter: row.chapter, symbols: row.symbols })));
+const threadKeys = new Set(threads.map((thread) => thread.key));
+
+interface Chapter {
+  readonly key: string;
+  readonly node: GraphNode | undefined;
+  readonly label: string;
+  readonly title: string;
+  readonly rows: Row[];
+}
+const chapterNode = (key: string): GraphNode | undefined => (key === 'N' ? graph.nodes['ms.frontmatter.notation'] : graph.nodes[`ms.chapter.${key}`]);
+const chapters: Chapter[] = [...new Set(rows.map((row) => row.chapter))].map((key) => {
+  const node = chapterNode(key);
+  return {
+    key,
+    node,
+    label: key === 'N' ? 'N' : key.padStart(2, '0'),
+    title: node?.shortTitle ?? (key === 'N' ? 'Notation' : `Chapter ${key}`),
+    rows: rows.filter((row) => row.chapter === key),
+  };
+});
+const anchorOf = (number: string): string => `eq-index-${number.replace('.', '-')}`;
+const rowText = (row: Row): string =>
+  [
+    row.entry.number,
+    row.where,
+    ...row.symbols.map((symbol) => symbolSearchText(symbol.key)),
+    ...row.symbols.map((symbol) => symbol.meaning ?? ''),
+  ]
+    .join(' ')
+    .toLowerCase()
+    .replace(/\s+/gu, ' ');
+---
+
+<section class="eqx" data-equations-explorer aria-label="Equations of the book and the symbols they share">
+  <div class="eqx-top">
+    <div class="eqx-inst">
+      <p class="eqx-head">
+        <span>Symbol threads</span>
+        <span class="eqx-head__note">one cell per equation · solid = declares its variables · point at a symbol, chapter, or cell</span>
+      </p>
+      <div class="eqx-strip" role="group" aria-label="Chapters. Arrow keys move; Enter filters the index to a chapter; Escape clears." data-eqx-strip>
+        {
+          chapters.map((chapter, index) => (
+            <div class="eqx-ch" data-eqx-ch={chapter.key}>
+              <button type="button" class="eqx-ch__btn" data-eqx-chbtn={chapter.key} aria-pressed="false" tabindex={index === 0 ? 0 : -1} title={chapter.node?.title ?? chapter.title}>
+                <span class="eqx-ch__n">{chapter.label}</span>
+                <span class="eqx-ch__t">{chapter.title}</span>
+              </button>
+              <span class="eqx-ch__cells">
+                {chapter.rows.map((row) => (
+                  <a
+                    class:list={['eqx-cell', { 'is-declared': row.entry.variables.length > 0 }]}
+                    href={`#${anchorOf(row.entry.number)}`}
+                    tabindex="-1"
+                    data-eqx-cell={row.entry.number}
+                    aria-label={`Equation ${row.entry.number}`}
+                  />
+                ))}
+              </span>
+              <span class="eqx-ch__c" data-eqx-chcount={chapter.rows.length}>
+                {chapter.rows.length}
+              </span>
+            </div>
+          ))
+        }
+      </div>
+    </div>
+
+    <aside class="eqx-readout" aria-live="polite" data-eqx-readout>
+      <p class="eqx-readout__kicker" data-eqx-kicker>{rows.length} equations · {threads.length} threads</p>
+      <p class="eqx-readout__title" data-eqx-title>Notation, followed across the book</p>
+      <p class="eqx-readout__meta" data-eqx-meta>Point at a symbol, a chapter, or an equation. Symbols are read from each equation's TeX; meanings come from the chapters' declared variables.</p>
+      <ol class="eqx-readout__list" data-eqx-list>
+        {
+          [...threads]
+            .sort((a, b) => b.chapters.length - a.chapters.length || b.equations.length - a.equations.length)
+            .slice(0, 5)
+            .map((thread) => (
+              <li>
+                <b>
+                  <SymbolGlyph symbol={thread.key} />
+                </b>{' '}
+                {thread.equations.length} equations across {thread.chapters.length} chapters
+              </li>
+            ))
+        }
+      </ol>
+    </aside>
+  </div>
+
+  <div class="eqx-symbols">
+    <p class="eqx-head">
+      <span>Symbols</span>
+      <span class="eqx-head__note">{threads.length} used by two or more equations · count = equations · click to pin as a filter</span>
+    </p>
+    <div class="eqx-symidx" role="group" aria-label="Shared symbols. Arrow keys move; Enter pins a symbol as a filter; Escape clears." data-eqx-symidx>
+      {
+        threads.map((thread, index) => (
+          <button
+            type="button"
+            class="eqx-chip"
+            id={`sym-${thread.key}`}
+            data-eqx-sym={thread.key}
+            data-eqx-eqs={thread.equations.join(' ')}
+            aria-pressed="false"
+            tabindex={index === 0 ? 0 : -1}
+            aria-label={`${thread.key}: ${String(thread.equations.length)} equations in ${String(thread.chapters.length)} chapters`}
+          >
+            <SymbolGlyph symbol={thread.key} />
+            <span class="eqx-chip__n">{thread.equations.length}</span>
+          </button>
+        ))
+      }
+    </div>
+    <button type="button" class="eqx-more" data-eqx-more hidden aria-expanded="false">
+      all {threads.length} symbols
+    </button>
+  </div>
+
+  <div class="eqx-filters">
+    <label class="eqx-search">
+      <span class="sh-visually-hidden">Filter equations by symbol, meaning, section, or number</span>
+      <input type="search" placeholder="Filter by symbol or meaning — σ, sigma, d_model, bytes…" data-eqx-search autocomplete="off" spellcheck="false" />
+    </label>
+    <span class="eqx-pins" data-eqx-pins></span>
+    <button type="button" class="eqx-clear" data-eqx-clear hidden>clear filters</button>
+    <span class="eqx-shown" data-eqx-shown aria-live="polite">{rows.length} of {rows.length}</span>
+  </div>
+
+  <div class="eqx-bar" aria-hidden="true" data-eqx-bar>
+    <div class="eqx-bar__strip">
+      {
+        chapters.map((chapter) => (
+          <span class="eqx-bar__ch" style={`flex-grow:${String(chapter.rows.length)}`} data-eqx-barch={chapter.key}>
+            <span class="eqx-bar__lab">{chapter.label}</span>
+            <span class="eqx-bar__cells">
+              {chapter.rows.map((row) => (
+                <i class:list={[{ 'is-declared': row.entry.variables.length > 0 }]} data-eqx-bcell={row.entry.number} />
+              ))}
+            </span>
+          </span>
+        ))
+      }
+    </div>
+    <p class="eqx-bar__status" data-eqx-status></p>
+  </div>
+
+  <div class="eqx-index">
+    {
+      chapters.map((chapter) => (
+        <section class="eqx-group" aria-labelledby={`eqch-${chapter.key}`} data-eqx-group={chapter.key}>
+          <h2 id={`eqch-${chapter.key}`} class="eqx-group__h">
+            {chapter.node !== undefined ? (
+              <a href={chapter.node.url}>
+                <span class="eqx-group__n">{chapter.label}</span> {chapter.node.title}
+              </a>
+            ) : (
+              <span>
+                <span class="eqx-group__n">{chapter.label}</span> {chapter.title}
+              </span>
+            )}
+            <span class="eqx-group__c">{chapter.rows.length} equations</span>
+          </h2>
+          <ol class="eqx-rows" role="list">
+            {chapter.rows.map((row) => (
+              <li class="eqx-row" id={anchorOf(row.entry.number)} data-eqx-row={row.entry.number} data-ch={chapter.key} data-syms={row.symbols.map((symbol) => symbol.key).join(' ')} data-text={rowText(row)}>
+                <div class="eqx-row__num">
+                  <a href={row.entry.url} aria-label={`Equation ${row.entry.number}, in ${row.where}`}>
+                    ({row.entry.number})
+                  </a>
+                  <span class="eqx-row__share" data-eqx-share aria-hidden="true" />
+                </div>
+                <div class="eqx-row__body">
+                  <div class="eqx-row__math" set:html={row.entry.html} />
+                  <div class="eqx-row__meta">
+                    <p class="eqx-row__line" data-eqx-line>
+                      <a class="eqx-row__where" href={row.entry.url}>
+                        {row.where}
+                      </a>
+                      {row.symbols.map((symbol) => (
+                        <span
+                          class:list={['eqx-sym', { 'is-thread': threadKeys.has(symbol.key), 'is-declared': symbol.meaning !== null }]}
+                          data-eqx-rsym={symbol.key}
+                          data-eq-var={symbol.key}
+                          title={symbol.meaning === null ? `${symbol.key} (no declared meaning)` : `${symbol.key}: ${symbol.meaning}`}
+                        >
+                          <SymbolGlyph symbol={symbol.key} />
+                          {symbol.meaning !== null && <span class="eqx-sym__m">{symbol.meaning}</span>}
+                        </span>
+                      ))}
+                    </p>
+                  </div>
+                </div>
+              </li>
+            ))}
+          </ol>
+        </section>
+      ))
+    }
+  </div>
+</section>
