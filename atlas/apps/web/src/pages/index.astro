@@ -1,12 +1,17 @@
 ---
 /**
- * Home (UI_UX §36, §83): no marketing. The title, one line of what this is,
- * the scale of the atlas, then the knowledge universe itself as a
- * typographic map — volumes → parts → chapters — beside one real instrument,
- * the reading routes, and the chapters that have manuscripts.
+ * Home: what the atlas is, why it is useful, what it provides, and how it
+ * works (components/home/HomeStory.astro — hero with the live stack, then
+ * evidence, connections, depth, search, sources, and the build pipeline,
+ * every example drawn from the compiled bundle), followed by the atlas itself:
+ * the dependency map, the knowledge universe beside the state-of-the-atlas
+ * instrument, the reading routes, and the chapters that have manuscripts.
  */
 import { isNodeId, type GraphNode, type NodeId, type ResearchDocument } from '@atlas/core';
 import AtlasInstrument from '../components/shell/AtlasInstrument.astro';
+import HomeStory from '../components/home/HomeStory.astro';
+import { buildAnatomy, buildFocus, buildLayers, countLabels, depthList, runSearches, selectClaims, type HomeModel } from '../lib/home-model.ts';
+import '../styles/home.css';
 import type { InstrumentPart, InstrumentRow } from '../lib/instrument.ts';
 import ReadingRoutes from '../components/shell/ReadingRoutes.astro';
 import UniverseMap from '../components/shell/UniverseMap.astro';
@@ -14,14 +19,21 @@ import StackExplorer from '../components/shell/StackExplorer.astro';
 import '../styles/explorer.css';
 import { buildStackModel } from '../lib/stack.ts';
 import BaseLayout from '../layouts/BaseLayout.astro';
-import { getDocument, getGraph, getManifest, getRegistry } from '../lib/atlas.ts';
+import { getDocument, getGraph, getManifest, getRegistry, listDocuments, readSearchPayload } from '../lib/atlas.ts';
 import { mapBounded } from '../lib/concurrency.ts';
 import { compareStrings, isoDate, plural, stateLabel, updatedLabel } from '../lib/format.ts';
 import { SITE_TITLE, siteJsonLd } from '../lib/jsonld.ts';
 import { childrenOf, nodesOfType } from '../lib/nodes.ts';
 import { routeTables } from '../lib/reading-routes.ts';
 
-const [graph, manifest, registry] = await Promise.all([getGraph(), getManifest(), getRegistry()]);
+const [graph, manifest, registry, allDocs, searchIndex, searchDocs] = await Promise.all([
+  getGraph(),
+  getManifest(),
+  getRegistry(),
+  listDocuments(),
+  readSearchPayload('searchIndex'),
+  readSearchPayload('searchDocs'),
+]);
 const compiled = new Set<string>(manifest.documents);
 const loadIfCompiled = async (id: NodeId): Promise<ResearchDocument | null> =>
   compiled.has(id) ? getDocument(id) : null;
@@ -35,6 +47,17 @@ const routesNode = graph.nodes[routesId] ?? null;
 const routesDoc = await loadIfCompiled(routesId);
 const routeTable = routesDoc === null ? null : (routeTables(routesDoc)[0] ?? null);
 const stackModel = buildStackModel(graph, registry, routesDoc === null ? [] : routeTables(routesDoc).flatMap((table) => table.rows));
+
+const home: HomeModel = {
+  layers: buildLayers(stackModel),
+  claims: selectClaims(allDocs),
+  labels: countLabels(allDocs),
+  focus: buildFocus(stackModel),
+  searches: runSearches(searchIndex, searchDocs, ['KV cache', 'contamination', 'tokenizer', 'mixture of experts']).filter((search) => search.results.length > 0),
+  anatomy: buildAnatomy(),
+  depths: depthList(),
+};
+const startUrl = written[0]?.url ?? '/library/';
 
 interface Recent {
   readonly node: GraphNode;
@@ -56,14 +79,6 @@ const recent: Recent[] = (
 )
   .filter((entry): entry is Recent => entry !== null)
   .sort((a, b) => compareStrings(b.updatedAt, a.updatedAt) || compareStrings(a.node.number ?? '', b.node.number ?? ''));
-
-const scale = [
-  plural(chapters.length, 'chapter'),
-  plural(sections.length, 'section'),
-  plural(manifest.counts.figures, 'figure'),
-  plural(manifest.counts.equations, 'equation'),
-  plural(manifest.counts.references, 'reference'),
-].join(' · ');
 
 const instrumentRows: InstrumentRow[] = [
   { key: 'volumes', value: nodesOfType(graph, 'volume').length, href: '/library/' },
@@ -111,14 +126,11 @@ const description =
   jsonLd={siteJsonLd(graph, Astro.site, manifest.edition)}
 >
   <main id="main" class="sh-home" tabindex="-1">
-    <header class="sh-home-head">
-      <p class="sh-identity">Research Atlas · Edition {manifest.edition}</p>
-      <h1 class="sh-home-title">The Model Stack</h1>
-      <p class="sh-home-lede">A research atlas of modern model systems — from data and silicon to intelligence.</p>
-      <p class="sh-scale">{scale}</p>
-    </header>
+    <HomeStory model={home} graph={graph} registry={registry} manifest={manifest} startUrl={startUrl} edges={stackModel.edges.length} />
 
-    <StackExplorer model={stackModel} />
+    <div id="stack-map" class="hx-anchor">
+      <StackExplorer model={stackModel} />
+    </div>
 
     <div class="sh-home-grid">
       <section class="sh-home-map" aria-label="Volumes, parts, and chapters">

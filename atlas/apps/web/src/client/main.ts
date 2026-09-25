@@ -79,6 +79,15 @@ const FEATURES: readonly Feature[] = [
     },
   ],
   [
+    'home',
+    (ctx) => {
+      if (ctx.doc.querySelector('[data-home-hero]') === null) return;
+      void import('./home.ts').then((module) => {
+        if (!ctx.ctl.disposed) module.initHome(ctx);
+      });
+    },
+  ],
+  [
     'eval-ecosystem',
     (ctx) => {
       if (ctx.doc.querySelector('[data-eco-explorer]') === null) return;
