@@ -20,10 +20,13 @@ const { instrument, doc, pageData } = Astro.props;
 const terms = instrument.slugs.map((slug) => {
   const definition = findDefinition(doc, slug);
   const entry = pageData?.terms[slug];
+  // Defined on this page: jump to it. Defined elsewhere: link to the owning page's definition.
+  // Defined on this page: jump to it. Defined elsewhere: the owning page. Defined nowhere yet: plain text.
+  const href = definition !== null && definition !== undefined ? `#${definition.anchor ?? termAnchor(slug)}` : (entry?.url ?? null);
   return {
     slug,
     term: definition?.term ?? entry?.term ?? slug,
-    anchor: definition?.anchor ?? termAnchor(slug),
+    href,
   };
 });
 ---
@@ -35,7 +38,15 @@ const terms = instrument.slugs.map((slug) => {
       <ul class="rb-terms" role="list">
         {terms.map((term) => (
           <li>
-            <a class="rb-terms__link" href={`#${term.anchor}`} {...termAttrs(term.slug)}>{term.term}</a>
+            {term.href === null ? (
+              <span class="rb-terms__link rb-terms__link--undefined" title="No glossary definition yet">
+                {term.term}
+              </span>
+            ) : (
+              <a class="rb-terms__link" href={term.href} {...termAttrs(term.slug)}>
+                {term.term}
+              </a>
+            )}
           </li>
         ))}
       </ul>

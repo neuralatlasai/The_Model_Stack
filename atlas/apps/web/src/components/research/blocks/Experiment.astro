@@ -7,6 +7,7 @@
 import type { ExperimentBlock } from '@atlas/core';
 import Blocks from '../Blocks.astro';
 import { depthAttrs } from '../lib/dom.ts';
+import { githubAlias } from '../../../lib/github-slug.ts';
 
 interface Props {
   block: ExperimentBlock;
@@ -14,9 +15,12 @@ interface Props {
 
 const { block } = Astro.props;
 const title = `Experiment ${block.number}`;
+// GitHub-style anchor of the manuscript heading ("Experiment 9.4 — Name" → experiment-94--name).
+const alias = githubAlias(`${title} — ${block.name}`, block.anchor);
 ---
 
 <section class="rb-experiment" id={block.anchor ?? undefined} {...depthAttrs(block.depth)}>
+  {alias !== null && <span class="rb-alias" id={alias} aria-hidden="true" />}
   <h3 class="rb-h rb-h3 rb-experiment__title">
     <span class="rb-experiment__num">{title}</span>
     <span class="rb-experiment__sep" aria-hidden="true">—</span>

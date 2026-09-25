@@ -27,9 +27,11 @@ export interface ModeInput {
   readonly referencesAnchor: string | null;
   /** True when a compare page exists for this node (it has sibling differentials). */
   readonly hasCompare: boolean;
+  /** True when some node of the node's chapter has a compare page (the compare index then has a `#ch-NN` group). */
+  readonly chapterHasCompare?: boolean;
 }
 
-export function modeLinks({ graph, url, chapter, referencesAnchor, hasCompare }: ModeInput): ModeLinks {
+export function modeLinks({ graph, url, chapter, referencesAnchor, hasCompare, chapterHasCompare = false }: ModeInput): ModeLinks {
   const referencesNode = chapter === null ? undefined : graph.nodes[`ms.references.${String(chapter)}` as NodeId];
   let papers = '/papers/';
   if (referencesAnchor !== null) papers = `${url}#${referencesAnchor}`;
@@ -37,7 +39,7 @@ export function modeLinks({ graph, url, chapter, referencesAnchor, hasCompare }:
 
   let compare = '/compare/';
   if (hasCompare) compare = compareUrl(url);
-  else if (chapter !== null) compare = `/compare/#${chapterFragment(chapter)}`;
+  else if (chapter !== null && chapterHasCompare) compare = `/compare/#${chapterFragment(chapter)}`;
 
   return {
     read: url,

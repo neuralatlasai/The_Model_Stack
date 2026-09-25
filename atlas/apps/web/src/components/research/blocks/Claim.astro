@@ -10,6 +10,7 @@ import CiteLink from '../inline/CiteLink.astro';
 import EvidenceMark from '../inline/EvidenceMark.astro';
 import { depthAttrs, xrefAttrs } from '../lib/dom.ts';
 import { provenanceItem } from '../lib/objects.ts';
+import { getRegistry } from '../../../lib/atlas.ts';
 
 interface Props {
   block: ClaimBlock;
@@ -17,6 +18,9 @@ interface Props {
 
 const { block } = Astro.props;
 const items = block.sources.map(provenanceItem);
+// A derivation source can cite an equation defined on another page: link to where it lives.
+const equationUrl = new Map((await getRegistry()).equations.map((entry) => [entry.number, entry.url]));
+const equationHref = (number: string, anchor: string): string => equationUrl.get(number) ?? `#${anchor}`;
 ---
 
 <div class="rb-claim" id={block.anchor ?? undefined} data-evidence={block.label} {...depthAttrs(block.depth)}>
@@ -28,7 +32,7 @@ const items = block.sources.map(provenanceItem);
       items.map((item) => (
         <span class="rb-claim__src">
           {item.type === 'cite' && <CiteLink citeKey={item.key} />}
-          {item.type === 'equation' && <a class="rb-xref" href={`#${item.anchor}`} {...xrefAttrs(`equation:${item.number}`)}>Eq. {item.number}</a>}
+          {item.type === 'equation' && <a class="rb-xref" href={equationHref(item.number, item.anchor)} {...xrefAttrs(`equation:${item.number}`)}>Eq. {item.number}</a>}
           {item.type === 'doc' && <span class="rb-claim__doc">OD:{item.id}</span>}
           {item.type === 'text' && item.text}
         </span>

@@ -99,9 +99,12 @@ describe('mode links', () => {
   });
 
   it('falls back to index pages when the node has no own targets', () => {
-    const links = modeLinks({ graph, url: '/ch06/', chapter: 6, referencesAnchor: null, hasCompare: false });
+    const links = modeLinks({ graph, url: '/ch06/', chapter: 6, referencesAnchor: null, hasCompare: false, chapterHasCompare: true });
     assert.equal(links.papers, '/papers/');
     assert.equal(links.compare, '/compare/#ch-06');
+    // A chapter with no compare pages has no #ch-NN group on the compare index: link the index itself.
+    const bare = modeLinks({ graph, url: '/ch06/', chapter: 6, referencesAnchor: null, hasCompare: false });
+    assert.equal(bare.compare, '/compare/');
     const reference = modeLinks({ graph, url: '/front-matter/notation/', chapter: null, referencesAnchor: null, hasCompare: false });
     assert.equal(reference.implementations, '/systems/');
     assert.equal(reference.compare, '/compare/');

@@ -11,6 +11,7 @@
  *   it does not read as a second copy of the figure.
  * - Sections: the chapter's section table renders as a section index.
  */
+import { githubAlias } from '../../lib/github-slug.ts';
 import type { Block, Region, ResearchDocument, TableBlock } from '@atlas/core';
 import Blocks from './Blocks.astro';
 import SectionIndex from './SectionIndex.astro';
@@ -43,6 +44,7 @@ const rest: readonly Block[] = sectionTable === null ? leading : leading.filter(
 ---
 
 <section id={region.anchor} class={`rb-region rb-region--${region.role}`} {...regionAttrs(region.anchor, region.role, region.depth)}>
+  {githubAlias(region.title, region.anchor) !== null && <span class="rb-alias" id={githubAlias(region.title, region.anchor)} aria-hidden="true" />}
   <h2 class="rb-region__title">
     {ordinal !== null && <span class="rb-region__ordinal" aria-hidden="true">{ordinal}</span>}
     <span class="rb-region__text">{region.title}</span>

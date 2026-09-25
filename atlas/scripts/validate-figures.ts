@@ -298,7 +298,7 @@ function regionAnchors(text: string): Set<string> {
   const anchors = new Set<string>();
   let inFence = false;
   for (const line of text.split('\n')) {
-    if (/^```/u.test(line.trim())) inFence = !inFence;
+    if (line.trim().startsWith("```")) inFence = !inFence;
     if (inFence) continue;
     const match = /^##\s+(.+?)\s*$/u.exec(line);
     if (match?.[1] !== undefined) anchors.add(slugify(match[1]));

@@ -1,0 +1,83 @@
+# Build the Research Atlas from docs/ and deploy it to GitHub Pages.
+#
+#   push to main (or run manually) → gates → compile manuscripts → build the
+#   static site under the Pages base path → full link check → deploy.
+#
+# One-time repository setting: Settings → Pages → Build and deployment →
+# Source: "GitHub Actions".
+name: Deploy atlas to GitHub Pages
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+# One deployment at a time; a newer push waits rather than cancelling a deploy in flight.
+concurrency:
+  group: pages
+  cancel-in-progress: false
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    defaults:
+      run:
+        working-directory: atlas
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: npm
+          cache-dependency-path: atlas/package-lock.json
+
+      - name: Install
+        run: npm ci
+
+      - name: Typecheck
+        run: npm run typecheck
+
+      - name: Unit tests
+        run: npm test
+
+      # Chapters are written in waves; a chapter mid-way (e.g. figures citing a
+      # references.md row not yet written) must not block publishing the rest.
+      # The strict check still runs and is shown as a failed-but-continued step.
+      - name: Compile manuscripts (strict, reported)
+        run: npm run compile:check
+        continue-on-error: true
+
+      - name: Configure Pages
+        id: pages
+        uses: actions/configure-pages@v5
+
+      - name: Build site
+        run: npm run build
+        env:
+          ATLAS_SITE: ${{ steps.pages.outputs.origin }}
+          ATLAS_BASE: ${{ steps.pages.outputs.base_path }}/
+
+      - name: Check every link
+        run: node scripts/check-links.ts apps/web/dist "${{ steps.pages.outputs.base_path }}/"
+
+      - uses: actions/upload-pages-artifact@v3
+        with:
+          path: atlas/apps/web/dist
+
+  deploy:
+    needs: build
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - name: Deploy to GitHub Pages
+        id: deployment
+        uses: actions/deploy-pages@v4

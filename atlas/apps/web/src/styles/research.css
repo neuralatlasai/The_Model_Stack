@@ -3126,3 +3126,10 @@ a.rb-secidx__title:hover {
 .rb-glance tbody tr.is-lit .rb-glance__dot {
   transform: scale(1.25);
 }
+
+/* GitHub-style alias anchors (lib/github-slug.ts): land like the element they precede. */
+.rb-alias {
+  display: block;
+  block-size: 0;
+  scroll-margin-top: calc(var(--sh-topbar-h, 52px) + 16px);
+}

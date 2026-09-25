@@ -23,7 +23,7 @@
     "dev": "npm run compile && npm run dev --workspace @atlas/web",
     "build": "npm run compile && npm run build --workspace @atlas/web",
     "preview": "npm run preview --workspace @atlas/web",
-    "typecheck": "tsc -p packages/core && tsc -p packages/visual && tsc -p packages/compiler && npm run typecheck --workspace @atlas/web",
+    "typecheck": "tsc -p packages/core && tsc -p packages/visual && tsc -p packages/compiler && tsc -p scripts && npm run typecheck --workspace @atlas/web",
     "lint": "eslint --max-warnings=0 .",
     "format": "prettier --write .",
     "format:check": "prettier --check .",

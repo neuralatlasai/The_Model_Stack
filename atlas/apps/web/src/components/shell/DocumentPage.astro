@@ -67,12 +67,15 @@ const node = graph.nodes[doc.meta.id];
 const domain = node?.domain ?? domainOfPart(doc.meta.part);
 const referencesRegion = doc.regions.find((region) => region.role === 'references') ?? null;
 const hasCompare = withCompare.has(doc.meta.id);
+// The compare index has a `#ch-NN` group only for chapters with at least one compare page.
+const chapterUrl = doc.meta.chapter === null ? null : (graph.nodes[`ms.chapter.${String(doc.meta.chapter)}`]?.url ?? null);
 const links = modeLinks({
   graph,
   url: doc.route.url,
   chapter: doc.meta.chapter,
   referencesAnchor: referencesRegion?.anchor ?? null,
   hasCompare,
+  chapterHasCompare: chapterUrl !== null && [...withCompare].some((id) => graph.nodes[id]?.url.startsWith(chapterUrl) === true),
 });
 
 const thesis = doc.header.thesis === null ? '' : squash(inlineToText(doc.header.thesis));
