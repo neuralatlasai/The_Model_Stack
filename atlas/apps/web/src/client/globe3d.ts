@@ -218,7 +218,7 @@ export function initGlobe3D(ctx: PageContext, panel: HTMLElement, reduced: boole
       const c = tint(node.domain);
       B.col.set([c.r, c.g, c.b], i * 3);
       const on = node.n === focus;
-      B.size[i] = (node.written ? 20 : 11) * (on ? 1.9 : linked.has(node.n) ? 1.35 : 1);
+      B.size[i] = (node.written ? 16 : 9) * (on ? 1.9 : linked.has(node.n) ? 1.35 : 1);
       B.alpha[i] = on || linked.has(node.n) ? 1 : node.written ? 0.7 : 0.4;
     });
     for (const attr of ['aColor', 'aSize', 'aAlpha'] as const) B.geo.getAttribute(attr).needsUpdate = true;

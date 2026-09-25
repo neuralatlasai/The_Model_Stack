@@ -309,7 +309,7 @@ export const GLOW: Readonly<Record<string, string>> = {
 
 /** Domain colours on paper (deep, saturated inks for the light theme). */
 export const INK: Readonly<Record<string, string>> = {
-  foundations: '#7b6a55',
+  foundations: '#a48558',
   data: '#b5541f',
   architecture: '#1f5fa8',
   training: '#7a45b5',

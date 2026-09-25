@@ -2310,3 +2310,34 @@ html[data-gl='1'] .hx-palette:not(.is-2d) .hy {
     transform: translateZ(calc((3 - var(--k)) * 3.6rem));
   }
 }
+
+
+/* ── alignment: each 3D object is centred in its column, its caption under it ─ */
+html[data-gl='1'] .hx-deps:not(.is-2d) {
+  display: grid;
+  justify-items: center;
+}
+
+html[data-gl='1'] .hx-deps:not(.is-2d) .hg {
+  inline-size: min(100%, 30rem);
+  aspect-ratio: 1;
+}
+
+.hg-cap,
+.hg-legend {
+  justify-content: center;
+  text-align: center;
+}
+
+.hb-cap {
+  justify-items: center;
+  text-align: center;
+}
+
+.hb-readout {
+  inline-size: min(100%, 36rem);
+}
+
+.hb-legend {
+  justify-content: center;
+}

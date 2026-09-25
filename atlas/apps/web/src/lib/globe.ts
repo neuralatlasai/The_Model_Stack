@@ -53,6 +53,6 @@ export function arcPoint(a: readonly [number, number, number], b: readonly [numb
     const wb = Math.sin(t * omega) / s;
     p = [a[0] * wa + b[0] * wb, a[1] * wa + b[1] * wb, a[2] * wa + b[2] * wb];
   }
-  const lift = 1 + (0.02 + 0.1 * (omega / Math.PI)) * Math.sin(Math.PI * t);
+  const lift = 1.004 + (0.012 + 0.045 * (omega / Math.PI)) * Math.sin(Math.PI * t);
   return [p[0] * lift, p[1] * lift, p[2] * lift];
 }
