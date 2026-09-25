@@ -16,7 +16,11 @@ describe('parseManifest', () => {
     assert.equal(parts.length, 11);
     assert.equal(chapters.length, 66);
     assert.equal(sections.length, 396);
-    assert.equal(manifest.appendices.length, 8);
+    // A–H from book_plan.md, plus I: the evaluation ecosystem (added 2026-09-25).
+    assert.deepEqual(
+      manifest.appendices.map((appendix) => appendix.letter),
+      ['A', 'B', 'C', 'D', 'E', 'F', 'G', 'H', 'I'],
+    );
     assert.equal(manifest.front_matter.length, 3);
     const chapter5 = must(chapters.find((chapter) => chapter.id === 'ms.chapter.5'));
     assert.equal(chapter5.slug, 'ch05-minimal-transformer-and-execution-trace');

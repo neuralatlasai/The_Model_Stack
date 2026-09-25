@@ -1,0 +1,3973 @@
+{
+  "meta": {
+    "title": "The top 100 evaluation ecosystem, 2026",
+    "asOf": "2026-09-25",
+    "provenance": "Editorial priority list supplied to The Model Stack on 2026-09-25; ranks, types and rationales reproduced verbatim. Kind, domain and chapter anchors are the atlas’s own classification. Links were checked against primary sources on 2026-09-25.",
+    "verified": 100
+  },
+  "sources": [
+    {
+      "n": 1,
+      "url": "https://artificialanalysis.ai/evaluations/artificial-analysis-intelligence-index",
+      "title": "Artificial Analysis Intelligence Index v4.3.2 | Artificial Analysis"
+    },
+    {
+      "n": 2,
+      "url": "https://epoch.ai/benchmarks?tab=eci&view=graph",
+      "title": "AI Benchmarks & Capabilities | Epoch AI"
+    },
+    {
+      "n": 3,
+      "url": "https://arena.ai/blog/lmarena-is-now-arena",
+      "title": "LMArena is now Arena - Arena.ai"
+    },
+    {
+      "n": 4,
+      "url": "https://metr.org/notes/2026-01-22-time-horizon-limitations/",
+      "title": "Clarifying limitations of time horizon - METR"
+    },
+    {
+      "n": 5,
+      "url": "https://www.mercor.com/research/",
+      "title": "Mercor Research | Frontier AI Training Data & Human Evaluation"
+    },
+    {
+      "n": 6,
+      "url": "https://scale.com/blog/leaderboard",
+      "title": "Scale's SEAL Leaderboards | Scale AI"
+    },
+    {
+      "n": 7,
+      "url": "https://arcprize.org/leaderboard",
+      "title": "ARC Prize - Leaderboard"
+    },
+    {
+      "n": 8,
+      "url": "https://github.com/harbor-framework/terminal-bench/blob/main/README.md",
+      "title": "terminal-bench/README.md at main · harbor-framework/terminal-bench · GitHub"
+    },
+    {
+      "n": 9,
+      "url": "https://inspect.aisi.org.uk/",
+      "title": "Inspect"
+    },
+    {
+      "n": 10,
+      "url": "https://github.com/LiveBench/LiveBench",
+      "title": "GitHub - LiveBench/LiveBench: LiveBench: A Challenging, Contamination-Free LLM Benchmark · GitHub"
+    },
+    {
+      "n": 11,
+      "url": "https://gorilla.cs.berkeley.edu/leaderboard",
+      "title": "Berkeley Function Calling Leaderboard (BFCL) V4"
+    },
+    {
+      "n": 12,
+      "url": "https://github.com/sierra-research/tau-bench",
+      "title": "GitHub - sierra-research/tau-bench: Code and Data for Tau-Bench · GitHub"
+    },
+    {
+      "n": 13,
+      "url": "https://github.com/open-compass/opencompass",
+      "title": "GitHub - open-compass/opencompass: OpenCompass is an LLM evaluation platform, supporting a wide range of models from OpenAI, Anthropic, Gemini, Qwen, GLM, DeepSeek, etc, across 100+ datasets covering knowledge, reasoning, coding, science, language, long-context, and safety. · GitHub"
+    },
+    {
+      "n": 14,
+      "url": "https://github.com/openai/evals",
+      "title": "GitHub - openai/evals: Evals is a framework for evaluating LLMs and LLM systems, and an open-source registry of benchmarks. · GitHub"
+    },
+    {
+      "n": 15,
+      "url": "https://github.com/EleutherAI/lm-evaluation-harness",
+      "title": "GitHub - EleutherAI/lm-evaluation-harness: A framework for few-shot evaluation of language models. · GitHub"
+    },
+    {
+      "n": 16,
+      "url": "https://epoch.ai/frontiermath",
+      "title": "FrontierMath: LLM Benchmark for Advanced AI Math Reasoning | Epoch AI"
+    },
+    {
+      "n": 17,
+      "url": "https://github.com/GOTOIA/livecodebench",
+      "title": "GitHub - GOTOIA/livecodebench: Official repository for the paper \"LiveCodeBench: Holistic and Contamination Free Evaluation of Large Language Models for Code\" · GitHub"
+    },
+    {
+      "n": 18,
+      "url": "https://openai.com/index/gdpval/",
+      "title": "Measuring the performance of our models on real-world tasks | OpenAI"
+    },
+    {
+      "n": 19,
+      "url": "https://www.mercor.com/blog/introducing-apex-agents-1-1/",
+      "title": "Introducing APEX-Agents 1.1"
+    },
+    {
+      "n": 20,
+      "url": "https://www.mercor.com/apex/methodology/",
+      "title": "APEX Benchmarking Methodology: How Mercor runs benchmarks | Mercor"
+    },
+    {
+      "n": 21,
+      "url": "https://os-world.github.io/",
+      "title": "OSWorld: Benchmarking Multimodal Agents for Open-Ended Tasks in Real Computer Environments"
+    },
+    {
+      "n": 22,
+      "url": "https://github.com/METR/RE-Bench",
+      "title": "GitHub - METR/RE-Bench · GitHub"
+    },
+    {
+      "n": 23,
+      "url": "https://openai.com/index/browsecomp/",
+      "title": "BrowseComp: a benchmark for browsing agents | OpenAI"
+    },
+    {
+      "n": 24,
+      "url": "https://github.com/TheAgentCompany/TheAgentCompany",
+      "title": "GitHub - TheAgentCompany/TheAgentCompany: An agent benchmark with tasks in a simulated software company. · GitHub"
+    },
+    {
+      "n": 25,
+      "url": "https://huggingface.co/gaia-benchmark",
+      "title": "gaia-benchmark (GAIA)"
+    },
+    {
+      "n": 26,
+      "url": "https://openai.com/index/swe-lancer/",
+      "title": "Introducing the SWE-Lancer benchmark | OpenAI"
+    },
+    {
+      "n": 27,
+      "url": "https://github.com/Aider-AI/aider/blob/main/aider/website/docs/leaderboards/index.md",
+      "title": "aider/aider/website/docs/leaderboards/index.md at main · Aider-AI/aider · GitHub"
+    },
+    {
+      "n": 28,
+      "url": "https://github.com/scicode-bench/SciCode",
+      "title": "GitHub - scicode-bench/SciCode: A benchmark that challenges language models to code solutions for scientific problems · GitHub"
+    },
+    {
+      "n": 29,
+      "url": "https://github.com/ethz-spylab/agentdojo",
+      "title": "GitHub - ethz-spylab/agentdojo: A Dynamic Environment to Evaluate Attacks and Defenses for LLM Agents. · GitHub"
+    },
+    {
+      "n": 30,
+      "url": "https://github.com/sierra-research/hyper-tau-bench",
+      "title": "GitHub - sierra-research/hyper-tau-bench · GitHub"
+    },
+    {
+      "n": 31,
+      "url": "https://epoch.ai/data/eci-documentation/data",
+      "title": "ECI Documentation – Included benchmarks | Epoch AI"
+    },
+    {
+      "n": 32,
+      "url": "https://www.mercor.com/blog/introducing-the-ai-consumer-index/",
+      "title": "Introducing the AI Consumer Index | Mercor"
+    },
+    {
+      "n": 33,
+      "url": "https://epoch.ai/benchmarks/search",
+      "title": "Benchmarks | Epoch AI"
+    },
+    {
+      "n": 34,
+      "url": "https://github.com/open-compass",
+      "title": "OpenCompass · GitHub"
+    },
+    {
+      "n": 35,
+      "url": "https://github.com/evolvinglmms-lab/lmms-eval",
+      "title": "GitHub - EvolvingLMMs-Lab/lmms-eval: One-for-All Multimodal Evaluation Toolkit Across Text, Image, Video, and Audio Tasks · GitHub"
+    },
+    {
+      "n": 36,
+      "url": "https://github.com/OpenDataArena/VLMEvalKit",
+      "title": "GitHub - OpenDataArena/VLMEvalKit: Open-source evaluation toolkit of large vision-language models (LVLMs) · GitHub"
+    },
+    {
+      "n": 37,
+      "url": "https://github.com/MMMU-Benchmark/MMMU",
+      "title": "GitHub - MMMU-Benchmark/MMMU: This repo contains evaluation code for the paper \"MMMU: A Massive Multi-discipline Multimodal Understanding and Reasoning Benchmark for Expert AGI\" · GitHub"
+    },
+    {
+      "n": 38,
+      "url": "https://github.com/MME-Benchmarks/Video-MME",
+      "title": "GitHub - MME-Benchmarks/Video-MME: ✨✨[CVPR 2025] Video-MME: The First-Ever Comprehensive Evaluation Benchmark of Multi-modal LLMs in Video Analysis · GitHub"
+    },
+    {
+      "n": 39,
+      "url": "https://github.com/MMStar-Benchmark/MMStar/blob/main/README.md",
+      "title": "MMStar/README.md at main · MMStar-Benchmark/MMStar · GitHub"
+    },
+    {
+      "n": 40,
+      "url": "https://github.com/bys0318/LongBench-v2",
+      "title": "GitHub - bys0318/LongBench-v2: LongBench v2 and LongBench (ACL 2024) · GitHub"
+    },
+    {
+      "n": 41,
+      "url": "https://github.com/NVIDIA/RULER/blob/main/README.md",
+      "title": "RULER/README.md at main · NVIDIA/RULER · GitHub"
+    },
+    {
+      "n": 42,
+      "url": "https://crfm.stanford.edu/helm/safety/v1.3.0/",
+      "title": "Safety - Holistic Evaluation of Language Models (HELM)"
+    },
+    {
+      "n": 43,
+      "url": "https://github.com/JailbreakBench/jailbreakbench",
+      "title": "GitHub - JailbreakBench/jailbreakbench: JailbreakBench: An Open Robustness Benchmark for Jailbreaking Language Models [NeurIPS 2024 Datasets and Benchmarks Track] · GitHub"
+    },
+    {
+      "n": 44,
+      "url": "https://garak.ai/",
+      "title": "garak: LLM vulnerability scanner"
+    },
+    {
+      "n": 45,
+      "url": "https://microsoft.github.io/PyRIT/latest/blog/2026-07-09-scenarios/",
+      "title": "Scenarios: Pre-Packaged Red-Teaming Playbooks - PyRIT Documentation"
+    },
+    {
+      "n": 46,
+      "url": "https://github.com/UKGovernmentBEIS/inspect_evals/blob/main/docs/methodology.md",
+      "title": "inspect_evals/docs/methodology.md at main · UKGovernmentBEIS/inspect_evals · GitHub"
+    },
+    {
+      "n": 47,
+      "url": "https://deepeval.com/docs/introduction",
+      "title": "Introduction to DeepEval | DeepEval - The LLM Evaluation Framework"
+    },
+    {
+      "n": 48,
+      "url": "https://deepeval.com/",
+      "title": "DeepEval - The LLM Evaluation Framework"
+    },
+    {
+      "n": 49,
+      "url": "https://docs.ragas.io/en/stable/references/evaluate/",
+      "title": "evaluate() - Ragas"
+    },
+    {
+      "n": 50,
+      "url": "https://www.promptfoo.dev/docs/usage/command-line/",
+      "title": "Command Line | Promptfoo"
+    },
+    {
+      "n": 51,
+      "url": "https://docs.langchain.com/langsmith/evaluation-types",
+      "title": "Evaluation types - Docs by LangChain"
+    },
+    {
+      "n": 52,
+      "url": "https://mlflow.org/docs/latest/genai/eval-monitor",
+      "title": "LLM and Agent Evaluation | MLflow AI Platform"
+    },
+    {
+      "n": 53,
+      "url": "https://langfuse.com/docs/evaluation/overview",
+      "title": "Evaluation of LLM Applications - Langfuse"
+    },
+    {
+      "n": 54,
+      "url": "https://www.trulens.org/docs/",
+      "title": "Documentation Index - 🦑 TruLens"
+    },
+    {
+      "n": 55,
+      "url": "https://www.comet.com/docs/opik/evaluation/getting-started",
+      "title": "Getting Started with Evaluation | Opik Documentation"
+    },
+    {
+      "n": 56,
+      "url": "https://docs.patronus.ai/docs/quickstart_eval",
+      "title": "Quick Start - Log your first eval"
+    },
+    {
+      "n": 57,
+      "url": "https://docs.giskard.ai/",
+      "title": "Giskard: AI Agent Evaluation and Red Teaming"
+    },
+    {
+      "n": 58,
+      "url": "https://learn.microsoft.com/en-us/python/api/overview/azure/ai-evaluation-readme?view=azure-python",
+      "title": "Azure AI Evaluation client library for Python | Microsoft Learn"
+    },
+    {
+      "n": 59,
+      "url": "https://docs.cloud.google.com/vertex-ai/generative-ai/docs/samples/generativeaionvertexai-create-evaluation-task",
+      "title": "Evaluate text generation models using Vertex AI Gen AI evaluation service | Generative AI on Vertex AI | Google Cloud Documentation"
+    },
+    {
+      "n": 60,
+      "url": "https://docs.aws.amazon.com/bedrock/latest/userguide/evaluation.html",
+      "title": "Evaluate the performance of Amazon Bedrock resources - Amazon Bedrock"
+    },
+    {
+      "n": 61,
+      "url": "https://github.com/modelscope/evalscope",
+      "title": "GitHub - modelscope/evalscope: A streamlined and customizable framework for efficient large model (LLM, VLM, AIGC) evaluation and performance benchmarking. · GitHub"
+    }
+  ],
+  "entries": [
+    {
+      "rank": 1,
+      "core": true,
+      "name": "Artificial Analysis",
+      "short": "Artificial Analysis",
+      "type": "Independent dashboard + benchmark suite",
+      "why": "Probably the strongest single public model-comparison surface today because it independently runs models and combines intelligence with price, latency and throughput. Its current Intelligence Index uses ten evaluations spanning agents, coding, science and general capability.",
+      "kind": "leaderboard",
+      "domain": "general",
+      "chapters": [
+        6,
+        48,
+        61,
+        62
+      ],
+      "aliases": [
+        "Artificial Analysis"
+      ],
+      "refs": [
+        {
+          "label": "Artificial Analysis",
+          "n": 1
+        }
+      ],
+      "links": {
+        "official": "https://artificialanalysis.ai/",
+        "repo": null,
+        "paper": null
+      },
+      "org": "Artificial Analysis",
+      "released": "2024-01",
+      "access": "hosted",
+      "verification": {
+        "status": "confirmed",
+        "currentName": null,
+        "note": "Claims consistent: Intelligence Index v4.3.2 aggregates 10 evaluations (e.g. GDPval-AA, Terminal-Bench 4.0, HLE). Jan 2024 launch per founders' Latent Space interview, not an AA page.",
+        "listLinkOk": true
+      }
+    },
+    {
+      "rank": 2,
+      "core": true,
+      "name": "Epoch AI Capabilities & Benchmarking / ECI",
+      "short": "Epoch AI · ECI",
+      "type": "Independent research database + composite index",
+      "why": "Exceptionally strong research-grade longitudinal capability tracking. It currently tracks hundreds of models and dozens of benchmarks and exposes methodology/data rather than only a leaderboard.",
+      "kind": "leaderboard",
+      "domain": "general",
+      "chapters": [
+        6,
+        61,
+        62
+      ],
+      "aliases": [
+        "Epoch Capabilities Index",
+        "Epoch AI Benchmarking",
+        "Epoch AI benchmarking hub"
+      ],
+      "refs": [
+        {
+          "label": "Epoch AI",
+          "n": 2
+        }
+      ],
+      "links": {
+        "official": "https://epoch.ai/benchmarks",
+        "repo": null,
+        "paper": "https://arxiv.org/abs/2512.00193"
+      },
+      "org": "Epoch AI",
+      "released": "2024-11",
+      "access": "hosted",
+      "verification": {
+        "status": "confirmed",
+        "currentName": null,
+        "note": "Official names: AI Benchmarking Hub (27 Nov 2024) and Epoch Capabilities Index (Oct 2025). Hub now lists 401 models, 86 benchmarks, consistent with claims. ECI paper co-authored with Google DeepMind.",
+        "listLinkOk": true
+      }
+    },
+    {
+      "rank": 3,
+      "core": true,
+      "name": "Arena.ai / LM Arena",
+      "short": "Arena",
+      "type": "Human-preference evaluation platform",
+      "why": "Best large-scale real-user preference signal. It measures utility that static QA benchmarks miss through anonymous pairwise human judgments. LMArena rebranded to Arena in January 2026.",
+      "kind": "leaderboard",
+      "domain": "general",
+      "chapters": [
+        6,
+        61,
+        62
+      ],
+      "aliases": [
+        "Chatbot Arena",
+        "LMArena",
+        "LM Arena",
+        "LMSYS Arena",
+        "Arena.ai"
+      ],
+      "refs": [
+        {
+          "label": "Arena AI",
+          "n": 3
+        }
+      ],
+      "links": {
+        "official": "https://arena.ai/leaderboard",
+        "repo": null,
+        "paper": "https://arxiv.org/abs/2403.04132"
+      },
+      "org": "Arena (ex-LMSYS, UC Berkeley)",
+      "released": "2023-05",
+      "access": "hosted",
+      "verification": {
+        "status": "renamed",
+        "currentName": "Arena",
+        "note": "Rebrand to Arena (arena.ai) announced 28 Jan 2026, consistent. Former name was 'LMArena' (one word), originally Chatbot Arena launched by LMSYS on 3 May 2023.",
+        "listLinkOk": true
+      }
+    },
+    {
+      "rank": 4,
+      "core": true,
+      "name": "METR",
+      "short": "METR",
+      "type": "Frontier autonomy/risk evaluation research",
+      "why": "Critical for long-horizon autonomous capability, human-calibrated task horizons and AI-R&D evaluation. METR itself warns that time-horizon estimates have large uncertainty and are approaching saturation—exactly the methodological transparency a serious evaluation program should provide.",
+      "kind": "leaderboard",
+      "domain": "agents",
+      "chapters": [
+        51,
+        54,
+        63
+      ],
+      "aliases": [
+        "METR"
+      ],
+      "refs": [
+        {
+          "label": "METR",
+          "n": 4
+        }
+      ],
+      "links": {
+        "official": "https://metr.org/",
+        "repo": "https://github.com/METR",
+        "paper": "https://arxiv.org/abs/2503.14499"
+      },
+      "org": "METR",
+      "released": "2023-12",
+      "access": "hosted",
+      "verification": {
+        "status": "confirmed",
+        "currentName": null,
+        "note": "Claims consistent. Spun out of ARC Evals as METR Dec 2023; time-horizon paper Mar 2025; Time Horizon 1.1 page (metr.org/time-horizons) says >16h measurements unreliable.",
+        "listLinkOk": true
+      }
+    },
+    {
+      "rank": 5,
+      "core": true,
+      "name": "Mercor Research / APEX",
+      "short": "Mercor APEX",
+      "type": "Expert professional benchmark platform",
+      "why": "One of the strongest directions in 2026: economically valuable real work rather than academic QA. APEX now spans professional services, long-horizon agents, accounting and software engineering.",
+      "kind": "leaderboard",
+      "domain": "work",
+      "chapters": [
+        61,
+        63
+      ],
+      "aliases": [
+        "Mercor"
+      ],
+      "refs": [
+        {
+          "label": "Mercor",
+          "n": 5
+        }
+      ],
+      "links": {
+        "official": "https://www.mercor.com/apex/",
+        "repo": "https://github.com/Mercor-Intelligence/apex-evals",
+        "paper": "https://arxiv.org/abs/2509.25721"
+      },
+      "org": "Mercor",
+      "released": "2025-09",
+      "access": "private-test",
+      "verification": {
+        "status": "confirmed",
+        "currentName": null,
+        "note": "APEX = AI Productivity Index. Family confirmed: APEX-v1 (four professions), APEX-Agents, APEX-SWE, APEX-Accounting. APEX-v1 leaderboard uses held-out cases; only examples open-sourced.",
+        "listLinkOk": true
+      }
+    },
+    {
+      "rank": 6,
+      "core": true,
+      "name": "Scale SEAL Leaderboards",
+      "short": "Scale SEAL",
+      "type": "Private expert-evaluated leaderboards",
+      "why": "Important because test data are private, domain experts grade outputs, and contamination/gaming resistance is explicitly part of the design.",
+      "kind": "leaderboard",
+      "domain": "general",
+      "chapters": [
+        6,
+        8,
+        61,
+        62
+      ],
+      "aliases": [
+        "SEAL Leaderboard",
+        "SEAL leaderboards",
+        "Scale SEAL"
+      ],
+      "refs": [
+        {
+          "label": "Scale AI",
+          "n": 6
+        }
+      ],
+      "links": {
+        "official": "https://labs.scale.com/leaderboard",
+        "repo": null,
+        "paper": null
+      },
+      "org": "Scale AI",
+      "released": "2024-05",
+      "access": "private-test",
+      "verification": {
+        "status": "renamed",
+        "currentName": "Scale Labs Leaderboards",
+        "note": "List link is the 29 May 2024 SEAL launch post. scale.com/leaderboard now 308-redirects to labs.scale.com, branded Scale Labs with no 'SEAL'; now mixes private and open datasets.",
+        "listLinkOk": true
+      }
+    },
+    {
+      "rank": 7,
+      "core": true,
+      "name": "SWE-bench",
+      "short": "SWE-bench",
+      "type": "Software-engineering benchmark ecosystem",
+      "why": "Still one of the canonical real-repository agent/coding measures. Actual GitHub issue resolution is significantly more informative than function-generation benchmarks.",
+      "kind": "benchmark",
+      "domain": "coding",
+      "chapters": [
+        61,
+        63
+      ],
+      "aliases": [
+        "SWE-bench",
+        "SWE-Bench"
+      ],
+      "refs": [],
+      "links": {
+        "official": "https://www.swebench.com/",
+        "repo": "https://github.com/SWE-bench/SWE-bench",
+        "paper": "https://arxiv.org/abs/2310.06770"
+      },
+      "org": "Princeton + Stanford (SWE-bench team)",
+      "released": "2023-10",
+      "access": "open-benchmark",
+      "verification": {
+        "status": "confirmed",
+        "currentName": null,
+        "note": "Claims consistent. Family includes Full, Lite, Verified (Aug 2024), Multimodal (v2 fully open-sourced Sep 2026), Multilingual and bash-only leaderboards.",
+        "listLinkOk": null
+      }
+    },
+    {
+      "rank": 8,
+      "core": true,
+      "name": "ARC Prize / ARC-AGI",
+      "short": "ARC-AGI",
+      "type": "Abstract reasoning leaderboard",
+      "why": "High-value signal for abstraction/generalization rather than memorized knowledge. Maintains explicit verification policies and cost/task reporting.",
+      "kind": "benchmark",
+      "domain": "reasoning",
+      "chapters": [
+        38,
+        61
+      ],
+      "aliases": [
+        "ARC-AGI",
+        "ARC Prize"
+      ],
+      "refs": [
+        {
+          "label": "ARC Prize",
+          "n": 7
+        }
+      ],
+      "links": {
+        "official": "https://arcprize.org/leaderboard",
+        "repo": "https://github.com/fchollet/ARC-AGI",
+        "paper": "https://arxiv.org/abs/1911.01547"
+      },
+      "org": "ARC Prize Foundation",
+      "released": "2019-11",
+      "access": "private-test",
+      "verification": {
+        "status": "confirmed",
+        "currentName": null,
+        "note": "Claims consistent: leaderboard covers ARC-AGI-1/2/3 with cost per task; verified testing policy uses Semi-Private set, $10k/run cap. ARC-AGI-2/3 repos under github.com/arcprize.",
+        "listLinkOk": true
+      }
+    },
+    {
+      "rank": 9,
+      "core": true,
+      "name": "Terminal-Bench + Harbor",
+      "short": "Terminal-Bench",
+      "type": "Agent benchmark + execution harness",
+      "why": "One of the most consequential 2026 agent evaluations: real terminal environments, difficult evolving tasks, executable verification and standardized Harbor execution.",
+      "kind": "benchmark",
+      "domain": "agents",
+      "chapters": [
+        51,
+        54,
+        63
+      ],
+      "aliases": [
+        "Terminal-Bench",
+        "Terminal Bench"
+      ],
+      "refs": [
+        {
+          "label": "GitHub",
+          "n": 8
+        }
+      ],
+      "links": {
+        "official": "https://www.tbench.ai/",
+        "repo": "https://github.com/harbor-framework/terminal-bench",
+        "paper": "https://arxiv.org/abs/2601.11868"
+      },
+      "org": "Stanford + Laude Institute (Harbor)",
+      "released": "2025-05",
+      "access": "open-benchmark",
+      "verification": {
+        "status": "confirmed",
+        "currentName": null,
+        "note": "Claims consistent. Launched 19 May 2025; TB 2.0 + Harbor Nov 2025; TB 3.0 Jul 2026; TB 4.0 (28 Aug 2026) current. Harbor repo: github.com/harbor-framework/harbor.",
+        "listLinkOk": true
+      }
+    },
+    {
+      "rank": 10,
+      "core": true,
+      "name": "Inspect AI — UK AISI",
+      "short": "Inspect AI",
+      "type": "Evaluation framework",
+      "why": "The strongest open-source general frontier-evaluation framework in my ordering: datasets, agents, tools, scorers, sandboxes, MCP, external agents and 200+ ready-to-run evaluations.",
+      "kind": "framework",
+      "domain": "general",
+      "chapters": [
+        6,
+        61,
+        62
+      ],
+      "aliases": [
+        "Inspect AI",
+        "inspect_ai",
+        "UK AISI Inspect"
+      ],
+      "refs": [
+        {
+          "label": "Inspect",
+          "n": 9
+        }
+      ],
+      "links": {
+        "official": "https://inspect.aisi.org.uk/",
+        "repo": "https://github.com/UKGovernmentBEIS/inspect_ai",
+        "paper": null
+      },
+      "org": "UK AISI + Meridian Labs",
+      "released": "2024-05",
+      "access": "open-source",
+      "verification": {
+        "status": "confirmed",
+        "currentName": null,
+        "note": "Claims consistent: site cites 'over 200 pre-built evaluations', MCP tools, sandboxes, external agents (Claude Code, Codex CLI). Released May 2024 by then-AI Safety Institute.",
+        "listLinkOk": true
+      }
+    },
+    {
+      "rank": 11,
+      "core": true,
+      "name": "LiveBench",
+      "short": "LiveBench",
+      "type": "Continuously refreshed benchmark",
+      "why": "Designed explicitly against contamination, with new questions introduced over time rather than freezing a static benchmark forever.",
+      "kind": "benchmark",
+      "domain": "general",
+      "chapters": [
+        6,
+        8,
+        61,
+        62
+      ],
+      "aliases": [
+        "LiveBench"
+      ],
+      "refs": [
+        {
+          "label": "GitHub",
+          "n": 10
+        }
+      ],
+      "links": {
+        "official": "https://livebench.ai/",
+        "repo": "https://github.com/LiveBench/LiveBench",
+        "paper": "https://arxiv.org/abs/2406.19314"
+      },
+      "org": "Abacus.AI + NYU et al.",
+      "released": "2024-06",
+      "access": "open-benchmark",
+      "verification": {
+        "status": "confirmed",
+        "currentName": null,
+        "note": "Latest changelog release is 2026-01-08; nothing newer found despite 'monthly' design. README says newest releases are not fully public on Hugging Face.",
+        "listLinkOk": true
+      }
+    },
+    {
+      "rank": 12,
+      "core": true,
+      "name": "Berkeley Function Calling Leaderboard — BFCL",
+      "short": "BFCL",
+      "type": "Tool-use / agent leaderboard",
+      "why": "Tool calling has become core agent infrastructure. BFCL V4 moves beyond trivial function selection toward multi-turn and agentic evaluation.",
+      "kind": "benchmark",
+      "domain": "agents",
+      "chapters": [
+        51,
+        54,
+        63
+      ],
+      "aliases": [
+        "BFCL",
+        "Berkeley Function Calling Leaderboard",
+        "Berkeley Function-Calling Leaderboard"
+      ],
+      "refs": [
+        {
+          "label": "Gorilla",
+          "n": 11
+        }
+      ],
+      "links": {
+        "official": "https://gorilla.cs.berkeley.edu/leaderboard.html",
+        "repo": "https://github.com/ShishirPatil/gorilla/tree/main/berkeley-function-call-leaderboard",
+        "paper": "https://proceedings.mlr.press/v267/patil25a.html"
+      },
+      "org": "UC Berkeley (Gorilla)",
+      "released": "2024-02",
+      "access": "open-benchmark",
+      "verification": {
+        "status": "confirmed",
+        "currentName": null,
+        "note": "Claims consistent: V1 Feb 2024, V2 Aug 2024, V3 multi-turn Sep 2024, V4 agentic (web search, memory) Jul 2025; page last updated 2026-04-12. Paper at ICML 2025.",
+        "listLinkOk": true
+      }
+    },
+    {
+      "rank": 13,
+      "core": true,
+      "name": "τ³-bench",
+      "short": "τ³-bench",
+      "type": "Conversational tool-agent benchmark",
+      "why": "Evaluates policy following, user interaction and tool execution under dynamic environments; materially closer to production agents than static QA. The original τ-bench repository now explicitly points users toward τ³.",
+      "kind": "benchmark",
+      "domain": "agents",
+      "chapters": [
+        51,
+        54,
+        63
+      ],
+      "aliases": [
+        "τ³-bench",
+        "τ²-bench",
+        "τ-bench",
+        "~tau-bench",
+        "~tau2-bench",
+        "~tau3-bench"
+      ],
+      "refs": [
+        {
+          "label": "GitHub",
+          "n": 12
+        }
+      ],
+      "links": {
+        "official": "https://taubench.com/",
+        "repo": "https://github.com/sierra-research/tau2-bench",
+        "paper": "https://arxiv.org/abs/2406.12045"
+      },
+      "org": "Sierra",
+      "released": "2024-06",
+      "access": "open-benchmark",
+      "verification": {
+        "status": "confirmed",
+        "currentName": null,
+        "note": "Claims consistent: original tau-bench repo points to τ³. τ³-bench 1.0.0 released 18 Mar 2026 inside tau2-bench repo (voice, knowledge, task fixes); v1.0.1 Jul 2026.",
+        "listLinkOk": true
+      }
+    },
+    {
+      "rank": 14,
+      "core": true,
+      "name": "Stanford HELM",
+      "short": "HELM",
+      "type": "Holistic benchmark framework",
+      "why": "Strong methodology, standardized scenarios and broad evaluation philosophy. Especially useful where transparency across metrics matters more than a single number.",
+      "kind": "framework",
+      "domain": "general",
+      "chapters": [
+        6,
+        61,
+        62
+      ],
+      "aliases": [
+        "HELM",
+        "Holistic Evaluation of Language Models"
+      ],
+      "refs": [],
+      "links": {
+        "official": "https://crfm.stanford.edu/helm/",
+        "repo": "https://github.com/stanford-crfm/helm",
+        "paper": "https://arxiv.org/abs/2211.09110"
+      },
+      "org": "Stanford CRFM",
+      "released": "2022-11",
+      "access": "open-source",
+      "verification": {
+        "status": "confirmed",
+        "currentName": null,
+        "note": "Claims consistent. Paper v1 16 Nov 2022 (TMLR 2023); repo still maintained (last commit Jun 2026).",
+        "listLinkOk": null
+      }
+    },
+    {
+      "rank": 15,
+      "core": true,
+      "name": "OpenCompass",
+      "short": "OpenCompass",
+      "type": "Evaluation platform/harness",
+      "why": "Major open evaluation stack supporting 100+ datasets, proprietary/open models and increasingly multimodal evaluation. Active 2026 development matters here.",
+      "kind": "framework",
+      "domain": "general",
+      "chapters": [
+        6,
+        61,
+        62
+      ],
+      "aliases": [
+        "OpenCompass"
+      ],
+      "refs": [
+        {
+          "label": "GitHub",
+          "n": 13
+        }
+      ],
+      "links": {
+        "official": "https://opencompass.org.cn/",
+        "repo": "https://github.com/open-compass/opencompass",
+        "paper": "https://arxiv.org/abs/2605.19276"
+      },
+      "org": "Shanghai AI Laboratory",
+      "released": "2023-07",
+      "access": "open-source",
+      "verification": {
+        "status": "confirmed",
+        "currentName": null,
+        "note": "Claims consistent: repo cites 100+ datasets; active in 2026 (v0.5.4 Aug 2026, commits Sep 2026, VLMEvalKit multimodal integration). Platform paper on arXiv May 2026.",
+        "listLinkOk": true
+      }
+    },
+    {
+      "rank": 16,
+      "core": true,
+      "name": "OpenAI Evals API / Graders",
+      "short": "OpenAI Evals API",
+      "type": "Evaluation service + SDK",
+      "why": "Important for production evaluation pipelines, model graders and application-specific eval sets rather than public leaderboard comparison.",
+      "kind": "platform",
+      "domain": "apps",
+      "chapters": [
+        47,
+        62,
+        63
+      ],
+      "aliases": [
+        "OpenAI Evals API",
+        "OpenAI graders"
+      ],
+      "refs": [],
+      "links": {
+        "official": "https://developers.openai.com/api/docs/guides/evals",
+        "repo": null,
+        "paper": null
+      },
+      "org": "OpenAI",
+      "released": "2024-10",
+      "access": "commercial",
+      "verification": {
+        "status": "confirmed",
+        "currentName": null,
+        "note": "Being deprecated: announced 3 Jun 2026; Evals read-only 31 Oct 2026, shutdown 30 Nov 2026; graders also deprecated. OpenAI points to Datasets instead. Evals launched Oct 2024.",
+        "listLinkOk": null
+      }
+    },
+    {
+      "rank": 17,
+      "core": true,
+      "name": "OpenAI Evals OSS",
+      "short": "OpenAI Evals",
+      "type": "Open-source evaluation registry",
+      "why": "Mature reference architecture for defining model/system evals and private/custom eval datasets.",
+      "kind": "framework",
+      "domain": "general",
+      "chapters": [
+        6,
+        61,
+        62
+      ],
+      "aliases": [
+        "OpenAI Evals",
+        "openai/evals"
+      ],
+      "refs": [
+        {
+          "label": "GitHub",
+          "n": 14
+        }
+      ],
+      "links": {
+        "official": "https://github.com/openai/evals",
+        "repo": "https://github.com/openai/evals",
+        "paper": null
+      },
+      "org": "OpenAI",
+      "released": "2023-03",
+      "access": "open-source",
+      "verification": {
+        "status": "confirmed",
+        "currentName": null,
+        "note": "Open-sourced with GPT-4 (Mar 2023, per GPT-4 technical report). Low activity: last commit Apr 2026; README steers users to Dashboard Evals, which shuts down 30 Nov 2026.",
+        "listLinkOk": true
+      }
+    },
+    {
+      "rank": 18,
+      "core": true,
+      "name": "EleutherAI lm-evaluation-harness",
+      "short": "lm-eval-harness",
+      "type": "General evaluation harness",
+      "why": "Still foundational infrastructure. It implements 60+ standard benchmarks, numerous backends and underpins major open-model evaluation workflows. It remains actively maintained in 2026.",
+      "kind": "framework",
+      "domain": "general",
+      "chapters": [
+        6,
+        61,
+        62
+      ],
+      "aliases": [
+        "lm-evaluation-harness",
+        "LM Evaluation Harness",
+        "Language Model Evaluation Harness",
+        "lm-eval"
+      ],
+      "refs": [
+        {
+          "label": "GitHub",
+          "n": 15
+        }
+      ],
+      "links": {
+        "official": "https://github.com/EleutherAI/lm-evaluation-harness",
+        "repo": "https://github.com/EleutherAI/lm-evaluation-harness",
+        "paper": "https://arxiv.org/abs/2405.14782"
+      },
+      "org": "EleutherAI",
+      "released": "2021-09",
+      "access": "open-source",
+      "verification": {
+        "status": "confirmed",
+        "currentName": null,
+        "note": "Claims consistent: README says 'over 60 standard academic benchmarks'; active (v0.4.13 Aug 2026, commits Sep 2026). First commit Aug 2020; first PyPI release Sep 2021.",
+        "listLinkOk": true
+      }
+    },
+    {
+      "rank": 19,
+      "core": true,
+      "name": "FrontierMath",
+      "short": "FrontierMath",
+      "type": "Frontier mathematics benchmark family",
+      "why": "Strong because the problems are deliberately unpublished/extremely difficult; newer variants include research-level and open mathematical problems.",
+      "kind": "benchmark",
+      "domain": "reasoning",
+      "chapters": [
+        8,
+        38,
+        61
+      ],
+      "aliases": [
+        "FrontierMath"
+      ],
+      "refs": [
+        {
+          "label": "Epoch AI",
+          "n": 16
+        }
+      ],
+      "links": {
+        "official": "https://epoch.ai/frontiermath",
+        "repo": null,
+        "paper": "https://arxiv.org/abs/2411.04872"
+      },
+      "org": "Epoch AI",
+      "released": "2024-11",
+      "access": "private-test",
+      "verification": {
+        "status": "confirmed",
+        "currentName": null,
+        "note": "Claims consistent: Tiers 1–4 (Tier 4 research-level), Open Problems, and FrontierMath Erdős (launched 3 Sep 2026; Lean proofs of open Erdős problems).",
+        "listLinkOk": true
+      }
+    },
+    {
+      "rank": 20,
+      "core": true,
+      "name": "LiveCodeBench",
+      "short": "LiveCodeBench",
+      "type": "Continually refreshed coding benchmark",
+      "why": "Better contamination profile than static coding datasets because it continuously draws from recently released competitive-programming problems.",
+      "kind": "benchmark",
+      "domain": "coding",
+      "chapters": [
+        8,
+        61,
+        63
+      ],
+      "aliases": [
+        "LiveCodeBench"
+      ],
+      "refs": [
+        {
+          "label": "GitHub",
+          "n": 17
+        }
+      ],
+      "links": {
+        "official": "https://livecodebench.github.io/",
+        "repo": "https://github.com/LiveCodeBench/LiveCodeBench",
+        "paper": "https://arxiv.org/abs/2403.07974"
+      },
+      "org": "UC Berkeley + MIT + Cornell",
+      "released": "2024-03",
+      "access": "open-benchmark",
+      "verification": {
+        "status": "confirmed",
+        "currentName": null,
+        "note": "List link github.com/GOTOIA/livecodebench is a 0-star fork; official is LiveCodeBench/LiveCodeBench. Refresh looks stalled: latest release_v6 (problems to Apr 2025), last commit Jul 2025.",
+        "listLinkOk": false
+      }
+    },
+    {
+      "rank": 21,
+      "core": false,
+      "name": "Humanity's Last Exam",
+      "short": "Humanity’s Last Exam",
+      "type": "Frontier general reasoning",
+      "why": "Extremely difficult multi-domain expert knowledge/reasoning; useful while frontier separation remains substantial.",
+      "kind": "benchmark",
+      "domain": "reasoning",
+      "chapters": [
+        38,
+        61
+      ],
+      "aliases": [
+        "Humanity's Last Exam",
+        "Humanity’s Last Exam",
+        "HLE"
+      ],
+      "refs": [],
+      "links": {
+        "official": "https://lastexam.ai/",
+        "repo": "https://github.com/centerforaisafety/hle",
+        "paper": "https://arxiv.org/abs/2501.14249"
+      },
+      "org": "CAIS + Scale AI",
+      "released": "2025-01",
+      "access": "open-benchmark",
+      "verification": {
+        "status": "confirmed",
+        "currentName": null,
+        "note": "Claims consistent. 2,500 questions; published in Nature 2026; variants HLE-Rolling (Oct 2025) and HLE-Diamond (22 Sep 2026).",
+        "listLinkOk": null
+      }
+    },
+    {
+      "rank": 22,
+      "core": false,
+      "name": "GDPval",
+      "short": "GDPval",
+      "type": "Economically valuable work",
+      "why": "Real occupational deliverables rather than exam-style QA; covers economically relevant tasks across occupations.",
+      "kind": "benchmark",
+      "domain": "work",
+      "chapters": [
+        61,
+        63
+      ],
+      "aliases": [
+        "GDPval"
+      ],
+      "refs": [
+        {
+          "label": "OpenAI",
+          "n": 18
+        }
+      ],
+      "links": {
+        "official": "https://openai.com/index/gdpval/",
+        "repo": null,
+        "paper": "https://arxiv.org/abs/2510.04374"
+      },
+      "org": "OpenAI",
+      "released": "2025-09",
+      "access": "open-benchmark",
+      "verification": {
+        "status": "confirmed",
+        "currentName": null,
+        "note": "Claims consistent: 44 occupations, 9 sectors, 1,320 tasks; 220-task gold subset open, grader at evals.openai.com. openai.com returns 403 to automated fetches; page confirmed via search.",
+        "listLinkOk": true
+      }
+    },
+    {
+      "rank": 23,
+      "core": false,
+      "name": "APEX-Agents",
+      "short": "APEX-Agents",
+      "type": "Long-horizon professional agents",
+      "why": "Multi-hour professional tasks across files, communications and productivity applications. Updated to 1.1 in September 2026.",
+      "kind": "benchmark",
+      "domain": "work",
+      "chapters": [
+        61,
+        63
+      ],
+      "aliases": [
+        "APEX-Agents"
+      ],
+      "refs": [
+        {
+          "label": "Mercor",
+          "n": 19
+        }
+      ],
+      "links": {
+        "official": "https://www.mercor.com/apex/apex-agents-leaderboard/",
+        "repo": "https://github.com/Mercor-Intelligence/archipelago",
+        "paper": "https://arxiv.org/abs/2601.14242"
+      },
+      "org": "Mercor",
+      "released": "2026-01",
+      "access": "open-benchmark",
+      "verification": {
+        "status": "confirmed",
+        "currentName": null,
+        "note": "Claims consistent: v1.1 announced 8 Sep 2026 (240 tasks, 80 each in banking, consulting, law; anti-hedging judge). v1 paper (Jan 2026) had 480 tasks.",
+        "listLinkOk": true
+      }
+    },
+    {
+      "rank": 24,
+      "core": false,
+      "name": "APEX-SWE",
+      "short": "APEX-SWE",
+      "type": "Professional software engineering",
+      "why": "Focuses on economically valuable integration and observability engineering rather than toy coding.",
+      "kind": "benchmark",
+      "domain": "coding",
+      "chapters": [
+        61,
+        63
+      ],
+      "aliases": [
+        "APEX-SWE"
+      ],
+      "refs": [
+        {
+          "label": "Mercor",
+          "n": 20
+        }
+      ],
+      "links": {
+        "official": "https://www.mercor.com/apex/apex-swe-leaderboard/",
+        "repo": "https://github.com/Mercor-Intelligence/apex-swe",
+        "paper": "https://arxiv.org/abs/2601.08806"
+      },
+      "org": "Mercor + Cognition",
+      "released": "2026-01",
+      "access": "private-test",
+      "verification": {
+        "status": "confirmed",
+        "currentName": null,
+        "note": "Claims consistent: integration + observability tasks, 200 hidden, 50 open dev. List link is the generic APEX methodology page; the dedicated leaderboard is the better link.",
+        "listLinkOk": true
+      }
+    },
+    {
+      "rank": 25,
+      "core": false,
+      "name": "OSWorld 2.0",
+      "short": "OSWorld 2.0",
+      "type": "Computer-use agents",
+      "why": "Long-horizon GUI/computer interaction in real operating-system environments. OSWorld 2.0/2.1 is the current branch in 2026.",
+      "kind": "benchmark",
+      "domain": "agents",
+      "chapters": [
+        51,
+        54,
+        63
+      ],
+      "aliases": [
+        "OSWorld"
+      ],
+      "refs": [
+        {
+          "label": "OSWorld",
+          "n": 21
+        }
+      ],
+      "links": {
+        "official": "https://osworld-v2.xlang.ai/",
+        "repo": "https://github.com/xlang-ai/OSWorld-V2",
+        "paper": "https://arxiv.org/abs/2606.29537"
+      },
+      "org": "XLANG Lab (HKU)",
+      "released": "2024-04",
+      "access": "open-benchmark",
+      "verification": {
+        "status": "confirmed",
+        "currentName": null,
+        "note": "List link redirects to the OSWorld 1.0 page (osworld-v1.xlang.ai). OSWorld 2.0 (108 tasks) released 26 Jun 2026; v2.1 16 Sep 2026. 'released' is original OSWorld.",
+        "listLinkOk": false
+      }
+    },
+    {
+      "rank": 26,
+      "core": false,
+      "name": "RE-Bench",
+      "short": "RE-Bench",
+      "type": "AI-R&D agents",
+      "why": "Measures AI agents against human experts on research-engineering tasks; valuable for autonomous AI-R&D capability.",
+      "kind": "benchmark",
+      "domain": "agents",
+      "chapters": [
+        51,
+        54,
+        63
+      ],
+      "aliases": [
+        "RE-Bench"
+      ],
+      "refs": [
+        {
+          "label": "GitHub",
+          "n": 22
+        }
+      ],
+      "links": {
+        "official": "https://github.com/METR/RE-Bench",
+        "repo": "https://github.com/METR/RE-Bench",
+        "paper": "https://arxiv.org/abs/2411.15114"
+      },
+      "org": "METR",
+      "released": "2024-11",
+      "access": "open-source",
+      "verification": {
+        "status": "confirmed",
+        "currentName": null,
+        "note": "Claims consistent with source. The v1 paper covers 7 ML research-engineering environments and 71 eight-hour attempts by human experts.",
+        "listLinkOk": true
+      }
+    },
+    {
+      "rank": 27,
+      "core": false,
+      "name": "BrowseComp",
+      "short": "BrowseComp",
+      "type": "Web-research agents",
+      "why": "Measures persistent, strategic search for difficult-to-find facts; designed around easy verification but difficult discovery.",
+      "kind": "benchmark",
+      "domain": "agents",
+      "chapters": [
+        51,
+        54,
+        63
+      ],
+      "aliases": [
+        "BrowseComp"
+      ],
+      "refs": [
+        {
+          "label": "OpenAI",
+          "n": 23
+        }
+      ],
+      "links": {
+        "official": "https://openai.com/index/browsecomp/",
+        "repo": "https://github.com/openai/simple-evals",
+        "paper": "https://arxiv.org/abs/2504.12516"
+      },
+      "org": "OpenAI",
+      "released": "2025-04",
+      "access": "open-benchmark",
+      "verification": {
+        "status": "confirmed",
+        "currentName": null,
+        "note": "Claims consistent with source (1,266 questions). The OpenAI page returns 403 to bots but search results confirm it. simple-evals, which holds the reference implementation, stopped updating in July 2025.",
+        "listLinkOk": true
+      }
+    },
+    {
+      "rank": 28,
+      "core": false,
+      "name": "DeepResearchBench II",
+      "short": "DeepResearchBench II",
+      "type": "Deep-research agents",
+      "why": "Long-form web research, information recall, analysis and presentation. Current professional research-agent signal.",
+      "kind": "benchmark",
+      "domain": "agents",
+      "chapters": [
+        51,
+        54,
+        63
+      ],
+      "aliases": [
+        "DeepResearchBench",
+        "Deep Research Bench",
+        "DeepResearch Bench"
+      ],
+      "refs": [
+        {
+          "label": "Mercor",
+          "n": 20
+        }
+      ],
+      "links": {
+        "official": "https://agentresearchlab.com/benchmarks/deepresearch-bench-ii/",
+        "repo": "https://github.com/imlrz/DeepResearch-Bench-II",
+        "paper": "https://arxiv.org/abs/2601.08536"
+      },
+      "org": "USTC; Metastone Technology",
+      "released": "2026-01",
+      "access": "open-benchmark",
+      "verification": {
+        "status": "confirmed",
+        "currentName": null,
+        "note": "Official spelling is 'DeepResearch Bench II' (USTC, 132 tasks; Mercor says 130). The list's link is Mercor's third-party page. Not Epoch's 'DeepResearchBench', a separate benchmark by FutureSearch.",
+        "listLinkOk": true
+      }
+    },
+    {
+      "rank": 29,
+      "core": false,
+      "name": "TheAgentCompany",
+      "short": "TheAgentCompany",
+      "type": "Digital-work agents",
+      "why": "Simulated software-company tasks involving browsing, coding, communication and work applications.",
+      "kind": "benchmark",
+      "domain": "work",
+      "chapters": [
+        61,
+        63
+      ],
+      "aliases": [
+        "TheAgentCompany"
+      ],
+      "refs": [
+        {
+          "label": "GitHub",
+          "n": 24
+        }
+      ],
+      "links": {
+        "official": "https://the-agent-company.com/",
+        "repo": "https://github.com/TheAgentCompany/TheAgentCompany",
+        "paper": "https://arxiv.org/abs/2412.14161"
+      },
+      "org": "CMU",
+      "released": "2024-12",
+      "access": "open-source",
+      "verification": {
+        "status": "confirmed",
+        "currentName": null,
+        "note": "Claims consistent with source (175 tasks in a simulated software company). Epoch lists it as 'The Agent Company'.",
+        "listLinkOk": true
+      }
+    },
+    {
+      "rank": 30,
+      "core": false,
+      "name": "GAIA",
+      "short": "GAIA",
+      "type": "General assistants",
+      "why": "Multi-step general-agent benchmark with tools/files and private test answers; still actively maintained.",
+      "kind": "benchmark",
+      "domain": "agents",
+      "chapters": [
+        51,
+        54,
+        63
+      ],
+      "aliases": [
+        "GAIA"
+      ],
+      "refs": [
+        {
+          "label": "Hugging Face",
+          "n": 25
+        }
+      ],
+      "links": {
+        "official": "https://huggingface.co/spaces/gaia-benchmark/leaderboard",
+        "repo": null,
+        "paper": "https://arxiv.org/abs/2311.12983"
+      },
+      "org": "Meta; Hugging Face",
+      "released": "2023-11",
+      "access": "private-test",
+      "verification": {
+        "status": "confirmed",
+        "currentName": null,
+        "note": "Claims consistent with source. 466 questions, with answers withheld for 300 test questions. The public-results dataset on Hugging Face was updated recently, so the benchmark is still maintained.",
+        "listLinkOk": true
+      }
+    },
+    {
+      "rank": 31,
+      "core": false,
+      "name": "SWE-Lancer",
+      "short": "SWE-Lancer",
+      "type": "Economic coding",
+      "why": "Real freelance engineering tasks linked to actual monetary value and end-to-end verification.",
+      "kind": "benchmark",
+      "domain": "coding",
+      "chapters": [
+        61,
+        63
+      ],
+      "aliases": [
+        "SWE-Lancer"
+      ],
+      "refs": [
+        {
+          "label": "OpenAI",
+          "n": 26
+        }
+      ],
+      "links": {
+        "official": "https://openai.com/index/swe-lancer/",
+        "repo": "https://github.com/openai/frontier-evals",
+        "paper": "https://arxiv.org/abs/2502.12115"
+      },
+      "org": "OpenAI",
+      "released": "2025-02",
+      "access": "open-benchmark",
+      "verification": {
+        "status": "confirmed",
+        "currentName": null,
+        "note": "Claims consistent with source. The original repo, openai/SWELancer-Benchmark, was archived in July 2025 and merged into openai/preparedness, which now redirects to frontier-evals. Only the Diamond split is public.",
+        "listLinkOk": true
+      }
+    },
+    {
+      "rank": 32,
+      "core": false,
+      "name": "Aider Polyglot",
+      "short": "Aider Polyglot",
+      "type": "Code editing",
+      "why": "Particularly useful for realistic edit-based coding rather than isolated function generation.",
+      "kind": "benchmark",
+      "domain": "coding",
+      "chapters": [
+        61,
+        63
+      ],
+      "aliases": [
+        "~aider polyglot"
+      ],
+      "refs": [
+        {
+          "label": "GitHub",
+          "n": 27
+        }
+      ],
+      "links": {
+        "official": "https://aider.chat/docs/leaderboards/",
+        "repo": "https://github.com/Aider-AI/polyglot-benchmark",
+        "paper": null
+      },
+      "org": "Aider",
+      "released": "2024-12",
+      "access": "open-benchmark",
+      "verification": {
+        "status": "confirmed",
+        "currentName": null,
+        "note": "The list links to GitHub source markdown; the canonical page is aider.chat. 225 Exercism exercises. Last updated 2025-11-20, with newest scores from Aug 2025, so it is stale for 2026.",
+        "listLinkOk": true
+      }
+    },
+    {
+      "rank": 33,
+      "core": false,
+      "name": "SciCode",
+      "short": "SciCode",
+      "type": "Scientific coding",
+      "why": "Research-derived coding problems across physics, biology, chemistry, mathematics and materials science.",
+      "kind": "benchmark",
+      "domain": "coding",
+      "chapters": [
+        61,
+        63
+      ],
+      "aliases": [
+        "SciCode"
+      ],
+      "refs": [
+        {
+          "label": "GitHub",
+          "n": 28
+        }
+      ],
+      "links": {
+        "official": "https://scicode-bench.github.io/",
+        "repo": "https://github.com/scicode-bench/SciCode",
+        "paper": "https://arxiv.org/abs/2407.13168"
+      },
+      "org": "UIUC et al.",
+      "released": "2024-07",
+      "access": "open-benchmark",
+      "verification": {
+        "status": "confirmed",
+        "currentName": null,
+        "note": "Claims consistent with source: 80 main problems and 338 subproblems across physics, math, materials science, biology and chemistry.",
+        "listLinkOk": true
+      }
+    },
+    {
+      "rank": 34,
+      "core": false,
+      "name": "AgentDojo",
+      "short": "AgentDojo",
+      "type": "Agent security",
+      "why": "Stateful agent benchmark combining legitimate task utility with prompt-injection attack success.",
+      "kind": "benchmark",
+      "domain": "safety",
+      "chapters": [
+        51,
+        63,
+        65
+      ],
+      "aliases": [
+        "AgentDojo"
+      ],
+      "refs": [
+        {
+          "label": "GitHub",
+          "n": 29
+        }
+      ],
+      "links": {
+        "official": "https://agentdojo.spylab.ai/",
+        "repo": "https://github.com/ethz-spylab/agentdojo",
+        "paper": "https://arxiv.org/abs/2406.13352"
+      },
+      "org": "ETH Zurich SPY Lab; Invariant Labs",
+      "released": "2024-06",
+      "access": "open-source",
+      "verification": {
+        "status": "confirmed",
+        "currentName": null,
+        "note": "Claims consistent with source: 97 tasks and 629 security test cases, measuring utility together with prompt-injection attack success.",
+        "listLinkOk": true
+      }
+    },
+    {
+      "rank": 35,
+      "core": false,
+      "name": "WebArena",
+      "short": "WebArena",
+      "type": "Web agents",
+      "why": "Interactive web environments and execution-based success.",
+      "kind": "benchmark",
+      "domain": "agents",
+      "chapters": [
+        51,
+        54,
+        63
+      ],
+      "aliases": [
+        "WebArena"
+      ],
+      "refs": [],
+      "links": {
+        "official": "https://webarena.dev/",
+        "repo": "https://github.com/web-arena-x/webarena",
+        "paper": "https://arxiv.org/abs/2307.13854"
+      },
+      "org": "CMU",
+      "released": "2023-07",
+      "access": "open-source",
+      "verification": {
+        "status": "confirmed",
+        "currentName": null,
+        "note": "Claims consistent with source. webarena.dev is now the WebArena-x hub, which also hosts WebArena-Infinity, VisualWebArena and TheAgentCompany.",
+        "listLinkOk": null
+      }
+    },
+    {
+      "rank": 36,
+      "core": false,
+      "name": "BrowserGym",
+      "short": "BrowserGym",
+      "type": "Browser-agent infrastructure",
+      "why": "Useful common environment/harness for browser-agent evaluation.",
+      "kind": "framework",
+      "domain": "agents",
+      "chapters": [
+        51,
+        54,
+        63
+      ],
+      "aliases": [
+        "BrowserGym"
+      ],
+      "refs": [],
+      "links": {
+        "official": "https://github.com/ServiceNow/BrowserGym",
+        "repo": "https://github.com/ServiceNow/BrowserGym",
+        "paper": "https://arxiv.org/abs/2412.05467"
+      },
+      "org": "ServiceNow Research",
+      "released": "2024-03",
+      "access": "open-source",
+      "verification": {
+        "status": "confirmed",
+        "currentName": null,
+        "note": "Claims consistent with source. It was first introduced in the WorkArena paper (arXiv 2403.07718, Mar 2024); the ecosystem paper followed in Dec 2024. It supports WebArena, VisualWebArena, WorkArena and others.",
+        "listLinkOk": null
+      }
+    },
+    {
+      "rank": 37,
+      "core": false,
+      "name": "VisualWebArena",
+      "short": "VisualWebArena",
+      "type": "Multimodal web agents",
+      "why": "Adds visual web understanding to browser task execution.",
+      "kind": "benchmark",
+      "domain": "agents",
+      "chapters": [
+        51,
+        54,
+        63
+      ],
+      "aliases": [
+        "VisualWebArena"
+      ],
+      "refs": [],
+      "links": {
+        "official": "https://jykoh.com/vwa",
+        "repo": "https://github.com/web-arena-x/visualwebarena",
+        "paper": "https://arxiv.org/abs/2401.13649"
+      },
+      "org": "CMU",
+      "released": "2024-01",
+      "access": "open-source",
+      "verification": {
+        "status": "confirmed",
+        "currentName": null,
+        "note": "Claims consistent with source: 910 visually grounded tasks across Classifieds, Shopping and Reddit sites (ACL 2024).",
+        "listLinkOk": null
+      }
+    },
+    {
+      "rank": 38,
+      "core": false,
+      "name": "WorkArena",
+      "short": "WorkArena",
+      "type": "Enterprise/browser agents",
+      "why": "Work-oriented web application tasks; useful for enterprise agent evaluation.",
+      "kind": "benchmark",
+      "domain": "agents",
+      "chapters": [
+        51,
+        54,
+        63
+      ],
+      "aliases": [
+        "WorkArena"
+      ],
+      "refs": [],
+      "links": {
+        "official": "https://github.com/ServiceNow/WorkArena",
+        "repo": "https://github.com/ServiceNow/WorkArena",
+        "paper": "https://arxiv.org/abs/2403.07718"
+      },
+      "org": "ServiceNow Research",
+      "released": "2024-03",
+      "access": "open-source",
+      "verification": {
+        "status": "confirmed",
+        "currentName": null,
+        "note": "Claims consistent with source. It has 33 atomic ServiceNow tasks, and WorkArena++ (arXiv 2407.05291) adds 682 composite tasks. Instances are gated on Hugging Face.",
+        "listLinkOk": null
+      }
+    },
+    {
+      "rank": 39,
+      "core": false,
+      "name": "τ^τ-bench / Hyper-τ",
+      "short": "Hyper-τ",
+      "type": "Agent construction",
+      "why": "Tests an outer coding agent constructing a functioning customer-service agent, then evaluates it through τ-style interactions.",
+      "kind": "benchmark",
+      "domain": "agents",
+      "chapters": [
+        51,
+        54,
+        63
+      ],
+      "aliases": [
+        "Hyper-τ",
+        "~hyper-tau",
+        "τ^τ-bench"
+      ],
+      "refs": [
+        {
+          "label": "GitHub",
+          "n": 30
+        }
+      ],
+      "links": {
+        "official": "https://sierra-research.github.io/hyper-tau-bench/",
+        "repo": "https://github.com/sierra-research/hyper-tau-bench",
+        "paper": "https://arxiv.org/abs/2609.04611"
+      },
+      "org": "Sierra",
+      "released": "2026-09",
+      "access": "open-source",
+      "verification": {
+        "status": "confirmed",
+        "currentName": null,
+        "note": "Claims consistent with source: 53 tasks across 4 domains, scored with held-out simulated users. The best configuration reaches 23.9%, against an 82.2% expert reference. It is pronounced 'hyper-tau-bench'.",
+        "listLinkOk": true
+      }
+    },
+    {
+      "rank": 40,
+      "core": false,
+      "name": "Remote Labor Index",
+      "short": "Remote Labor Index",
+      "type": "Economic autonomy",
+      "why": "Measures agent ability against remote-work tasks; included in Epoch's current capability benchmark ecosystem.",
+      "kind": "benchmark",
+      "domain": "work",
+      "chapters": [
+        61,
+        63
+      ],
+      "aliases": [
+        "Remote Labor Index"
+      ],
+      "refs": [
+        {
+          "label": "Epoch AI",
+          "n": 31
+        }
+      ],
+      "links": {
+        "official": "https://www.remotelabor.ai/",
+        "repo": "https://github.com/centerforaisafety/rli_evaluation_platform",
+        "paper": "https://arxiv.org/abs/2510.26787"
+      },
+      "org": "CAIS; Scale AI",
+      "released": "2025-10",
+      "access": "private-test",
+      "verification": {
+        "status": "confirmed",
+        "currentName": null,
+        "note": "Claims consistent with source: 240 freelance projects (230 private test, 10 public). It is listed on Epoch's ECI included-benchmarks page.",
+        "listLinkOk": true
+      }
+    },
+    {
+      "rank": 41,
+      "core": false,
+      "name": "APEX-1",
+      "short": "APEX-1",
+      "type": "Professional cognition",
+      "why": "High-value banking, consulting, law and medicine deliverables.",
+      "kind": "benchmark",
+      "domain": "work",
+      "chapters": [
+        61,
+        63
+      ],
+      "aliases": [
+        "APEX-1",
+        "APEX-v1",
+        "AI Productivity Index"
+      ],
+      "refs": [],
+      "links": {
+        "official": "https://www.mercor.com/apex/apex-v1-leaderboard/",
+        "repo": "https://github.com/Mercor-Intelligence/apex-evals",
+        "paper": "https://arxiv.org/abs/2509.25721"
+      },
+      "org": "Mercor",
+      "released": "2025-09",
+      "access": "private-test",
+      "verification": {
+        "status": "confirmed",
+        "currentName": null,
+        "note": "Launched as 'APEX' (AI Productivity Index v1.0, 200 held-out cases), now APEX-v1-extended (400 held-out). Mercor labels it 'APEX-1'. The four domains match the list.",
+        "listLinkOk": null
+      }
+    },
+    {
+      "rank": 42,
+      "core": false,
+      "name": "APEX-Accounting",
+      "short": "APEX-Accoun­ting",
+      "type": "Professional accounting agents",
+      "why": "Real reconciliation, statements, audit and tax workflows.",
+      "kind": "benchmark",
+      "domain": "work",
+      "chapters": [
+        61,
+        63
+      ],
+      "aliases": [
+        "APEX-Accounting"
+      ],
+      "refs": [
+        {
+          "label": "Mercor",
+          "n": 20
+        }
+      ],
+      "links": {
+        "official": "https://www.mercor.com/apex/apex-accounting-leaderboard/",
+        "repo": null,
+        "paper": "https://arxiv.org/abs/2607.27189"
+      },
+      "org": "Mercor; Ramp",
+      "released": "2026-07",
+      "access": "private-test",
+      "verification": {
+        "status": "confirmed",
+        "currentName": null,
+        "note": "arXiv and Mercor blog date it Jul 2026; Mercor's methodology page says March 2026. Paper tasks are reconciliation, accruals, posting and reports. The list's 'statements/audit/tax' matches only the methodology page.",
+        "listLinkOk": true
+      }
+    },
+    {
+      "rank": 43,
+      "core": false,
+      "name": "ACE / AI Consumer Index",
+      "short": "AI Consumer Index",
+      "type": "Consumer tasks",
+      "why": "Evaluates realistic shopping, food, DIY and gaming tasks rather than academic questions.",
+      "kind": "benchmark",
+      "domain": "work",
+      "chapters": [
+        61,
+        63
+      ],
+      "aliases": [
+        "AI Consumer Index"
+      ],
+      "refs": [
+        {
+          "label": "Mercor",
+          "n": 32
+        }
+      ],
+      "links": {
+        "official": "https://www.mercor.com/blog/introducing-the-ai-consumer-index/",
+        "repo": "https://github.com/Mercor-Intelligence/apex-evals",
+        "paper": "https://arxiv.org/abs/2512.04921"
+      },
+      "org": "Mercor",
+      "released": "2025-12",
+      "access": "private-test",
+      "verification": {
+        "status": "confirmed",
+        "currentName": null,
+        "note": "Claims consistent with source: 400 hidden cases plus an 80-case open dev set. As of 2026-09-25 the ACE leaderboard URL redirects to /apex/, and ACE is no longer listed there.",
+        "listLinkOk": true
+      }
+    },
+    {
+      "rank": 44,
+      "core": false,
+      "name": "SimpleQA Verified",
+      "short": "SimpleQA Verified",
+      "type": "Factuality",
+      "why": "High-quality verified factual knowledge benchmark; useful as a clean factual layer rather than a holistic intelligence metric.",
+      "kind": "benchmark",
+      "domain": "general",
+      "chapters": [
+        6,
+        61,
+        62
+      ],
+      "aliases": [
+        "SimpleQA"
+      ],
+      "refs": [],
+      "links": {
+        "official": "https://www.kaggle.com/benchmarks/deepmind/simpleqa-verified",
+        "repo": null,
+        "paper": "https://arxiv.org/abs/2509.07968"
+      },
+      "org": "Google DeepMind; Google Research",
+      "released": "2025-09",
+      "access": "open-benchmark",
+      "verification": {
+        "status": "confirmed",
+        "currentName": null,
+        "note": "Claims consistent with source: 1,000 prompts filtered from OpenAI's SimpleQA. The dataset is on Hugging Face (google/simpleqa-verified). Epoch runs it itself.",
+        "listLinkOk": null
+      }
+    },
+    {
+      "rank": 45,
+      "core": false,
+      "name": "MirrorCode",
+      "short": "MirrorCode",
+      "type": "Long-horizon coding",
+      "why": "Reimplementation of entire software programs rather than isolated functions; part of Epoch's current frontier suite.",
+      "kind": "benchmark",
+      "domain": "coding",
+      "chapters": [
+        61,
+        63
+      ],
+      "aliases": [
+        "MirrorCode"
+      ],
+      "refs": [
+        {
+          "label": "Epoch AI",
+          "n": 33
+        }
+      ],
+      "links": {
+        "official": "https://epoch.ai/benchmarks/mirrorcode",
+        "repo": "https://github.com/epoch-research/MirrorCode",
+        "paper": "https://arxiv.org/abs/2606.30182"
+      },
+      "org": "Epoch AI; METR",
+      "released": "2026-06",
+      "access": "open-source",
+      "verification": {
+        "status": "confirmed",
+        "currentName": null,
+        "note": "Preliminary results came out 2026-04-10; code and paper in Jun 2026. 22 of 25 targets are open, 3 private. The list's link is Epoch's generic registry, not the MirrorCode page.",
+        "listLinkOk": true
+      }
+    },
+    {
+      "rank": 46,
+      "core": false,
+      "name": "DeepSWE v1.1",
+      "short": "DeepSWE",
+      "type": "Software agents",
+      "why": "Stronger emphasis on repository-level software agent performance.",
+      "kind": "benchmark",
+      "domain": "coding",
+      "chapters": [
+        61,
+        63
+      ],
+      "aliases": [
+        "DeepSWE"
+      ],
+      "refs": [],
+      "links": {
+        "official": "https://deepswe.datacurve.ai/",
+        "repo": "https://github.com/datacurve-ai/deep-swe",
+        "paper": "https://arxiv.org/abs/2607.07946"
+      },
+      "org": "Datacurve",
+      "released": "2026-05",
+      "access": "open-benchmark",
+      "verification": {
+        "status": "confirmed",
+        "currentName": null,
+        "note": "This is Datacurve's benchmark: 113 tasks, v1.0 on 2026-05-26 and v1.1 on 2026-06-14. It is not Agentica/Together AI's 2025 DeepSWE agent model. Epoch lists 'DeepSWE v1.1'.",
+        "listLinkOk": null
+      }
+    },
+    {
+      "rank": 47,
+      "core": false,
+      "name": "FrontierCode",
+      "short": "FrontierCode",
+      "type": "Frontier coding",
+      "why": "Hard coding/agent capability signal included in contemporary capability indices.",
+      "kind": "benchmark",
+      "domain": "coding",
+      "chapters": [
+        61,
+        63
+      ],
+      "aliases": [
+        "FrontierCode"
+      ],
+      "refs": [],
+      "links": {
+        "official": "https://cognition.com/frontiercode",
+        "repo": null,
+        "paper": null
+      },
+      "org": "Cognition",
+      "released": "2026-06",
+      "access": "private-test",
+      "verification": {
+        "status": "confirmed",
+        "currentName": null,
+        "note": "Launched 2026-06-08; current version is FrontierCode 1.1 (Jul 2026). Splits: Diamond 50, Main 100, Extended 150. Tasks are unreleased and scored on mergeability. It is on Epoch's ECI list.",
+        "listLinkOk": null
+      }
+    },
+    {
+      "rank": 48,
+      "core": false,
+      "name": "ProofBench",
+      "short": "ProofBench",
+      "type": "Formal reasoning",
+      "why": "Important for verifiable proof/reasoning capability.",
+      "kind": "benchmark",
+      "domain": "reasoning",
+      "chapters": [
+        38,
+        61
+      ],
+      "aliases": [
+        "ProofBench"
+      ],
+      "refs": [],
+      "links": {
+        "official": "https://www.vals.ai/benchmarks/proof_bench",
+        "repo": null,
+        "paper": "https://arxiv.org/abs/2603.26996"
+      },
+      "org": "Vals AI",
+      "released": "2026-03",
+      "access": "private-test",
+      "verification": {
+        "status": "confirmed",
+        "currentName": null,
+        "note": "Vals AI's Lean 4 benchmark, currently v1.1; the paper calls it 'FormalProofBench'. Scored on a private 100-problem split. Not the 2025 natural-language ProofBench (arXiv 2510.13888). Release date from paper.",
+        "listLinkOk": null
+      }
+    },
+    {
+      "rank": 49,
+      "core": false,
+      "name": "ExploitBench",
+      "short": "ExploitBench",
+      "type": "Cyber agents",
+      "why": "Realistic exploitation/security capability evaluation.",
+      "kind": "benchmark",
+      "domain": "safety",
+      "chapters": [
+        63,
+        65
+      ],
+      "aliases": [
+        "ExploitBench"
+      ],
+      "refs": [],
+      "links": {
+        "official": "https://exploitbench.ai/",
+        "repo": "https://github.com/exploitbench/exploitbench",
+        "paper": "https://arxiv.org/abs/2605.14153"
+      },
+      "org": "CMU",
+      "released": "2026-05",
+      "access": "open-source",
+      "verification": {
+        "status": "confirmed",
+        "currentName": null,
+        "note": "Current release is v0.1, covering V8 only: 41 bugs in the paper, 16 flags in 5 tiers. Epoch lists it as 'ExploitBench v0.1'. Otherwise consistent.",
+        "listLinkOk": null
+      }
+    },
+    {
+      "rank": 50,
+      "core": false,
+      "name": "PostTrainBench v1.1",
+      "short": "PostTrainBench",
+      "type": "Post-training",
+      "why": "Measures capabilities associated with post-training workflows.",
+      "kind": "benchmark",
+      "domain": "agents",
+      "chapters": [
+        31,
+        51,
+        54,
+        63
+      ],
+      "aliases": [
+        "PostTrainBench"
+      ],
+      "refs": [],
+      "links": {
+        "official": "https://posttrainbench.com/",
+        "repo": "https://github.com/aisa-group/PostTrainBench",
+        "paper": "https://arxiv.org/abs/2603.08640"
+      },
+      "org": "ELLIS Institute Tübingen; MPI-IS; Thoughtful",
+      "released": "2026-03",
+      "access": "open-source",
+      "verification": {
+        "status": "confirmed",
+        "currentName": null,
+        "note": "Launched Mar 2026; v1.1 came out 2026-07-28. Agents get one H100 for 10 hours to post-train small base LLMs. Epoch lists 'PostTrainBench v1.1'.",
+        "listLinkOk": null
+      }
+    },
+    {
+      "rank": 51,
+      "core": false,
+      "name": "AgentCompass",
+      "short": "AgentCompass",
+      "type": "Agent evaluation infrastructure",
+      "why": "Extensible OpenCompass-family infrastructure specifically aimed at LLM/VLM agents; active in 2026.",
+      "kind": "framework",
+      "domain": "agents",
+      "chapters": [
+        51,
+        54,
+        63
+      ],
+      "aliases": [
+        "AgentCompass"
+      ],
+      "refs": [
+        {
+          "label": "GitHub",
+          "n": 34
+        }
+      ],
+      "links": {
+        "official": "https://github.com/open-compass/AgentCompass",
+        "repo": "https://github.com/open-compass/AgentCompass",
+        "paper": "https://arxiv.org/abs/2607.13705"
+      },
+      "org": "OpenCompass (Shanghai AI Lab)",
+      "released": "2025-09",
+      "access": "open-source",
+      "verification": {
+        "status": "confirmed",
+        "currentName": null,
+        "note": "List links the open-compass org page, not the repo. Supports 20+ benchmarks, 10+ harnesses; repo commits from 2025-09, tech report 2026-07, EMNLP 2026 Demo.",
+        "listLinkOk": false
+      }
+    },
+    {
+      "rank": 52,
+      "core": false,
+      "name": "LMMs-Eval",
+      "short": "LMMs-Eval",
+      "type": "Multimodal harness",
+      "why": "Unified text/image/video/audio evaluation with 100+ tasks.",
+      "kind": "framework",
+      "domain": "multimodal",
+      "chapters": [
+        55,
+        63
+      ],
+      "aliases": [
+        "LMMs-Eval",
+        "lmms-eval"
+      ],
+      "refs": [
+        {
+          "label": "GitHub",
+          "n": 35
+        }
+      ],
+      "links": {
+        "official": "https://github.com/EvolvingLMMs-Lab/lmms-eval",
+        "repo": "https://github.com/EvolvingLMMs-Lab/lmms-eval",
+        "paper": "https://arxiv.org/abs/2407.12772"
+      },
+      "org": "LMMs-Lab (NTU S-Lab)",
+      "released": "2024-03",
+      "access": "open-source",
+      "verification": {
+        "status": "confirmed",
+        "currentName": null,
+        "note": "Claims consistent with source: README advertises 100+ tasks across text, image, video and audio; v0.1 first release 2024-03.",
+        "listLinkOk": true
+      }
+    },
+    {
+      "rank": 53,
+      "core": false,
+      "name": "VLMEvalKit",
+      "short": "VLMEvalKit",
+      "type": "Multimodal harness",
+      "why": "One-command VLM benchmarking and broad model/dataset support; increasingly integrated into OpenCompass.",
+      "kind": "framework",
+      "domain": "multimodal",
+      "chapters": [
+        55,
+        63
+      ],
+      "aliases": [
+        "VLMEvalKit"
+      ],
+      "refs": [
+        {
+          "label": "GitHub",
+          "n": 36
+        }
+      ],
+      "links": {
+        "official": "https://github.com/open-compass/VLMEvalKit",
+        "repo": "https://github.com/open-compass/VLMEvalKit",
+        "paper": "https://arxiv.org/abs/2407.11691"
+      },
+      "org": "OpenCompass (Shanghai AI Lab)",
+      "released": "2023-12",
+      "access": "open-source",
+      "verification": {
+        "status": "confirmed",
+        "currentName": null,
+        "note": "List links OpenDataArena/VLMEvalKit, an unattributed 0-star copy made 2025-12; canonical is open-compass/VLMEvalKit (220+ LMMs, 80+ benchmarks). It is an OpenCompass project, not newly 'integrated'.",
+        "listLinkOk": false
+      }
+    },
+    {
+      "rank": 54,
+      "core": false,
+      "name": "OpenVLM Leaderboard",
+      "short": "OpenVLM Leader­board",
+      "type": "Multimodal leaderboard",
+      "why": "Useful common leaderboard around standardized VLM evaluations.",
+      "kind": "leaderboard",
+      "domain": "multimodal",
+      "chapters": [
+        55,
+        63
+      ],
+      "aliases": [
+        "OpenVLM Leaderboard",
+        "Open VLM Leaderboard"
+      ],
+      "refs": [],
+      "links": {
+        "official": "https://huggingface.co/spaces/opencompass/open_vlm_leaderboard",
+        "repo": "https://github.com/open-compass/VLMEvalKit",
+        "paper": "https://arxiv.org/abs/2407.11691"
+      },
+      "org": "OpenCompass (Shanghai AI Lab)",
+      "released": "2024-01",
+      "access": "hosted",
+      "verification": {
+        "status": "confirmed",
+        "currentName": null,
+        "note": "Official title 'Open VLM Leaderboard' (HF Space created 2024-01), populated by VLMEvalKit results; a separate OpenVLM video leaderboard also exists. Claims consistent with source.",
+        "listLinkOk": null
+      }
+    },
+    {
+      "rank": 55,
+      "core": false,
+      "name": "MMMU-Pro",
+      "short": "MMMU-Pro",
+      "type": "Multimodal reasoning",
+      "why": "Removes many text-only shortcuts and introduces harder visual reasoning conditions.",
+      "kind": "benchmark",
+      "domain": "multimodal",
+      "chapters": [
+        55,
+        63
+      ],
+      "aliases": [
+        "MMMU-Pro",
+        "MMMU"
+      ],
+      "refs": [
+        {
+          "label": "GitHub",
+          "n": 37
+        }
+      ],
+      "links": {
+        "official": "https://mmmu-benchmark.github.io/",
+        "repo": "https://github.com/MMMU-Benchmark/MMMU",
+        "paper": "https://arxiv.org/abs/2409.02813"
+      },
+      "org": "MMMU Team",
+      "released": "2024-09",
+      "access": "open-benchmark",
+      "verification": {
+        "status": "confirmed",
+        "currentName": null,
+        "note": "List link is the shared MMMU repo, which hosts MMMU-Pro code (mmmu-pro folder). Claims consistent: filters text-only-answerable questions, augments options, adds vision-only setting.",
+        "listLinkOk": true
+      }
+    },
+    {
+      "rank": 56,
+      "core": false,
+      "name": "Video-MME",
+      "short": "Video-MME",
+      "type": "Video understanding",
+      "why": "Broad video understanding evaluation and increasingly treated as an industry-standard multimodal test.",
+      "kind": "benchmark",
+      "domain": "multimodal",
+      "chapters": [
+        55,
+        57,
+        63
+      ],
+      "aliases": [
+        "Video-MME"
+      ],
+      "refs": [
+        {
+          "label": "GitHub",
+          "n": 38
+        }
+      ],
+      "links": {
+        "official": "https://video-mme.github.io/",
+        "repo": "https://github.com/MME-Benchmarks/Video-MME",
+        "paper": "https://arxiv.org/abs/2405.21075"
+      },
+      "org": "MME-Benchmarks team (NJU, CASIA et al.)",
+      "released": "2024-05",
+      "access": "open-benchmark",
+      "verification": {
+        "status": "confirmed",
+        "currentName": null,
+        "note": "Claims consistent: 900 videos, 2,700 QA; README cites OpenAI GPT-4.1 calling it an 'industry standard measure'. Repo moved from BradyFU (redirects); Video-MME-v2 now exists.",
+        "listLinkOk": true
+      }
+    },
+    {
+      "rank": 57,
+      "core": false,
+      "name": "MME-RealWorld",
+      "short": "MME-RealWorld",
+      "type": "High-resolution multimodal",
+      "why": "Stronger emphasis on difficult real-world high-resolution visual scenarios.",
+      "kind": "benchmark",
+      "domain": "multimodal",
+      "chapters": [
+        55,
+        63
+      ],
+      "aliases": [
+        "MME-RealWorld"
+      ],
+      "refs": [],
+      "links": {
+        "official": "https://mme-realworld.github.io/",
+        "repo": "https://github.com/MME-Benchmarks/MME-RealWorld",
+        "paper": "https://arxiv.org/abs/2408.13257"
+      },
+      "org": "MME-Benchmarks team (CASIA et al.)",
+      "released": "2024-08",
+      "access": "open-benchmark",
+      "verification": {
+        "status": "confirmed",
+        "currentName": null,
+        "note": "Claims consistent: 13,366 high-resolution images (avg 2000x1500), 29,429 human-annotated QA, 43 subtasks. Repo moved from yfzhang114 to MME-Benchmarks org (redirects).",
+        "listLinkOk": null
+      }
+    },
+    {
+      "rank": 58,
+      "core": false,
+      "name": "MMStar",
+      "short": "MMStar",
+      "type": "Vision-indispensable reasoning",
+      "why": "Explicitly filters tasks where text alone can solve the problem and studies multimodal leakage.",
+      "kind": "benchmark",
+      "domain": "multimodal",
+      "chapters": [
+        8,
+        55,
+        63
+      ],
+      "aliases": [
+        "MMStar"
+      ],
+      "refs": [
+        {
+          "label": "GitHub",
+          "n": 39
+        }
+      ],
+      "links": {
+        "official": "https://mmstar-benchmark.github.io/",
+        "repo": "https://github.com/MMStar-Benchmark/MMStar",
+        "paper": "https://arxiv.org/abs/2403.20330"
+      },
+      "org": "USTC / CUHK / Shanghai AI Lab",
+      "released": "2024-03",
+      "access": "open-benchmark",
+      "verification": {
+        "status": "confirmed",
+        "currentName": null,
+        "note": "Claims consistent: 1,500 vision-indispensable samples; defines multi-modal gain and multi-modal leakage metrics. NeurIPS 2024.",
+        "listLinkOk": true
+      }
+    },
+    {
+      "rank": 59,
+      "core": false,
+      "name": "OCRBench",
+      "short": "OCRBench",
+      "type": "Document/OCR multimodal",
+      "why": "Important for OCR-centric VLM and document intelligence evaluation.",
+      "kind": "benchmark",
+      "domain": "multimodal",
+      "chapters": [
+        55,
+        63
+      ],
+      "aliases": [
+        "OCRBench"
+      ],
+      "refs": [],
+      "links": {
+        "official": "https://github.com/Yuliang-Liu/MultimodalOCR",
+        "repo": "https://github.com/Yuliang-Liu/MultimodalOCR",
+        "paper": "https://arxiv.org/abs/2305.07895"
+      },
+      "org": "HUST",
+      "released": "2024-01",
+      "access": "open-benchmark",
+      "verification": {
+        "status": "confirmed",
+        "currentName": null,
+        "note": "OCRBench (1,000 QA) first appears in arXiv v5, 2024-01; paper v1 (2023-05) predates the name. Successor OCRBench v2 (2024-12, arXiv 2501.00321) adds a private test set.",
+        "listLinkOk": null
+      }
+    },
+    {
+      "rank": 60,
+      "core": false,
+      "name": "LongBench v2",
+      "short": "LongBench v2",
+      "type": "Long context",
+      "why": "Contexts from 8K to extremely long inputs, emphasizing deeper understanding rather than needle retrieval.",
+      "kind": "benchmark",
+      "domain": "context",
+      "chapters": [
+        15,
+        61
+      ],
+      "aliases": [
+        "LongBench"
+      ],
+      "refs": [
+        {
+          "label": "GitHub",
+          "n": 40
+        }
+      ],
+      "links": {
+        "official": "https://longbench2.github.io/",
+        "repo": "https://github.com/THUDM/LongBench",
+        "paper": "https://arxiv.org/abs/2412.15204"
+      },
+      "org": "Tsinghua University (THUDM) / Zhipu AI",
+      "released": "2024-12",
+      "access": "open-benchmark",
+      "verification": {
+        "status": "confirmed",
+        "currentName": null,
+        "note": "List links bys0318/LongBench-v2, the first author's personal fork (3 stars); canonical repo is THUDM/LongBench. Claims consistent: 503 questions, contexts 8k to 2M words.",
+        "listLinkOk": false
+      }
+    },
+    {
+      "rank": 61,
+      "core": false,
+      "name": "RULER",
+      "short": "RULER",
+      "type": "Long context",
+      "why": "Measures effective rather than advertised context length across configurable long-context tasks.",
+      "kind": "benchmark",
+      "domain": "context",
+      "chapters": [
+        15,
+        61
+      ],
+      "aliases": [
+        "RULER"
+      ],
+      "refs": [
+        {
+          "label": "GitHub",
+          "n": 41
+        }
+      ],
+      "links": {
+        "official": "https://github.com/NVIDIA/RULER",
+        "repo": "https://github.com/NVIDIA/RULER",
+        "paper": "https://arxiv.org/abs/2404.06654"
+      },
+      "org": "NVIDIA",
+      "released": "2024-04",
+      "access": "open-benchmark",
+      "verification": {
+        "status": "confirmed",
+        "currentName": null,
+        "note": "Claims consistent: synthetic, configurable length/complexity; 13 tasks in 4 categories; reports claimed vs effective length. Paper's hsiehjackson/RULER link redirects to NVIDIA/RULER.",
+        "listLinkOk": true
+      }
+    },
+    {
+      "rank": 62,
+      "core": false,
+      "name": "InfiniteBench",
+      "short": "InfiniteBench",
+      "type": "Extreme context",
+      "why": "Stress test for very-long-context model behavior.",
+      "kind": "benchmark",
+      "domain": "context",
+      "chapters": [
+        15,
+        61
+      ],
+      "aliases": [
+        "InfiniteBench",
+        "∞Bench"
+      ],
+      "refs": [],
+      "links": {
+        "official": "https://github.com/OpenBMB/InfiniteBench",
+        "repo": "https://github.com/OpenBMB/InfiniteBench",
+        "paper": "https://arxiv.org/abs/2402.13718"
+      },
+      "org": "Tsinghua University / OpenBMB",
+      "released": "2023-11",
+      "access": "open-benchmark",
+      "verification": {
+        "status": "confirmed",
+        "currentName": null,
+        "note": "Paper titles it '∞Bench'. 12 tasks, 100K+ token average, English/Chinese. Code/data commits from 2023-11; arXiv paper 2024-02 (ACL 2024). Claims consistent.",
+        "listLinkOk": null
+      }
+    },
+    {
+      "rank": 63,
+      "core": false,
+      "name": "HELM Safety",
+      "short": "HELM Safety",
+      "type": "Safety benchmark suite",
+      "why": "Standardized public safety evaluation across multiple risk categories.",
+      "kind": "benchmark",
+      "domain": "safety",
+      "chapters": [
+        63,
+        65
+      ],
+      "aliases": [
+        "HELM Safety"
+      ],
+      "refs": [
+        {
+          "label": "Stanford CRFM",
+          "n": 42
+        }
+      ],
+      "links": {
+        "official": "https://crfm.stanford.edu/helm/safety/latest/",
+        "repo": "https://github.com/stanford-crfm/helm",
+        "paper": null
+      },
+      "org": "Stanford CRFM",
+      "released": "2024-11",
+      "access": "hosted",
+      "verification": {
+        "status": "confirmed",
+        "currentName": null,
+        "note": "List pins release v1.3.0 (2025-04); latest is v1.17.0 (2025-11). 5 benchmarks, 6 risk categories. No paper; introduced by CRFM blog post 2024-11-08.",
+        "listLinkOk": true
+      }
+    },
+    {
+      "rank": 64,
+      "core": false,
+      "name": "HarmBench",
+      "short": "HarmBench",
+      "type": "Safety/red teaming",
+      "why": "Canonical harmful-behavior and jailbreak evaluation suite.",
+      "kind": "benchmark",
+      "domain": "safety",
+      "chapters": [
+        63,
+        65
+      ],
+      "aliases": [
+        "HarmBench"
+      ],
+      "refs": [],
+      "links": {
+        "official": "https://www.harmbench.org/",
+        "repo": "https://github.com/centerforaisafety/HarmBench",
+        "paper": "https://arxiv.org/abs/2402.04249"
+      },
+      "org": "Center for AI Safety (with UIUC et al.)",
+      "released": "2024-02",
+      "access": "open-benchmark",
+      "verification": {
+        "status": "confirmed",
+        "currentName": null,
+        "note": "Claims consistent: standardized automated red-teaming and robust-refusal framework; initial release compared 18 red-teaming methods against 33 target LLMs and defenses.",
+        "listLinkOk": null
+      }
+    },
+    {
+      "rank": 65,
+      "core": false,
+      "name": "JailbreakBench",
+      "short": "JailbreakBench",
+      "type": "Robustness benchmark",
+      "why": "Open benchmark for attacks, defenses and jailbreak artifacts with an official leaderboard.",
+      "kind": "benchmark",
+      "domain": "safety",
+      "chapters": [
+        63,
+        65
+      ],
+      "aliases": [
+        "JailbreakBench"
+      ],
+      "refs": [
+        {
+          "label": "GitHub",
+          "n": 43
+        }
+      ],
+      "links": {
+        "official": "https://jailbreakbench.github.io/",
+        "repo": "https://github.com/JailbreakBench/jailbreakbench",
+        "paper": "https://arxiv.org/abs/2404.01318"
+      },
+      "org": "UPenn / ETH Zurich / EPFL / Sony AI",
+      "released": "2024-03",
+      "access": "open-benchmark",
+      "verification": {
+        "status": "confirmed",
+        "currentName": null,
+        "note": "Claims consistent: JBB-Behaviors (100 harmful + 100 benign), jailbreak artifacts repo, attack and defense leaderboards. NeurIPS 2024 Datasets and Benchmarks.",
+        "listLinkOk": true
+      }
+    },
+    {
+      "rank": 66,
+      "core": false,
+      "name": "StrongREJECT",
+      "short": "StrongREJECT",
+      "type": "Refusal robustness",
+      "why": "Better than naive refusal scoring for measuring harmful-request compliance.",
+      "kind": "benchmark",
+      "domain": "safety",
+      "chapters": [
+        63,
+        65
+      ],
+      "aliases": [
+        "StrongREJECT",
+        "StrongReject"
+      ],
+      "refs": [],
+      "links": {
+        "official": "https://strong-reject.readthedocs.io/en/latest/",
+        "repo": "https://github.com/dsbowen/strong_reject",
+        "paper": "https://arxiv.org/abs/2402.10260"
+      },
+      "org": "UC Berkeley",
+      "released": "2024-02",
+      "access": "open-benchmark",
+      "verification": {
+        "status": "confirmed",
+        "currentName": null,
+        "note": "Original repo alexandrasouly/strongreject is deprecated in favour of dsbowen/strong_reject. 313 forbidden prompts plus autograder. Claims consistent.",
+        "listLinkOk": null
+      }
+    },
+    {
+      "rank": 67,
+      "core": false,
+      "name": "Agent Security Bench",
+      "short": "Agent Security Bench",
+      "type": "Agent safety",
+      "why": "Security evaluation specifically for tool-using autonomous agents.",
+      "kind": "benchmark",
+      "domain": "safety",
+      "chapters": [
+        51,
+        63,
+        65
+      ],
+      "aliases": [
+        "Agent Security Bench"
+      ],
+      "refs": [],
+      "links": {
+        "official": "https://github.com/agiresearch/ASB",
+        "repo": "https://github.com/agiresearch/ASB",
+        "paper": "https://arxiv.org/abs/2410.02644"
+      },
+      "org": "Zhejiang University / Rutgers University",
+      "released": "2024-10",
+      "access": "open-benchmark",
+      "verification": {
+        "status": "confirmed",
+        "currentName": null,
+        "note": "Abbreviated ASB; ICLR 2025. Covers 10 agent scenarios with prompt-injection, memory-poisoning and plan-of-thought backdoor attacks plus defenses. Claims consistent.",
+        "listLinkOk": null
+      }
+    },
+    {
+      "rank": 68,
+      "core": false,
+      "name": "CyberSecEval",
+      "short": "CyberSecEval",
+      "type": "Cybersecurity",
+      "why": "Security/cyber capability and risk evaluation.",
+      "kind": "benchmark",
+      "domain": "safety",
+      "chapters": [
+        63,
+        65
+      ],
+      "aliases": [
+        "CyberSecEval",
+        "CYBERSECEVAL"
+      ],
+      "refs": [],
+      "links": {
+        "official": "https://meta-llama.github.io/PurpleLlama/CyberSecEval/",
+        "repo": "https://github.com/meta-llama/PurpleLlama",
+        "paper": "https://arxiv.org/abs/2312.04724"
+      },
+      "org": "Meta",
+      "released": "2023-12",
+      "access": "open-benchmark",
+      "verification": {
+        "status": "confirmed",
+        "currentName": null,
+        "note": "Part of Meta's Purple Llama; current version is CyberSecEval 4 (adds AutoPatchBench and CyberSOCEval). Claims consistent.",
+        "listLinkOk": null
+      }
+    },
+    {
+      "rank": 69,
+      "core": false,
+      "name": "ToolSandbox",
+      "short": "ToolSandbox",
+      "type": "Stateful tool use",
+      "why": "Tests stateful tool interactions where tool-call sequence and world state matter.",
+      "kind": "benchmark",
+      "domain": "agents",
+      "chapters": [
+        51,
+        54,
+        63
+      ],
+      "aliases": [
+        "ToolSandbox"
+      ],
+      "refs": [],
+      "links": {
+        "official": "https://github.com/apple-aiml-research/ToolSandbox",
+        "repo": "https://github.com/apple-aiml-research/ToolSandbox",
+        "paper": "https://arxiv.org/abs/2408.04682"
+      },
+      "org": "Apple",
+      "released": "2024-08",
+      "access": "open-benchmark",
+      "verification": {
+        "status": "confirmed",
+        "currentName": null,
+        "note": "Repo moved from apple/ToolSandbox (paper's link, now redirects) to apple-aiml-research. Stateful, conversational, interactive tool-use benchmark; claims consistent.",
+        "listLinkOk": null
+      }
+    },
+    {
+      "rank": 70,
+      "core": false,
+      "name": "NVIDIA garak",
+      "short": "garak",
+      "type": "Red-team framework",
+      "why": "Mature vulnerability scanner covering jailbreaks, injection, leakage, hallucination and toxicity.",
+      "kind": "framework",
+      "domain": "safety",
+      "chapters": [
+        63,
+        65
+      ],
+      "aliases": [
+        "garak"
+      ],
+      "refs": [
+        {
+          "label": "Garak",
+          "n": 44
+        }
+      ],
+      "links": {
+        "official": "https://garak.ai/",
+        "repo": "https://github.com/NVIDIA/garak",
+        "paper": "https://arxiv.org/abs/2406.11036"
+      },
+      "org": "NVIDIA",
+      "released": "2023-06",
+      "access": "open-source",
+      "verification": {
+        "status": "confirmed",
+        "currentName": null,
+        "note": "Claims consistent: probes hallucination, data leakage, prompt injection, misinformation, toxicity, jailbreaks. Originally leondz/garak (redirects); first PyPI release 2023-06.",
+        "listLinkOk": true
+      }
+    },
+    {
+      "rank": 71,
+      "core": false,
+      "name": "Microsoft PyRIT",
+      "short": "PyRIT",
+      "type": "Red-team framework",
+      "why": "Highly relevant enterprise adversarial-testing framework with reusable attack scenarios.",
+      "kind": "framework",
+      "domain": "safety",
+      "chapters": [
+        63,
+        65
+      ],
+      "aliases": [
+        "PyRIT"
+      ],
+      "refs": [
+        {
+          "label": "Microsoft GitHub",
+          "n": 45
+        }
+      ],
+      "links": {
+        "official": "https://microsoft.github.io/PyRIT/",
+        "repo": "https://github.com/microsoft/PyRIT",
+        "paper": "https://arxiv.org/abs/2410.02828"
+      },
+      "org": "Microsoft (AI Red Team)",
+      "released": "2024-02",
+      "access": "open-source",
+      "verification": {
+        "status": "confirmed",
+        "currentName": null,
+        "note": "List link is a 2026-07-09 blog post on Scenarios (pre-packaged red-teaming playbooks), matching the claim. Repo moved from Azure/PyRIT (archived placeholder) to microsoft/PyRIT.",
+        "listLinkOk": true
+      }
+    },
+    {
+      "rank": 72,
+      "core": false,
+      "name": "Inspect Evals Register",
+      "short": "Inspect Evals",
+      "type": "Benchmark registry",
+      "why": "Important bridge between standardized benchmark definitions and the Inspect execution stack.",
+      "kind": "framework",
+      "domain": "general",
+      "chapters": [
+        6,
+        61,
+        62
+      ],
+      "aliases": [
+        "Inspect Evals",
+        "inspect_evals"
+      ],
+      "refs": [
+        {
+          "label": "GitHub",
+          "n": 46
+        }
+      ],
+      "links": {
+        "official": "https://ukgovernmentbeis.github.io/inspect_evals/register/",
+        "repo": "https://github.com/UKGovernmentBEIS/inspect_evals",
+        "paper": null
+      },
+      "org": "Generality Labs / UK AISI",
+      "released": "2026-05",
+      "access": "open-source",
+      "verification": {
+        "status": "confirmed",
+        "currentName": null,
+        "note": "List links legacy docs/methodology.md, not the Register. Register (beta) replaced /src submissions from 2026-05-08, listing externally hosted evals via YAML. Maintained by Generality Labs.",
+        "listLinkOk": false
+      }
+    },
+    {
+      "rank": 73,
+      "core": false,
+      "name": "DeepEval",
+      "short": "DeepEval",
+      "type": "Application/agent eval framework",
+      "why": "Excellent pytest-native unit/regression evaluation; now supports end-to-end, component and trajectory evaluation with 50+ metrics.",
+      "kind": "framework",
+      "domain": "apps",
+      "chapters": [
+        47,
+        62,
+        63
+      ],
+      "aliases": [
+        "DeepEval"
+      ],
+      "refs": [
+        {
+          "label": "DeepEval",
+          "n": 47
+        }
+      ],
+      "links": {
+        "official": "https://deepeval.com/",
+        "repo": "https://github.com/confident-ai/deepeval",
+        "paper": null
+      },
+      "org": "Confident AI",
+      "released": "2023-08",
+      "access": "open-source",
+      "verification": {
+        "status": "confirmed",
+        "currentName": null,
+        "note": "Claims consistent: docs state 50+ ready-to-use metrics, pytest-style assertions, and end-to-end, component-level and trajectory evaluation.",
+        "listLinkOk": true
+      }
+    },
+    {
+      "rank": 74,
+      "core": false,
+      "name": "Confident AI",
+      "short": "Confident AI",
+      "type": "Managed evaluation platform",
+      "why": "Managed collaboration/observability layer around DeepEval; useful when local eval code has to become a team/production workflow.",
+      "kind": "platform",
+      "domain": "apps",
+      "chapters": [
+        47,
+        62,
+        63
+      ],
+      "aliases": [
+        "Confident AI"
+      ],
+      "refs": [
+        {
+          "label": "DeepEval",
+          "n": 48
+        }
+      ],
+      "links": {
+        "official": "https://www.confident-ai.com/",
+        "repo": null,
+        "paper": null
+      },
+      "org": "Confident AI",
+      "released": "2023-11",
+      "access": "commercial",
+      "verification": {
+        "status": "confirmed",
+        "currentName": null,
+        "note": "List links deepeval.com (DeepEval homepage, which promotes Confident AI) rather than confident-ai.com. Released = company founding date from site metadata; platform launch date unconfirmed.",
+        "listLinkOk": false
+      }
+    },
+    {
+      "rank": 75,
+      "core": false,
+      "name": "Ragas",
+      "short": "Ragas",
+      "type": "RAG evaluation framework",
+      "why": "Still one of the canonical RAG-specific evaluation toolkits; evolving toward experiment-oriented APIs.",
+      "kind": "framework",
+      "domain": "apps",
+      "chapters": [
+        47,
+        50,
+        62,
+        63
+      ],
+      "aliases": [
+        "Ragas",
+        "RAGAS"
+      ],
+      "refs": [
+        {
+          "label": "Ragas",
+          "n": 49
+        }
+      ],
+      "links": {
+        "official": "https://docs.ragas.io/en/stable/",
+        "repo": "https://github.com/vibrantlabsai/ragas",
+        "paper": "https://arxiv.org/abs/2309.15217"
+      },
+      "org": "VibrantLabs (formerly Exploding Gradients)",
+      "released": "2023-05",
+      "access": "open-source",
+      "verification": {
+        "status": "confirmed",
+        "currentName": null,
+        "note": "List links the evaluate() reference, now deprecated in favour of @experiment, consistent with the experiment-oriented claim. Repo moved from explodinggradients to vibrantlabsai (redirects).",
+        "listLinkOk": true
+      }
+    },
+    {
+      "rank": 76,
+      "core": false,
+      "name": "Promptfoo",
+      "short": "Promptfoo",
+      "type": "Eval + red-team framework",
+      "why": "Strong CI-native prompt/model/agent regression framework with deterministic assertions and red-team capabilities.",
+      "kind": "framework",
+      "domain": "apps",
+      "chapters": [
+        47,
+        62,
+        63
+      ],
+      "aliases": [
+        "~promptfoo"
+      ],
+      "refs": [
+        {
+          "label": "Promptfoo",
+          "n": 50
+        }
+      ],
+      "links": {
+        "official": "https://www.promptfoo.dev/",
+        "repo": "https://github.com/promptfoo/promptfoo",
+        "paper": null
+      },
+      "org": "Promptfoo (OpenAI)",
+      "released": "2023-05",
+      "access": "open-source",
+      "verification": {
+        "status": "renamed",
+        "currentName": "Promptfoo (part of OpenAI)",
+        "note": "OpenAI agreed to acquire Promptfoo (announced 2026-03-09); official README now says 'Promptfoo is now part of OpenAI', still MIT open source. Capability claims consistent.",
+        "listLinkOk": true
+      }
+    },
+    {
+      "rank": 77,
+      "core": false,
+      "name": "LangSmith",
+      "short": "LangSmith",
+      "type": "Application evaluation platform",
+      "why": "Strong offline benchmarking, regression, backtesting, LLM judges and online evaluation integrated with tracing.",
+      "kind": "platform",
+      "domain": "apps",
+      "chapters": [
+        47,
+        62,
+        63
+      ],
+      "aliases": [
+        "LangSmith"
+      ],
+      "refs": [
+        {
+          "label": "Docs by LangChain",
+          "n": 51
+        }
+      ],
+      "links": {
+        "official": "https://www.langchain.com/langsmith/evaluation",
+        "repo": "https://github.com/langchain-ai/langsmith-sdk",
+        "paper": null
+      },
+      "org": "LangChain",
+      "released": "2023-07",
+      "access": "commercial",
+      "verification": {
+        "status": "confirmed",
+        "currentName": null,
+        "note": "Claims consistent with source: docs cover offline benchmarking, regression, backtesting, pairwise, LLM-as-judge and online evaluation. Announced July 2023 in closed beta; repo is the client SDK.",
+        "listLinkOk": true
+      }
+    },
+    {
+      "rank": 78,
+      "core": false,
+      "name": "Braintrust",
+      "short": "Braintrust",
+      "type": "Evaluation/observability platform",
+      "why": "Strong experiment-driven production evaluation workflow.",
+      "kind": "platform",
+      "domain": "apps",
+      "chapters": [
+        47,
+        62,
+        63
+      ],
+      "aliases": [
+        "Braintrust"
+      ],
+      "refs": [],
+      "links": {
+        "official": "https://www.braintrust.dev/docs/evaluate",
+        "repo": "https://github.com/braintrustdata/braintrust-sdk-python",
+        "paper": null
+      },
+      "org": "Braintrust",
+      "released": "2023",
+      "access": "commercial",
+      "verification": {
+        "status": "confirmed",
+        "currentName": null,
+        "note": "Claims consistent; site now brands it an 'observability platform for agents' with evals as a core pillar. Independent (Series B Feb 2026). Repo is the SDK; autoevals is separate.",
+        "listLinkOk": null
+      }
+    },
+    {
+      "rank": 79,
+      "core": false,
+      "name": "Arize Phoenix",
+      "short": "Arize Phoenix",
+      "type": "Open-source observability/evals",
+      "why": "Strong traces + evaluation combination, especially RAG/agent debugging.",
+      "kind": "framework",
+      "domain": "apps",
+      "chapters": [
+        47,
+        50,
+        62,
+        63
+      ],
+      "aliases": [
+        "Arize Phoenix",
+        "Arize"
+      ],
+      "refs": [],
+      "links": {
+        "official": "https://arize.com/docs/phoenix/",
+        "repo": "https://github.com/Arize-ai/phoenix",
+        "paper": null
+      },
+      "org": "Arize AI",
+      "released": "2023-04",
+      "access": "open-source",
+      "verification": {
+        "status": "confirmed",
+        "currentName": null,
+        "note": "Tracing plus evaluation claims consistent. Caveat: licensed under Elastic License 2.0 (source-available, self-hostable), not an OSI open-source licence. Launched April 2023.",
+        "listLinkOk": null
+      }
+    },
+    {
+      "rank": 80,
+      "core": false,
+      "name": "Weights & Biases Weave",
+      "short": "W&B Weave",
+      "type": "Evaluation/observability",
+      "why": "Natural choice for teams already using W&B experiments/artifacts.",
+      "kind": "platform",
+      "domain": "apps",
+      "chapters": [
+        47,
+        62,
+        63
+      ],
+      "aliases": [
+        "W&B Weave",
+        "Weights & Biases Weave"
+      ],
+      "refs": [],
+      "links": {
+        "official": "https://docs.wandb.ai/weave",
+        "repo": "https://github.com/wandb/weave",
+        "paper": null
+      },
+      "org": "Weights & Biases (CoreWeave)",
+      "released": "2024",
+      "access": "commercial",
+      "verification": {
+        "status": "renamed",
+        "currentName": "W&B Weave (Weights & Biases, a CoreWeave company)",
+        "note": "Product name unchanged, but CoreWeave completed its acquisition of Weights & Biases on 2025-05-05. Weave SDK is Apache-2.0; evaluations run on the W&B platform. GA Dec 2024.",
+        "listLinkOk": null
+      }
+    },
+    {
+      "rank": 81,
+      "core": false,
+      "name": "MLflow GenAI Evaluation",
+      "short": "MLflow GenAI",
+      "type": "OSS lifecycle/eval framework",
+      "why": "Serious 2026 option: datasets, judges, human feedback, traces, production monitoring and `mlflow.genai.evaluate`.",
+      "kind": "framework",
+      "domain": "apps",
+      "chapters": [
+        47,
+        62,
+        63
+      ],
+      "aliases": [
+        "mlflow.genai",
+        "MLflow GenAI"
+      ],
+      "refs": [
+        {
+          "label": "MLflow AI Platform",
+          "n": 52
+        }
+      ],
+      "links": {
+        "official": "https://mlflow.org/docs/latest/genai/eval-monitor",
+        "repo": "https://github.com/mlflow/mlflow",
+        "paper": null
+      },
+      "org": "MLflow (Databricks)",
+      "released": "2025-06",
+      "access": "open-source",
+      "verification": {
+        "status": "confirmed",
+        "currentName": null,
+        "note": "Claims consistent with source: mlflow.genai.evaluate, LLM-judge scorers, human feedback, tracing and production monitoring. The mlflow.genai evaluation API arrived with MLflow 3.0 (June 2025).",
+        "listLinkOk": true
+      }
+    },
+    {
+      "rank": 82,
+      "core": false,
+      "name": "Langfuse",
+      "short": "Langfuse",
+      "type": "Open-source eval/observability",
+      "why": "Particularly good evaluation loop from production traces → datasets → experiments → deployment monitoring.",
+      "kind": "framework",
+      "domain": "apps",
+      "chapters": [
+        47,
+        62,
+        63
+      ],
+      "aliases": [
+        "Langfuse"
+      ],
+      "refs": [
+        {
+          "label": "Langfuse",
+          "n": 53
+        }
+      ],
+      "links": {
+        "official": "https://langfuse.com/docs/evaluation/overview",
+        "repo": "https://github.com/langfuse/langfuse",
+        "paper": null
+      },
+      "org": "Langfuse (ClickHouse)",
+      "released": "2023",
+      "access": "open-source",
+      "verification": {
+        "status": "renamed",
+        "currentName": "Langfuse (a ClickHouse company)",
+        "note": "ClickHouse acquired Langfuse (2026-01-16); name unchanged, stays open source and self-hostable, Langfuse Cloud continues. Evaluation claims consistent.",
+        "listLinkOk": true
+      }
+    },
+    {
+      "rank": 83,
+      "core": false,
+      "name": "TruLens",
+      "short": "TruLens",
+      "type": "Evaluation framework",
+      "why": "Mature feedback/evaluator model and strong RAG/agent instrumentation.",
+      "kind": "framework",
+      "domain": "apps",
+      "chapters": [
+        47,
+        50,
+        62,
+        63
+      ],
+      "aliases": [
+        "TruLens"
+      ],
+      "refs": [
+        {
+          "label": "TruLens",
+          "n": 54
+        }
+      ],
+      "links": {
+        "official": "https://www.trulens.org/",
+        "repo": "https://github.com/truera/trulens",
+        "paper": null
+      },
+      "org": "Snowflake",
+      "released": "2023-05",
+      "access": "open-source",
+      "verification": {
+        "status": "renamed",
+        "currentName": "TruLens (maintained by Snowflake)",
+        "note": "Name unchanged; creator TruEra was acquired by Snowflake in 2024, and Snowflake now maintains TruLens (MIT) under the truera/trulens repo. Feedback-function and RAG/agent claims consistent.",
+        "listLinkOk": true
+      }
+    },
+    {
+      "rank": 84,
+      "core": false,
+      "name": "Opik",
+      "short": "Opik",
+      "type": "OSS evaluation/observability",
+      "why": "Test suites, datasets, quantitative metrics and agent tracing.",
+      "kind": "framework",
+      "domain": "apps",
+      "chapters": [
+        47,
+        62,
+        63
+      ],
+      "aliases": [
+        "Opik"
+      ],
+      "refs": [
+        {
+          "label": "Comet",
+          "n": 55
+        }
+      ],
+      "links": {
+        "official": "https://www.comet.com/site/products/opik/",
+        "repo": "https://github.com/comet-ml/opik",
+        "paper": null
+      },
+      "org": "Comet",
+      "released": "2024-09",
+      "access": "open-source",
+      "verification": {
+        "status": "confirmed",
+        "currentName": null,
+        "note": "Claims consistent with source: test suites with LLM-judge assertions, datasets, metrics and tracing. Apache-2.0 with hosted Comet option. Launched 17 Sept 2024.",
+        "listLinkOk": true
+      }
+    },
+    {
+      "rank": 85,
+      "core": false,
+      "name": "Patronus AI",
+      "short": "Patronus AI",
+      "type": "Evaluation platform",
+      "why": "Specialized evaluator API, experiments, production scoring and hallucination/safety evaluation.",
+      "kind": "platform",
+      "domain": "apps",
+      "chapters": [
+        47,
+        62,
+        63
+      ],
+      "aliases": [
+        "Patronus AI",
+        "Patronus"
+      ],
+      "refs": [
+        {
+          "label": "Patronus Docs",
+          "n": 56
+        }
+      ],
+      "links": {
+        "official": "https://www.patronus.ai/products",
+        "repo": null,
+        "paper": null
+      },
+      "org": "Patronus AI",
+      "released": "2023-09",
+      "access": "commercial",
+      "verification": {
+        "status": "confirmed",
+        "currentName": null,
+        "note": "List link returns HTTP 401 (docs now gated: 'contact support for access'). Company now leads with digital world models and RL environments; eval platform, Lynx, GLIDER and Percival still listed.",
+        "listLinkOk": false
+      }
+    },
+    {
+      "rank": 86,
+      "core": false,
+      "name": "Giskard",
+      "short": "Giskard",
+      "type": "Evaluation/red-team platform",
+      "why": "Strong behavioral testing, LLM judges, vulnerability scanning and CI/CD.",
+      "kind": "platform",
+      "domain": "apps",
+      "chapters": [
+        47,
+        62,
+        63
+      ],
+      "aliases": [
+        "Giskard"
+      ],
+      "refs": [
+        {
+          "label": "Giskard Documentation",
+          "n": 57
+        }
+      ],
+      "links": {
+        "official": "https://docs.giskard.ai/",
+        "repo": "https://github.com/Giskard-AI/giskard-oss",
+        "paper": null
+      },
+      "org": "Giskard",
+      "released": "2022",
+      "access": "open-source",
+      "verification": {
+        "status": "confirmed",
+        "currentName": null,
+        "note": "Claims broadly consistent. Open-source library (Apache-2.0, v3) moved to Giskard-AI/giskard-oss; continuous red teaming and team features are in the commercial Giskard Hub.",
+        "listLinkOk": true
+      }
+    },
+    {
+      "rank": 87,
+      "core": false,
+      "name": "Galileo",
+      "short": "Galileo",
+      "type": "Evaluation/observability",
+      "why": "Production-focused model/application evaluation and monitoring.",
+      "kind": "platform",
+      "domain": "apps",
+      "chapters": [
+        47,
+        62,
+        63
+      ],
+      "aliases": [
+        "Galileo AI",
+        "rungalileo"
+      ],
+      "refs": [],
+      "links": {
+        "official": "https://www.splunk.com/en_us/products/agent-observability.html",
+        "repo": "https://github.com/rungalileo/galileo-python",
+        "paper": null
+      },
+      "org": "Cisco (Splunk)",
+      "released": "2022-05",
+      "access": "commercial",
+      "verification": {
+        "status": "renamed",
+        "currentName": "Splunk Agent Observability",
+        "note": "Cisco announced the Galileo acquisition 2026-04-09 and later completed it. Splunk says 'Galileo – now Splunk Agent Observability'. galileo.ai is still online. Repo is the Python client.",
+        "listLinkOk": null
+      }
+    },
+    {
+      "rank": 88,
+      "core": false,
+      "name": "HoneyHive",
+      "short": "HoneyHive",
+      "type": "Evaluation platform",
+      "why": "Experiment and trace-based LLM application evaluation.",
+      "kind": "platform",
+      "domain": "apps",
+      "chapters": [
+        47,
+        62,
+        63
+      ],
+      "aliases": [
+        "HoneyHive"
+      ],
+      "refs": [],
+      "links": {
+        "official": "https://www.honeyhive.ai/",
+        "repo": "https://github.com/honeyhiveai/python-sdk",
+        "paper": null
+      },
+      "org": "HoneyHive",
+      "released": "2023-08",
+      "access": "commercial",
+      "verification": {
+        "status": "confirmed",
+        "currentName": null,
+        "note": "Active and independent: no acquisition or shutdown found. GA announced April 2025; SDK 1.6.0 released Sept 2026. Experiments, evaluators and tracing claims consistent.",
+        "listLinkOk": null
+      }
+    },
+    {
+      "rank": 89,
+      "core": false,
+      "name": "Parea",
+      "short": "Parea",
+      "type": "Evaluation platform",
+      "why": "Dataset/evaluator/experiment workflow for model and prompt iteration.",
+      "kind": "platform",
+      "domain": "apps",
+      "chapters": [
+        47,
+        62,
+        63
+      ],
+      "aliases": [
+        "Parea"
+      ],
+      "refs": [],
+      "links": {
+        "official": "https://docs.parea.ai/",
+        "repo": "https://github.com/parea-ai/parea-sdk-py",
+        "paper": null
+      },
+      "org": "Parea AI",
+      "released": "2023",
+      "access": "commercial",
+      "verification": {
+        "status": "confirmed",
+        "currentName": null,
+        "note": "Appears defunct: parea.ai and app.parea.ai return HTTP 402 (Vercel deployment disabled) as of 2026-09-25. Last SDK release Feb 2025; only docs remain. No acquisition found.",
+        "listLinkOk": null
+      }
+    },
+    {
+      "rank": 90,
+      "core": false,
+      "name": "Vellum",
+      "short": "Vellum",
+      "type": "Evaluation/workflow platform",
+      "why": "Good application-level comparison when evals need to sit next to orchestration/workflow tooling.",
+      "kind": "platform",
+      "domain": "apps",
+      "chapters": [
+        47,
+        62,
+        63
+      ],
+      "aliases": [
+        "Vellum"
+      ],
+      "refs": [],
+      "links": {
+        "official": "https://docs.vellum.ai/product/evaluation/quantitative-evaluation",
+        "repo": "https://github.com/vellum-ai/vellum-python-sdks",
+        "paper": null
+      },
+      "org": "Vellum",
+      "released": "2023",
+      "access": "commercial",
+      "verification": {
+        "status": "confirmed",
+        "currentName": null,
+        "note": "vellum.ai now markets a personal AI assistant, and /enterprise redirects to it. Workflow and Evaluations docs remain on docs.vellum.ai; check it is still sold before listing.",
+        "listLinkOk": null
+      }
+    },
+    {
+      "rank": 91,
+      "core": false,
+      "name": "Maxim AI",
+      "short": "Maxim AI",
+      "type": "Evaluation platform",
+      "why": "Broader production experimentation/evaluation environment.",
+      "kind": "platform",
+      "domain": "apps",
+      "chapters": [
+        47,
+        62,
+        63
+      ],
+      "aliases": [
+        "Maxim AI"
+      ],
+      "refs": [],
+      "links": {
+        "official": "https://www.getmaxim.ai/evals",
+        "repo": "https://github.com/maximhq/maxim-py",
+        "paper": null
+      },
+      "org": "Maxim AI",
+      "released": "2024-06",
+      "access": "commercial",
+      "verification": {
+        "status": "confirmed",
+        "currentName": null,
+        "note": "Claims consistent: experimentation, simulation, evals and observability. getmaxim.ai homepage now leads with its Bifrost AI gateway; the eval platform lives at /evals. GA June 2024.",
+        "listLinkOk": null
+      }
+    },
+    {
+      "rank": 92,
+      "core": false,
+      "name": "Evidently AI",
+      "short": "Evidently AI",
+      "type": "Evaluation/monitoring",
+      "why": "Useful where LLM quality evaluation must live beside conventional ML/data monitoring.",
+      "kind": "framework",
+      "domain": "apps",
+      "chapters": [
+        47,
+        62,
+        63
+      ],
+      "aliases": [
+        "Evidently AI"
+      ],
+      "refs": [],
+      "links": {
+        "official": "https://www.evidentlyai.com/",
+        "repo": "https://github.com/evidentlyai/evidently",
+        "paper": null
+      },
+      "org": "Evidently AI",
+      "released": "2020-11",
+      "access": "open-source",
+      "verification": {
+        "status": "confirmed",
+        "currentName": null,
+        "note": "Claims consistent: an Apache-2.0 library covering LLM evals alongside classic ML/data monitoring, plus commercial Evidently Cloud. No acquisition found.",
+        "listLinkOk": null
+      }
+    },
+    {
+      "rank": 93,
+      "core": false,
+      "name": "Azure AI Evaluation SDK",
+      "short": "Azure AI Evalu­ation",
+      "type": "Cloud SDK",
+      "why": "Strong enterprise evaluator library covering groundedness, relevance, safety, retrieval and agent-specific tool-call/task-adherence evaluation.",
+      "kind": "platform",
+      "domain": "apps",
+      "chapters": [
+        47,
+        62,
+        63
+      ],
+      "aliases": [
+        "Azure AI Evaluation",
+        "azure-ai-evaluation"
+      ],
+      "refs": [
+        {
+          "label": "Microsoft Learn",
+          "n": 58
+        }
+      ],
+      "links": {
+        "official": "https://learn.microsoft.com/en-us/python/api/overview/azure/ai-evaluation-readme?view=azure-python",
+        "repo": "https://github.com/Azure/azure-sdk-for-python/tree/main/sdk/evaluation/azure-ai-evaluation",
+        "paper": null
+      },
+      "org": "Microsoft",
+      "released": "2024-08",
+      "access": "open-source",
+      "verification": {
+        "status": "confirmed",
+        "currentName": null,
+        "note": "Evaluator claims consistent, including TaskAdherence, ToolCallAccuracy and IntentResolution; package active (1.18.6, Sept 2026). Its how-to docs now sit under 'Microsoft Foundry (classic)'; AI-assisted evaluators need Azure.",
+        "listLinkOk": true
+      }
+    },
+    {
+      "rank": 94,
+      "core": false,
+      "name": "Vertex AI Gen AI Evaluation",
+      "short": "Vertex AI Evalu­ation",
+      "type": "Cloud evaluation service",
+      "why": "Managed Google Cloud model/application evaluation.",
+      "kind": "platform",
+      "domain": "apps",
+      "chapters": [
+        47,
+        62,
+        63
+      ],
+      "aliases": [
+        "Vertex AI Gen AI Evaluation",
+        "Gen AI evaluation service",
+        "Vertex AI evaluation"
+      ],
+      "refs": [
+        {
+          "label": "Google Cloud Documentation",
+          "n": 59
+        }
+      ],
+      "links": {
+        "official": "https://docs.cloud.google.com/gemini-enterprise-agent-platform/models/evaluation-overview",
+        "repo": "https://github.com/googleapis/python-aiplatform",
+        "paper": null
+      },
+      "org": "Google Cloud",
+      "released": "2024-04",
+      "access": "commercial",
+      "verification": {
+        "status": "renamed",
+        "currentName": "Gemini Enterprise Agent Platform Evals",
+        "note": "Vertex AI is now Gemini Enterprise Agent Platform; Google maps 'Gen AI evaluation service on Vertex AI' to 'Gemini Enterprise Agent Platform Evals'. List link is legacy, no longer updated.",
+        "listLinkOk": true
+      }
+    },
+    {
+      "rank": 95,
+      "core": false,
+      "name": "Amazon Bedrock Evaluations",
+      "short": "Bedrock Evalu­ations",
+      "type": "Cloud evaluation service",
+      "why": "Supports automated, LLM-judge, human and RAG evaluations, including non-Bedrock sources.",
+      "kind": "platform",
+      "domain": "apps",
+      "chapters": [
+        47,
+        50,
+        62,
+        63
+      ],
+      "aliases": [
+        "Bedrock Evaluations",
+        "Amazon Bedrock evaluation"
+      ],
+      "refs": [
+        {
+          "label": "AWS Documentation",
+          "n": 60
+        }
+      ],
+      "links": {
+        "official": "https://aws.amazon.com/bedrock/evaluations/",
+        "repo": null,
+        "paper": null
+      },
+      "org": "AWS",
+      "released": "2023-11",
+      "access": "commercial",
+      "verification": {
+        "status": "confirmed",
+        "currentName": null,
+        "note": "Claims consistent: automatic, human, LLM-as-judge and RAG evaluations, including models and RAG sources outside Bedrock. Preview at re:Invent 2023; GA April 2024.",
+        "listLinkOk": true
+      }
+    },
+    {
+      "rank": 96,
+      "core": false,
+      "name": "EvalScope",
+      "short": "EvalScope",
+      "type": "Evaluation + performance framework",
+      "why": "Useful one-stop ModelScope framework spanning LLM/VLM capability eval and inference-performance benchmarking.",
+      "kind": "framework",
+      "domain": "general",
+      "chapters": [
+        6,
+        48,
+        61,
+        62
+      ],
+      "aliases": [
+        "EvalScope"
+      ],
+      "refs": [
+        {
+          "label": "GitHub",
+          "n": 61
+        }
+      ],
+      "links": {
+        "official": "https://evalscope.readthedocs.io/en/latest/",
+        "repo": "https://github.com/modelscope/evalscope",
+        "paper": null
+      },
+      "org": "ModelScope (Alibaba)",
+      "released": "2024-03",
+      "access": "open-source",
+      "verification": {
+        "status": "confirmed",
+        "currentName": null,
+        "note": "Claims consistent: LLM/VLM/AIGC evaluation plus performance stress testing, Apache-2.0. First published on PyPI as 'llmuses' (renamed July 2024). No arXiv paper; README cites a 2024 @misc.",
+        "listLinkOk": true
+      }
+    },
+    {
+      "rank": 97,
+      "core": false,
+      "name": "WeirdML v2",
+      "short": "WeirdML v2",
+      "type": "Frontier niche benchmark",
+      "why": "Current hard benchmark included in Epoch's capability-index input set.",
+      "kind": "benchmark",
+      "domain": "coding",
+      "chapters": [
+        61,
+        63
+      ],
+      "aliases": [
+        "WeirdML"
+      ],
+      "refs": [
+        {
+          "label": "Epoch AI",
+          "n": 31
+        }
+      ],
+      "links": {
+        "official": "https://htihle.github.io/weirdml_v2.html",
+        "repo": null,
+        "paper": null
+      },
+      "org": "Håvard Tveit Ihle",
+      "released": "2025-06",
+      "access": "private-test",
+      "verification": {
+        "status": "confirmed",
+        "currentName": null,
+        "note": "In Epoch's ECI as 'WeirdML (v2)'. Creator has since released v3 (11 agentic tasks) and says v2 (17 tasks, 92.3% SOTA) is near saturation. Only selected task prompts public.",
+        "listLinkOk": true
+      }
+    },
+    {
+      "rank": 98,
+      "core": false,
+      "name": "Surface Evolver Bench",
+      "short": "Surface Evolver",
+      "type": "Scientific/agent benchmark",
+      "why": "Specialized difficult scientific/computational task signal used in current frontier composite evaluation.",
+      "kind": "benchmark",
+      "domain": "reasoning",
+      "chapters": [
+        38,
+        61
+      ],
+      "aliases": [
+        "Surface Evolver"
+      ],
+      "refs": [
+        {
+          "label": "Epoch AI",
+          "n": 31
+        }
+      ],
+      "links": {
+        "official": "https://yhenon.github.io/surface-evolver-llm-eval/",
+        "repo": "https://github.com/yhenon/surface-evolver-llm-eval",
+        "paper": null
+      },
+      "org": "Yann Henon (independent)",
+      "released": "2026",
+      "access": "private-test",
+      "verification": {
+        "status": "confirmed",
+        "currentName": null,
+        "note": "Listed in Epoch's ECI. Agentic task: write Surface Evolver .fe liquid-surface simulations, graded against hidden reference metrics. Harness is Apache-2.0; scored tasks are private. Repo commits date from June 2026.",
+        "listLinkOk": true
+      }
+    },
+    {
+      "rank": 99,
+      "core": false,
+      "name": "Earthborne Rangers / EBR-bench",
+      "short": "EBR-bench",
+      "type": "Learning/adaptation benchmark",
+      "why": "Tests whether systems improve through repeated interaction rather than measuring only static knowledge.",
+      "kind": "benchmark",
+      "domain": "reasoning",
+      "chapters": [
+        38,
+        61
+      ],
+      "aliases": [
+        "Earthborne Rangers",
+        "EBR-bench"
+      ],
+      "refs": [
+        {
+          "label": "Epoch AI",
+          "n": 33
+        }
+      ],
+      "links": {
+        "official": "https://epoch.ai/benchmarks/ebr-bench",
+        "repo": null,
+        "paper": "https://epoch.ai/publications/earthborne-rangers-benchmark"
+      },
+      "org": "Epoch AI",
+      "released": "2026-07",
+      "access": "hosted",
+      "verification": {
+        "status": "confirmed",
+        "currentName": null,
+        "note": "Claims consistent: measures score improvement across repeated playthroughs, and is in the ECI. Epoch-run with no public harness; game content not distributed. Launch report published 2026-07-01.",
+        "listLinkOk": true
+      }
+    },
+    {
+      "rank": 100,
+      "core": false,
+      "name": "Mystery Game Puzzles",
+      "short": "Mystery Game Puzzles",
+      "type": "Hidden-rule reasoning",
+      "why": "Useful niche evaluation of inference under deliberately undisclosed game structure; tracked by Epoch.",
+      "kind": "benchmark",
+      "domain": "reasoning",
+      "chapters": [
+        38,
+        61
+      ],
+      "aliases": [
+        "Mystery Game Puzzles"
+      ],
+      "refs": [
+        {
+          "label": "Epoch AI",
+          "n": 33
+        }
+      ],
+      "links": {
+        "official": "https://epoch.ai/benchmarks/mystery-game-puzzles",
+        "repo": null,
+        "paper": null
+      },
+      "org": "Epoch AI",
+      "released": "2026-07",
+      "access": "private-test",
+      "verification": {
+        "status": "confirmed",
+        "currentName": null,
+        "note": "Tracked by Epoch and in the ECI. Epoch describes 100 best-next-move puzzles from a well-known game whose identity is withheld to prevent preparation, not 'hidden-rule' inference. Prompts unpublished.",
+        "listLinkOk": true
+      }
+    }
+  ]
+}

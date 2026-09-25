@@ -11,7 +11,7 @@ slug: appendices
 parent: ms.root
 prev_sibling: ms.volume.3
 next_sibling: null
-children: [ms.appendix.a, ms.appendix.b, ms.appendix.c, ms.appendix.d, ms.appendix.e, ms.appendix.f, ms.appendix.g, ms.appendix.h]
+children: [ms.appendix.a, ms.appendix.b, ms.appendix.c, ms.appendix.d, ms.appendix.e, ms.appendix.f, ms.appendix.g, ms.appendix.h, ms.appendix.i]
 prerequisites: []
 downstream: []
 related: []
@@ -44,3 +44,4 @@ Appendices are typed reference indexes. Organisations, software, datasets, paper
 | F | Conferences, journals, and publication routes | [appendix-f-conferences-journals-and-publication-routes.md](appendix-f-conferences-journals-and-publication-routes.md) |
 | G | Curricula, reference ecosystems, and independent measurement | [appendix-g-curricula-reference-ecosystems-and-independent-measurement.md](appendix-g-curricula-reference-ecosystems-and-independent-measurement.md) |
 | H | Editorial specification, metadata, and coverage audit | [appendix-h-editorial-specification-metadata-and-coverage-audit.md](appendix-h-editorial-specification-metadata-and-coverage-audit.md) |
+| I | Evaluation ecosystem, 2026 — frameworks, benchmarks, and platforms in priority order | [appendix-i-evaluation-ecosystem-2026.md](appendix-i-evaluation-ecosystem-2026.md) |

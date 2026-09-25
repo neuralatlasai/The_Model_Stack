@@ -57,6 +57,7 @@ export const TOP_NAV = [
   { key: 'papers', label: 'Papers', url: '/papers/' },
   { key: 'systems', label: 'Systems', url: '/systems/' },
   { key: 'labs', label: 'Labs', url: '/labs/' },
+  { key: 'evals', label: 'Evals', url: '/evaluation-ecosystem/' },
   { key: 'timeline', label: 'Timeline', url: '/timeline/' },
   { key: 'graph', label: 'Graph', url: '/graph/' },
 ] as const;

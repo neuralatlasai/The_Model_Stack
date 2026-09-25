@@ -1,0 +1,406 @@
+---
+/**
+ * The evaluation ecosystem (lib/eval-ecosystem.ts) as one connected
+ * instrument plus the complete ledger.
+ *
+ *   table     all 100 entries in priority order, ten to a row: colour =
+ *             domain, glyph = kind, the core tier (ranks 1–20) framed
+ *   readout   a fixed-size panel naming the entry under the pointer: rank,
+ *             kind, domain, maintainer, rationale, primary links, and where
+ *             the book treats it
+ *   matrix    domain × kind counts; a row, column, or cell lights its entries
+ *             and click filters to them
+ *   chapters  the book chapters that treat these systems; point to light
+ *             their entries, click to filter
+ *   ledger    every entry with its verbatim rationale and every link
+ *
+ * Connected (client eval-ecosystem.ts): table, matrix, chapters, filters, and
+ * ledger drive each other. Every cell is an in-page link to its ledger row,
+ * so the page is complete without JavaScript.
+ */
+import type { AtlasGraph, NodeId, Registry, ResearchDocument } from '@atlas/core';
+import { ACCESS_LABEL, DOMAINS, KINDS, domainKindMatrix, ecosystem, findMentions, findPapers, hostLabel } from '../../lib/eval-ecosystem.ts';
+import { jsonForHtml } from '../../lib/json.ts';
+import { nodesOfType } from '../../lib/nodes.ts';
+
+interface Props {
+  graph: AtlasGraph;
+  registry: Registry;
+  docs: readonly ResearchDocument[];
+}
+
+const { graph, registry, docs } = Astro.props;
+const data = ecosystem();
+const { entries, sources } = data;
+const sourceOf = new Map(sources.map((source) => [source.n, source]));
+const mentions = findMentions(entries, docs, graph);
+const papers = findPapers(entries, registry.references);
+
+const chapterNodes = new Map(nodesOfType(graph, 'chapter').map((node) => [Number.parseInt(node.number ?? '0', 10), node]));
+const pad = (n: number): string => String(n).padStart(2, '0');
+const kindOf = new Map(KINDS.map((kind) => [kind.key, kind]));
+const domainOf = new Map(DOMAINS.map((domain) => [domain.key, domain]));
+
+/** Soft hyphens at camel-case joins so long names wrap inside a cell (`DeepResearchBench` → `Deep·Research·Bench`). */
+const softBreaks = (label: string): string =>
+  label.replace(/([a-z])(?=[A-Z])|([A-Z])(?=[A-Z][a-z]{2})/gu, (match) => `${match}­`);
+
+/** A verification note worth showing: anything other than "claims consistent with source". */
+const checkNote = (note: string): string | null => (note.trim() === '' || /^claims consistent/iu.test(note.trim()) ? null : note.trim());
+const checkedOn = new Date(`${data.meta.asOf}T00:00:00Z`).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric', timeZone: 'UTC' });
+
+const rows = entries.map((entry) => {
+  const named = mentions.get(entry.rank) ?? [];
+  const namedChapters = [...new Set(named.map((mention) => mention.chapter))];
+  const chapters = [...new Set([...entry.chapters, ...namedChapters])].sort((a, b) => a - b);
+  return { entry, named, namedChapters, chapters, papers: papers.get(entry.rank) ?? [] };
+});
+
+const allChapters = [...new Set(rows.flatMap((row) => row.chapters))].sort((a, b) => a - b);
+const chapterList = allChapters.map((n) => {
+  const node = chapterNodes.get(n);
+  const count = rows.filter((row) => row.chapters.includes(n)).length;
+  const named = rows.filter((row) => row.namedChapters.includes(n)).length;
+  return { n, node, count, named, planned: node === undefined || !node.hasManuscript };
+});
+const maxChapter = Math.max(1, ...chapterList.map((chapter) => chapter.count));
+const matrix = domainKindMatrix(entries);
+const maxCell = Math.max(1, ...matrix.flatMap((row) => row.cells));
+const kindTotals = KINDS.map((kind) => entries.filter((entry) => entry.kind === kind.key).length);
+
+const appendix = graph.nodes['ms.appendix.i' as NodeId] ?? null;
+const part11 = [61, 62, 63, 65, 66].map((n) => chapterNodes.get(n)).filter((node) => node !== undefined);
+const renamedCount = entries.filter((entry) => entry.verification.status === 'renamed').length;
+const located = entries.filter((entry) => entry.verification.status === 'confirmed' || entry.verification.status === 'renamed').length;
+
+const accessKeys = Object.keys(ACCESS_LABEL).filter((key) => entries.some((entry) => entry.access === key));
+const counts = {
+  core: entries.filter((entry) => entry.core).length,
+  named: rows.filter((row) => row.named.length > 0).length,
+  repo: entries.filter((entry) => entry.links.repo !== null).length,
+  paper: entries.filter((entry) => entry.links.paper !== null).length,
+};
+
+const island = {
+  chapters: chapterList.map(({ n, node, planned }) => ({ n, title: node?.title ?? `Chapter ${pad(n)}`, url: node?.url ?? null, planned })),
+  entries: rows.map(({ entry, named, chapters, papers: works }) => ({
+    rank: entry.rank,
+    name: entry.name,
+    type: entry.type,
+    why: entry.why,
+    kind: entry.kind,
+    domain: entry.domain,
+    core: entry.core,
+    org: entry.org,
+    released: entry.released,
+    access: entry.access === null ? null : (ACCESS_LABEL[entry.access] ?? entry.access),
+    official: entry.links.official,
+    repo: entry.links.repo,
+    paper: entry.links.paper,
+    sources: entry.refs.map((ref) => ({ n: ref.n, label: ref.label, href: sourceOf.get(ref.n)?.url ?? '' })),
+    chapters,
+    named: named.map((mention) => ({ number: mention.number ?? pad(mention.chapter), title: mention.title, url: mention.url })),
+    papers: works.map((record) => ({ key: record.key, url: record.atlasUrl })),
+    status: entry.verification.status,
+    current: entry.verification.currentName,
+    note: checkNote(entry.verification.note),
+  })),
+};
+
+const GLYPH: Readonly<Record<string, string>> = {
+  leaderboard: 'M6 0.8 11.2 6 6 11.2 0.8 6Z',
+  benchmark: 'M6 1.2a4.8 4.8 0 1 1 0 9.6a4.8 4.8 0 1 1 0-9.6Z',
+  framework: 'M1.6 1.6h8.8v8.8H1.6Z',
+  platform: 'M6 1.2 11 10.4H1Z',
+};
+---
+
+<section class="eco" data-eco-explorer aria-label="Evaluation ecosystem">
+  <script type="application/json" data-eco-data set:html={jsonForHtml(island)} />
+  <div class="eco-top">
+    <figure class="eco-table">
+      <figcaption class="eco-table__head">
+        <span>Priority table</span>
+        <span class="eco-table__note">rank order, ten to a row · colour = domain · glyph = kind · ranks 1–20 are the core tier</span>
+      </figcaption>
+      <ol class="eco-grid" data-eco-grid aria-label="The 100 entries in priority order. Arrow keys move between entries; Enter pins one in the readout.">
+        {
+          rows.map(({ entry }) => (
+            <li class="eco-grid__item">
+              <a
+                class:list={['eco-cell', `eco-d--${entry.domain}`, { 'is-core': entry.core }]}
+                href={`#eco-${String(entry.rank)}`}
+                data-eco-cell={entry.rank}
+                tabindex={entry.rank === 1 ? 0 : -1}
+                aria-label={`${String(entry.rank)}. ${entry.name}: ${kindOf.get(entry.kind)?.label ?? entry.kind}, ${domainOf.get(entry.domain)?.label ?? entry.domain}`}
+              >
+                <span class="eco-cell__rank">{entry.rank}</span>
+                <svg class="eco-glyph" viewBox="0 0 12 12" width="10" height="10" aria-hidden="true" focusable="false">
+                  <path d={GLYPH[entry.kind]} />
+                </svg>
+                <span class="eco-cell__name">{softBreaks(entry.short)}</span>
+              </a>
+            </li>
+          ))
+        }
+      </ol>
+      <p class="eco-legend" aria-hidden="true">
+        {
+          KINDS.map((kind) => (
+            <span class="eco-legend__kind">
+              <svg class="eco-glyph" viewBox="0 0 12 12" width="10" height="10">
+                <path d={GLYPH[kind.key]} />
+              </svg>
+              {kind.label}
+            </span>
+          ))
+        }
+      </p>
+    </figure>
+
+    <aside class="eco-panel" aria-label="Entry readout, domain by kind, and book chapters">
+      <div class="eco-readout" aria-live="polite" data-eco-readout>
+        <p class="eco-readout__kicker" data-eco-kicker>{entries.length} systems · {counts.core} core · {DOMAINS.length} domains · {KINDS.length} kinds</p>
+        <p class="eco-readout__title" data-eco-title>Point at any entry</p>
+        <p class="eco-readout__meta" data-eco-meta>Click to pin an entry and follow its links · Esc releases</p>
+        <p class="eco-readout__why" data-eco-why>
+          <b>Core tier</b> {entries.filter((entry) => entry.core).map((entry) => entry.short.replaceAll('­', '')).join(' · ')}
+        </p>
+        <p class="eco-readout__links" data-eco-links>
+          <b>Checked</b> {located} of {entries.length} located at a primary source{renamedCount > 0 ? ` · ${String(renamedCount)} renamed or acquired since listing` : ''} · {data.meta.asOf}
+        </p>
+        <p class="eco-readout__book" data-eco-book>
+          <b>In the book</b>{' '}
+          {appendix !== null && <a href={appendix.url}>Appendix I</a>}
+          {part11.map((node) => (
+            <>
+              {' '}
+              <a href={node.url} class:list={{ 'is-planned': !node.hasManuscript }}>
+                ch {node.number}
+              </a>
+            </>
+          ))}
+        </p>
+      </div>
+
+      <div class="eco-matrix">
+        <p class="eco-panel__head"><span>Domain × kind</span><span>point to light · click to filter</span></p>
+        <table class="eco-matrix__table">
+          <caption class="sh-visually-hidden">Number of entries by domain and kind</caption>
+          <thead>
+            <tr>
+              <th scope="col"><span class="sh-visually-hidden">Domain</span></th>
+              {
+                KINDS.map((kind, index) => (
+                  <th scope="col">
+                    <button type="button" class="eco-mx__kind" data-eco-kind={kind.key} aria-pressed="false" title={`${kind.label} · ${String(kindTotals[index] ?? 0)}`}>
+                      <svg class="eco-glyph" viewBox="0 0 12 12" width="11" height="11" aria-hidden="true" focusable="false">
+                        <path d={GLYPH[kind.key]} />
+                      </svg>
+                      <span class="sh-visually-hidden">{kind.label}</span>
+                    </button>
+                  </th>
+                ))
+              }
+              <th scope="col" class="eco-mx__total">all</th>
+            </tr>
+          </thead>
+          <tbody>
+            {
+              matrix.map((row) => (
+                <tr class={`eco-d--${row.domain}`}>
+                  <th scope="row">
+                    <button type="button" class="eco-mx__domain" id={`domain-${row.domain}`} data-eco-domain={row.domain} aria-pressed="false">
+                      <i class="eco-key" aria-hidden="true" />
+                      {domainOf.get(row.domain)?.short}
+                    </button>
+                  </th>
+                  {row.cells.map((count, index) => {
+                    const kind = KINDS[index]?.key ?? 'benchmark';
+                    return (
+                      <td>
+                        {count > 0 ? (
+                          <button
+                            type="button"
+                            class="eco-mx__cell"
+                            style={`--n:${String(Math.round((count / maxCell) * 100))}`}
+                            data-eco-cell-domain={row.domain}
+                            data-eco-cell-kind={kind}
+                            aria-pressed="false"
+                            aria-label={`${String(count)} ${KINDS[index]?.plural ?? kind} in ${domainOf.get(row.domain)?.label ?? row.domain}`}
+                          >
+                            {count}
+                          </button>
+                        ) : (
+                          <span class="eco-mx__zero" aria-hidden="true">·</span>
+                        )}
+                      </td>
+                    );
+                  })}
+                  <td class="eco-mx__total">{row.total}</td>
+                </tr>
+              ))
+            }
+          </tbody>
+        </table>
+      </div>
+
+      <div class="eco-chapters">
+        <p class="eco-panel__head"><span>In the book</span><span>entries · <b>named in text</b></span></p>
+        <ol class="eco-chapters__list" role="list">
+          {
+            chapterList.map(({ n, node, count, named, planned }) => (
+              <li>
+                <button type="button" class:list={['eco-ch', { 'is-planned': planned }]} data-eco-chapter={n} aria-pressed="false" title={node?.title ?? `Chapter ${pad(n)}`}>
+                  <span class="eco-ch__n">{pad(n)}</span>
+                  <span class="eco-ch__t">{node?.title ?? `Chapter ${pad(n)}`}</span>
+                  <span class="eco-ch__bar" aria-hidden="true">
+                    <span style={`inline-size:${String(Math.round((count / maxChapter) * 100))}%`} />
+                  </span>
+                  <span class="eco-ch__c">
+                    {count}
+                    {named > 0 && <b> · {named}</b>}
+                  </span>
+                </button>
+              </li>
+            ))
+          }
+        </ol>
+      </div>
+    </aside>
+  </div>
+
+  <div class="eco-filters" role="group" aria-label="Filters">
+    <button type="button" class="eco-chip" data-eco-flag="core" aria-pressed="false">core tier <span class="eco-chip__n">{counts.core}</span></button>
+    <button type="button" class="eco-chip" data-eco-flag="named" aria-pressed="false">named in the book <span class="eco-chip__n">{counts.named}</span></button>
+    {counts.repo > 0 && <button type="button" class="eco-chip" data-eco-flag="repo" aria-pressed="false">has code <span class="eco-chip__n">{counts.repo}</span></button>}
+    {counts.paper > 0 && <button type="button" class="eco-chip" data-eco-flag="paper" aria-pressed="false">has paper <span class="eco-chip__n">{counts.paper}</span></button>}
+    {
+      accessKeys.map((key) => (
+        <button type="button" class="eco-chip" data-eco-access={ACCESS_LABEL[key]} aria-pressed="false">
+          {ACCESS_LABEL[key]} <span class="eco-chip__n">{entries.filter((entry) => entry.access === key).length}</span>
+        </button>
+      ))
+    }
+    <label class="eco-search">
+      <span class="sh-visually-hidden">Filter by name, maintainer, type, or rationale</span>
+      <input type="search" placeholder="Filter by name, maintainer, type, rationale…" data-eco-search autocomplete="off" spellcheck="false" />
+    </label>
+    <button type="button" class="eco-clear" data-eco-clear hidden>clear filters</button>
+    <span class="eco-shown" data-eco-shown aria-live="polite">{entries.length} of {entries.length}</span>
+  </div>
+
+  <div class="eco-ledger">
+    <table class="eco-table-ledger" data-eco-table>
+      <caption class="sh-visually-hidden">All 100 entries with rationale, primary links, and book chapters</caption>
+      <thead>
+        <tr>
+          <th scope="col" class="eco-num" aria-sort="ascending"><button type="button" data-eco-sort="rank">#</button></th>
+          <th scope="col" aria-sort="none"><button type="button" data-eco-sort="name">Evaluation system</button></th>
+          <th scope="col">Kind · domain</th>
+          <th scope="col">Why it ranks here</th>
+          <th scope="col">Links</th>
+          <th scope="col">In the book</th>
+        </tr>
+      </thead>
+      <tbody>
+        {
+          rows.map(({ entry, named, namedChapters, chapters, papers: works }) => (
+            <tr
+              id={`eco-${String(entry.rank)}`}
+              class:list={['eco-row', `eco-d--${entry.domain}`, { 'is-core': entry.core }]}
+              data-eco-row={entry.rank}
+              data-kind={entry.kind}
+              data-domain={entry.domain}
+              data-core={entry.core ? 'yes' : 'no'}
+              data-named={named.length > 0 ? 'yes' : 'no'}
+              data-repo={entry.links.repo === null ? 'no' : 'yes'}
+              data-paper={entry.links.paper === null ? 'no' : 'yes'}
+              data-access={entry.access === null ? '' : (ACCESS_LABEL[entry.access] ?? entry.access)}
+              data-chapters={` ${chapters.join(' ')} `}
+              data-name={entry.name.toLowerCase()}
+              data-text={`${entry.name} ${entry.short} ${entry.org ?? ''} ${entry.type} ${entry.why} ${entry.verification.currentName ?? ''}`.toLowerCase()}
+            >
+              <td class="eco-num">
+                <span class="eco-rank">{entry.rank}</span>
+              </td>
+              <th scope="row" class="eco-name">
+                {entry.links.official === null ? <span>{entry.name}</span> : <a href={entry.links.official} rel="external">{entry.name}</a>}
+                <span class="eco-sub">
+                  {[entry.org, entry.released, entry.access === null ? null : ACCESS_LABEL[entry.access]].filter((part) => part !== null && part !== undefined).join(' · ')}
+                </span>
+                {entry.verification.currentName !== null && <span class="eco-sub">now: {entry.verification.currentName}</span>}
+              </th>
+              <td class="eco-kd">
+                <span class="eco-kd__kind">
+                  <svg class="eco-glyph" viewBox="0 0 12 12" width="10" height="10" aria-hidden="true" focusable="false">
+                    <path d={GLYPH[entry.kind]} />
+                  </svg>
+                  {kindOf.get(entry.kind)?.label}
+                </span>
+                <span class="eco-kd__domain">
+                  <i class="eco-key" aria-hidden="true" />
+                  {domainOf.get(entry.domain)?.short}
+                </span>
+                <span class="eco-kd__type">{entry.type}</span>
+              </td>
+              <td class="eco-why">
+                {entry.why}
+                {entry.verification.status === 'unconfirmed' && <span class="eco-flag">UNVERIFIED — not confirmed against a primary source</span>}
+                {checkNote(entry.verification.note) !== null && (
+                  <span class="eco-check">
+                    <b>Checked {checkedOn}</b> {checkNote(entry.verification.note)}
+                  </span>
+                )}
+              </td>
+              <td class="eco-links">
+                {entry.links.official !== null && (
+                  <a href={entry.links.official} rel="external" title={entry.links.official}>
+                    {hostLabel(entry.links.official)}
+                  </a>
+                )}
+                {entry.links.repo !== null && entry.links.repo !== entry.links.official && (
+                  <a href={entry.links.repo} rel="external" title={entry.links.repo}>
+                    code
+                  </a>
+                )}
+                {entry.links.paper !== null && (
+                  <a href={entry.links.paper} rel="external" title={entry.links.paper}>
+                    paper
+                  </a>
+                )}
+                {entry.refs.map((ref) => {
+                  const source = sourceOf.get(ref.n);
+                  return source === undefined ? null : (
+                    <a class="eco-src" href={source.url} rel="external" title={`List source [${String(ref.n)}]: ${source.title}`}>
+                      [{ref.n}]
+                    </a>
+                  );
+                })}
+                {entry.links.official === null && entry.refs.length === 0 && <span class="eco-none">no primary link</span>}
+              </td>
+              <td class="eco-book">
+                {chapters.map((n) => {
+                  const node = chapterNodes.get(n);
+                  const isNamed = namedChapters.includes(n);
+                  return node === undefined ? (
+                    <span class="eco-bk">{pad(n)}</span>
+                  ) : (
+                    <a class:list={['eco-bk', { 'is-named': isNamed, 'is-planned': !node.hasManuscript }]} href={node.url} title={`${node.title}${isNamed ? ' — named in the text' : ''}`}>
+                      {pad(n)}
+                    </a>
+                  );
+                })}
+                {works.map((record) => (
+                  <a class="eco-bk is-paper" href={record.atlasUrl} title={record.work}>
+                    {record.key}
+                  </a>
+                ))}
+              </td>
+            </tr>
+          ))
+        }
+      </tbody>
+    </table>
+  </div>
+</section>

@@ -223,6 +223,7 @@ The book develops one central relationship: a learning objective induces a repre
 | F | Conferences, journals, and publication routes | [appendix-f-conferences-journals-and-publication-routes.md](appendices/appendix-f-conferences-journals-and-publication-routes.md) |
 | G | Curricula, reference ecosystems, and independent measurement | [appendix-g-curricula-reference-ecosystems-and-independent-measurement.md](appendices/appendix-g-curricula-reference-ecosystems-and-independent-measurement.md) |
 | H | Editorial specification, metadata, and coverage audit | [appendix-h-editorial-specification-metadata-and-coverage-audit.md](appendices/appendix-h-editorial-specification-metadata-and-coverage-audit.md) |
+| I | Evaluation ecosystem, 2026 — frameworks, benchmarks, and platforms in priority order | [appendix-i-evaluation-ecosystem-2026.md](appendices/appendix-i-evaluation-ecosystem-2026.md) |
 
 ## Editorial status
 

@@ -4751,6 +4751,13 @@
       "title": "Editorial specification, metadata, and coverage audit",
       "slug": "appendix-h-editorial-specification-metadata-and-coverage-audit",
       "path": "appendices/appendix-h-editorial-specification-metadata-and-coverage-audit.md"
+    },
+    {
+      "id": "ms.appendix.i",
+      "letter": "I",
+      "title": "Evaluation ecosystem, 2026 — frameworks, benchmarks, and platforms in priority order",
+      "slug": "appendix-i-evaluation-ecosystem-2026",
+      "path": "appendices/appendix-i-evaluation-ecosystem-2026.md"
     }
   ],
   "front_matter": [

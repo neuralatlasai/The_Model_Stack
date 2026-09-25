@@ -1,0 +1,51 @@
+---
+/**
+ * Evaluation ecosystem: the 100 evaluation frameworks, benchmarks, and
+ * platforms that matter in 2026, in priority order, as one connected
+ * instrument (components/shell/EvalEcosystemExplorer.astro, client
+ * eval-ecosystem.ts) linked into the chapters that treat them.
+ * `#eco-N` lands on entry N; `#domain-…` selects a domain.
+ */
+import type { NodeId } from '@atlas/core';
+import EvalEcosystemExplorer from '../components/shell/EvalEcosystemExplorer.astro';
+import PageHeader from '../components/shell/PageHeader.astro';
+import ReaderLayout from '../layouts/ReaderLayout.astro';
+import { getGraph, getRegistry, listDocuments } from '../lib/atlas.ts';
+import { KINDS, ecosystem } from '../lib/eval-ecosystem.ts';
+import '../styles/eval-ecosystem.css';
+
+const [graph, registry, docs] = await Promise.all([getGraph(), getRegistry(), listDocuments()]);
+const { entries, meta } = ecosystem();
+const byKind = KINDS.map((kind) => `${String(entries.filter((entry) => entry.kind === kind.key).length)} ${kind.plural}`);
+const asOf = new Date(`${meta.asOf}T00:00:00Z`).toLocaleDateString('en-GB', { day: 'numeric', month: 'long', year: 'numeric', timeZone: 'UTC' });
+const appendix = graph.nodes['ms.appendix.i' as NodeId] ?? null;
+const DOCX = 'https://github.com/neuralatlasai/The_Model_Stack/blob/main/research/evaluation-ecosystem/top-100-evaluation-ecosystem-2026.docx';
+---
+
+<ReaderLayout
+  title="Evaluation ecosystem"
+  description="The top 100 evaluation frameworks, benchmarks, and platforms of 2026 in priority order, with primary links and the chapters of The Model Stack that treat them."
+  canonicalPath="/evaluation-ecosystem/"
+  currentId={null}
+  navKey="evals"
+>
+  <PageHeader
+    identity="Research Atlas / Evaluation ecosystem"
+    title="Evaluation ecosystem"
+    lede="The hundred evaluation systems worth knowing in 2026, in priority order: what each one measures, why it ranks where it does, where it lives, and where the book takes it up."
+    meta={`${String(entries.length)} systems · ${byKind.join(' · ')} · as of ${asOf}`}
+  />
+  <p class="eco-provenance">
+    Ranking and rationales are an editorial priority list, reproduced verbatim — an ordering by usefulness as an evaluation signal, not a measured score. Kind, domain, and chapter
+    anchors are the atlas’s classification; links point to each system’s own site, code, and paper, and were checked on {asOf}.{' '}
+    {
+      appendix !== null && (
+        <>
+          In the book: <a href={appendix.url}>Appendix I — {appendix.title.split(' — ')[0]}</a> ·{' '}
+        </>
+      )
+    }
+    <a href={DOCX} rel="external">the list as a document (.docx)</a>
+  </p>
+  <EvalEcosystemExplorer graph={graph} registry={registry} docs={docs} />
+</ReaderLayout>

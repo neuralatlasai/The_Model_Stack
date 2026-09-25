@@ -54,7 +54,9 @@ const FEATURES: readonly Feature[] = [
   ['sheets', initSheets],
   ['rail', initRail],
   ['rail-track', initRailTrack],
-  ['live-instruments', (ctx) => initLiveInstruments(ctx, evaluateFigureState)],
+  ['live-instruments', (ctx) => {
+    initLiveInstruments(ctx, evaluateFigureState);
+  }],
   ['tree', initTree],
   ['minimap', initMinimap],
   ['reading-state', initReadingState],
@@ -73,6 +75,15 @@ const FEATURES: readonly Feature[] = [
       if (ctx.doc.querySelector('[data-papers-explorer]') === null) return;
       void import('./papers-explorer.ts').then((module) => {
         if (!ctx.ctl.disposed) module.initPapersExplorer(ctx);
+      });
+    },
+  ],
+  [
+    'eval-ecosystem',
+    (ctx) => {
+      if (ctx.doc.querySelector('[data-eco-explorer]') === null) return;
+      void import('./eval-ecosystem.ts').then((module) => {
+        if (!ctx.ctl.disposed) module.initEvalEcosystem(ctx);
       });
     },
   ],
