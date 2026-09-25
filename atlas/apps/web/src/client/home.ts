@@ -2,9 +2,9 @@
  * Home story behaviour (components/home/HomeStory.astro). Progressive: the
  * server renders the first state of everything; this adds motion and life.
  *
- * - Sections reveal as they enter the viewport; the stack builds up on load.
- * - The stack tours its layers bottom to top until the reader takes over;
- *   pointing at a layer names it, its progress, and its outcome.
+ * - Sections reveal as they enter the viewport.
+ * - The hero brain (client brain.ts) fires signals along real prerequisite
+ *   fibres and names any chapter neuron under the pointer.
  * - Claims, example chapters, depths, and search queries cycle while their
  *   panel is on screen and not being handled; every control also works by
  *   click and keyboard. Nothing moves under prefers-reduced-motion.
@@ -44,7 +44,7 @@ export function initHome(ctx: PageContext): void {
       { rootMargin: '0px 0px -12% 0px', threshold: 0.12 },
     ),
   );
-  for (const el of root.querySelectorAll('[data-reveal], [data-home-stack], [data-home-claims], [data-home-deps], [data-home-depth], [data-home-search]')) io.observe(el);
+  for (const el of root.querySelectorAll('[data-reveal], [data-home-claims], [data-home-deps], [data-home-depth], [data-home-search]')) io.observe(el);
   // The pulse runs from the first step's icon to the last one's.
   const steps = root.querySelector<HTMLElement>('.hx-steps');
   const measure = (): void => {
@@ -66,58 +66,28 @@ export function initHome(ctx: PageContext): void {
       scope.addEventListener('focusin', () => { held = true; }, { signal });
       scope.addEventListener('focusout', () => { held = false; }, { signal });
     }
-    const tick = (): void => {
-      if (stopped) return;
-      if (!held && doc.visibilityState === 'visible' && panel !== null && visible.has(panel)) step();
-      ctl.timeout(tick, ms);
+    const id = stopped
+      ? null
+      : setInterval(() => {
+          if (!stopped && !held && doc.visibilityState === 'visible' && panel !== null && visible.has(panel)) step();
+        }, ms);
+    if (id !== null) ctl.defer(() => {
+      clearInterval(id);
+    });
+    return {
+      stop: () => {
+        stopped = true;
+        if (id !== null) clearInterval(id);
+      },
     };
-    if (!stopped) ctl.timeout(tick, ms);
-    return { stop: () => { stopped = true; } };
   };
 
-  // ── the stack ──────────────────────────────────────────────────────────────
-  const stack = root.querySelector<HTMLElement>('[data-home-stack]');
-  const layers = stack === null ? [] : [...stack.querySelectorAll<HTMLElement>('[data-home-layer]')];
-  const readout = stack?.querySelector('[data-home-stack-readout]') ?? null;
-  const rk = readout?.querySelector('[data-k]') ?? null;
-  const rt = readout?.querySelector('[data-t]') ?? null;
-  const ro = readout?.querySelector('[data-o]') ?? null;
-  const initial = [rk?.textContent ?? '', rt?.textContent ?? '', ro?.textContent ?? ''] as const;
-  const activate = (layer: HTMLElement | null): void => {
-    stack?.classList.toggle('has-active', layer !== null);
-    for (const other of layers) other.classList.toggle('is-active', other === layer);
-    const slab = layer?.querySelector<HTMLAnchorElement>('.hx-layer__slab') ?? null;
-    if (rk === null || rt === null || ro === null) return;
-    if (layer === null || slab === null) {
-      [rk.textContent, rt.textContent, ro.textContent] = initial;
-      return;
-    }
-    rk.textContent = `Part ${layer.dataset['homeLayer'] ?? ''} · ${slab.dataset['written'] ?? ''}`;
-    rt.textContent = slab.querySelector('.hx-layer__title')?.textContent ?? '';
-    ro.textContent = slab.dataset['outcome'] ?? '';
-  };
-  let tour = layers.length - 1; // the list renders top-down; the tour climbs from the bottom
-  let touring: Cycler | null = null;
-  if (stack !== null && layers.length > 0) {
-    stack.addEventListener('pointerover', (event) => {
-      const layer = event.target instanceof Element ? event.target.closest<HTMLElement>('[data-home-layer]') : null;
-      if (layer !== null) {
-        touring?.stop();
-        activate(layer);
-      }
-    }, { signal });
-    stack.addEventListener('focusin', (event) => {
-      const layer = event.target instanceof Element ? event.target.closest<HTMLElement>('[data-home-layer]') : null;
-      if (layer !== null) {
-        touring?.stop();
-        activate(layer);
-      }
-    }, { signal });
-    stack.addEventListener('pointerleave', () => { activate(null); }, { signal });
-    touring = cycle(stack, 2400, () => {
-      activate(layers[tour] ?? null);
-      tour = tour <= 0 ? layers.length - 1 : tour - 1;
-    }, null);
+  // ── the brain ──────────────────────────────────────────────────────────────
+  const brain = root.querySelector<HTMLElement>('[data-brain]');
+  if (brain !== null) {
+    void import('./brain.ts').then((module) => {
+      if (!ctl.disposed) module.initBrain(ctx, brain, reduced);
+    });
   }
 
   // ── 01 claims ──────────────────────────────────────────────────────────────
@@ -220,18 +190,21 @@ export function initHome(ctx: PageContext): void {
   const query = searchPanel?.querySelector('[data-query]') ?? null;
   const results = searchPanel === null ? [] : [...searchPanel.querySelectorAll<HTMLElement>('[data-results]')];
   let searchAt = 0;
-  let typing: (() => void) | null = null;
+  let typing: ReturnType<typeof setTimeout> | undefined;
+  ctl.defer(() => {
+    clearTimeout(typing);
+  });
   const showSearch = (index: number): void => {
     searchAt = (index + results.length) % Math.max(1, results.length);
     const text = results[searchAt]?.dataset['q'] ?? '';
     for (const list of results) list.hidden = true;
-    typing?.();
+    clearTimeout(typing);
     let n = 0;
     const type = (): void => {
       if (query !== null) query.textContent = text.slice(0, n);
       if (n < text.length) {
         n += 1;
-        typing = ctl.timeout(type, 65);
+        typing = setTimeout(type, 65);
       } else {
         const list = results[searchAt];
         if (list !== undefined) list.hidden = false;

@@ -2,8 +2,8 @@
 /**
  * The home page's product story, above the existing atlas instruments:
  *
- *   hero        what the atlas is and why it is useful, beside the stack itself
- *               (the eleven parts, bottom to top, chapters written or planned)
+ *   hero        what the atlas is and why it is useful, beside the book as a
+ *               brain (BrainHero.astro): chapters as neurons, concepts, fibres
  *   01 evidence every claim carries its evidence label — real claims cycle
  *   02 connected a written chapter with what it builds on and what it unlocks
  *   03 depth    one text, four depths — the section anatomy by depth
@@ -19,10 +19,13 @@ import type { AtlasGraph, BundleManifest, NodeId, Registry } from '@atlas/core';
 import { DOMAINS as ECO_DOMAINS, ecosystem } from '../../lib/eval-ecosystem.ts';
 import { grouped } from '../../lib/format.ts';
 import { jsonForHtml } from '../../lib/json.ts';
-import type { HomeClaim, HomeFocus, HomeLayer, HomeModel } from '../../lib/home-model.ts';
+import type { BrainModel } from '../../lib/brain-map.ts';
+import type { HomeClaim, HomeFocus, HomeModel } from '../../lib/home-model.ts';
+import BrainHero from './BrainHero.astro';
 
 interface Props {
   model: HomeModel;
+  brain: BrainModel;
   graph: AtlasGraph;
   registry: Registry;
   manifest: BundleManifest;
@@ -30,12 +33,8 @@ interface Props {
   edges: number;
 }
 
-const { model, graph, registry, manifest, startUrl, edges } = Astro.props;
-const layers: readonly HomeLayer[] = [...model.layers].reverse();
-const outcomeOf = (numeral: string): string =>
-  Object.values(graph.nodes).find((node) => node.entityType === 'part' && node.number === numeral)?.plan?.outcome ?? '';
-const written = model.layers.reduce((sum, layer) => sum + layer.written, 0);
-const chapterTotal = model.layers.reduce((sum, layer) => sum + layer.chapters.length, 0);
+const { model, brain, graph, registry, manifest, startUrl, edges } = Astro.props;
+const chapterTotal = brain.neurons.length;
 
 const CLASS_LABEL: Readonly<Record<string, string>> = { source: 'cited source', inference: "the book's inference", gap: 'evidence missing', measurement: 'executed check' };
 const labelTotal = model.labels.reduce((sum, entry) => sum + entry.count, 0);
@@ -77,38 +76,11 @@ const focus: readonly HomeFocus[] = model.focus;
     </a>
   </div>
 
-  <figure class="hx-stack" data-home-stack aria-label="The eleven parts of the book as a stack, from foundations at the bottom to evaluation at the top">
-    <figcaption class="hx-stack__cap">
-      <span>The stack</span>
-      <span>{written} of {chapterTotal} chapters written</span>
-    </figcaption>
-    <ol class="hx-layers" role="list">
-      {
-        layers.map((layer, index) => (
-          <li class="hx-layer" style={`--i:${String(layers.length - 1 - index)};--d:var(--domain-${layer.domain})`} data-home-layer={layer.numeral}>
-            <a class="hx-layer__slab" href={layer.url} data-outcome={outcomeOf(layer.numeral)} data-written={`${String(layer.written)} of ${String(layer.chapters.length)} chapters written`}>
-              <span class="hx-layer__num">{layer.numeral}</span>
-              <span class="hx-layer__title">{layer.title}</span>
-              <span class="hx-layer__pips" aria-label={`${String(layer.written)} of ${String(layer.chapters.length)} chapters written`}>
-                {layer.chapters.map((chapter) => (
-                  <i class:list={['hx-pip', { 'is-on': chapter.written }]} title={`${chapter.number} · ${chapter.title}`} />
-                ))}
-              </span>
-            </a>
-          </li>
-        ))
-      }
-    </ol>
-    <div class="hx-stack__readout" aria-live="polite" data-home-stack-readout>
-      <p class="hx-stack__kicker" data-k>From data and silicon (bottom) to intelligence and its evaluation (top)</p>
-      <p class="hx-stack__title" data-t>Point at a layer</p>
-      <p class="hx-stack__outcome" data-o>Each part is one layer of the stack; filled marks are chapters with manuscripts.</p>
-    </div>
-  </figure>
+  <BrainHero brain={brain} />
 </section>
 
 <p class="hx-scale">
-  {grouped(chapterTotal)} chapters · {grouped(model.layers.length)} parts · {grouped(manifest.counts.figures)} figures · {grouped(manifest.counts.equations)} equations · {grouped(manifest.counts.references)} references · {grouped(manifest.counts.terms)} terms
+  {grouped(chapterTotal)} chapters · {grouped(brain.regions.length)} parts · {grouped(manifest.counts.figures)} figures · {grouped(manifest.counts.equations)} equations · {grouped(manifest.counts.references)} references · {grouped(manifest.counts.terms)} terms
 </p>
 
 <!-- 01 · evidence ------------------------------------------------------------ -->

@@ -2,8 +2,6 @@
  * Data behind the home page's product sections — every value comes from the
  * compiled bundle, nothing is hand-written:
  *
- *   layers     the eleven parts as the stack, bottom (foundations) to top
- *              (evaluation), with each chapter written or planned
  *   claims     real labelled claims from written sections, one or two per
  *              evidence label, for the "evidence first" card
  *   labels     how often each evidence label occurs across the manuscripts
@@ -32,15 +30,6 @@ import {
 import MiniSearch from 'minisearch';
 import type { StackModel } from './stack.ts';
 import { walkDocument } from './walk.ts';
-
-export interface HomeLayer {
-  readonly numeral: string;
-  readonly title: string;
-  readonly url: string;
-  readonly domain: string;
-  readonly written: number;
-  readonly chapters: readonly { readonly number: string; readonly title: string; readonly url: string; readonly written: boolean }[];
-}
 
 export interface HomeClaim {
   readonly label: EvidenceLabel;
@@ -72,7 +61,6 @@ export interface HomeSearch {
 }
 
 export interface HomeModel {
-  readonly layers: readonly HomeLayer[];
   readonly claims: readonly HomeClaim[];
   readonly labels: readonly { readonly label: EvidenceLabel; readonly cls: EvidenceClass; readonly count: number }[];
   readonly focus: readonly HomeFocus[];
@@ -224,20 +212,6 @@ export function countLabels(docs: readonly ResearchDocument[]): HomeModel['label
   return EVIDENCE_LABELS.map((label) => ({ label, cls: EVIDENCE_CLASS[label], count: counts.get(label) ?? 0 }))
     .filter((entry) => entry.count > 0 && entry.cls !== 'measurement')
     .sort((a, b) => b.count - a.count);
-}
-
-export function buildLayers(stack: StackModel): HomeLayer[] {
-  return stack.parts.map((part) => {
-    const chapters = part.chapters.map((n) => stack.chapters[String(n)]).filter((chapter) => chapter !== undefined);
-    return {
-      numeral: part.numeral,
-      title: part.title.replace(/^Part [IVXL]+ — /u, ''),
-      url: part.url,
-      domain: part.domain,
-      written: chapters.filter((chapter) => chapter.written).length,
-      chapters: chapters.map((chapter) => ({ number: chapter.number, title: chapter.title, url: chapter.url, written: chapter.written })),
-    };
-  });
 }
 
 /** The short title, unless it is a placeholder ("Chapter 15 overview"). */

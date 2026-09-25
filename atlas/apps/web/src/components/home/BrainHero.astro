@@ -1,0 +1,147 @@
+---
+/**
+ * The book as a brain (lib/brain-map.ts): regions are the eleven parts,
+ * neurons the 66 chapters (lit when written), small neurons the glossary
+ * concepts around the chapter that owns them, fibres the declared
+ * prerequisites. Client (home.ts) fires signals along real fibres, lights a
+ * chapter's connections on hover or focus, and names it in the readout.
+ * Every neuron is a link to its chapter.
+ */
+import type { BrainModel } from '../../lib/brain-map.ts';
+import { grouped } from '../../lib/format.ts';
+
+interface Props {
+  brain: BrainModel;
+}
+
+const { brain } = Astro.props;
+const REGION_LABEL: Readonly<Record<number, string>> = {
+  1: 'Foundations',
+  2: 'Data',
+  3: 'Architecture',
+  4: 'Training',
+  5: 'Hardware',
+  6: 'Post-training',
+  7: 'Inference',
+  8: 'Serving',
+  9: 'Agents',
+  10: 'Multimodal',
+  11: 'Evaluation',
+};
+const written = brain.neurons.filter((neuron) => neuron.written).length;
+const conceptCount = new Map<number, number>();
+for (const concept of brain.concepts) conceptCount.set(concept.chapter, (conceptCount.get(concept.chapter) ?? 0) + 1);
+const firstWritten = brain.neurons.find((neuron) => neuron.written)?.n ?? brain.neurons[0]?.n;
+const pad = (n: number): string => String(n).padStart(2, '0');
+---
+
+<figure class="hb" data-brain aria-label="The book as a brain: chapters as neurons, concepts clustered around them, prerequisites as fibres">
+  <div class="hb-stage">
+    <svg class="hb-svg" viewBox={`0 0 ${String(brain.width)} ${String(brain.height)}`} role="group" aria-label="Chapters of The Model Stack. Arrow keys move between chapters; Enter opens one." data-brain-svg>
+      <defs>
+        <clipPath id="hb-clip"><path d={brain.cerebrum} /></clipPath>
+        <radialGradient id="hb-body" cx="46%" cy="38%" r="72%">
+          <stop offset="0" class="hb-body-0" />
+          <stop offset="1" class="hb-body-1" />
+        </radialGradient>
+        {
+          brain.regions.map((region) => (
+            <radialGradient id={`hb-reg-${String(region.n)}`}>
+              <stop offset="0" style={`stop-color:var(--hb-${region.domain});stop-opacity:0.34`} />
+              <stop offset="1" style={`stop-color:var(--hb-${region.domain});stop-opacity:0`} />
+            </radialGradient>
+          ))
+        }
+        <filter id="hb-glow" x="-100%" y="-100%" width="300%" height="300%">
+          <feGaussianBlur stdDeviation="3.2" />
+        </filter>
+        <filter id="hb-soft" x="-20%" y="-20%" width="140%" height="140%">
+          <feGaussianBlur stdDeviation="10" />
+        </filter>
+      </defs>
+
+      <path class="hb-halo" d={brain.cerebrum} filter="url(#hb-soft)" />
+      <path class="hb-stem" d={brain.stem} />
+      <path class="hb-cb" d={brain.cerebellum} />
+      <g class="hb-folia">{brain.folia.map((d) => <path d={d} />)}</g>
+      <path class="hb-body" d={brain.cerebrum} fill="url(#hb-body)" />
+
+      <g clip-path="url(#hb-clip)">
+        {brain.regions.map((region) => <circle class="hb-region" data-region={region.n} cx={region.x} cy={region.y} r="78" fill={`url(#hb-reg-${String(region.n)})`} />)}
+        <g class="hb-sulci">{brain.sulci.map((d) => <path d={d} />)}</g>
+        <g class="hb-fissures">{brain.fissures.map((d) => <path d={d} />)}</g>
+      </g>
+
+      <g class="hb-labels" aria-hidden="true">
+        {
+          brain.regions.map((region) => (
+            <text class="hb-label" data-region-label={region.n} x={region.x} y={region.y + 38}>
+              {REGION_LABEL[region.n] ?? region.title}
+            </text>
+          ))
+        }
+      </g>
+
+      <g class="hb-fibres" aria-hidden="true">{brain.fibres.map((fibre) => <path d={fibre.d} data-from={fibre.from} data-to={fibre.to} />)}</g>
+      <g class="hb-dendrites" aria-hidden="true">
+        {brain.dendrites.map((dendrite) => <path d={dendrite.d} data-c={dendrite.chapter} style={`stroke:var(--hb-${dendrite.domain})`} />)}
+      </g>
+      <g class="hb-concepts" aria-hidden="true">
+        {
+          brain.concepts.map((concept) => (
+            <circle cx={concept.x} cy={concept.y} r="1.7" data-c={concept.chapter} data-t={concept.term} style={`fill:var(--hb-${concept.domain})`} />
+          ))
+        }
+      </g>
+
+      <g class="hb-glows" aria-hidden="true" filter="url(#hb-glow)">
+        {brain.neurons.filter((neuron) => neuron.written).map((neuron) => <circle cx={neuron.x} cy={neuron.y} r="7" data-glow={neuron.n} style={`fill:var(--hb-${neuron.domain})`} />)}
+      </g>
+      <g class="hb-pulses" aria-hidden="true" data-pulses></g>
+
+      <g class="hb-neurons">
+        {
+          brain.neurons.map((neuron) => (
+            <a
+              class:list={['hb-n', { 'is-written': neuron.written }]}
+              href={neuron.url}
+              data-n={neuron.n}
+              data-title={neuron.title}
+              data-part={neuron.part}
+              data-region={REGION_LABEL[neuron.part] ?? ''}
+              data-concepts={conceptCount.get(neuron.n) ?? 0}
+              tabindex={neuron.n === firstWritten ? 0 : -1}
+              style={`--c:var(--hb-${neuron.domain})`}
+              aria-label={`Chapter ${pad(neuron.n)}: ${neuron.title}${neuron.written ? '' : ' (planned)'}`}
+            >
+              <circle class="hb-n__hit" cx={neuron.x} cy={neuron.y} r="10" />
+              <circle class="hb-n__core" cx={neuron.x} cy={neuron.y} r={neuron.written ? 4.4 : 3.1} />
+            </a>
+          ))
+        }
+      </g>
+
+      <g class="hb-tag" data-tag aria-hidden="true">
+        <rect rx="4" />
+        <text />
+      </g>
+    </svg>
+  </div>
+
+  <figcaption class="hb-cap">
+    <div class="hb-readout" aria-live="polite" data-brain-readout>
+      <p class="hb-readout__k" data-k>A map of the book as a brain</p>
+      <p class="hb-readout__t" data-t>Point at any neuron</p>
+      <p class="hb-readout__m" data-m>
+        {grouped(brain.neurons.length)} chapters are neurons, lit where written; {grouped(brain.concepts.length)} concepts cluster around the chapter that defines them;{' '}
+        {grouped(brain.fibres.length)} fibres are declared prerequisites.
+      </p>
+    </div>
+    <p class="hb-legend" aria-hidden="true">
+      <span><i class="hb-key is-written"></i>{written} written</span>
+      <span><i class="hb-key"></i>{brain.neurons.length - written} planned</span>
+      <span><i class="hb-key is-concept"></i>{brain.concepts.length} concepts</span>
+      <span><i class="hb-key is-fibre"></i>{brain.fibres.length} connections</span>
+    </p>
+  </figcaption>
+</figure>

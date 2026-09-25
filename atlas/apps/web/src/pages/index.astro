@@ -10,7 +10,8 @@
 import { isNodeId, type GraphNode, type NodeId, type ResearchDocument } from '@atlas/core';
 import AtlasInstrument from '../components/shell/AtlasInstrument.astro';
 import HomeStory from '../components/home/HomeStory.astro';
-import { buildAnatomy, buildFocus, buildLayers, countLabels, depthList, runSearches, selectClaims, type HomeModel } from '../lib/home-model.ts';
+import { brainMap } from '../lib/brain-map.ts';
+import { buildAnatomy, buildFocus, countLabels, depthList, runSearches, selectClaims, type HomeModel } from '../lib/home-model.ts';
 import '../styles/home.css';
 import type { InstrumentPart, InstrumentRow } from '../lib/instrument.ts';
 import ReadingRoutes from '../components/shell/ReadingRoutes.astro';
@@ -49,7 +50,6 @@ const routeTable = routesDoc === null ? null : (routeTables(routesDoc)[0] ?? nul
 const stackModel = buildStackModel(graph, registry, routesDoc === null ? [] : routeTables(routesDoc).flatMap((table) => table.rows));
 
 const home: HomeModel = {
-  layers: buildLayers(stackModel),
   claims: selectClaims(allDocs),
   labels: countLabels(allDocs),
   focus: buildFocus(stackModel),
@@ -58,6 +58,12 @@ const home: HomeModel = {
   depths: depthList(),
 };
 const startUrl = written[0]?.url ?? '/library/';
+const brain = brainMap(
+  stackModel.parts.map((part) => ({ n: part.n, numeral: part.numeral, title: part.title, domain: part.domain, url: part.url })),
+  Object.values(stackModel.chapters).map((chapter) => ({ n: chapter.n, number: chapter.number, title: chapter.title, url: chapter.url, part: chapter.part, domain: chapter.domain, written: chapter.written })),
+  registry.terms.flatMap((term) => (term.chapter === null ? [] : [{ term: term.term, chapter: term.chapter, url: term.url }])),
+  stackModel.edges,
+);
 
 interface Recent {
   readonly node: GraphNode;
@@ -126,7 +132,7 @@ const description =
   jsonLd={siteJsonLd(graph, Astro.site, manifest.edition)}
 >
   <main id="main" class="sh-home" tabindex="-1">
-    <HomeStory model={home} graph={graph} registry={registry} manifest={manifest} startUrl={startUrl} edges={stackModel.edges.length} />
+    <HomeStory model={home} brain={brain} graph={graph} registry={registry} manifest={manifest} startUrl={startUrl} edges={stackModel.edges.length} />
 
     <div id="stack-map" class="hx-anchor">
       <StackExplorer model={stackModel} />
