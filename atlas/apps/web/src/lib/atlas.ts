@@ -176,7 +176,10 @@ function resetCaches(dir: string): void {
 
 /** Dev only: drop caches when bundle.json was rewritten by `npm run compile`. */
 async function revalidateInDev(dir: string): Promise<void> {
-  if (!import.meta.env.DEV) return;
+  // astro/client types `import.meta.env` as always present, but this module's own
+  // tests run it directly under `node --test` (no Vite transform), where it is absent.
+  const env = import.meta.env as ImportMetaEnv | undefined;
+  if (!env?.DEV) return;
   let stamp: number | null = null;
   try {
     stamp = (await stat(path.join(dir, BUNDLE_FILES.manifest))).mtimeMs;
