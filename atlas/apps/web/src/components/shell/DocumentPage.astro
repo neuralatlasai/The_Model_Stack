@@ -14,6 +14,9 @@ import Minimap from '../research/Minimap.astro';
 import RailPanel from '../research/RailPanel.astro';
 import RailTrack from '../research/RailTrack.astro';
 import MiniStack from '../research/MiniStack.astro';
+import PartMap from '../research/PartMap.astro';
+import { buildLibraryModel } from '../../lib/library-model.ts';
+import '../../styles/partmap.css';
 import { getStackModel } from '../../lib/stack.ts';
 import ChapterGlance from '../research/ChapterGlance.astro';
 import CitationTimeline from '../research/CitationTimeline.astro';
@@ -45,7 +48,8 @@ const [graph, registry, manifest, withCompare] = await Promise.all([
 const pageData = await buildPageData(doc);
 const presentation = presentDocument(doc);
 const stackModel = doc.meta.chapter === null && doc.meta.entityType !== 'part' ? null : await getStackModel();
-// Part pages focus the mini map on the part's six chapters.
+// Part pages: the part as a flow (PartMap) and the mini map focused on its six chapters.
+const libraryModel = doc.meta.entityType === 'part' && stackModel !== null ? buildLibraryModel(graph, registry, stackModel) : null;
 const partFocus = doc.meta.entityType === 'part' && stackModel !== null ? (stackModel.parts.find((part) => part.n === doc.meta.part) ?? null) : null;
 // Equation → rail calculator linkage, read by blocks/Equation.astro ("▸ run").
 Astro.locals.equationRunners = new Map(
@@ -88,6 +92,7 @@ const jsonLd = documentJsonLd({ doc, graph, registry, site: Astro.site, edition:
   <article class="sh-article" data-node-id={doc.meta.id}>
     <DocumentHeader doc={doc} />
     <ModeTabs links={links} current="read" />
+    {libraryModel !== null && doc.meta.part !== null && <PartMap model={libraryModel} part={doc.meta.part} />}
     {doc.meta.entityType === 'chapter' && <ChapterGlance doc={doc} graph={graph} registry={registry} />}
     {doc.meta.entityType === 'references' && <CitationTimeline doc={doc} references={registry.references} />}
     {doc.lead.length > 0 && <Blocks blocks={doc.lead} />}

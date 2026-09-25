@@ -121,6 +121,15 @@ const FEATURES: readonly Feature[] = [
       });
     },
   ],
+  [
+    'part-map',
+    (ctx) => {
+      if (ctx.doc.querySelector('[data-part-map]') === null) return;
+      void import('./part-map.ts').then((module) => {
+        if (!ctx.ctl.disposed) module.initPartMap(ctx);
+      });
+    },
+  ],
   ['search', initSearch],
   ['scroll-sync', initScrollSync],
 ];

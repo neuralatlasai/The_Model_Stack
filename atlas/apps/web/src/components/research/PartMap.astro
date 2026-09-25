@@ -1,0 +1,187 @@
+---
+/**
+ * Part map (part pages): the part as a flow through the book.
+ *
+ *   builds on   chapters in earlier parts that this part's chapters list as
+ *               direct prerequisites, grouped by part
+ *   the part    its six chapter tiles: number, title, one cell per section
+ *               (filled when drafted), words · figures · equations, and the
+ *               in-part chapters each one builds on
+ *   unlocks     chapters in later parts that list this part's chapters as
+ *               direct prerequisites
+ *
+ * Connected (client part-map.ts): pointing at a tile lights the outside
+ * chapters it builds on and unlocks, dims the rest, and fills a fixed-size
+ * readout with the chapter's thesis and measures; pointing at an outside chip
+ * lights the tiles that use it. Every tile, cell, and chip is a link. Data
+ * comes from lib/library-model.ts, so the numbers match the Library page.
+ */
+import type { LibraryModel } from '../../lib/library-model.ts';
+import { compactCount } from '../../lib/library-model.ts';
+import { jsonForHtml } from '../../lib/json.ts';
+
+interface Props {
+  model: LibraryModel;
+  part: number;
+}
+
+const { model, part: partNumber } = Astro.props;
+const part = model.parts.find((candidate) => candidate.n === partNumber);
+const byN = new Map(model.chapters.map((chapter) => [chapter.n, chapter]));
+const partOf = new Map(model.parts.flatMap((p) => p.chapters.map((n) => [n, p] as const)));
+const own = (part?.chapters ?? []).map((n) => byN.get(n)).filter((chapter) => chapter !== undefined);
+const ownSet = new Set(own.map((chapter) => chapter.n));
+
+// Direct links crossing the part boundary, with the in-part chapters on each side.
+const inbound = new Map<number, number[]>();
+const outbound = new Map<number, number[]>();
+for (const chapter of own) {
+  for (const p of chapter.prereqs) if (!ownSet.has(p)) inbound.set(p, [...(inbound.get(p) ?? []), chapter.n]);
+  for (const u of chapter.unlocks) if (!ownSet.has(u)) outbound.set(u, [...(outbound.get(u) ?? []), chapter.n]);
+}
+const grouped = (links: Map<number, number[]>) => {
+  const groups = new Map<number, { numeral: string; title: string; items: { n: number; via: number[] }[] }>();
+  for (const [n, via] of [...links].sort((a, b) => a[0] - b[0])) {
+    const p = partOf.get(n);
+    if (p === undefined) continue;
+    const group = groups.get(p.n) ?? { numeral: p.numeral, title: p.title, items: [] };
+    group.items.push({ n, via });
+    groups.set(p.n, group);
+  }
+  return [...groups.values()];
+};
+const inGroups = grouped(inbound);
+const outGroups = grouped(outbound);
+const pad = (n: number): string => String(n).padStart(2, '0');
+const sectionsWritten = own.reduce((sum, chapter) => sum + chapter.sectionsWritten, 0);
+const sectionsTotal = own.reduce((sum, chapter) => sum + chapter.sections.length, 0);
+---
+
+{
+  part !== undefined && own.length > 0 && (
+    <section class="pm" data-part-map data-domain={part.domain} aria-labelledby="pm-title">
+      <p class="pm-head">
+        <span class="pm-head__title" id="pm-title">Part {part.numeral}, as a flow</span>
+        <span class="pm-head__note">
+          {own.filter((chapter) => chapter.written).length} of {own.length} chapters written · {sectionsWritten} of {sectionsTotal} sections · point at a
+          chapter to see what it builds on and unlocks
+        </span>
+      </p>
+      <div class="pm-flow">
+        <div class="pm-side pm-side--in" aria-label="Builds on, from earlier parts">
+          <p class="pm-side__label">Builds on</p>
+          {inGroups.length === 0 ? (
+            <p class="pm-side__none">No earlier chapter — this part opens the book.</p>
+          ) : (
+            inGroups.map((group) => (
+              <div class="pm-group">
+                <p class="pm-group__head">Part {group.numeral}</p>
+                <ul class="pm-chips" role="list">
+                  {group.items.map(({ n, via }) => {
+                    const chapter = byN.get(n);
+                    return (
+                      <li>
+                        <a class:list={['pm-chip', { 'is-written': chapter?.written === true }]} href={chapter?.url} data-pm-ext={n} data-pm-via={via.join(' ')} title={chapter?.title}>
+                          <span class="pm-chip__n">{pad(n)}</span>
+                          <span class="pm-chip__t">{chapter?.short}</span>
+                        </a>
+                      </li>
+                    );
+                  })}
+                </ul>
+              </div>
+            ))
+          )}
+        </div>
+
+        <ol class="pm-tiles" role="list" data-pm-tiles>
+          {own.map((chapter, index) => {
+            const inPart = chapter.prereqs.filter((p) => ownSet.has(p));
+            return (
+              <li
+                class:list={['pm-tile', chapter.written ? 'is-written' : 'is-planned', { 'has-draft': !chapter.written && chapter.sectionsWritten > 0 }]}
+                data-pm-tile={chapter.n}
+                data-pm-in={chapter.prereqs.join(' ')}
+                data-pm-out={chapter.unlocks.join(' ')}
+              >
+                <a class="pm-tile__link" href={chapter.url} tabindex={index === 0 ? 0 : -1} aria-label={`${chapter.number} ${chapter.title}. ${chapter.state}. ${String(chapter.sectionsWritten)} of ${String(chapter.sections.length)} sections.`}>
+                  <span class="pm-tile__n">{chapter.number}</span>
+                  <span class="pm-tile__t">{chapter.title}</span>
+                </a>
+                <span class="pm-tile__cells">
+                  {chapter.sections.map((section) => (
+                    <a class:list={['pm-cell', section.written ? 'is-written' : 'is-planned']} href={section.url} tabindex="-1" title={`${section.number} ${section.title}${section.written ? '' : ' · planned'}`}>
+                      <span class="sh-visually-hidden">
+                        {section.number} {section.title}
+                      </span>
+                    </a>
+                  ))}
+                </span>
+                <span class="pm-tile__m">
+                  {chapter.words > 0 ? `${compactCount(chapter.words)} words` : 'no words yet'}
+                  {chapter.figures + chapter.equations > 0 && ` · ${String(chapter.figures)} fig · ${String(chapter.equations)} eq`}
+                </span>
+                <span class="pm-tile__in">
+                  {inPart.length === 0 ? (
+                    <span class="pm-tile__root">entry point of the part</span>
+                  ) : (
+                    <>
+                      builds on{' '}
+                      {inPart.map((p) => (
+                        <span class="pm-tile__ref" data-pm-ref={p}>
+                          {pad(p)}
+                        </span>
+                      ))}
+                    </>
+                  )}
+                </span>
+              </li>
+            );
+          })}
+        </ol>
+
+        <div class="pm-side pm-side--out" aria-label="Unlocks, in later parts">
+          <p class="pm-side__label">Unlocks</p>
+          {outGroups.length === 0 ? (
+            <p class="pm-side__none">No later chapter lists this part yet.</p>
+          ) : (
+            outGroups.map((group) => (
+              <div class="pm-group">
+                <p class="pm-group__head">Part {group.numeral}</p>
+                <ul class="pm-chips" role="list">
+                  {group.items.map(({ n, via }) => {
+                    const chapter = byN.get(n);
+                    return (
+                      <li>
+                        <a class:list={['pm-chip', { 'is-written': chapter?.written === true }]} href={chapter?.url} data-pm-ext={n} data-pm-via={via.join(' ')} title={chapter?.title}>
+                          <span class="pm-chip__n">{pad(n)}</span>
+                          <span class="pm-chip__t">{chapter?.short}</span>
+                        </a>
+                      </li>
+                    );
+                  })}
+                </ul>
+              </div>
+            ))
+          )}
+        </div>
+      </div>
+
+      <div class="pm-readout" aria-live="polite" data-pm-readout>
+        <p class="pm-readout__kicker" data-pm-kicker>
+          Part {part.numeral} · {own.length} chapters · {inbound.size} in · {outbound.size} out
+        </p>
+        <p class="pm-readout__title" data-pm-title>
+          {part.outcome ?? part.title}
+        </p>
+        <p class="pm-readout__body" data-pm-body>
+          Point at a chapter for its thesis and measures; its links into earlier parts and out to later ones light on either side.
+        </p>
+      </div>
+
+      <script is:inline type="application/json" data-pm-data set:html={jsonForHtml(
+        Object.fromEntries(own.map((chapter) => [chapter.n, { title: chapter.title, state: chapter.state, summary: chapter.summary === '' ? chapter.plan : chapter.summary, words: chapter.words, figures: chapter.figures, equations: chapter.equations, sections: `${String(chapter.sectionsWritten)}/${String(chapter.sections.length)}` }])),
+      )} />
+    </section>
+  )
+}
