@@ -38,7 +38,7 @@ editorial_status: manuscript_draft
 
 ### Part I — Scientific Foundations
 
-[part-01-scientific-foundations/README.md](part-01-scientific-foundations/README.md) · A correct reference model and defensible experiment
+[Part I page](part-01-scientific-foundations/README.md) · A correct reference model and defensible experiment
 
 - [01 — The foundation-model lifecycle as a scientific system](part-01-scientific-foundations/ch01-foundation-model-lifecycle/README.md) · prerequisites: graduate-level ML and software engineering
 - [02 — Mathematical and statistical foundations](part-01-scientific-foundations/ch02-mathematical-and-statistical-foundations/README.md) · prerequisites: 01
@@ -49,7 +49,7 @@ editorial_status: manuscript_draft
 
 ### Part II — Data and Representation Engineering
 
-[part-02-data-and-representation-engineering/README.md](part-02-data-and-representation-engineering/README.md) · A versioned corpus, tokenizer, and ingestion pipeline
+[Part II page](part-02-data-and-representation-engineering/README.md) · A versioned corpus, tokenizer, and ingestion pipeline
 
 - [07 — Data provenance, acquisition, and dataset semantics](part-02-data-and-representation-engineering/ch07-data-provenance-acquisition-and-dataset-semantics/README.md) · prerequisites: 04, 06
 - [08 — Cleaning, deduplication, privacy filtering, and contamination](part-02-data-and-representation-engineering/ch08-cleaning-deduplication-privacy-filtering-and-contamination/README.md) · prerequisites: 06–07
@@ -60,7 +60,7 @@ editorial_status: manuscript_draft
 
 ### Part III — Model Architectures and State
 
-[part-03-model-architectures-and-state/README.md](part-03-model-architectures-and-state/README.md) · Explicit representation, state, and computation tradeoffs
+[Part III page](part-03-model-architectures-and-state/README.md) · Explicit representation, state, and computation tradeoffs
 
 - [13 — Dense Transformer design and parameter allocation](part-03-model-architectures-and-state/ch13-dense-transformer-design-and-parameter-allocation/README.md) · prerequisites: 05, 10
 - [14 — Attention architectures and cache representations](part-03-model-architectures-and-state/ch14-attention-architectures-and-cache-representations/README.md) · prerequisites: 05, 13
@@ -71,7 +71,7 @@ editorial_status: manuscript_draft
 
 ### Part IV — Training Science and Adaptation
 
-[part-04-training-science-and-adaptation/README.md](part-04-training-science-and-adaptation/README.md) · Pretraining/adaptation recipes with scaling and retention evidence
+[Part IV page](part-04-training-science-and-adaptation/README.md) · Pretraining/adaptation recipes with scaling and retention evidence
 
 - [19 — Pretraining objectives and the full training loop](part-04-training-science-and-adaptation/ch19-pretraining-objectives-and-the-full-training-loop/README.md) · prerequisites: 04, 06, 12–18
 - [20 — Optimization, schedules, and training stability](part-04-training-science-and-adaptation/ch20-optimization-schedules-and-training-stability/README.md) · prerequisites: 02–03, 19

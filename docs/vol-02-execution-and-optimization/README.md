@@ -38,7 +38,7 @@ editorial_status: manuscript_draft
 
 ### Part V — Hardware, Kernels, and Distributed Execution
 
-[part-05-hardware-kernels-and-distributed-execution/README.md](part-05-hardware-kernels-and-distributed-execution/README.md) · Measured kernels, parallelization, and recoverable training
+[Part V page](part-05-hardware-kernels-and-distributed-execution/README.md) · Measured kernels, parallelization, and recoverable training
 
 - [25 — Accelerators, memory hierarchy, and performance models](part-05-hardware-kernels-and-distributed-execution/ch25-accelerators-memory-hierarchy-and-performance-models/README.md) · prerequisites: 01–03, 05, 13–17
 - [26 — Kernel programming and numerical equivalence](part-05-hardware-kernels-and-distributed-execution/ch26-kernel-programming-and-numerical-equivalence/README.md) · prerequisites: 03, 05, 25
@@ -49,7 +49,7 @@ editorial_status: manuscript_draft
 
 ### Part VI — Post-Training and Reinforcement Learning
 
-[part-06-post-training-and-reinforcement-learning/README.md](part-06-post-training-and-reinforcement-learning/README.md) · Auditable supervised, preference, and reinforcement-learning pipelines
+[Part VI page](part-06-post-training-and-reinforcement-learning/README.md) · Auditable supervised, preference, and reinforcement-learning pipelines
 
 - [31 — Supervised fine-tuning and behavior acquisition](part-06-post-training-and-reinforcement-learning/ch31-supervised-fine-tuning-and-behavior-acquisition/README.md) · prerequisites: 10–12, 19–24, 30
 - [32 — Preferences, reward models, verifiers, and oversight](part-06-post-training-and-reinforcement-learning/ch32-preferences-reward-models-verifiers-and-oversight/README.md) · prerequisites: 02, 06, 11, 31
@@ -60,7 +60,7 @@ editorial_status: manuscript_draft
 
 ### Part VII — Inference Algorithms, Distillation, and Compression
 
-[part-07-inference-algorithms-distillation-and-compression/README.md](part-07-inference-algorithms-distillation-and-compression/README.md) · Quality/resource frontiers and validated state accounting
+[Part VII page](part-07-inference-algorithms-distillation-and-compression/README.md) · Quality/resource frontiers and validated state accounting
 
 - [37 — Decoding, constrained generation, and speculative execution](part-07-inference-algorithms-distillation-and-compression/ch37-decoding-constrained-generation-and-speculative-execution/README.md) · prerequisites: 04–05, 14, 31
 - [38 — Inference-time reasoning, search, and adaptive compute](part-07-inference-algorithms-distillation-and-compression/ch38-inference-time-reasoning-search-and-adaptive-compute/README.md) · prerequisites: 06, 32, 35, 37
@@ -71,7 +71,7 @@ editorial_status: manuscript_draft
 
 ### Part VIII — Inference Engines and Production Serving
 
-[part-08-inference-engines-and-production-serving/README.md](part-08-inference-engines-and-production-serving/README.md) · SLO-driven deployment with capacity and cost evidence
+[Part VIII page](part-08-inference-engines-and-production-serving/README.md) · SLO-driven deployment with capacity and cost evidence
 
 - [43 — Runtime architecture and inference-engine selection](part-08-inference-engines-and-production-serving/ch43-runtime-architecture-and-inference-engine-selection/README.md) · prerequisites: 26–29, 37, 40–42
 - [44 — Scheduling, distributed serving, and disaggregation](part-08-inference-engines-and-production-serving/ch44-scheduling-distributed-serving-and-disaggregation/README.md) · prerequisites: 29, 42–43

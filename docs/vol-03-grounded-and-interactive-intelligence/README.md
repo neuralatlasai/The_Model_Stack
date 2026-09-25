@@ -38,7 +38,7 @@ editorial_status: manuscript_draft
 
 ### Part IX — Retrieval, Context, and Agent Systems
 
-[part-09-retrieval-context-and-agent-systems/README.md](part-09-retrieval-context-and-agent-systems/README.md) · Grounded context, reliable tools, and consistent long-horizon state
+[Part IX page](part-09-retrieval-context-and-agent-systems/README.md) · Grounded context, reliable tools, and consistent long-horizon state
 
 - [49 — Retrieval models, indexing, and evidence access](part-09-retrieval-context-and-agent-systems/ch49-retrieval-models-indexing-and-evidence-access/README.md) · prerequisites: 06–12, 18, 48
 - [50 — Context construction and retrieval-augmented generation](part-09-retrieval-context-and-agent-systems/ch50-context-construction-and-retrieval-augmented-generation/README.md) · prerequisites: 10, 15, 37–38, 49
@@ -49,7 +49,7 @@ editorial_status: manuscript_draft
 
 ### Part X — Multimodal, World, and Embodied Models
 
-[part-10-multimodal-world-and-embodied-models/README.md](part-10-multimodal-world-and-embodied-models/README.md) · Modality-aware learning, prediction, planning, and control studies
+[Part X page](part-10-multimodal-world-and-embodied-models/README.md) · Modality-aware learning, prediction, planning, and control studies
 
 - [55 — Vision-language models and document intelligence](part-10-multimodal-world-and-embodied-models/ch55-vision-language-models-and-document-intelligence/README.md) · prerequisites: 18, 31, 49–50
 - [56 — Audio, speech, and real-time interaction](part-10-multimodal-world-and-embodied-models/ch56-audio-speech-and-real-time-interaction/README.md) · prerequisites: 18, 31, 42, 46–47
@@ -60,7 +60,7 @@ editorial_status: manuscript_draft
 
 ### Part XI — Evaluation, Interpretability, and Deployment Assurance
 
-[part-11-evaluation-interpretability-and-deployment-assurance/README.md](part-11-evaluation-interpretability-and-deployment-assurance/README.md) · Reproducible evidence and an accountable release dossier
+[Part XI page](part-11-evaluation-interpretability-and-deployment-assurance/README.md) · Reproducible evidence and an accountable release dossier
 
 - [61 — Capability portfolios and benchmark validity](part-11-evaluation-interpretability-and-deployment-assurance/ch61-capability-portfolios-and-benchmark-validity/README.md) · prerequisites: 06, 21, 31–40, 49–60
 - [62 — Human preference, model judges, and uncertainty](part-11-evaluation-interpretability-and-deployment-assurance/ch62-human-preference-model-judges-and-uncertainty/README.md) · prerequisites: 02, 06, 32–33, 61
