@@ -4,7 +4,7 @@
 
 A technical book and interactive research atlas connecting foundation-model learning science, systems engineering, and intelligent applications: continuous reading, connected concepts, and inspectable evidence in one place.
 
-![An open research book connects data and mathematics to silicon, model computation, and an evidence map; a return path carries evaluation back to learning. Conceptual illustration.](assets/model-stack-editorial.png)
+![An open book and a silicon chip on a warm ivory surface, connecting knowledge and computation.](assets/model-stack-editorial.png)
 
 [Explore the book](docs/README.md) · [Choose a reading route](docs/front-matter/reading-routes.md) · [Run the Research Atlas](atlas/README.md)
 
