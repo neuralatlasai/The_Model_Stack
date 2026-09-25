@@ -82,6 +82,10 @@ const FEATURES: readonly Feature[] = [
     'home',
     (ctx) => {
       if (ctx.doc.querySelector('[data-home-hero]') === null) return;
+      // fetched in parallel, not one after another: home.ts awaits the same modules
+      void import('./brain3d.ts');
+      void import('./globe3d.ts');
+      void import('./galaxy3d.ts');
       void import('./home.ts').then((module) => {
         if (!ctx.ctl.disposed) module.initHome(ctx);
       });

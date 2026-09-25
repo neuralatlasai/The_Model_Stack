@@ -1787,7 +1787,7 @@ html[data-gl='1'] .hb:not(.is-2d) .hb-stage {
   outline: none;
   touch-action: pan-y;
   opacity: 0;
-  transition: opacity 0.9s ease;
+  transition: opacity 0.35s ease;
 }
 
 .hb.is-3d .hb3-canvas {
@@ -1872,7 +1872,7 @@ html[data-gl='1'] .hx-deps:not(.is-2d) > .hx-panel__head {
   cursor: grab;
   touch-action: pan-y;
   opacity: 0;
-  transition: opacity 0.9s ease;
+  transition: opacity 0.35s ease;
 }
 
 .hx-deps.is-3d .hg-canvas {
@@ -2262,7 +2262,7 @@ html[data-gl='1'] .hx-palette:not(.is-2d) .hy {
   cursor: grab;
   touch-action: pan-y;
   opacity: 0;
-  transition: opacity 0.9s ease;
+  transition: opacity 0.35s ease;
 }
 
 .hx-palette.is-3d .hy-canvas {
@@ -2340,4 +2340,77 @@ html[data-gl='1'] .hx-deps:not(.is-2d) .hg {
 
 .hb-legend {
   justify-content: center;
+}
+
+
+/* § 04 in 3D: the query and its results live in the galaxy; the list is the fallback */
+html[data-gl='1'] .hx-palette:not(.is-2d) .hx-palette__input,
+html[data-gl='1'] .hx-palette:not(.is-2d) .hx-palette__results {
+  display: none;
+}
+
+html[data-gl='1'] .hx-palette:not(.is-2d) .hy {
+  aspect-ratio: 4 / 3.2;
+}
+
+.hy-q {
+  position: absolute;
+  inset-block-start: 0;
+  inset-inline-start: 0;
+  display: inline-flex;
+  align-items: center;
+  gap: 2px;
+  font: 400 26px/1 var(--font-serif);
+  white-space: nowrap;
+  color: var(--ink);
+  text-shadow: 0 0 3px var(--paper), 0 0 10px var(--paper);
+  will-change: transform;
+}
+
+.hy-q i {
+  inline-size: 1.5px;
+  block-size: 1.05em;
+  background: var(--accent);
+}
+
+.sh-home.hx-anim .hy-q i {
+  animation: hx-blink 1.05s steps(1) infinite;
+}
+
+.hy-hit {
+  position: absolute;
+  inset-block-start: 0;
+  inset-inline-start: 0;
+  display: grid;
+  gap: 1px;
+  max-inline-size: 15rem;
+  pointer-events: auto;
+  text-decoration: none;
+  color: var(--ink);
+  text-shadow: 0 0 2px var(--paper), 0 0 6px var(--paper), 0 0 12px var(--paper);
+  transition: color var(--t-hover) ease;
+  will-change: transform, opacity;
+}
+
+.hy-hit.is-left {
+  text-align: end;
+}
+
+.hy-hit b {
+  font: 600 9px var(--font-mono);
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--accent);
+}
+
+.hy-hit span {
+  overflow: hidden;
+  font: 500 13px/1.3 var(--font-sans);
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+
+.hy-hit:hover,
+.hy-hit:focus-visible {
+  color: var(--accent);
 }

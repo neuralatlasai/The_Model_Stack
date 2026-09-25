@@ -17,6 +17,7 @@ const IslandSchema = z.object({
   arms: z.string(),
   labels: z.array(z.object({ label: z.string(), domain: z.string(), count: z.number() })),
   queries: z.array(z.array(z.number())),
+  hits: z.array(z.array(z.object({ kind: z.string(), title: z.string(), url: z.string() }))),
 });
 
 const BEAMS = 8;
@@ -48,7 +49,7 @@ export function initGalaxy3D(ctx: PageContext, panel: HTMLElement, reduced: bool
   const disposables: { dispose(): void }[] = [renderer];
   const scene = new THREE.Scene();
   const camera = new THREE.PerspectiveCamera(32, 1, 0.1, 30);
-  camera.position.set(0, 2.2, 3.75);
+  camera.position.set(0, 2.45, 4.35);
   camera.lookAt(0, -0.12, 0);
   const galaxy = new THREE.Group();
   scene.add(galaxy);
@@ -165,17 +166,39 @@ export function initGalaxy3D(ctx: PageContext, panel: HTMLElement, reduced: bool
     const angle = (a / data.labels.length) * Math.PI * 2 + 2.4 + 0.12;
     return { el, p: new THREE.Vector3(Math.cos(angle) * 1.6, 0, Math.sin(angle) * 1.6) };
   });
+  const queryEl = doc.createElement('span');
+  queryEl.className = 'hy-q';
+  const queryText = doc.createElement('span');
+  const caret = doc.createElement('i');
+  queryEl.append(queryText, caret);
+  layer.append(queryEl);
+  const source = panel.querySelector('[data-query]');
+  let hitEls: HTMLAnchorElement[] = [];
   ctl.defer(() => {
     layer.replaceChildren();
   });
 
-  // ── the query: its results light up and rise ──────────────────────────────
+  // ── the query: its results light up, rise, and are named in place ─────────
   let active: readonly number[] = data.queries[0] ?? [];
   let changedAt = performance.now();
   const setQuery = (index: number): void => {
     active = data.queries[index] ?? [];
     changedAt = performance.now();
+    for (const el of hitEls) el.remove();
+    hitEls = (data.hits[index] ?? []).map((hit) => {
+      const a = doc.createElement('a');
+      a.className = 'hy-hit';
+      a.href = hit.url;
+      const kind = doc.createElement('b');
+      kind.textContent = hit.kind;
+      const title = doc.createElement('span');
+      title.textContent = hit.title;
+      a.append(kind, title);
+      layer.append(a);
+      return a;
+    });
   };
+  setQuery(0);
   panel.addEventListener('hx:query', (event) => {
     const n = (event as CustomEvent<number>).detail;
     if (typeof n === 'number') setQuery(n);
@@ -225,13 +248,14 @@ export function initGalaxy3D(ctx: PageContext, panel: HTMLElement, reduced: bool
   resize();
 
   const v = new THREE.Vector3();
-  const project = (p: THREE.Vector3): { x: number; y: number; z: number } => {
-    v.copy(p);
-    galaxy.localToWorld(v);
-    const z = v.z;
-    v.project(camera);
+  const w = new THREE.Vector3();
+  const project = (p: THREE.Vector3, local = true): { x: number; y: number; z: number } => {
+    w.copy(p);
+    if (local) galaxy.localToWorld(w);
+    const z = w.z;
+    w.project(camera);
     const rect = canvas.getBoundingClientRect();
-    return { x: (v.x * 0.5 + 0.5) * rect.width, y: (-v.y * 0.5 + 0.5) * rect.height, z };
+    return { x: (w.x * 0.5 + 0.5) * rect.width, y: (-w.y * 0.5 + 0.5) * rect.height, z };
   };
   let introStart = -1;
   function frame(now: number): void {
@@ -240,7 +264,7 @@ export function initGalaxy3D(ctx: PageContext, panel: HTMLElement, reduced: bool
     const dt = Math.min(0.05, (now - then) / 1000);
     then = now;
     if (introStart < 0) introStart = now;
-    const intro = reduced ? 1 : 1 - (1 - Math.min(1, (now - introStart) / 2000)) ** 3;
+    const intro = reduced ? 1 : 1 - (1 - Math.min(1, (now - introStart) / 1100)) ** 3;
     if (!reduced && !dragging) yaw += dt * 0.07;
     galaxy.rotation.y = yaw;
     galaxy.scale.setScalar(0.6 + 0.4 * intro);
@@ -274,9 +298,37 @@ export function initGalaxy3D(ctx: PageContext, panel: HTMLElement, reduced: bool
     qa.setX(1, 0.9 * intro);
     qa.needsUpdate = true;
 
+    const q = project(QUERY, false);
+    queryText.textContent = source?.textContent ?? '';
+    queryEl.style.transform = `translate(${q.x.toFixed(1)}px, ${(q.y - 30).toFixed(1)}px) translate(-50%, -100%)`;
+    queryEl.style.opacity = String(intro);
+    const placed = active.slice(0, hitEls.length).map((i, h) => {
+      v.set(pos[i * 3] ?? 0, pos[i * 3 + 1] ?? 0, pos[i * 3 + 2] ?? 0);
+      const s = project(v);
+      return { h, x: s.x, y: s.y };
+    });
+    placed.sort((a, b) => a.y - b.y);
+    const rect = canvas.getBoundingClientRect();
+    for (let j = 1; j < placed.length; j += 1) {
+      const prev = placed[j - 1];
+      const cur = placed[j];
+      if (prev !== undefined && cur !== undefined && cur.y - prev.y < 40) cur.y = prev.y + 40;
+    }
+    for (const p of placed) {
+      const el = hitEls[p.h];
+      if (el === undefined) continue;
+      const width = el.offsetWidth;
+      const right = p.x + 14 + width <= rect.width - 4 || p.x - 14 - width < 4;
+      el.classList.toggle('is-left', !right);
+      const left = right ? Math.min(p.x + 14, rect.width - 4 - width) : Math.max(4, p.x - 14 - width);
+      el.style.transform = `translate(${left.toFixed(1)}px, ${p.y.toFixed(1)}px) translate(0, -50%)`;
+      el.style.opacity = String(Math.max(0, Math.min(1, (k - 0.35) * 2.5)) * intro);
+    }
     for (const label of armLabels) {
       const s = project(label.p);
-      label.el.style.transform = `translate(${s.x.toFixed(1)}px, ${s.y.toFixed(1)}px) translate(-50%, -50%)`;
+      const half = label.el.offsetWidth / 2;
+      const x = Math.max(half + 4, Math.min(canvas.clientWidth - half - 4, s.x));
+      label.el.style.transform = `translate(${x.toFixed(1)}px, ${s.y.toFixed(1)}px) translate(-50%, -50%)`;
       label.el.style.opacity = String(Math.max(0.25, Math.min(1, 0.6 + s.z * 0.35)) * intro);
     }
     renderer.render(scene, camera);

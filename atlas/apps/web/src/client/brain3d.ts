@@ -19,9 +19,9 @@
  *   false and the SVG brain stays.
  */
 import * as THREE from 'three';
-import { mergeVertices } from 'three/examples/jsm/utils/BufferGeometryUtils.js';
 import { z } from 'zod';
-import { GLOW, INK, cerebellumPoint, hemispherePoint, simplex3 } from '../lib/brain3d.ts';
+import { brainMeshes, type MeshArrays } from '../lib/brain-mesh.ts';
+import { GLOW, INK } from '../lib/brain3d.ts';
 import type { PageContext } from './page.ts';
 import { BEAD_FRAGMENT, BEAD_VERTEX, GLASS_FRAGMENT, GLASS_VERTEX, isNight } from './three-shaders.ts';
 
@@ -74,7 +74,6 @@ export function initBrain3D(ctx: PageContext, fig: HTMLElement, reduced: boolean
   scene.add(brain);
 
   // ── glass cortex ──────────────────────────────────────────────────────────
-  const noise = simplex3(3);
   const glass = (side: THREE.Side, opacity: number): THREE.ShaderMaterial => {
     const m = new THREE.ShaderMaterial({
       uniforms: {
@@ -98,22 +97,6 @@ export function initBrain3D(ctx: PageContext, fig: HTMLElement, reduced: boolean
     (glassBack.uniforms as { uOpacity: { value: number } }).uOpacity.value = 0.42 * k;
     (glassFront.uniforms as { uOpacity: { value: number } }).uOpacity.value = k;
   };
-  const sculpt = (detail: number, point: (x: number, y: number, z: number) => readonly [number, number, number]): THREE.BufferGeometry => {
-    const base = new THREE.IcosahedronGeometry(1, detail);
-    base.deleteAttribute('normal');
-    base.deleteAttribute('uv');
-    const geo = mergeVertices(base);
-    base.dispose();
-    const pos = geo.getAttribute('position');
-    for (let i = 0; i < pos.count; i += 1) {
-      const len = Math.hypot(pos.getX(i), pos.getY(i), pos.getZ(i)) || 1;
-      const [x, y, zz] = point(pos.getX(i) / len, pos.getY(i) / len, pos.getZ(i) / len);
-      pos.setXYZ(i, x, y, zz);
-    }
-    geo.computeVertexNormals();
-    disposables.push(geo);
-    return geo;
-  };
   const addGlass = (geo: THREE.BufferGeometry, transform?: (mesh: THREE.Mesh) => void): void => {
     for (const [material, order] of [[glassBack, 0], [glassFront, 1]] as const) {
       const mesh = new THREE.Mesh(geo, material);
@@ -122,10 +105,38 @@ export function initBrain3D(ctx: PageContext, fig: HTMLElement, reduced: boolean
       brain.add(mesh);
     }
   };
-  // three subdivides an icosahedron into 20·(detail+1)² faces
-  const detail = small ? 44 : 68;
-  for (const side of [1, -1] as const) addGlass(sculpt(detail, (x, y, zz) => hemispherePoint(noise, x, y, zz, side)));
-  addGlass(sculpt(small ? 30 : 42, (x, y, zz) => cerebellumPoint(noise, x, y, zz)));
+  // The cortex is built off the main thread (brain-worker.ts, ~0.2 s) while
+  // the neurons and fibres already draw; the glass condenses in when it lands.
+  let cortexAt = -1;
+  const addCortex = (meshes: readonly MeshArrays[]): void => {
+    if (ctl.disposed) return;
+    for (const mesh of meshes) {
+      const geo = new THREE.BufferGeometry();
+      geo.setAttribute('position', new THREE.BufferAttribute(mesh.position, 3));
+      geo.setAttribute('normal', new THREE.BufferAttribute(mesh.normal, 3));
+      geo.setIndex(new THREE.BufferAttribute(mesh.index, 1));
+      disposables.push(geo);
+      addGlass(geo);
+    }
+    cortexAt = performance.now();
+  };
+  const buildHere = (): void => {
+    addCortex(brainMeshes(small));
+  };
+  try {
+    const worker = new Worker(new URL('./brain-worker.ts', import.meta.url), { type: 'module' });
+    ctl.defer(() => {
+      worker.terminate();
+    });
+    worker.addEventListener('message', (event: MessageEvent<MeshArrays[]>) => {
+      addCortex(event.data);
+      worker.terminate();
+    }, { signal });
+    worker.addEventListener('error', buildHere, { signal });
+    worker.postMessage({ small });
+  } catch {
+    buildHere();
+  }
   const stemGeo = new THREE.CylinderGeometry(0.075, 0.11, 0.42, 48, 6, true);
   disposables.push(stemGeo);
   addGlass(stemGeo, (mesh) => {
@@ -486,7 +497,6 @@ export function initBrain3D(ctx: PageContext, fig: HTMLElement, reduced: boolean
     data.concepts.forEach((concept, i) => { C.pos.set([concept.p[0] * spread, concept.p[1] * spread, concept.p[2] * spread], i * 3); });
     N.geo.getAttribute('position').needsUpdate = true;
     C.geo.getAttribute('position').needsUpdate = true;
-    setGlass(k);
     lineMat.opacity = k * k;
     brain.scale.setScalar(0.9 + 0.1 * k);
     labelsLayer.style.opacity = String(k);
@@ -503,7 +513,7 @@ export function initBrain3D(ctx: PageContext, fig: HTMLElement, reduced: boolean
     const engaged = now < engagedUntil;
     if (intro < 1) {
       if (introStart < 0) introStart = now;
-      const t = Math.min(1, (now - introStart) / 1900);
+      const t = Math.min(1, (now - introStart) / 1000);
       intro = 1 - (1 - t) ** 3;
       assemble(intro);
     }
@@ -515,6 +525,7 @@ export function initBrain3D(ctx: PageContext, fig: HTMLElement, reduced: boolean
     }
     if (!reduced) phase += dt * (engaged ? 0.08 : 0.32);
     brain.rotation.y = baseYaw + Math.sin(phase) * 0.5 + offset;
+    setGlass(cortexAt < 0 ? 0 : reduced ? 1 : Math.min(1, (now - cortexAt) / 450));
     brain.rotation.x = pitch + scrollTilt * 0.35 + (reduced ? 0 : Math.sin(now / 2600) * 0.025);
 
     if (!reduced && now > nextAmbient && live.length > 0) {

@@ -85,6 +85,7 @@ const galaxy = {
   arms,
   labels: GALAXY_ARMS.map((arm, a) => ({ label: arm.label, domain: arm.domain, count: Array.from(arms).filter((ch) => ch === String(a)).length })),
   queries: home.searches.map((search) => search.results.map((result) => result.index)),
+  hits: home.searches.map((search) => search.results.map((result) => ({ kind: result.kind, title: result.title, url: result.url }))),
 };
 const brain3d = brainLayout({
   parts: stackModel.parts.map((part) => ({ n: part.n, title: part.title, domain: part.domain })),

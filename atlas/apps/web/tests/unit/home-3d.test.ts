@@ -1,5 +1,6 @@
 import assert from 'node:assert/strict';
 import { describe, test } from 'node:test';
+import { brainMeshes, icosphere } from '../../src/lib/brain-mesh.ts';
 import { brainLayout, hemispherePoint, insideBrain, simplex3 } from '../../src/lib/brain3d.ts';
 import { arcPoint, globeNodes } from '../../src/lib/globe.ts';
 import { landDots } from '../../src/lib/world-dots.ts';
@@ -64,5 +65,27 @@ describe('globe', () => {
     assert.equal(dots.length % 2, 0);
     const fraction = dots.length / 2 / 22000;
     assert.ok(fraction > 0.26 && fraction < 0.32, String(fraction));
+  });
+});
+
+describe('cortex mesh', () => {
+  test('the icosphere is a closed, shared-vertex mesh (V − E + F = 2)', () => {
+    for (const level of [0, 2, 4]) {
+      const { position, index } = icosphere(level);
+      const V = position.length / 3;
+      const F = index.length / 3;
+      assert.equal(V, 10 * 4 ** level + 2);
+      assert.equal(V - (3 * F) / 2 + F, 2);
+    }
+  });
+
+  test('brain meshes: three bodies, unit normals, indices in range', () => {
+    const meshes = brainMeshes(true);
+    assert.equal(meshes.length, 3);
+    for (const mesh of meshes) {
+      const V = mesh.position.length / 3;
+      assert.ok(Math.max(...mesh.index) < V);
+      for (let i = 0; i < mesh.normal.length; i += 300) assert.ok(Math.abs(Math.hypot(mesh.normal[i] ?? 0, mesh.normal[i + 1] ?? 0, mesh.normal[i + 2] ?? 0) - 1) < 1e-4);
+    }
   });
 });

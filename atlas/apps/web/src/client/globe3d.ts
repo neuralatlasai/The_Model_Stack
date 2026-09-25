@@ -403,7 +403,7 @@ export function initGlobe3D(ctx: PageContext, panel: HTMLElement, reduced: boole
     then = now;
     if (intro < 1) {
       if (introStart < 0) introStart = now;
-      const t = Math.min(1, (now - introStart) / 2400);
+      const t = Math.min(1, (now - introStart) / 1300);
       intro = 1 - (1 - t) ** 3;
       emerge(intro);
     }
