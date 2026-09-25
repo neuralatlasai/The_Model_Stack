@@ -1,6 +1,6 @@
 /**
- * The one inline script of the site: sets `<html data-theme>` and
- * `<html data-depth>` before first paint (no flash of the wrong theme, no
+ * The one inline script of the site: sets `<html data-theme>`,
+ * `<html data-depth>`, and `<html data-gl>` before first paint (no flash of the wrong theme, no
  * layout shift from depth-hidden blocks), and re-applies both to the incoming
  * document on every Astro ClientRouter navigation (`astro:before-swap`),
  * because the router replaces the root element's attributes.
@@ -33,10 +33,14 @@ const BODY = `
     var stored = read(c.depthKey);
     return stored !== null && c.depths.indexOf(stored) !== -1 ? stored : c.fallbackDepth;
   }
+  // WebGL support, known before first paint: 3D objects take their place at
+  // once and their drawn 2D fallbacks never flash on load.
+  var GL = (function () { try { return 'WebGLRenderingContext' in window ? '1' : '0'; } catch (noGl) { return '0'; } })();
   function apply(root, href) {
     var selected = theme();
     if (selected === null) root.removeAttribute(c.themeAttr); else root.setAttribute(c.themeAttr, selected);
     root.setAttribute(c.depthAttr, depth(href));
+    root.setAttribute('data-gl', GL);
   }
   apply(document.documentElement, window.location.href);
   if (window[BOOT] !== true) {

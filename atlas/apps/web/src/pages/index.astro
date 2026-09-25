@@ -11,7 +11,9 @@ import { isNodeId, type GraphNode, type NodeId, type ResearchDocument } from '@a
 import AtlasInstrument from '../components/shell/AtlasInstrument.astro';
 import HomeStory from '../components/home/HomeStory.astro';
 import { brainMap } from '../lib/brain-map.ts';
-import { buildAnatomy, buildFocus, countLabels, depthList, runSearches, selectClaims, type HomeModel } from '../lib/home-model.ts';
+import { REGION_LABEL, brainLayout } from '../lib/brain3d.ts';
+import { landDots } from '../lib/world-dots.ts';
+import { GALAXY_ARMS, buildAnatomy, buildFocus, countLabels, depthList, galaxyArms, runSearches, selectClaims, type HomeModel } from '../lib/home-model.ts';
 import '../styles/home.css';
 import type { InstrumentPart, InstrumentRow } from '../lib/instrument.ts';
 import ReadingRoutes from '../components/shell/ReadingRoutes.astro';
@@ -64,6 +66,32 @@ const brain = brainMap(
   registry.terms.flatMap((term) => (term.chapter === null ? [] : [{ term: term.term, chapter: term.chapter, url: term.url }])),
   stackModel.edges,
 );
+const globe = {
+  chapters: Object.values(stackModel.chapters).map((chapter) => ({
+    n: chapter.n,
+    title: /^chapter \d+/iu.test(chapter.short) ? chapter.title : chapter.short,
+    url: chapter.url,
+    part: chapter.part,
+    domain: chapter.domain,
+    written: chapter.written,
+  })),
+  edges: stackModel.edges.map(([from, to]) => [from, to] as const),
+  parts: stackModel.parts.map((part) => ({ n: part.n, label: REGION_LABEL[part.n] ?? part.title })),
+  focus: home.focus.map((chapter) => Number.parseInt(chapter.number, 10)),
+  land: landDots(),
+};
+const arms = galaxyArms(searchDocs);
+const galaxy = {
+  arms,
+  labels: GALAXY_ARMS.map((arm, a) => ({ label: arm.label, domain: arm.domain, count: Array.from(arms).filter((ch) => ch === String(a)).length })),
+  queries: home.searches.map((search) => search.results.map((result) => result.index)),
+};
+const brain3d = brainLayout({
+  parts: stackModel.parts.map((part) => ({ n: part.n, title: part.title, domain: part.domain })),
+  chapters: Object.values(stackModel.chapters).map((chapter) => ({ n: chapter.n, title: chapter.title, url: chapter.url, part: chapter.part, domain: chapter.domain, written: chapter.written })),
+  terms: registry.terms.flatMap((term) => (term.chapter === null ? [] : [{ term: term.term, chapter: term.chapter }])),
+  prereqs: stackModel.edges,
+});
 
 interface Recent {
   readonly node: GraphNode;
@@ -132,7 +160,7 @@ const description =
   jsonLd={siteJsonLd(graph, Astro.site, manifest.edition)}
 >
   <main id="main" class="sh-home" tabindex="-1">
-    <HomeStory model={home} brain={brain} graph={graph} registry={registry} manifest={manifest} startUrl={startUrl} edges={stackModel.edges.length} />
+    <HomeStory model={home} brain={brain} brain3d={brain3d} globe={globe} galaxy={galaxy} graph={graph} registry={registry} manifest={manifest} startUrl={startUrl} edges={stackModel.edges.length} />
 
     <div id="stack-map" class="hx-anchor">
       <StackExplorer model={stackModel} />

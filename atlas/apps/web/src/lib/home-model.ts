@@ -57,7 +57,7 @@ export interface HomeRef {
 
 export interface HomeSearch {
   readonly query: string;
-  readonly results: readonly { readonly kind: string; readonly title: string; readonly context: string; readonly url: string }[];
+  readonly results: readonly { readonly kind: string; readonly title: string; readonly context: string; readonly url: string; readonly index: number }[];
 }
 
 export interface HomeModel {
@@ -241,16 +241,39 @@ export function buildFocus(stack: StackModel, max = 4): HomeFocus[] {
 /** Top results for each query from the site's own search index (same options as the palette). */
 export function runSearches(indexJson: string, docsJson: string, queries: readonly string[], per = 4): HomeSearch[] {
   const engine = MiniSearch.loadJSON<SearchDoc>(indexJson, { ...SEARCH_INDEX_OPTIONS, searchOptions: { ...SEARCH_INDEX_OPTIONS.searchOptions, boost: { ...SEARCH_INDEX_OPTIONS.searchOptions.boost } }, fields: [...SEARCH_INDEX_OPTIONS.fields], storeFields: [...SEARCH_INDEX_OPTIONS.storeFields] });
-  const docs = new Map((JSON.parse(docsJson) as SearchDoc[]).map((doc) => [doc.id, doc]));
+  const list = JSON.parse(docsJson) as SearchDoc[];
+  const docs = new Map(list.map((doc, index) => [doc.id, { doc, index }]));
   return queries.map((query) => ({
     query,
     results: engine
       .search(query)
       .slice(0, per)
       .map((hit) => docs.get(String(hit.id)))
-      .filter((doc) => doc !== undefined)
-      .map((doc) => ({ kind: doc.kind, title: doc.title, context: doc.context, url: doc.url })),
+      .filter((entry) => entry !== undefined)
+      .map(({ doc, index }) => ({ kind: doc.kind, title: doc.title, context: doc.context, url: doc.url, index })),
   }));
+}
+
+/** The seven arms of the search galaxy, by object kind. */
+export const GALAXY_ARMS = [
+  { label: 'The book', kinds: ['volume', 'part', 'chapter', 'section', 'front-matter', 'appendix'], domain: 'architecture' },
+  { label: 'Figures', kinds: ['figure'], domain: 'data' },
+  { label: 'Equations', kinds: ['equation'], domain: 'training' },
+  { label: 'Algorithms · experiments', kinds: ['algorithm', 'experiment', 'open-question'], domain: 'inference' },
+  { label: 'Failure modes', kinds: ['failure-mode'], domain: 'post-training' },
+  { label: 'Terms', kinds: ['term'], domain: 'serving' },
+  { label: 'Papers · systems · labs', kinds: ['paper', 'system', 'lab'], domain: 'hardware' },
+] as const;
+
+/** Arm index per search document, in index order, as a compact digit string. */
+export function galaxyArms(docsJson: string): string {
+  const list = JSON.parse(docsJson) as SearchDoc[];
+  return list
+    .map((doc) => {
+      const arm = GALAXY_ARMS.findIndex((entry) => (entry.kinds as readonly string[]).includes(doc.kind));
+      return String(arm < 0 ? 0 : arm);
+    })
+    .join('');
 }
 
 /** Section anatomy in reading order with the depth at which each region appears. */

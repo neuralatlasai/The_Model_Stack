@@ -85,9 +85,17 @@ export function initHome(ctx: PageContext): void {
   // ── the brain ──────────────────────────────────────────────────────────────
   const brain = root.querySelector<HTMLElement>('[data-brain]');
   if (brain !== null) {
-    void import('./brain.ts').then((module) => {
-      if (!ctl.disposed) module.initBrain(ctx, brain, reduced);
-    });
+    // WebGL brain first; the SVG brain is the fallback.
+    void import('./brain3d.ts')
+      .then((module) => !ctl.disposed && module.initBrain3D(ctx, brain, reduced))
+      .catch(() => false)
+      .then((ok) => {
+        if (ok || ctl.disposed) return;
+        brain.classList.add('is-2d');
+        void import('./brain.ts').then((module) => {
+          if (!ctl.disposed) module.initBrain(ctx, brain, reduced);
+        });
+      });
   }
 
   // ── 01 claims ──────────────────────────────────────────────────────────────
@@ -122,6 +130,8 @@ export function initHome(ctx: PageContext): void {
   let depAt = 0;
   const showDep = (index: number): void => {
     depAt = (index + deps.length) % Math.max(1, deps.length);
+    const n = Number(tabs[depAt]?.dataset['focusN']);
+    if (Number.isFinite(n)) depsPanel?.dispatchEvent(new CustomEvent('hx:focus', { detail: n }));
     deps.forEach((dep, i) => { dep.hidden = i !== depAt; });
     tabs.forEach((tab, i) => {
       tab.setAttribute('aria-selected', String(i === depAt));
@@ -143,6 +153,17 @@ export function initHome(ctx: PageContext): void {
       tabs[depAt]?.focus();
     }, { signal });
   });
+  if (depsPanel instanceof HTMLElement) {
+    void import('./globe3d.ts')
+      .then((module) => {
+        if (ctl.disposed) return;
+        if (module.initGlobe3D(ctx, depsPanel, reduced)) showDep(depAt);
+        else depsPanel.classList.add('is-2d');
+      })
+      .catch(() => {
+        depsPanel.classList.add('is-2d');
+      });
+  }
   showDep(0);
   if (deps.length > 1) depCycle = cycle(depsPanel, 5200, () => { showDep(depAt + 1); }, depsPanel?.closest('section') ?? depsPanel);
 
@@ -196,6 +217,7 @@ export function initHome(ctx: PageContext): void {
   });
   const showSearch = (index: number): void => {
     searchAt = (index + results.length) % Math.max(1, results.length);
+    searchPanel?.dispatchEvent(new CustomEvent('hx:query', { detail: searchAt }));
     const text = results[searchAt]?.dataset['q'] ?? '';
     for (const list of results) list.hidden = true;
     clearTimeout(typing);
@@ -212,10 +234,38 @@ export function initHome(ctx: PageContext): void {
     };
     type();
   };
+  if (searchPanel instanceof HTMLElement) {
+    void import('./galaxy3d.ts')
+      .then((module) => {
+        if (ctl.disposed) return;
+        if (module.initGalaxy3D(ctx, searchPanel, reduced)) searchPanel.dispatchEvent(new CustomEvent('hx:query', { detail: searchAt }));
+        else searchPanel.classList.add('is-2d');
+      })
+      .catch(() => {
+        searchPanel.classList.add('is-2d');
+      });
+  }
   if (results.length > 1) cycle(searchPanel, 4200, () => { showSearch(searchAt + 1); });
   root.querySelector('[data-home-open-search]')?.addEventListener('click', () => {
     doc.querySelector<HTMLElement>('[data-action="open-search"]')?.click();
   }, { signal });
+
+  // ── pointer-driven depth on [data-tilt] ────────────────────────────────────
+  if (!reduced) {
+    for (const el of root.querySelectorAll<HTMLElement>('[data-tilt]')) {
+      el.addEventListener('pointermove', (event) => {
+        const rect = el.getBoundingClientRect();
+        const x = (event.clientX - rect.left) / rect.width - 0.5;
+        const y = (event.clientY - rect.top) / rect.height - 0.5;
+        el.style.setProperty('--ry', `${(x * 10).toFixed(2)}deg`);
+        el.style.setProperty('--rx', `${(-y * 8).toFixed(2)}deg`);
+      }, { signal });
+      el.addEventListener('pointerleave', () => {
+        el.style.setProperty('--ry', '0deg');
+        el.style.setProperty('--rx', '0deg');
+      }, { signal });
+    }
+  }
 
   // ── 05 sources: name the evaluation system under the pointer ──────────────
   const ecoName = root.querySelector('[data-eco-name]');

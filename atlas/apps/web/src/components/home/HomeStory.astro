@@ -20,12 +20,16 @@ import { DOMAINS as ECO_DOMAINS, ecosystem } from '../../lib/eval-ecosystem.ts';
 import { grouped } from '../../lib/format.ts';
 import { jsonForHtml } from '../../lib/json.ts';
 import type { BrainModel } from '../../lib/brain-map.ts';
+import type { Brain3D } from '../../lib/brain3d.ts';
 import type { HomeClaim, HomeFocus, HomeModel } from '../../lib/home-model.ts';
 import BrainHero from './BrainHero.astro';
 
 interface Props {
   model: HomeModel;
   brain: BrainModel;
+  brain3d: Brain3D;
+  globe: unknown;
+  galaxy: unknown;
   graph: AtlasGraph;
   registry: Registry;
   manifest: BundleManifest;
@@ -33,7 +37,7 @@ interface Props {
   edges: number;
 }
 
-const { model, brain, graph, registry, manifest, startUrl, edges } = Astro.props;
+const { model, brain, brain3d, globe, galaxy, graph, registry, manifest, startUrl, edges } = Astro.props;
 const chapterTotal = brain.neurons.length;
 
 const CLASS_LABEL: Readonly<Record<string, string>> = { source: 'cited source', inference: "the book's inference", gap: 'evidence missing', measurement: 'executed check' };
@@ -76,7 +80,7 @@ const focus: readonly HomeFocus[] = model.focus;
     </a>
   </div>
 
-  <BrainHero brain={brain} />
+  <BrainHero brain={brain} brain3d={brain3d} />
 </section>
 
 <p class="hx-scale">
@@ -100,7 +104,7 @@ const focus: readonly HomeFocus[] = model.focus;
     <a class="hx-link" href="/evidence/">How the evidence labels work <span aria-hidden="true">→</span></a>
   </div>
 
-  <div class="hx-panel hx-claims" data-home-claims>
+  <div class="hx-panel hx-claims" data-home-claims data-tilt>
     <p class="hx-panel__head"><span>From the manuscripts</span><span>{grouped(labelTotal)} labelled statements</span></p>
     <div class="hx-claims__stage">
       {
@@ -163,7 +167,7 @@ const focus: readonly HomeFocus[] = model.focus;
         </p>
         <div class="hx-tabs" role="tablist" aria-label="Example chapters">
           {focus.map((chapter, index) => (
-            <button type="button" role="tab" class="hx-tab" data-focus-tab={index} aria-selected={index === 0 ? 'true' : 'false'}>
+            <button type="button" role="tab" class="hx-tab" data-focus-tab={index} data-focus-n={Number.parseInt(chapter.number, 10)} aria-selected={index === 0 ? 'true' : 'false'}>
               <b>{pad2(chapter.number)}</b> {chapter.title}
             </button>
           ))}
@@ -174,6 +178,17 @@ const focus: readonly HomeFocus[] = model.focus;
       </div>
 
       <div class="hx-panel hx-deps" data-home-deps>
+        <script type="application/json" data-globe set:html={jsonForHtml(globe)} />
+        <div class="hg" data-globe-host>
+          <div class="hg-labels" data-globe-labels aria-hidden="true" />
+        </div>
+        <p class="hg-cap" data-globe-cap aria-live="polite" />
+        <p class="hg-legend" aria-hidden="true">
+          <span><i class="is-in" />builds on</span>
+          <span><i class="is-out" />unlocks</span>
+          <span><i class="is-node" />chapter, filled when written</span>
+          <span>drag to spin · click a chapter to open it</span>
+        </p>
         <p class="hx-panel__head">
           <span>builds on</span>
           <span>unlocks</span>
@@ -244,7 +259,24 @@ const focus: readonly HomeFocus[] = model.focus;
       }
     </div>
     <p class="hx-depth__desc" data-depth-desc aria-live="polite">{model.depths.find((depth) => depth.key === 'technical')?.description}</p>
-    <ol class="hx-anatomy" role="list">
+    <div class="hx-depth3d" aria-hidden="true">
+      <div class="hx-stack3d">
+        {
+          model.depths.map((depth, index) => (
+            <div class={`hx-plane hx-plane--${depth.key}`} style={`--k:${String(index)}`}>
+              <span class="hx-plane__name">{depth.label}</span>
+              <span class="hx-plane__rows">
+                {model.anatomy
+                  .filter((row) => row.depth === depth.key)
+                  .map((row) => row.label)
+                  .join(' · ')}
+              </span>
+            </div>
+          ))
+        }
+      </div>
+    </div>
+    <ol class="hx-anatomy sh-visually-hidden" role="list">
       {
         model.anatomy.map((row) => (
           <li class={`hx-anat hx-anat--${row.depth}`} data-anat={row.depth}>
@@ -278,7 +310,11 @@ const focus: readonly HomeFocus[] = model.focus;
         </button>
       </div>
 
-      <div class="hx-panel hx-palette" data-home-search>
+      <div class="hx-panel hx-palette" data-home-search data-tilt>
+        <script type="application/json" data-galaxy set:html={jsonForHtml(galaxy)} />
+        <div class="hy" data-galaxy-host>
+          <div class="hy-labels" data-galaxy-labels aria-hidden="true" />
+        </div>
         <div class="hx-palette__input">
           <svg viewBox="0 0 16 16" width="15" height="15" aria-hidden="true">
             <circle cx="7" cy="7" r="4.6" fill="none" stroke="currentColor" stroke-width="1.4" />
@@ -360,6 +396,7 @@ const focus: readonly HomeFocus[] = model.focus;
       <span>Evaluation ecosystem, 2026</span>
       <span data-eco-name>100 systems · point to name one</span>
     </p>
+    <div class="hx-eco3d">
     <ol class="hx-eco" role="list" aria-label="The 100 evaluation systems in priority order">
       {
         eco.entries.map((entry) => (
@@ -375,6 +412,7 @@ const focus: readonly HomeFocus[] = model.focus;
         ))
       }
     </ol>
+    </div>
     <p class="hx-statuslegend">
       {
         ECO_DOMAINS.map((domain) => (
