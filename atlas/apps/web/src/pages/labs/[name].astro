@@ -9,7 +9,11 @@ import Breadcrumbs from '../../components/shell/Breadcrumbs.astro';
 import PageHeader from '../../components/shell/PageHeader.astro';
 import StackUses from '../../components/shell/StackUses.astro';
 import ReaderLayout from '../../layouts/ReaderLayout.astro';
+import EntityMap from '../../components/shell/EntityMap.astro';
 import { getGraph, getRegistry } from '../../lib/atlas.ts';
+import { buildLabsModel } from '../../lib/entity-model.ts';
+import { getStackModel } from '../../lib/stack.ts';
+import '../../styles/entity-map.css';
 
 type Props = { readonly id: LabId };
 
@@ -22,6 +26,8 @@ const { id } = Astro.props;
 const [registry, graph] = await Promise.all([getRegistry(), getGraph()]);
 const lab = registry.labs.find((entry) => entry.id === id);
 if (lab === undefined) throw new Error(`labs/[name]: ${id} missing from the registry`);
+const labsModel = buildLabsModel(graph, registry, await getStackModel());
+const labRow = labsModel.labs.find((candidate) => candidate.url === lab.atlasUrl) ?? null;
 const identity = ['Lab', lab.rank === null ? null : `reference-stack position ${String(lab.rank)}`]
   .filter((part): part is string => part !== null)
   .join(' · ');
@@ -51,6 +57,8 @@ const identity = ['Lab', lab.rank === null ? null : `reference-stack position ${
         )
       }
     </PageHeader>
+
+    {labRow !== null && <EntityMap kind="lab" name={lab.name} chapters={labsModel.chapters} parts={labsModel.parts} used={labRow.chapters} uses={labRow.uses} />}
 
     <section class="sh-section" aria-labelledby="takes-heading">
       <h2 id="takes-heading">What chapters take from it</h2>

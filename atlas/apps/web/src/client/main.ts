@@ -130,6 +130,15 @@ const FEATURES: readonly Feature[] = [
       });
     },
   ],
+  [
+    'entity-map',
+    (ctx) => {
+      if (ctx.doc.querySelector('[data-entity-map]') === null) return;
+      void import('./entity-map.ts').then((module) => {
+        if (!ctx.ctl.disposed) module.initEntityMap(ctx);
+      });
+    },
+  ],
   ['search', initSearch],
   ['scroll-sync', initScrollSync],
 ];

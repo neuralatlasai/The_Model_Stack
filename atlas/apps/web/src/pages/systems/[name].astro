@@ -10,7 +10,11 @@ import Breadcrumbs from '../../components/shell/Breadcrumbs.astro';
 import PageHeader from '../../components/shell/PageHeader.astro';
 import StackUses from '../../components/shell/StackUses.astro';
 import ReaderLayout from '../../layouts/ReaderLayout.astro';
+import EntityMap from '../../components/shell/EntityMap.astro';
 import { getGraph, getRegistry } from '../../lib/atlas.ts';
+import { buildSystemsModel } from '../../lib/entity-model.ts';
+import { getStackModel } from '../../lib/stack.ts';
+import '../../styles/entity-map.css';
 
 type Props = { readonly id: ImplId };
 
@@ -23,6 +27,19 @@ const { id } = Astro.props;
 const [registry, graph] = await Promise.all([getRegistry(), getGraph()]);
 const system = registry.systems.find((entry) => entry.id === id);
 if (system === undefined) throw new Error(`systems/[name]: ${id} missing from the registry`);
+const model = buildSystemsModel(graph, registry, await getStackModel());
+const row = model.systems.find((candidate) => candidate.url === system.atlasUrl) ?? null;
+const layerRow = row === null || row.layer < 0 ? null : (model.layers[row.layer] ?? null);
+const layer =
+  row === null || layerRow === null
+    ? null
+    : {
+        index: row.layer,
+        siblings: layerRow.systems
+          .map((key) => model.systems.find((candidate) => candidate.key === key))
+          .filter((candidate) => candidate !== undefined)
+          .map((candidate) => ({ name: candidate.name, url: candidate.url, self: candidate.key === row.key, analysed: candidate.chapters.length > 0 })),
+      };
 const usedBy = system.usedBy.map((nodeId) => graph.nodes[nodeId]).filter((node): node is GraphNode => node !== undefined);
 const identity = ['System', system.layer ?? 'layer not stated', system.rank === null ? null : `rank ${String(system.rank)}`]
   .filter((part): part is string => part !== null)
@@ -53,6 +70,12 @@ const identity = ['System', system.layer ?? 'layer not stated', system.rank === 
         )
       }
     </PageHeader>
+
+    {
+      row !== null && (
+        <EntityMap kind="system" name={system.name} chapters={model.chapters} parts={model.parts} used={row.chapters} planned={row.planned} uses={row.uses} layer={layer} />
+      )
+    }
 
     <section class="sh-section" aria-labelledby="takes-heading">
       <h2 id="takes-heading">What chapters take from it</h2>
