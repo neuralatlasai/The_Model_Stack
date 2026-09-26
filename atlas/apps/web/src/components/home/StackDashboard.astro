@@ -1,0 +1,173 @@
+---
+/**
+ * The live dashboard beside the story (lib/stack-dashboard.ts; client
+ * dashboard.ts): one instrument panel that re-reads itself for the part in
+ * view, the way a dated dashboard follows a scenario.
+ *
+ *   badge     the part (or the whole book)
+ *   brain     the book as a brain (BrainHero) — the one image
+ *   line      what each part rests on (rising) and feeds (falling) through
+ *             the stack; solid up to the current part, dashed beyond
+ *   tiles     the part's chapters (or all parts), filled by sections written
+ *   donut     how its written claims are supported
+ *   grid      the concepts it defines, one square each
+ *   stats     rests on · feeds · written, with the regions it draws on
+ *   status    every chapter: written, in progress, planned
+ *
+ * Rendered in the whole-book state; every mark here is real data.
+ */
+import type { Brain3D } from '../../lib/brain3d.ts';
+import type { BrainModel } from '../../lib/brain-map.ts';
+import { jsonForHtml } from '../../lib/json.ts';
+import type { Dashboard } from '../../lib/stack-dashboard.ts';
+import BrainHero from './BrainHero.astro';
+
+interface Props {
+  brain: BrainModel;
+  brain3d: Brain3D;
+  dash: Dashboard;
+}
+
+const { brain, brain3d, dash } = Astro.props;
+const o = dash.overview;
+
+// line chart geometry (viewBox units)
+const W = 720;
+const H = 92;
+const X0 = 18;
+const X1 = W - 18;
+const Y0 = 14;
+const Y1 = 68;
+const max = Math.max(1, ...dash.line.map((point) => point.restsOn), ...dash.parts.map((state) => state.feeds));
+const xs = dash.line.map((_, i) => X0 + (i / Math.max(1, dash.line.length - 1)) * (X1 - X0));
+const y = (v: number): number => Y1 - (v / max) * (Y1 - Y0);
+const path = (values: readonly number[]): string => values.map((v, i) => `${i === 0 ? 'M' : 'L'}${(xs[i] ?? 0).toFixed(1)} ${y(v).toFixed(1)}`).join('');
+const rests = path(dash.line.map((point) => point.restsOn));
+const feeds = path(dash.parts.map((state) => state.feeds));
+
+// donut: three arcs on a circle of circumference 100
+const total = o.evidence[0] + o.evidence[1] + o.evidence[2];
+const share = o.evidence.map((v) => (total === 0 ? 0 : (v / total) * 100));
+const offsets = [0, share[0] ?? 0, (share[0] ?? 0) + (share[1] ?? 0)];
+
+const maxConcepts = Math.max(o.concepts.length, ...dash.parts.map((state) => state.concepts.length));
+const groups = [
+  { key: 'written', label: 'Written' },
+  { key: 'progress', label: 'In progress' },
+  { key: 'planned', label: 'Planned' },
+] as const;
+---
+
+<aside class="dx" data-dash aria-label="The stack at the part in view">
+  <script type="application/json" data-dash-data set:html={jsonForHtml(dash)} />
+
+  <div class="dx-top">
+    <p class="dx-badge" data-dx-badge aria-live="polite">{o.badge}</p>
+    <p class="dx-range" data-dx-range>{o.range}</p>
+  </div>
+
+  <div class="dx-brain">
+    <BrainHero brain={brain} brain3d={brain3d} />
+  </div>
+
+  <figure class="dx-line" aria-hidden="true">
+    <svg viewBox={`0 0 ${String(W)} ${String(H)}`} data-dx-line>
+      <defs>
+        <clipPath id="dx-past"><rect x="0" y="0" height={H} width={W} data-dx-past /></clipPath>
+        <clipPath id="dx-future"><rect x={W} y="0" height={H} width="0" data-dx-future /></clipPath>
+      </defs>
+      <line class="dx-axis" x1={X0} x2={X1} y1={Y1 + 4} y2={Y1 + 4} />
+      <g clip-path="url(#dx-past)">
+        <path class="dx-curve dx-curve--rests" d={rests} />
+        <path class="dx-curve dx-curve--feeds" d={feeds} />
+      </g>
+      <g clip-path="url(#dx-future)">
+        <path class="dx-curve dx-curve--rests is-dashed" d={rests} />
+        <path class="dx-curve dx-curve--feeds is-dashed" d={feeds} />
+      </g>
+      <line class="dx-now" x1="0" x2="0" y1={Y0 - 8} y2={Y1 + 4} data-dx-now />
+      <circle class="dx-dot dx-dot--rests" r="3.6" cx="0" cy="0" data-dx-dot-rests />
+      <circle class="dx-dot dx-dot--feeds" r="3.6" cx="0" cy="0" data-dx-dot-feeds />
+      <text class="dx-curve-label dx-curve-label--rests" x={X1} y={y(dash.line.at(-1)?.restsOn ?? 0) - 7} text-anchor="end">rests on</text>
+      <text class="dx-curve-label dx-curve-label--feeds" x={X0} y={y(dash.parts[0]?.feeds ?? 0) - 7}>feeds</text>
+      {
+        dash.line.map((point, i) => (
+          <text class="dx-tick" x={xs[i]} y={H - 6} text-anchor="middle" data-dx-tick={point.part}>
+            {point.numeral}
+          </text>
+        ))
+      }
+    </svg>
+    <script type="application/json" data-dx-geometry set:html={jsonForHtml({ xs, ys: { rests: dash.line.map((point) => y(point.restsOn)), feeds: dash.parts.map((state) => y(state.feeds)) }, W })} />
+  </figure>
+
+  <div class="dx-mid">
+    <div class="dx-tiles" data-dx-tiles>
+      {
+        o.tiles.map((tile) => (
+          <a class="dx-tile" href={tile.url} style={`--f:${tile.fill.toFixed(3)}`} title={tile.label}>
+            <span class="dx-tile__t">{tile.label}</span>
+            <span class="dx-tile__t is-on" aria-hidden="true">
+              {tile.label}
+            </span>
+          </a>
+        ))
+      }
+    </div>
+    <figure class="dx-donut" aria-hidden="true">
+      <svg viewBox="0 0 42 42" data-dx-donut>
+        <circle class="dx-ring" cx="21" cy="21" r="15.915" />
+        {share.map((value, i) => <circle class={`dx-arc dx-arc--${String(i)}`} cx="21" cy="21" r="15.915" style={`stroke-dasharray:${value.toFixed(2)} ${(100 - value).toFixed(2)};stroke-dashoffset:${(25 - (offsets[i] ?? 0)).toFixed(2)}`} data-dx-arc={i} />)}
+        <text x="21" y="22.6" text-anchor="middle" class="dx-donut__label" data-dx-donut-label>
+          Evidence
+        </text>
+      </svg>
+      <figcaption class="dx-donut__key">
+        <span><i class="dx-k0" />cited source</span>
+        <span><i class="dx-k1" />derived · assumed</span>
+        <span><i class="dx-k2" />gap</span>
+      </figcaption>
+    </figure>
+  </div>
+
+  <p class="dx-head" data-dx-grid-head>Concepts the book defines</p>
+  <div class="dx-grid" data-dx-grid aria-hidden="true">
+    {Array.from({ length: maxConcepts }, (_, i) => <i class:list={{ 'is-on': i < o.concepts.length }} />)}
+  </div>
+
+  <dl class="dx-stats">
+    <div>
+      <dt>Rests on</dt>
+      <dd data-dx-rests>—</dd>
+    </div>
+    <div>
+      <dt>Feeds</dt>
+      <dd data-dx-feeds>—</dd>
+    </div>
+    <div>
+      <dt>Written</dt>
+      <dd data-dx-written>{o.written}</dd>
+    </div>
+    <div class="dx-stats__wide">
+      <dt>Draws on</dt>
+      <dd data-dx-draws>the whole stack, one loop</dd>
+    </div>
+  </dl>
+
+  <div class="dx-status" aria-hidden="true">
+    {
+      groups.map((group) => (
+        <div class={`dx-status__g dx-status__g--${group.key}`}>
+          <p>{group.label}</p>
+          <span>
+            {dash.status
+              .filter((chapter) => chapter.state === group.key)
+              .map((chapter) => (
+                <i data-dx-ch={chapter.n} data-dx-part={chapter.part} title={`${String(chapter.n).padStart(2, '0')} · ${chapter.title}`} />
+              ))}
+          </span>
+        </div>
+      ))
+    }
+  </div>
+</aside>

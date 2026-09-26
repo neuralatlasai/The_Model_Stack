@@ -19,7 +19,6 @@
  */
 import clientCss from './client.css?inline';
 import { ATTR } from '@atlas/core';
-import { initAtlasInstrument } from './atlas-instrument.ts';
 import { initStackExplorer } from './stack-explorer.ts';
 import { initFigureExplore } from './figure-explore.ts';
 import { initMiniStack } from './mini-stack.ts';
@@ -62,7 +61,6 @@ const FEATURES: readonly Feature[] = [
   ['reading-state', initReadingState],
   ['citations', initCitations],
   ['copy', initCopy],
-  ['atlas-instrument', initAtlasInstrument],
   ['stack-explorer', initStackExplorer],
   ['figure-explore', initFigureExplore],
   ['mini-stack', initMiniStack],
@@ -81,13 +79,11 @@ const FEATURES: readonly Feature[] = [
   [
     'home',
     (ctx) => {
-      if (ctx.doc.querySelector('[data-home-hero]') === null) return;
-      // fetched in parallel, not one after another: home.ts awaits the same modules
+      if (ctx.doc.querySelector('[data-story]') === null) return;
+      // the brain renderer (and three.js) downloads alongside the story controller
       void import('./brain3d.ts');
-      void import('./globe3d.ts');
-      void import('./galaxy3d.ts');
-      void import('./home.ts').then((module) => {
-        if (!ctx.ctl.disposed) module.initHome(ctx);
+      void import('./story.ts').then((module) => {
+        if (!ctx.ctl.disposed) module.initStory(ctx);
       });
     },
   ],

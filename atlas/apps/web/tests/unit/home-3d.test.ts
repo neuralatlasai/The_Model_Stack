@@ -2,8 +2,6 @@ import assert from 'node:assert/strict';
 import { describe, test } from 'node:test';
 import { brainMeshes, icosphere } from '../../src/lib/brain-mesh.ts';
 import { brainLayout, hemispherePoint, insideBrain, simplex3 } from '../../src/lib/brain3d.ts';
-import { arcPoint, globeNodes } from '../../src/lib/globe.ts';
-import { landDots } from '../../src/lib/world-dots.ts';
 
 const DOMAINS = ['foundations', 'data', 'architecture', 'training', 'hardware', 'post-training', 'inference', 'serving', 'agents', 'embodied', 'evaluation'];
 const chapters = Array.from({ length: 66 }, (_, i) => ({
@@ -41,30 +39,6 @@ describe('3D brain', () => {
       radii.push(Math.hypot(px, py));
     }
     assert.ok(Math.max(...radii) - Math.min(...radii) > 0.3);
-  });
-});
-
-describe('globe', () => {
-  test('chapters sit on the unit sphere in reading order; arcs stay close to it', () => {
-    const nodes = globeNodes(chapters);
-    assert.deepEqual(
-      nodes.map((node) => node.n),
-      chapters.map((chapter) => chapter.n),
-    );
-    for (const node of nodes) assert.ok(Math.abs(Math.hypot(...node.p) - 1) < 1e-9);
-    const a = nodes[0]?.p ?? [0, 0, 1];
-    const b = nodes[65]?.p ?? [0, 0, 1];
-    for (let t = 0; t <= 1; t += 0.125) {
-      const r = Math.hypot(...arcPoint(a, b, t));
-      assert.ok(r >= 1 - 1e-9 && r <= 1.13, `radius ${String(r)} at t=${String(t)}`);
-    }
-  });
-
-  test('land covers about 29 % of the Earth', () => {
-    const dots = landDots();
-    assert.equal(dots.length % 2, 0);
-    const fraction = dots.length / 2 / 22000;
-    assert.ok(fraction > 0.26 && fraction < 0.32, String(fraction));
   });
 });
 

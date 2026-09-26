@@ -3,13 +3,13 @@
  * The book as a brain (lib/brain-map.ts): regions are the eleven parts,
  * neurons the 66 chapters (lit when written), small neurons the glossary
  * concepts around the chapter that owns them, fibres the declared
- * prerequisites. Client (home.ts) fires signals along real fibres, lights a
- * chapter's connections on hover or focus, and names it in the readout.
+ * prerequisites. The WebGL brain (client brain3d.ts) is the image; this SVG
+ * brain is its fallback (client brain.ts). The story (client story.ts)
+ * focuses one part at a time; hover names a chapter in the readout.
  * Every neuron is a link to its chapter.
  */
 import type { Brain3D } from '../../lib/brain3d.ts';
 import type { BrainModel } from '../../lib/brain-map.ts';
-import { grouped } from '../../lib/format.ts';
 import { jsonForHtml } from '../../lib/json.ts';
 
 interface Props {
@@ -31,7 +31,6 @@ const REGION_LABEL: Readonly<Record<number, string>> = {
   10: 'Multimodal',
   11: 'Evaluation',
 };
-const written = brain.neurons.filter((neuron) => neuron.written).length;
 const conceptCount = new Map<number, number>();
 for (const concept of brain.concepts) conceptCount.set(concept.chapter, (conceptCount.get(concept.chapter) ?? 0) + 1);
 const firstWritten = brain.neurons.find((neuron) => neuron.written)?.n ?? brain.neurons[0]?.n;
@@ -137,18 +136,16 @@ const pad = (n: number): string => String(n).padStart(2, '0');
 
   <figcaption class="hb-cap">
     <div class="hb-readout" aria-live="polite" data-brain-readout>
-      <p class="hb-readout__k" data-k>A map of the book as a brain</p>
-      <p class="hb-readout__t" data-t>Point at any neuron</p>
-      <p class="hb-readout__m" data-m>
-        {grouped(brain.neurons.length)} chapters are neurons, lit where written; {grouped(brain.concepts.length)} concepts cluster around the chapter that defines them;{' '}
-        {grouped(brain.fibres.length)} fibres are declared prerequisites.
-      </p>
+      <p class="hb-readout__k" data-k>The Model Stack</p>
+      <p class="hb-readout__t" data-t>From data and silicon to intelligence</p>
+      <p class="hb-readout__m" data-m></p>
     </div>
     <p class="hb-legend" aria-hidden="true">
-      <span><i class="hb-key is-written"></i>{written} written</span>
-      <span><i class="hb-key"></i>{brain.neurons.length - written} planned</span>
-      <span><i class="hb-key is-concept"></i>{brain.concepts.length} concepts</span>
-      <span><i class="hb-key is-fibre"></i>{brain.fibres.length} connections</span>
+      <span><i class="hb-key is-written"></i>chapter, written</span>
+      <span><i class="hb-key"></i>planned</span>
+      <span><i class="hb-key is-concept"></i>concept</span>
+      <span><i class="hb-key is-in"></i>builds on</span>
+      <span><i class="hb-key is-out"></i>unlocks</span>
     </p>
   </figcaption>
 </figure>

@@ -1,5 +1,5 @@
 /**
- * Shaders shared by the home page's 3D objects (brain3d.ts, globe3d.ts):
+ * Shaders for the home page's 3D brain (brain3d.ts):
  *
  *   glass   Fresnel glass — nearly clear where the surface faces the viewer,
  *           dense at grazing angles, with a specular glint; drawn back faces
@@ -86,51 +86,3 @@ export function isNight(doc: Document): boolean {
   const theme = doc.documentElement.dataset['theme'];
   return theme === 'dark' || (theme !== 'light' && window.matchMedia('(prefers-color-scheme: dark)').matches);
 }
-
-/** Small flat dots (the globe's land), fading with depth so the far side reads through the glass. */
-export const DOT_VERTEX = /* glsl */ `
-  uniform float uPixelRatio;
-  uniform float uSize;
-  uniform float uNear;
-  uniform float uFar;
-  varying float vAlpha;
-  void main() {
-    vec4 mv = modelViewMatrix * vec4(position, 1.0);
-    gl_Position = projectionMatrix * mv;
-    float depth = clamp((-mv.z - uNear) / (uFar - uNear), 0.0, 1.0);
-    vAlpha = mix(1.0, 0.05, depth);
-    gl_PointSize = uSize * uPixelRatio;
-  }
-`;
-
-export const DOT_FRAGMENT = /* glsl */ `
-  uniform vec3 uColor;
-  uniform float uOpacity;
-  varying float vAlpha;
-  void main() {
-    float d = length(gl_PointCoord - vec2(0.5));
-    if (d > 0.5) discard;
-    gl_FragColor = vec4(uColor, (1.0 - smoothstep(0.32, 0.5, d)) * uOpacity * vAlpha);
-  }
-`;
-
-/** Arc lines with per-vertex RGBA that fade where they pass behind the globe. */
-export const ARC_VERTEX = /* glsl */ `
-  attribute vec4 aColor;
-  uniform float uCentre;
-  varying vec4 vColor;
-  void main() {
-    vec4 mv = modelViewMatrix * vec4(position, 1.0);
-    gl_Position = projectionMatrix * mv;
-    float behind = smoothstep(-0.15, 0.55, -mv.z - uCentre);
-    vColor = vec4(aColor.rgb, aColor.a * mix(1.0, 0.1, behind));
-  }
-`;
-
-export const ARC_FRAGMENT = /* glsl */ `
-  uniform float uOpacity;
-  varying vec4 vColor;
-  void main() {
-    gl_FragColor = vec4(vColor.rgb, vColor.a * uOpacity);
-  }
-`;

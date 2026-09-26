@@ -1,0 +1,102 @@
+---
+/**
+ * Home as one argument beside one live dashboard: the narrative walks the
+ * stack part by part (lib/home-story.ts) while the dashboard (StackDashboard,
+ * the brain at its centre) stays in view and follows it — each step turns the
+ * brain to that part's region, draws its prerequisites in and out, and
+ * re-reads every instrument for that part (client story.ts → brain3d.ts,
+ * dashboard.ts). Each step lists its chapters as links.
+ */
+import type { StackModel } from '../../lib/stack.ts';
+import type { Brain3D } from '../../lib/brain3d.ts';
+import type { BrainModel } from '../../lib/brain-map.ts';
+import { STORY_BRAIN, STORY_CLOSE, STORY_PARTS, STORY_THESIS, runs } from '../../lib/home-story.ts';
+import type { Dashboard } from '../../lib/stack-dashboard.ts';
+import StackDashboard from './StackDashboard.astro';
+
+interface Props {
+  brain: BrainModel;
+  brain3d: Brain3D;
+  stack: StackModel;
+  dash: Dashboard;
+  startUrl: string;
+}
+
+const { brain, brain3d, stack, dash, startUrl } = Astro.props;
+const pad = (n: number): string => String(n).padStart(2, '0');
+const partOf = new Map(stack.parts.map((part) => [part.n, part]));
+const steps = STORY_PARTS.map((story) => {
+  const part = partOf.get(story.n);
+  const chapters = (part?.chapters ?? []).map((n) => stack.chapters[String(n)]).filter((chapter) => chapter !== undefined);
+  const first = chapters[0]?.n ?? 0;
+  const last = chapters.at(-1)?.n ?? 0;
+  return {
+    ...story,
+    numeral: part?.numeral ?? '',
+    title: (part?.title ?? '').replace(/^Part [IVXL]+ — /u, ''),
+    url: part?.url ?? '/library/',
+    range: `${pad(first)}–${pad(last)}`,
+    chapters,
+  };
+});
+---
+
+<div class="bs" data-story>
+  <div class="bs-visual">
+    <div class="bs-sticky">
+      <StackDashboard brain={brain} brain3d={brain3d} dash={dash} />
+    </div>
+  </div>
+
+  <div class="bs-text">
+    <header class="bs-intro bs-step" data-step data-part="0" data-k="The Model Stack" data-t="From data and silicon to intelligence">
+      <p class="bs-eyebrow">Research Atlas</p>
+      <h1 class="bs-title">The Model Stack</h1>
+      <p class="bs-sub">From data and silicon to intelligence</p>
+      <p class="bs-thesis">{STORY_THESIS}</p>
+      <p class="bs-note">{STORY_BRAIN}</p>
+      <p class="bs-actions">
+        <a class="bs-start" href={startUrl}>Start with Chapter 01 <span aria-hidden="true">→</span></a>
+        <a class="bs-link" href="/library/">The library</a>
+      </p>
+    </header>
+
+    {
+      steps.map((step) => (
+        <section class="bs-step" id={`part-${step.numeral.toLowerCase()}`} data-step data-part={step.n} data-k={`Part ${step.numeral} · Chapters ${step.range}`} data-t={step.title} aria-labelledby={`bs-h-${String(step.n)}`}>
+          <p class="bs-kicker">
+            <a href={step.url}>
+              Part {step.numeral} · {step.title}
+            </a>
+          </p>
+          <h2 class="bs-h2" id={`bs-h-${String(step.n)}`}>
+            {step.heading}
+          </h2>
+          <p class="bs-body">{runs(step.body).map((run) => (run.bold ? <b>{run.text}</b> : run.text))}</p>
+          <p class="bs-outcome">
+            <span>Outcome</span> {step.outcome}
+          </p>
+          <ol class="bs-chapters" role="list">
+            {step.chapters.map((chapter) => (
+              <li>
+                <a class:list={['bs-ch', { 'is-written': chapter.written }]} href={chapter.url} data-ch={chapter.n}>
+                  <span class="bs-ch__n">{chapter.number}</span>
+                  <span class="bs-ch__t">{chapter.title}</span>
+                </a>
+              </li>
+            ))}
+          </ol>
+        </section>
+      ))
+    }
+
+    <section class="bs-step bs-close" data-step data-part="0" data-k="The Model Stack" data-t="The whole stack, connected" aria-labelledby="bs-h-close">
+      <h2 class="bs-h2" id="bs-h-close">{STORY_CLOSE.heading}</h2>
+      <p class="bs-body">{runs(STORY_CLOSE.body).map((run) => (run.bold ? <b>{run.text}</b> : run.text))}</p>
+      <p class="bs-actions">
+        <a class="bs-start" href={startUrl}>Start with Chapter 01 <span aria-hidden="true">→</span></a>
+        <a class="bs-link" href="/library/">The library</a>
+      </p>
+    </section>
+  </div>
+</div>

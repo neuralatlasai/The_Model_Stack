@@ -1,224 +1,45 @@
 ---
 /**
- * Home: what the atlas is, why it is useful, what it provides, and how it
- * works (components/home/HomeStory.astro — hero with the live stack, then
- * evidence, connections, depth, search, sources, and the build pipeline,
- * every example drawn from the compiled bundle), followed by the atlas itself:
- * the dependency map, the knowledge universe beside the state-of-the-atlas
- * instrument, the reading routes, and the chapters that have manuscripts.
+ * Home: one argument beside one image. The narrative states the book's
+ * central relationship and walks the stack part by part; the brain — the
+ * book as a brain, each region a part, each neuron a chapter, each fibre a
+ * declared prerequisite — stays in view and follows it
+ * (components/home/BrainStory.astro).
  */
-import { isNodeId, type GraphNode, type NodeId, type ResearchDocument } from '@atlas/core';
-import AtlasInstrument from '../components/shell/AtlasInstrument.astro';
-import HomeStory from '../components/home/HomeStory.astro';
-import { brainMap } from '../lib/brain-map.ts';
-import { REGION_LABEL, brainLayout } from '../lib/brain3d.ts';
-import { landDots } from '../lib/world-dots.ts';
-import { GALAXY_ARMS, buildAnatomy, buildFocus, countLabels, depthList, galaxyArms, runSearches, selectClaims, type HomeModel } from '../lib/home-model.ts';
-import '../styles/home.css';
-import type { InstrumentPart, InstrumentRow } from '../lib/instrument.ts';
-import ReadingRoutes from '../components/shell/ReadingRoutes.astro';
-import UniverseMap from '../components/shell/UniverseMap.astro';
-import StackExplorer from '../components/shell/StackExplorer.astro';
-import '../styles/explorer.css';
-import { buildStackModel } from '../lib/stack.ts';
+import BrainStory from '../components/home/BrainStory.astro';
 import BaseLayout from '../layouts/BaseLayout.astro';
-import { getDocument, getGraph, getManifest, getRegistry, listDocuments, readSearchPayload } from '../lib/atlas.ts';
-import { mapBounded } from '../lib/concurrency.ts';
-import { compareStrings, isoDate, plural, stateLabel, updatedLabel } from '../lib/format.ts';
+import { getGraph, getManifest, getRegistry, listDocuments } from '../lib/atlas.ts';
+import { brainMap } from '../lib/brain-map.ts';
+import { brainLayout } from '../lib/brain3d.ts';
 import { SITE_TITLE, siteJsonLd } from '../lib/jsonld.ts';
-import { childrenOf, nodesOfType } from '../lib/nodes.ts';
-import { routeTables } from '../lib/reading-routes.ts';
+import { getStackModel } from '../lib/stack.ts';
+import { buildDashboard } from '../lib/stack-dashboard.ts';
+import '../styles/home.css';
 
-const [graph, manifest, registry, allDocs, searchIndex, searchDocs] = await Promise.all([
-  getGraph(),
-  getManifest(),
-  getRegistry(),
-  listDocuments(),
-  readSearchPayload('searchIndex'),
-  readSearchPayload('searchDocs'),
-]);
-const compiled = new Set<string>(manifest.documents);
-const loadIfCompiled = async (id: NodeId): Promise<ResearchDocument | null> =>
-  compiled.has(id) ? getDocument(id) : null;
+const [graph, manifest, registry, stack, docs] = await Promise.all([getGraph(), getManifest(), getRegistry(), getStackModel(), listDocuments()]);
+const dash = buildDashboard(stack, registry, docs);
 
-const chapters = nodesOfType(graph, 'chapter');
-const sections = nodesOfType(graph, 'section');
-const written = chapters.filter((chapter) => chapter.hasManuscript);
-
-const routesId: NodeId = 'ms.frontmatter.reading-routes';
-const routesNode = graph.nodes[routesId] ?? null;
-const routesDoc = await loadIfCompiled(routesId);
-const routeTable = routesDoc === null ? null : (routeTables(routesDoc)[0] ?? null);
-const stackModel = buildStackModel(graph, registry, routesDoc === null ? [] : routeTables(routesDoc).flatMap((table) => table.rows));
-
-const home: HomeModel = {
-  claims: selectClaims(allDocs),
-  labels: countLabels(allDocs),
-  focus: buildFocus(stackModel),
-  searches: runSearches(searchIndex, searchDocs, ['KV cache', 'contamination', 'tokenizer', 'mixture of experts']).filter((search) => search.results.length > 0),
-  anatomy: buildAnatomy(),
-  depths: depthList(),
-};
-const startUrl = written[0]?.url ?? '/library/';
+const chapters = Object.values(stack.chapters).sort((a, b) => a.n - b.n);
+const startUrl = chapters[0]?.url ?? '/library/';
+const terms = registry.terms.flatMap((term) => (term.chapter === null ? [] : [{ term: term.term, chapter: term.chapter, url: term.url }]));
 const brain = brainMap(
-  stackModel.parts.map((part) => ({ n: part.n, numeral: part.numeral, title: part.title, domain: part.domain, url: part.url })),
-  Object.values(stackModel.chapters).map((chapter) => ({ n: chapter.n, number: chapter.number, title: chapter.title, url: chapter.url, part: chapter.part, domain: chapter.domain, written: chapter.written })),
-  registry.terms.flatMap((term) => (term.chapter === null ? [] : [{ term: term.term, chapter: term.chapter, url: term.url }])),
-  stackModel.edges,
+  stack.parts.map((part) => ({ n: part.n, numeral: part.numeral, title: part.title, domain: part.domain, url: part.url })),
+  chapters.map((chapter) => ({ n: chapter.n, number: chapter.number, title: chapter.title, url: chapter.url, part: chapter.part, domain: chapter.domain, written: chapter.written })),
+  terms,
+  stack.edges,
 );
-const globe = {
-  chapters: Object.values(stackModel.chapters).map((chapter) => ({
-    n: chapter.n,
-    title: /^chapter \d+/iu.test(chapter.short) ? chapter.title : chapter.short,
-    url: chapter.url,
-    part: chapter.part,
-    domain: chapter.domain,
-    written: chapter.written,
-  })),
-  edges: stackModel.edges.map(([from, to]) => [from, to] as const),
-  parts: stackModel.parts.map((part) => ({ n: part.n, label: REGION_LABEL[part.n] ?? part.title })),
-  focus: home.focus.map((chapter) => Number.parseInt(chapter.number, 10)),
-  land: landDots(),
-};
-const arms = galaxyArms(searchDocs);
-const galaxy = {
-  arms,
-  labels: GALAXY_ARMS.map((arm, a) => ({ label: arm.label, domain: arm.domain, count: Array.from(arms).filter((ch) => ch === String(a)).length })),
-  queries: home.searches.map((search) => search.results.map((result) => result.index)),
-  hits: home.searches.map((search) => search.results.map((result) => ({ kind: result.kind, title: result.title, url: result.url }))),
-};
 const brain3d = brainLayout({
-  parts: stackModel.parts.map((part) => ({ n: part.n, title: part.title, domain: part.domain })),
-  chapters: Object.values(stackModel.chapters).map((chapter) => ({ n: chapter.n, title: chapter.title, url: chapter.url, part: chapter.part, domain: chapter.domain, written: chapter.written })),
-  terms: registry.terms.flatMap((term) => (term.chapter === null ? [] : [{ term: term.term, chapter: term.chapter }])),
-  prereqs: stackModel.edges,
+  parts: stack.parts.map((part) => ({ n: part.n, title: part.title, domain: part.domain })),
+  chapters: chapters.map((chapter) => ({ n: chapter.n, title: chapter.title, url: chapter.url, part: chapter.part, domain: chapter.domain, written: chapter.written })),
+  terms,
+  prereqs: stack.edges,
 });
-
-interface Recent {
-  readonly node: GraphNode;
-  readonly updatedAt: string;
-  readonly status: string;
-  readonly sectionCount: number;
-}
-const recent: Recent[] = (
-  await mapBounded(written, 4, async (node): Promise<Recent | null> => {
-    const doc = isNodeId(node.id) ? await loadIfCompiled(node.id) : null;
-    if (doc === null) return null;
-    return {
-      node,
-      updatedAt: doc.meta.updatedAt,
-      status: stateLabel(doc.meta.editorialStatus),
-      sectionCount: childrenOf(graph, node).filter((child) => child.entityType === 'section' && child.hasManuscript).length,
-    };
-  })
-)
-  .filter((entry): entry is Recent => entry !== null)
-  .sort((a, b) => compareStrings(b.updatedAt, a.updatedAt) || compareStrings(a.node.number ?? '', b.node.number ?? ''));
-
-const instrumentRows: InstrumentRow[] = [
-  { key: 'volumes', value: nodesOfType(graph, 'volume').length, href: '/library/' },
-  { key: 'parts', value: nodesOfType(graph, 'part').length, href: '/library/' },
-  { key: 'chapters', value: chapters.length, href: '/library/' },
-  { key: 'sections', value: sections.length, href: '/library/' },
-  { key: 'figures', value: manifest.counts.figures, href: '/figures/' },
-  { key: 'equations', value: manifest.counts.equations, href: '/equations/' },
-  { key: 'references', value: manifest.counts.references, href: '/papers/' },
-  { key: 'glossary terms', value: manifest.counts.terms, href: '/terms/' },
-];
-
-const instrumentParts: InstrumentPart[] = nodesOfType(graph, 'part').map((part) => ({
-  id: part.id,
-  numeral: part.number ?? '',
-  title: part.title,
-  domain: part.domain,
-  dots: childrenOf(graph, part)
-    .filter((child) => child.entityType === 'chapter')
-    .map((chapter) => {
-      const chapterSections = childrenOf(graph, chapter).filter((child) => child.entityType === 'section');
-      const writtenSections = chapterSections.filter((section) => section.hasManuscript).length;
-      const state = chapter.hasManuscript
-        ? `${String(writtenSections)}/${String(chapterSections.length)} sections written`
-        : 'planned';
-      return {
-        id: chapter.id,
-        number: chapter.number ?? '',
-        title: chapter.title,
-        href: chapter.url,
-        filled: chapter.hasManuscript,
-        readout: `${chapter.number ?? ''} · ${chapter.title} · ${state}`,
-      };
-    }),
-}));
 const description =
-  'A research atlas of modern model systems — from data and silicon to intelligence: three volumes, eleven parts, sixty-six chapters compiled into typed research objects.';
+  'The Model Stack: how modern AI models are built, from data and silicon to intelligence — the learning objective, representation, execution, and deployment evidence studied as one loop.';
 ---
 
-<BaseLayout
-  title={SITE_TITLE}
-  description={description}
-  canonicalPath="/"
-  navKey="atlas"
-  jsonLd={siteJsonLd(graph, Astro.site, manifest.edition)}
->
-  <main id="main" class="sh-home" tabindex="-1">
-    <HomeStory model={home} brain={brain} brain3d={brain3d} globe={globe} galaxy={galaxy} graph={graph} registry={registry} manifest={manifest} startUrl={startUrl} edges={stackModel.edges.length} />
-
-    <div id="stack-map" class="hx-anchor">
-      <StackExplorer model={stackModel} />
-    </div>
-
-    <div class="sh-home-grid">
-      <section class="sh-home-map" aria-label="Volumes, parts, and chapters">
-        <UniverseMap graph={graph} />
-      </section>
-
-      <div class="sh-home-side">
-        <AtlasInstrument
-          header={`EDITION ${manifest.edition} · STATE OF THE ATLAS`}
-          rows={instrumentRows}
-          parts={instrumentParts}
-          legend={{ filled: 'chapters with manuscripts', hollow: 'chapters planned' }}
-        />
-
-        {
-          routeTable !== null && routesNode !== null && (
-            <section class="sh-home-block" aria-labelledby="routes-heading">
-              <h2 id="routes-heading" class="sh-block-title">
-                Reading routes
-              </h2>
-              <ReadingRoutes graph={graph} table={routeTable} moreUrl={routesNode.url} />
-            </section>
-          )
-        }
-
-        {
-          recent.length > 0 && (
-            <section class="sh-home-block" aria-labelledby="recent-heading">
-              <h2 id="recent-heading" class="sh-block-title">
-                Recently developed
-              </h2>
-              <ol class="sh-recent">
-                {recent.map((entry) => {
-                  const iso = isoDate(entry.updatedAt);
-                  return (
-                    <li class="sh-recent-item" data-domain={entry.node.domain}>
-                      <a class="sh-recent-title" href={entry.node.url}>
-                        <span class="sh-num">{entry.node.number}</span>
-                        {entry.node.title}
-                      </a>
-                      {entry.node.summary !== null && <p class="sh-recent-summary">{entry.node.summary}</p>}
-                      <p class="sh-meta-line">
-                        {plural(entry.sectionCount, 'section')} · {entry.status} ·{' '}
-                        {iso !== null ? <time datetime={iso}>{updatedLabel(entry.updatedAt)}</time> : updatedLabel(entry.updatedAt)}
-                      </p>
-                    </li>
-                  );
-                })}
-              </ol>
-            </section>
-          )
-        }
-      </div>
-    </div>
+<BaseLayout title={SITE_TITLE} description={description} canonicalPath="/" navKey="atlas" jsonLd={siteJsonLd(graph, Astro.site, manifest.edition)}>
+  <main id="main" class="sh-home bs-home" tabindex="-1">
+    <BrainStory brain={brain} brain3d={brain3d} stack={stack} dash={dash} startUrl={startUrl} />
   </main>
 </BaseLayout>

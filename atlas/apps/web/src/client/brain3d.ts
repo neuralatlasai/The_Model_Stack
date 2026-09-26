@@ -8,11 +8,14 @@
  * book: chapters as glowing neurons, glossary concepts around them, declared
  * prerequisites as fibres carrying signals.
  *
- * - Rotates slowly; drag to orbit (with inertia).
- * - Point at a neuron (or arrow keys on the focused canvas): its fibres light
- *   (blue = builds on, coral = unlocks), its concepts glow, a tag names it in
- *   place and the readout lists its concepts; click or Enter opens the
- *   chapter. Left alone it tours the written chapters.
+ * - Follows the story (client story.ts, `hx:part` events): a part turns its
+ *   region to the reader, lights its chapters and concepts, and draws its
+ *   prerequisites in (blue) and out (coral) to the other regions; the
+ *   readout names the regions it draws on and feeds. Part 0 is the whole
+ *   brain, rocking slowly.
+ * - Drag to orbit (with inertia). Point at a neuron (or arrow keys on the
+ *   focused canvas): its fibres light, its concepts glow, a tag names it in
+ *   place; click or Enter opens the chapter.
  * - Light and dark themes (ink on paper / light on night), switching live.
  * - Renders only while on screen; disposed on page change. Reduced motion:
  *   no auto-rotation or signals; dragging still works. No WebGL: returns
@@ -252,10 +255,23 @@ export function initBrain3D(ctx: PageContext, fig: HTMLElement, reduced: boolean
   const IN = new THREE.Color();
   const OUT = new THREE.Color();
   let active: number | null = null;
+  let focusPart: number | null = null;
+  const partOf = (n: number): number => neurons[indexOf.get(n) ?? -1]?.part ?? 0;
   const paintFibres = (): void => {
     fibres.forEach((fibre, i) => {
       let c = tint(neurons[indexOf.get(fibre.from) ?? 0]?.domain ?? '');
-      let a = active === null ? (night ? 0.2 : 0.2) : night ? 0.06 : 0.06;
+      let a = active === null && focusPart === null ? 0.2 : 0.035;
+      if (active === null && focusPart !== null) {
+        const fromIn = partOf(fibre.from) === focusPart;
+        const toIn = partOf(fibre.to) === focusPart;
+        if (toIn && !fromIn) {
+          c = IN;
+          a = 0.85;
+        } else if (fromIn && !toIn) {
+          c = OUT;
+          a = 0.85;
+        } else if (fromIn && toIn) a = 0.7;
+      }
       if (active !== null && fibre.to === active) {
         c = IN;
         a = 0.95;
@@ -308,7 +324,7 @@ export function initBrain3D(ctx: PageContext, fig: HTMLElement, reduced: boolean
     el.className = 'hb3-region';
     el.textContent = region.label;
     labelsLayer.append(el);
-    return { el, p: new THREE.Vector3(...region.p) };
+    return { el, n: region.n, p: new THREE.Vector3(...region.p) };
   });
   const tag = doc.createElement('span');
   tag.className = 'hb3-tag';
@@ -320,7 +336,7 @@ export function initBrain3D(ctx: PageContext, fig: HTMLElement, reduced: boolean
   // ── readout ───────────────────────────────────────────────────────────────
   const readout = fig.querySelector('[data-brain-readout]');
   const slots = { k: readout?.querySelector('[data-k]') ?? null, t: readout?.querySelector('[data-t]') ?? null, m: readout?.querySelector('[data-m]') ?? null };
-  const idle = { k: slots.k?.textContent ?? '', t: slots.t?.textContent ?? '', m: slots.m?.textContent ?? '' };
+  let idle = { k: slots.k?.textContent ?? '', t: slots.t?.textContent ?? '', m: slots.m?.textContent ?? '' };
 
   const activate = (n: number | null, fire: boolean): void => {
     active = n;
@@ -330,14 +346,25 @@ export function initBrain3D(ctx: PageContext, fig: HTMLElement, reduced: boolean
       if (fibre.to === n) linked.add(fibre.from);
       if (fibre.from === n) linked.add(fibre.to);
     }
+    const inPart = (chapter: number): boolean => focusPart === null || partOf(chapter) === focusPart;
     neurons.forEach((neuron, i) => {
       const on = neuron.n === n;
+      if (n === null) {
+        N.size[i] = (baseSize[i] ?? 15) * (focusPart !== null && inPart(neuron.n) ? 1.45 : 1);
+        N.alpha[i] = inPart(neuron.n) ? Math.min(1, (baseAlpha[i] ?? 0.6) + 0.2) : (baseAlpha[i] ?? 0.6) * 0.32;
+        return;
+      }
       N.size[i] = (baseSize[i] ?? 15) * (on ? 2 : linked.has(neuron.n) ? 1.35 : 1);
-      N.alpha[i] = n === null || on || linked.has(neuron.n) ? Math.min(1, (baseAlpha[i] ?? 0.6) + (on ? 0.4 : 0)) : (baseAlpha[i] ?? 0.6) * 0.45;
+      N.alpha[i] = on || linked.has(neuron.n) ? Math.min(1, (baseAlpha[i] ?? 0.6) + (on ? 0.4 : 0)) : (baseAlpha[i] ?? 0.6) * 0.45;
     });
     data.concepts.forEach((concept, i) => {
+      if (n === null) {
+        C.size[i] = focusPart !== null && inPart(concept.chapter) ? 10 : 8;
+        C.alpha[i] = inPart(concept.chapter) ? 0.9 : 0.14;
+        return;
+      }
       C.size[i] = concept.chapter === n ? 13 : 8;
-      C.alpha[i] = n === null ? 0.85 : concept.chapter === n ? 1 : 0.28;
+      C.alpha[i] = concept.chapter === n ? 1 : 0.28;
     });
     for (const attr of ['aSize', 'aAlpha'] as const) {
       N.geo.getAttribute(attr).needsUpdate = true;
@@ -369,6 +396,51 @@ export function initBrain3D(ctx: PageContext, fig: HTMLElement, reduced: boolean
       });
     }
   };
+
+  // ── the story: focus one part (region) at a time ──────────────────────────
+  const regionAt = new Map(data.regions.map((region) => [region.n, region]));
+  const labelOf = (part: number): string => regionAt.get(part)?.label ?? '';
+  /** The regions a part draws on and the regions it feeds, strongest first. */
+  const correlations = (part: number): string => {
+    const tally = (pick: (fibre: (typeof fibres)[number]) => number | null): string[] => {
+      const counts = new Map<number, number>();
+      for (const fibre of fibres) {
+        const other = pick(fibre);
+        if (other !== null && other !== part) counts.set(other, (counts.get(other) ?? 0) + 1);
+      }
+      return [...counts.entries()].sort((a, b) => b[1] - a[1]).slice(0, 4).map(([n]) => labelOf(n));
+    };
+    const from = tally((fibre) => (partOf(fibre.to) === part ? partOf(fibre.from) : null));
+    const to = tally((fibre) => (partOf(fibre.from) === part ? partOf(fibre.to) : null));
+    return [from.length > 0 ? `draws on ${from.join(' · ')}` : '', to.length > 0 ? `feeds ${to.join(' · ')}` : ''].filter((text) => text !== '').join('   ·   ');
+  };
+  let targetYaw = brain.rotation.y;
+  let targetPitch = brain.rotation.x;
+  const focus = (part: number | null, k: string, t: string): void => {
+    focusPart = part;
+    const region = part === null ? undefined : regionAt.get(part);
+    if (region !== undefined) {
+      targetYaw = Math.atan2(-region.p[0], region.p[2]) * 0.85;
+      targetPitch = 0.1 + region.p[1] * 0.35;
+    }
+    idle = { k, t, m: part === null ? '' : correlations(part) };
+    if (active === null) activate(null, false);
+    else paintFibres();
+    if (part !== null) {
+      fibres.forEach((fibre, i) => {
+        if (partOf(fibre.to) === part && partOf(fibre.from) !== part) spawn(i, false, Math.random() * 500);
+        else if (partOf(fibre.from) === part && partOf(fibre.to) !== part) spawn(i, false, 400 + Math.random() * 500);
+      });
+    }
+  };
+  fig.addEventListener('hx:chapter', (event) => {
+    const n = (event as CustomEvent<number | null>).detail;
+    activate(typeof n === 'number' ? n : null, typeof n === 'number');
+  }, { signal });
+  fig.addEventListener('hx:part', (event) => {
+    const detail = (event as CustomEvent<{ part: number; k: string; t: string }>).detail;
+    focus(detail.part > 0 ? detail.part : null, detail.k, detail.t);
+  }, { signal });
 
   // ── interaction ───────────────────────────────────────────────────────────
   const baseYaw = brain.rotation.y;
@@ -483,14 +555,11 @@ export function initBrain3D(ctx: PageContext, fig: HTMLElement, reduced: boolean
   resize();
 
   const writtenNs = neurons.filter((neuron) => neuron.written).map((neuron) => neuron.n);
-  const live = fibres.map((fibre, i) => ({ fibre, i })).filter(({ fibre }) => writtenNs.includes(fibre.from) || writtenNs.includes(fibre.to));
+  const everyFibre = fibres.map((fibre, i) => ({ fibre, i }));
+  const live = everyFibre.filter(({ fibre }) => writtenNs.includes(fibre.from) || writtenNs.includes(fibre.to));
   // emergence: neurons and concepts fly in and assemble, the glass condenses, fibres grow last
   let introStart = -1;
   let intro = reduced ? 1 : 0;
-  let scrollTilt = 0;
-  window.addEventListener('scroll', () => {
-    scrollTilt = Math.max(0, Math.min(1, window.scrollY / 900));
-  }, { signal, passive: true });
   const assemble = (k: number): void => {
     const spread = 1 + (1 - k) * 1.1;
     neurons.forEach((neuron, i) => { N.pos.set([neuron.p[0] * spread, neuron.p[1] * spread, neuron.p[2] * spread], i * 3); });
@@ -502,8 +571,8 @@ export function initBrain3D(ctx: PageContext, fig: HTMLElement, reduced: boolean
     labelsLayer.style.opacity = String(k);
   };
   assemble(intro);
-  let tourAt = 0;
-  let nextTour = performance.now() + 2600;
+  let aim = baseYaw;
+  let aimPitch = pitch;
   let nextAmbient = 0;
   function frame(now: number): void {
     raf = 0;
@@ -523,20 +592,21 @@ export function initBrain3D(ctx: PageContext, fig: HTMLElement, reduced: boolean
       // ease a dragged brain back toward the three-quarter view it rocks around
       if (!engaged) offset *= 1 - Math.min(1, dt * 0.6);
     }
-    if (!reduced) phase += dt * (engaged ? 0.08 : 0.32);
-    brain.rotation.y = baseYaw + Math.sin(phase) * 0.5 + offset;
+    if (!reduced) phase += dt * (engaged ? 0.08 : 0.3);
+    const desired = focusPart === null ? baseYaw + Math.sin(phase) * 0.5 : targetYaw + Math.sin(phase) * 0.07;
+    const turn = Math.atan2(Math.sin(desired - aim), Math.cos(desired - aim));
+    aim += turn * (reduced ? 1 : Math.min(1, dt * 2.2));
+    aimPitch += ((focusPart === null ? pitch : targetPitch) - aimPitch) * (reduced ? 1 : Math.min(1, dt * 2.2));
+    brain.rotation.y = aim + offset;
+    brain.rotation.x = aimPitch + (reduced ? 0 : Math.sin(now / 2600) * 0.025);
     setGlass(cortexAt < 0 ? 0 : reduced ? 1 : Math.min(1, (now - cortexAt) / 450));
-    brain.rotation.x = pitch + scrollTilt * 0.35 + (reduced ? 0 : Math.sin(now / 2600) * 0.025);
 
     if (!reduced && now > nextAmbient && live.length > 0) {
-      const chosen = live[Math.floor(Math.random() * live.length)];
+      const focused = focusPart === null ? [] : everyFibre.filter(({ fibre }) => partOf(fibre.from) === focusPart || partOf(fibre.to) === focusPart);
+      const pool = focused.length > 0 && Math.random() < 0.75 ? focused : live;
+      const chosen = pool[Math.floor(Math.random() * pool.length)];
       if (chosen !== undefined) spawn(chosen.i, Math.random() < 0.2);
       nextAmbient = now + 260;
-    }
-    if (!reduced && !engaged && now > nextTour && writtenNs.length > 0) {
-      activate(writtenNs[tourAt % writtenNs.length] ?? null, true);
-      tourAt += 1;
-      nextTour = now + 3400;
     }
 
     for (let i = 0; i < MAX_PULSES; i += 1) {
@@ -563,7 +633,10 @@ export function initBrain3D(ctx: PageContext, fig: HTMLElement, reduced: boolean
       brain.localToWorld(world);
       const nearer = centre - camera.position.distanceTo(world);
       label.el.style.transform = `translate(${s.x.toFixed(1)}px, ${s.y.toFixed(1)}px) translate(-50%, -50%)`;
-      label.el.style.opacity = String(Math.max(0, Math.min(0.9, 0.2 + nearer * 2.4)));
+      const depth = Math.max(0, Math.min(0.9, 0.2 + nearer * 2.4));
+      const on = focusPart !== null && label.n === focusPart;
+      label.el.classList.toggle('is-on', on);
+      label.el.style.opacity = String(on ? 1 : focusPart === null ? depth : depth * 0.35);
     }
     const current = active === null ? undefined : neurons[indexOf.get(active) ?? -1];
     if (current !== undefined) {
