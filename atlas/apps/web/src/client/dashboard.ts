@@ -213,7 +213,7 @@ export function initDashboard(ctx: PageContext, root: HTMLElement, reduced: bool
         state.part === 0
           ? `${String(n)} concepts the book defines`
           : n === 0
-            ? 'Concepts appear here as its chapters are written'
+            ? 'No concepts defined yet'
             : `${String(n)} concepts defined in this part`;
     }
 

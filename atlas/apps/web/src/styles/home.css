@@ -77,6 +77,26 @@
   color: var(--ink-2);
 }
 
+/* title-page byline: spaced small caps, an italic "by" on the same baseline */
+.bs-author {
+  display: flex;
+  align-items: baseline;
+  gap: 0.55rem;
+  margin: 1.35rem 0 0;
+  font: 500 18px/1.2 var(--font-serif);
+  font-variant-caps: all-small-caps;
+  letter-spacing: 0.14em;
+  color: var(--ink);
+}
+
+.bs-author span {
+  font-style: italic;
+  font-weight: 400;
+  font-variant-caps: normal;
+  letter-spacing: 0;
+  color: var(--ink-3);
+}
+
 .bs-rule {
   inline-size: 3rem;
   block-size: 1px;
@@ -87,7 +107,7 @@
 
 .bs-thesis {
   margin: 0;
-  font: 400 clamp(20px, 1.5vw, 23px) / 1.58 var(--font-serif);
+  font: 400 clamp(19.5px, 1.4vw, 21.5px) / 1.6 var(--font-serif);
   color: var(--ink);
   text-wrap: pretty;
   hanging-punctuation: first;

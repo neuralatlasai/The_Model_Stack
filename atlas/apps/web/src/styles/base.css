@@ -409,3 +409,49 @@ summary {
     animation: none !important;
   }
 }
+
+/*
+ * Book prose meets one right edge on every page: justified and hyphenated,
+ * the last line ragged. Running serif paragraphs only — never titles, labels,
+ * list rows or narrow readouts — and ragged again on phones, where a short
+ * line would open rivers.
+ */
+:where(
+  .bs-thesis,
+  .bs-body,
+  .bs-note,
+  .rb-p,
+  .rb-header__thesis,
+  .rb-def__text,
+  .rb-note__text,
+  .rb-asm__sens,
+  .rb-obs__text,
+  .sh-lede,
+  .sx-lede,
+  .tmx-def,
+  .sh-section > p
+) {
+  text-align: justify;
+  hyphens: auto;
+  hyphenate-limit-chars: 6 3 3;
+}
+
+@media (max-width: 559.98px) {
+  :where(
+    .bs-thesis,
+    .bs-body,
+    .bs-note,
+    .rb-p,
+    .rb-header__thesis,
+    .rb-def__text,
+    .rb-note__text,
+    .rb-asm__sens,
+    .rb-obs__text,
+    .sh-lede,
+    .sx-lede,
+    .tmx-def,
+    .sh-section > p
+  ) {
+    text-align: start;
+  }
+}

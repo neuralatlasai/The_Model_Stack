@@ -10,7 +10,7 @@
 import type { StackModel } from '../../lib/stack.ts';
 import type { Brain3D } from '../../lib/brain3d.ts';
 import type { BrainModel } from '../../lib/brain-map.ts';
-import { STORY_BRAIN, STORY_CLOSE, STORY_PARTS, STORY_THESIS, runs } from '../../lib/home-story.ts';
+import { STORY_AUTHOR, STORY_BRAIN, STORY_CLOSE, STORY_PARTS, STORY_THESIS, runs } from '../../lib/home-story.ts';
 import type { Dashboard } from '../../lib/stack-dashboard.ts';
 import StackDashboard from './StackDashboard.astro';
 
@@ -52,6 +52,7 @@ const steps = STORY_PARTS.map((story) => {
     <header class="bs-intro bs-step" data-step data-part="0" data-k="The Model Stack" data-t="From data and silicon to intelligence">
       <h1 class="bs-title">The Model Stack</h1>
       <p class="bs-sub">From data and silicon to intelligence</p>
+      <p class="bs-author"><span>by</span> {STORY_AUTHOR}</p>
       <hr class="bs-rule" />
       <p class="bs-thesis">{STORY_THESIS}</p>
       <p class="bs-note">{STORY_BRAIN}</p>

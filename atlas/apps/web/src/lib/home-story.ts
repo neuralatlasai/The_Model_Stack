@@ -13,6 +13,9 @@ export interface StoryPart {
   readonly outcome: string;
 }
 
+/** The byline on the home page's title (added at the author's request). */
+export const STORY_AUTHOR = 'Kandimalla Hemanth';
+
 export const STORY_THESIS =
   'A learning objective induces a representation and an algorithm. Those choices fix how a model executes — its memory, its communication, its deployment behaviour — and the evidence from deployment decides the next learning intervention. Architecture, data, optimisation, hardware and evaluation have to be studied together.';
 
