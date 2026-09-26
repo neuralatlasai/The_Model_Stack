@@ -4,21 +4,26 @@
  * dashboard.ts): one instrument panel that re-reads itself for the part in
  * view, the way a dated dashboard follows a scenario.
  *
- *   badge     the part (or the whole book)
- *   brain     the book as a brain (BrainHero) — the one image
- *   line      what each part rests on (rising) and feeds (falling) through
- *             the stack; solid up to the current part, dashed beyond
- *   tiles     the part's chapters (or all parts), filled by sections written
- *   donut     how its written claims are supported
- *   grid      the concepts it defines, one square each
- *   stats     rests on · feeds · written, with the regions it draws on
+ *   field     the brain (BrainHero) on a halftone field, the part badge set
+ *             into it — the one image
+ *   line      the dependency line: what each part rests on (rising) and
+ *             feeds (falling) through the stack, solid and shaded up to the
+ *             current part, dashed beyond, the crossover marked
+ *   tiles     the part's chapters (or all parts) with their icon, filled by
+ *             sections written; beside them how the claims are supported
+ *   signals   prerequisites as the brain fires them, named as they fire —
+ *             beside them the concepts the part defines, one square each
  *   status    every chapter: written, in progress, planned
+ *
+ * Every module stays on screen at every desktop height; on short windows
+ * they tighten rather than drop out (styles/home.css).
  *
  * Rendered in the whole-book state; every mark here is real data.
  */
 import type { Brain3D } from '../../lib/brain3d.ts';
 import type { BrainModel } from '../../lib/brain-map.ts';
 import { jsonForHtml } from '../../lib/json.ts';
+import { PART_ICON } from '../../lib/part-icons.ts';
 import type { Dashboard } from '../../lib/stack-dashboard.ts';
 import BrainHero from './BrainHero.astro';
 
@@ -31,24 +36,56 @@ interface Props {
 const { brain, brain3d, dash } = Astro.props;
 const o = dash.overview;
 
-// line chart geometry (viewBox units)
+// ── the dependency line (viewBox units) ─────────────────────────────────────
 const W = 720;
-const H = 92;
-const X0 = 18;
-const X1 = W - 18;
-const Y0 = 14;
-const Y1 = 68;
-const max = Math.max(1, ...dash.line.map((point) => point.restsOn), ...dash.parts.map((state) => state.feeds));
+const H = 124;
+const X0 = 40;
+const X1 = W - 16;
+const Y0 = 26;
+const Y1 = 94;
+const restsV = dash.line.map((point) => point.restsOn);
+const feedsV = dash.parts.map((state) => state.feeds);
+const max = Math.max(1, ...restsV, ...feedsV);
 const xs = dash.line.map((_, i) => X0 + (i / Math.max(1, dash.line.length - 1)) * (X1 - X0));
 const y = (v: number): number => Y1 - (v / max) * (Y1 - Y0);
-const path = (values: readonly number[]): string => values.map((v, i) => `${i === 0 ? 'M' : 'L'}${(xs[i] ?? 0).toFixed(1)} ${y(v).toFixed(1)}`).join('');
-const rests = path(dash.line.map((point) => point.restsOn));
-const feeds = path(dash.parts.map((state) => state.feeds));
+const f1 = (v: number): string => v.toFixed(1);
+/** Smooth path through the points (Catmull-Rom as cubic Béziers). */
+const smooth = (values: readonly number[]): string => {
+  const pts = values.map((v, i) => [xs[i] ?? 0, y(v)] as const);
+  let d = `M${f1(pts[0]?.[0] ?? 0)} ${f1(pts[0]?.[1] ?? 0)}`;
+  for (let i = 0; i < pts.length - 1; i += 1) {
+    const p0 = pts[Math.max(0, i - 1)];
+    const p1 = pts[i];
+    const p2 = pts[i + 1];
+    const p3 = pts[Math.min(pts.length - 1, i + 2)];
+    if (p0 === undefined || p1 === undefined || p2 === undefined || p3 === undefined) continue;
+    const c1 = [p1[0] + (p2[0] - p0[0]) / 6, p1[1] + (p2[1] - p0[1]) / 6] as const;
+    const c2 = [p2[0] - (p3[0] - p1[0]) / 6, p2[1] - (p3[1] - p1[1]) / 6] as const;
+    d += `C${f1(c1[0])} ${f1(c1[1])} ${f1(c2[0])} ${f1(c2[1])} ${f1(p2[0])} ${f1(p2[1])}`;
+  }
+  return d;
+};
+const rests = smooth(restsV);
+const feeds = smooth(feedsV);
+const restsArea = `${rests}L${f1(X1)} ${f1(Y1)}L${f1(X0)} ${f1(Y1)}Z`;
+// where the curves cross: the part the stack balances on
+let cross: { x: number; y: number } | null = null;
+for (let i = 0; i < restsV.length - 1 && cross === null; i += 1) {
+  const d0 = (restsV[i] ?? 0) - (feedsV[i] ?? 0);
+  const d1 = (restsV[i + 1] ?? 0) - (feedsV[i + 1] ?? 0);
+  if (d0 === 0) cross = { x: xs[i] ?? 0, y: y(restsV[i] ?? 0) };
+  else if (d0 < 0 && d1 >= 0) {
+    const t = d0 / (d0 - d1);
+    cross = { x: (xs[i] ?? 0) + t * ((xs[i + 1] ?? 0) - (xs[i] ?? 0)), y: y((restsV[i] ?? 0) + t * ((restsV[i + 1] ?? 0) - (restsV[i] ?? 0))) };
+  }
+}
+const grid = [0, Math.round(max / 2), max];
 
-// donut: three arcs on a circle of circumference 100
+// ── donut: three arcs on a circle of circumference 100 ──────────────────────
 const total = o.evidence[0] + o.evidence[1] + o.evidence[2];
 const share = o.evidence.map((v) => (total === 0 ? 0 : (v / total) * 100));
 const offsets = [0, share[0] ?? 0, (share[0] ?? 0) + (share[1] ?? 0)];
+const keys = ['cited source', 'derived · assumed', 'not disclosed · unverified'];
 
 const maxConcepts = Math.max(o.concepts.length, ...dash.parts.map((state) => state.concepts.length));
 const groups = [
@@ -61,54 +98,94 @@ const groups = [
 <aside class="dx" data-dash aria-label="The stack at the part in view">
   <script type="application/json" data-dash-data set:html={jsonForHtml(dash)} />
 
-  <div class="dx-top">
+  <div class="dx-field">
+    <div class="dx-dots" aria-hidden="true"></div>
     <p class="dx-badge" data-dx-badge aria-live="polite">{o.badge}</p>
+    <p class="dx-draws" data-dx-draws></p>
     <p class="dx-range" data-dx-range>{o.range}</p>
-  </div>
-
-  <div class="dx-brain">
-    <BrainHero brain={brain} brain3d={brain3d} />
+    <div class="dx-brain">
+      <BrainHero brain={brain} brain3d={brain3d} />
+    </div>
   </div>
 
   <figure class="dx-line" aria-hidden="true">
+    <figcaption class="dx-line__cap">
+      <span class="dx-line__title">
+        <svg viewBox="0 0 24 24" width="14" height="14"><path d="M3 19C9 19 12 16 14 11s4-7 7-7" /></svg>
+        Dependency line
+      </span>
+      <span class="dx-line__keys"><i class="is-rests"></i>rests on <i class="is-feeds"></i>feeds</span>
+    </figcaption>
     <svg viewBox={`0 0 ${String(W)} ${String(H)}`} data-dx-line>
       <defs>
         <clipPath id="dx-past"><rect x="0" y="0" height={H} width={W} data-dx-past /></clipPath>
         <clipPath id="dx-future"><rect x={W} y="0" height={H} width="0" data-dx-future /></clipPath>
+        <linearGradient id="dx-area" x1="0" x2="0" y1="0" y2="1">
+          <stop offset="0" class="dx-area-0" />
+          <stop offset="1" class="dx-area-1" />
+        </linearGradient>
       </defs>
-      <line class="dx-axis" x1={X0} x2={X1} y1={Y1 + 4} y2={Y1 + 4} />
+      {
+        grid.map((v) => (
+          <g class="dx-gridline">
+            <line x1={X0} x2={X1} y1={y(v)} y2={y(v)} />
+            <text x={X0 - 8} y={y(v) + 3.5} text-anchor="end">
+              {v === max ? `${String(v)} ch` : String(v)}
+            </text>
+          </g>
+        ))
+      }
       <g clip-path="url(#dx-past)">
-        <path class="dx-curve dx-curve--rests" d={rests} />
+        <path class="dx-area" d={restsArea} fill="url(#dx-area)" />
         <path class="dx-curve dx-curve--feeds" d={feeds} />
+        <path class="dx-curve dx-curve--rests" d={rests} />
       </g>
       <g clip-path="url(#dx-future)">
-        <path class="dx-curve dx-curve--rests is-dashed" d={rests} />
         <path class="dx-curve dx-curve--feeds is-dashed" d={feeds} />
+        <path class="dx-curve dx-curve--rests is-dashed" d={rests} />
       </g>
-      <line class="dx-now" x1="0" x2="0" y1={Y0 - 8} y2={Y1 + 4} data-dx-now />
-      <circle class="dx-dot dx-dot--rests" r="3.6" cx="0" cy="0" data-dx-dot-rests />
-      <circle class="dx-dot dx-dot--feeds" r="3.6" cx="0" cy="0" data-dx-dot-feeds />
-      <text class="dx-curve-label dx-curve-label--rests" x={X1} y={y(dash.line.at(-1)?.restsOn ?? 0) - 7} text-anchor="end">rests on</text>
-      <text class="dx-curve-label dx-curve-label--feeds" x={X0} y={y(dash.parts[0]?.feeds ?? 0) - 7}>feeds</text>
+      {
+        cross !== null && (
+          <g class="dx-cross">
+            <circle cx={cross.x} cy={cross.y} r="4" />
+            <text x={cross.x + 8} y={cross.y + 17}>
+              crossover
+            </text>
+          </g>
+        )
+      }
+      <line class="dx-now" x1="0" x2="0" y1={Y0 - 6} y2={Y1 + 2} data-dx-now />
+      <text class="dx-now-label" x="0" y={Y0 - 14} text-anchor="middle" data-dx-now-label></text>
+      <circle class="dx-dot dx-dot--feeds" r="4.6" cx="0" cy="0" data-dx-dot-feeds />
+      <circle class="dx-dot dx-dot--rests" r="4.6" cx="0" cy="0" data-dx-dot-rests />
+      <g class="dx-pill dx-pill--rests" data-dx-pill-rests><rect x="-15" y="-9" width="30" height="18" rx="9" /><text y="4" text-anchor="middle"></text></g>
+      <g class="dx-pill dx-pill--feeds" data-dx-pill-feeds><rect x="-15" y="-9" width="30" height="18" rx="9" /><text y="4" text-anchor="middle"></text></g>
       {
         dash.line.map((point, i) => (
-          <text class="dx-tick" x={xs[i]} y={H - 6} text-anchor="middle" data-dx-tick={point.part}>
+          <text class="dx-tick" x={xs[i]} y={H - 8} text-anchor="middle" data-dx-tick={point.part}>
             {point.numeral}
           </text>
         ))
       }
     </svg>
-    <script type="application/json" data-dx-geometry set:html={jsonForHtml({ xs, ys: { rests: dash.line.map((point) => y(point.restsOn)), feeds: dash.parts.map((state) => y(state.feeds)) }, W })} />
+    <script type="application/json" data-dx-geometry set:html={jsonForHtml({ xs, ys: { rests: restsV.map(y), feeds: feedsV.map(y) }, W, X0, X1 })} />
   </figure>
 
   <div class="dx-mid">
-    <div class="dx-tiles" data-dx-tiles>
+    <div class="dx-tiles is-parts" data-dx-tiles>
       {
         o.tiles.map((tile) => (
           <a class="dx-tile" href={tile.url} style={`--f:${tile.fill.toFixed(3)}`} title={tile.label}>
-            <span class="dx-tile__t">{tile.label}</span>
-            <span class="dx-tile__t is-on" aria-hidden="true">
-              {tile.label}
+            <span class="dx-tile__i" aria-hidden="true">
+              <svg viewBox="0 0 24 24">
+                <path d={PART_ICON[tile.icon] ?? ''} />
+              </svg>
+            </span>
+            <span class="dx-tile__bar">
+              <span class="dx-tile__t">{tile.label}</span>
+              <span class="dx-tile__t is-on" aria-hidden="true">
+                {tile.label}
+              </span>
             </span>
           </a>
         ))
@@ -118,47 +195,47 @@ const groups = [
       <svg viewBox="0 0 42 42" data-dx-donut>
         <circle class="dx-ring" cx="21" cy="21" r="15.915" />
         {share.map((value, i) => <circle class={`dx-arc dx-arc--${String(i)}`} cx="21" cy="21" r="15.915" style={`stroke-dasharray:${value.toFixed(2)} ${(100 - value).toFixed(2)};stroke-dashoffset:${(25 - (offsets[i] ?? 0)).toFixed(2)}`} data-dx-arc={i} />)}
-        <text x="21" y="22.6" text-anchor="middle" class="dx-donut__label" data-dx-donut-label>
-          Evidence
+        <text x="21" y="21" text-anchor="middle" class="dx-donut__pct" data-dx-donut-pct>
+          {total === 0 ? '—' : `${String(Math.round(share[0] ?? 0))}%`}
+        </text>
+        <text x="21" y="26.2" text-anchor="middle" class="dx-donut__label" data-dx-donut-label>
+          {total === 0 ? 'planned' : 'cited'}
         </text>
       </svg>
       <figcaption class="dx-donut__key">
-        <span><i class="dx-k0" />cited source</span>
-        <span><i class="dx-k1" />derived · assumed</span>
-        <span><i class="dx-k2" />gap</span>
+        {
+          keys.map((key, i) => (
+            <span>
+              <i class={`dx-k${String(i)}`} />
+              {key}
+              <b data-dx-pct={i}>{total === 0 ? '—' : `${String(Math.round(share[i] ?? 0))}%`}</b>
+            </span>
+          ))
+        }
       </figcaption>
     </figure>
   </div>
 
-  <p class="dx-head" data-dx-grid-head>Concepts the book defines</p>
-  <div class="dx-grid" data-dx-grid aria-hidden="true">
-    {Array.from({ length: maxConcepts }, (_, i) => <i class:list={{ 'is-on': i < o.concepts.length }} />)}
+  <div class="dx-pair">
+    <div class="dx-signals" aria-hidden="true">
+      <p class="dx-head"><i class="dx-live"></i>Signals firing</p>
+      <ol class="dx-feed" data-dx-feed></ol>
+    </div>
+    <div class="dx-concepts">
+      <p class="dx-head" data-dx-grid-head>{o.concepts.length} concepts the book defines</p>
+      <div class="dx-grid" data-dx-grid aria-hidden="true">
+        {Array.from({ length: maxConcepts }, (_, i) => <i class:list={{ 'is-on': i < o.concepts.length }} />)}
+      </div>
+    </div>
   </div>
-
-  <dl class="dx-stats">
-    <div>
-      <dt>Rests on</dt>
-      <dd data-dx-rests>—</dd>
-    </div>
-    <div>
-      <dt>Feeds</dt>
-      <dd data-dx-feeds>—</dd>
-    </div>
-    <div>
-      <dt>Written</dt>
-      <dd data-dx-written>{o.written}</dd>
-    </div>
-    <div class="dx-stats__wide">
-      <dt>Draws on</dt>
-      <dd data-dx-draws>the whole stack, one loop</dd>
-    </div>
-  </dl>
 
   <div class="dx-status" aria-hidden="true">
     {
       groups.map((group) => (
         <div class={`dx-status__g dx-status__g--${group.key}`}>
-          <p>{group.label}</p>
+          <p>
+            {group.label} <b>{dash.status.filter((chapter) => chapter.state === group.key).length}</b>
+          </p>
           <span>
             {dash.status
               .filter((chapter) => chapter.state === group.key)

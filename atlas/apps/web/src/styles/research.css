@@ -94,10 +94,12 @@ html[data-depth='research'] [data-depth-min='implementation'] {
   margin-block: var(--gap-section) 0;
 }
 
+/* one left edge for the whole reading column: text holds the measure, wide
+ * material extends to the right from the same edge (never centred apart) */
 .rb-region > *,
 .rb-flow > * {
   max-inline-size: var(--measure);
-  margin-inline: auto;
+  margin-inline: 0;
 }
 
 .rb-region > .rb-wide,
@@ -114,7 +116,7 @@ html[data-depth='research'] [data-depth-min='implementation'] {
  * carries the DOM-contract `data-node-id`; they take the same measure. */
 :where([data-node-id]) > :where([data-depth-min]):not([data-region]) {
   max-inline-size: var(--measure);
-  margin-inline: auto;
+  margin-inline: 0;
 }
 
 :where([data-node-id]) > :where([data-depth-min].rb-wide):not([data-region]) {
@@ -231,7 +233,7 @@ html[data-depth='research'] [data-depth-min='implementation'] {
 
 .rb-header {
   max-inline-size: var(--measure);
-  margin-inline: auto;
+  margin-inline: 0;
   padding-block: var(--gap-argument) 0;
   font-family: var(--font-serif);
   color: var(--ink);
@@ -2135,7 +2137,7 @@ a.rb-sibstrip__name:hover {
 
 /* Section index: the chapter's table of contents as a numbered progression. */
 .rb-secidx {
-  margin: var(--gap-related) auto 0;
+  margin: var(--gap-related) 0 0;
   padding: 0;
   list-style: none;
   border-block: 1.5px solid var(--ink);
@@ -2248,7 +2250,7 @@ a.rb-secidx__title:hover {
   align-items: baseline;
   gap: 0.3rem 1rem;
   max-inline-size: var(--measure);
-  margin: 0 auto;
+  margin: 0;
   font-family: var(--font-sans);
 }
 
@@ -2616,7 +2618,7 @@ a.rb-secidx__title:hover {
 .rb-glance,
 .rb-ctl {
   max-inline-size: var(--measure);
-  margin: var(--gap-argument) auto 0;
+  margin: var(--gap-argument) 0 0;
   padding-block: 0.8rem 0.9rem;
   border-block: 1.5px solid var(--ink);
   font-family: var(--font-mono);

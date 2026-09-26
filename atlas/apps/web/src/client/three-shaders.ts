@@ -23,6 +23,7 @@ export const GLASS_FRAGMENT = /* glsl */ `
   uniform vec3 uBody;
   uniform vec3 uLight;
   uniform float uOpacity;
+  uniform float uFill;
   varying vec3 vN;
   varying vec3 vV;
   void main() {
@@ -34,8 +35,11 @@ export const GLASS_FRAGMENT = /* glsl */ `
     vec3 l = normalize(uLight);
     float spec = pow(max(dot(reflect(-l, n), v), 0.0), 42.0);
     float diff = max(dot(n, l), 0.0);
-    vec3 col = mix(uBody, uRim, clamp(fres * 1.15, 0.0, 1.0)) + vec3(spec) * 0.6;
+    // uFill > 0 gives the glass a solid, softly lit body (a form on a halftone field)
+    vec3 body = uBody * mix(1.0, 0.86 + 0.18 * diff, uFill);
+    vec3 col = mix(body, uRim, clamp(fres * 1.15, 0.0, 1.0)) + vec3(spec) * 0.6;
     float a = (0.03 + fres * 0.78 + spec * 0.45 + diff * 0.025) * uOpacity;
+    a = max(a, uFill * uOpacity);
     gl_FragColor = vec4(col, clamp(a, 0.0, 1.0));
   }
 `;

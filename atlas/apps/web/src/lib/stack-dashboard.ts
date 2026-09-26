@@ -21,6 +21,8 @@ export type ChapterState = 'written' | 'progress' | 'planned';
 
 export interface DashTile {
   readonly n: number;
+  /** Part whose icon the tile carries. */
+  readonly icon: number;
   readonly label: string;
   readonly url: string;
   readonly fill: number;
@@ -151,6 +153,7 @@ export function buildDashboard(stack: StackModel, registry: Registry, docs: read
         const chapter = stack.chapters[String(n)];
         return {
           n,
+          icon: part.n,
           label: chapter === undefined ? pad(n) : /^chapter \d+/iu.test(chapter.short) ? chapter.title : chapter.short,
           url: chapter?.url ?? '/library/',
           fill: chapter === undefined || chapter.sectionsTotal === 0 ? 0 : chapter.sectionsWritten / chapter.sectionsTotal,
@@ -177,7 +180,7 @@ export function buildDashboard(stack: StackModel, registry: Registry, docs: read
         const chapter = stack.chapters[String(n)];
         return sum + (chapter === undefined || chapter.sectionsTotal === 0 ? 0 : chapter.sectionsWritten / chapter.sectionsTotal);
       }, 0);
-      return { n: part.n, label: REGION_LABEL[part.n] ?? part.title, url: part.url, fill: part.chapters.length === 0 ? 0 : done / part.chapters.length };
+      return { n: part.n, icon: part.n, label: REGION_LABEL[part.n] ?? part.title, url: part.url, fill: part.chapters.length === 0 ? 0 : done / part.chapters.length };
     }),
     evidence: sumEvidence(all),
     concepts: conceptsOf(all),

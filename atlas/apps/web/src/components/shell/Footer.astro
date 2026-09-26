@@ -1,37 +1,53 @@
 ---
 /**
- * Site footer: edition, compile date, the evidence-label legend, reference
- * pages, and where the content comes from. No marketing copy.
+ * Site footer: the mark and title, the reference pages in two groups, and one
+ * line of edition and compile date. Shares the top bar's edges. No marketing
+ * copy.
  */
 import { getGraph, getManifest } from '../../lib/atlas.ts';
 import { isoDate, updatedLabel } from '../../lib/format.ts';
 import { BOOK_TITLE } from '../../lib/jsonld.ts';
+import BrandMark from './BrandMark.astro';
 
 const [manifest, graph] = await Promise.all([getManifest(), getGraph()]);
 const compiledIso = isoDate(manifest.compiledAt);
 const notation = graph.nodes['ms.frontmatter.notation'];
 const routes = graph.nodes['ms.frontmatter.reading-routes'];
+const [bookName = BOOK_TITLE, bookSub = ''] = BOOK_TITLE.split(' — ');
 ---
 
 <footer class="sh-footer">
   <div class="sh-footer-inner">
-    <p class="sh-footer-book">
-      <span class="sh-smallcaps">{BOOK_TITLE}</span>
-      <span class="sh-footer-sep" aria-hidden="true">·</span>
+    <div class="sh-footer-id">
+      <a class="sh-footer-brand" href="/" aria-label={`${bookName} — home`}>
+        <BrandMark size={30} />
+        <span>{bookName}</span>
+      </a>
+      {bookSub !== '' && <p class="sh-footer-sub">{bookSub}</p>}
+    </div>
+    <nav class="sh-footer-nav" aria-label="Reference pages">
+      <div class="sh-footer-col">
+        <p class="sh-footer-h">The book</p>
+        <ul>
+          {routes !== undefined && <li><a href={routes.url}>Reading routes</a></li>}
+          {notation !== undefined && <li><a href={notation.url}>Notation</a></li>}
+          <li><a href="/terms/">Terms</a></li>
+          <li><a href="/evidence/">Evidence labels</a></li>
+        </ul>
+      </div>
+      <div class="sh-footer-col">
+        <p class="sh-footer-h">The atlas</p>
+        <ul>
+          <li><a href="/library/">Library</a></li>
+          <li><a href="/timeline/">Timeline</a></li>
+          <li><a href="/evaluation-ecosystem/">Evaluation ecosystem</a></li>
+        </ul>
+      </div>
+    </nav>
+    <p class="sh-footer-meta">
       <span>Edition {manifest.edition}</span>
-      <span class="sh-footer-sep" aria-hidden="true">·</span>
+      <span aria-hidden="true">·</span>
       {compiledIso !== null ? <time datetime={compiledIso}>{updatedLabel(manifest.compiledAt)}</time> : <span>{manifest.compiledAt}</span>}
     </p>
-    <nav class="sh-footer-nav" aria-label="Reference pages">
-      <ul>
-        <li><a href="/evidence/">Evidence labels</a></li>
-        <li><a href="/terms/">Terms</a></li>
-        {notation !== undefined && <li><a href={notation.url}>Notation</a></li>}
-        {routes !== undefined && <li><a href={routes.url}>Reading routes</a></li>}
-        <li><a href="/library/">Library</a></li>
-        <li><a href="/timeline/">Timeline</a></li>
-        <li><a href="/evaluation-ecosystem/">Evaluation ecosystem</a></li>
-      </ul>
-    </nav>
   </div>
 </footer>

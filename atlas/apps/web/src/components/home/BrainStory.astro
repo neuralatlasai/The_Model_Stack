@@ -50,14 +50,14 @@ const steps = STORY_PARTS.map((story) => {
 
   <div class="bs-text">
     <header class="bs-intro bs-step" data-step data-part="0" data-k="The Model Stack" data-t="From data and silicon to intelligence">
-      <p class="bs-eyebrow">Research Atlas</p>
       <h1 class="bs-title">The Model Stack</h1>
       <p class="bs-sub">From data and silicon to intelligence</p>
+      <hr class="bs-rule" />
       <p class="bs-thesis">{STORY_THESIS}</p>
       <p class="bs-note">{STORY_BRAIN}</p>
       <p class="bs-actions">
-        <a class="bs-start" href={startUrl}>Start with Chapter 01 <span aria-hidden="true">→</span></a>
-        <a class="bs-link" href="/library/">The library</a>
+        <a class="bs-start" href={startUrl}>Start reading <svg class="bs-arrow" viewBox="0 0 12 12" width="12" height="12" aria-hidden="true"><path class="bs-arrow__stem" d="M1 6h8" /><path class="bs-arrow__head" d="M5.5 2.5 9 6l-3.5 3.5" /></svg></a>
+        <a class="bs-link" href="/library/">Browse the library <svg class="bs-arrow" viewBox="0 0 12 12" width="12" height="12" aria-hidden="true"><path class="bs-arrow__stem" d="M1 6h8" /><path class="bs-arrow__head" d="M5.5 2.5 9 6l-3.5 3.5" /></svg></a>
       </p>
     </header>
 
@@ -93,10 +93,6 @@ const steps = STORY_PARTS.map((story) => {
     <section class="bs-step bs-close" data-step data-part="0" data-k="The Model Stack" data-t="The whole stack, connected" aria-labelledby="bs-h-close">
       <h2 class="bs-h2" id="bs-h-close">{STORY_CLOSE.heading}</h2>
       <p class="bs-body">{runs(STORY_CLOSE.body).map((run) => (run.bold ? <b>{run.text}</b> : run.text))}</p>
-      <p class="bs-actions">
-        <a class="bs-start" href={startUrl}>Start with Chapter 01 <span aria-hidden="true">→</span></a>
-        <a class="bs-link" href="/library/">The library</a>
-      </p>
     </section>
   </div>
 </div>

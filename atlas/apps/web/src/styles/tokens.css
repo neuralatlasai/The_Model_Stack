@@ -80,7 +80,8 @@
   --gap-section: 3.5rem;
 
   /* widths (UI_UX §4, §70) */
-  --measure: 760px;
+  /* one fixed reading measure for every page (≈ 70–75 characters of body serif) */
+  --measure: 42rem;
   --analysis: 1120px;
   --tree-w: 280px;
   --rail-w: 340px;

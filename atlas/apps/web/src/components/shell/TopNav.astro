@@ -10,6 +10,7 @@
  * behaviour on top.
  */
 import { TOP_NAV, type TopNavKey } from '@atlas/core';
+import BrandMark from './BrandMark.astro';
 import DepthControl from './DepthControl.astro';
 import SearchTrigger from './SearchTrigger.astro';
 import ThemeToggle from './ThemeToggle.astro';
@@ -48,6 +49,7 @@ const { navKey, hasTree, depthControl } = Astro.props;
       )
     }
     <a class="sh-wordmark" href="/" aria-label="The Model Stack — Research Atlas home">
+      <BrandMark size={26} />
       <span class="sh-wordmark-title">The Model Stack</span>
       <span class="sh-wordmark-sub">Research Atlas</span>
     </a>

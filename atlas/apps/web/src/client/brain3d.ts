@@ -84,6 +84,7 @@ export function initBrain3D(ctx: PageContext, fig: HTMLElement, reduced: boolean
         uBody: { value: new THREE.Color() },
         uLight: { value: new THREE.Vector3(-0.5, 0.8, 0.6) },
         uOpacity: { value: opacity },
+        uFill: { value: 0 },
       },
       vertexShader: GLASS_VERTEX,
       fragmentShader: GLASS_FRAGMENT,
@@ -246,6 +247,8 @@ export function initBrain3D(ctx: PageContext, fig: HTMLElement, reduced: boolean
   const spawn = (fibre: number, reverse = false, delay = 0): void => {
     if (reduced || pulses.length >= MAX_PULSES) return;
     pulses.push({ fibre, reverse, start: performance.now() + delay, dur: 1100 + Math.random() * 700 });
+    const edge = fibres[fibre];
+    if (edge !== undefined) fig.dispatchEvent(new CustomEvent('hx:signal', { detail: { from: edge.from, to: edge.to }, bubbles: true }));
   };
 
   // ── theme: ink on paper, or light on night ────────────────────────────────
@@ -290,8 +293,9 @@ export function initBrain3D(ctx: PageContext, fig: HTMLElement, reduced: boolean
     for (const m of [glassBack, glassFront]) {
       const u = m.uniforms as { uRim: { value: THREE.Color }; uBody: { value: THREE.Color } };
       u.uRim.value.set(night ? 0x9cc8ff : 0x23466f);
-      u.uBody.value.set(night ? 0x0f1722 : 0xdfe9f5);
+      u.uBody.value.set(night ? 0x141b26 : 0xfbf7ee);
     }
+    (glassFront.uniforms as { uFill: { value: number } }).uFill.value = night ? 0.72 : 0.9;
     for (const m of glowMaterials) {
       (m.uniforms as { uPaper: { value: number } }).uPaper.value = night ? 0 : 1;
       m.blending = night ? THREE.AdditiveBlending : THREE.NormalBlending;
@@ -550,6 +554,10 @@ export function initBrain3D(ctx: PageContext, fig: HTMLElement, reduced: boolean
     renderer.setSize(Math.max(1, rect.width), Math.max(1, rect.height), false);
     camera.aspect = rect.width / Math.max(1, rect.height);
     camera.updateProjectionMatrix();
+    // the brain's size on screen follows the canvas height (fixed vertical
+    // field of view); the beads follow it too, so they stay small beside it
+    const k = Math.min(1.1, Math.max(0.3, rect.height / 560)) * 0.7;
+    for (const material of glowMaterials) (material.uniforms as { uScale: { value: number } }).uScale.value = 4.4 * k;
   };
   ctl.observe(new ResizeObserver(resize)).observe(host);
   resize();
