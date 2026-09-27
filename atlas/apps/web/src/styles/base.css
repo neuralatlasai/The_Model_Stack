@@ -455,3 +455,8 @@ summary {
     text-align: start;
   }
 }
+
+/* display-size ledes hyphenate only long words, never short ones like "occu-pies" */
+:where(.sh-lede, .sx-lede, .rb-header__thesis, .bs-thesis) {
+  hyphenate-limit-chars: 10 4 4;
+}

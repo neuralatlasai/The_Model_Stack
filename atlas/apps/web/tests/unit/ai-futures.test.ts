@@ -1,12 +1,46 @@
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import { describe, test } from 'node:test';
-import { BANDS, BAND_DEPTH, GEOS, GLYPHS, KINDS, SCOPE, SWEEP_S, bandOf, futures, kindGeoMatrix, linkLabel, presentGeos, scopeLayout, statusCounts } from '../../src/lib/ai-futures.ts';
+import {
+  FIELD,
+  GEOS,
+  GEO_NAME,
+  HIST_NARROW,
+  HIST_WIDE,
+  KINDS,
+  KIND_ROW,
+  MAP,
+  SHARE_NARROW,
+  SHARE_WIDE,
+  SHARE_WINDOW,
+  fieldLine,
+  fieldMap,
+  fieldX,
+  fitBands,
+  fitRange,
+  futures,
+  kindGeoMatrix,
+  kindShare,
+  labelWidth,
+  linkLabel,
+  monotone,
+  monotoneAt,
+  monotonePath,
+  partition,
+  presentGeos,
+  shareBands,
+  statusCounts,
+  unitHistogram,
+} from '../../src/lib/ai-futures.ts';
+import { ICONS, ICON_VIEWBOX } from '../../src/lib/futures-icons.ts';
 import raw from '../../src/data/ai-futures-ecosystem.json' with { type: 'json' };
 
 /** The supplied list, verbatim (research/ai-futures-ecosystem/source-2026-09-27.md). */
 function suppliedRows(): { rank: number; geo: string; name: string; url: string; fit: number; reason: string }[] {
-  const text = readFileSync(new URL('../../../../../research/ai-futures-ecosystem/source-2026-09-27.md', import.meta.url), 'utf8');
+  const text = readFileSync(
+    new URL('../../../../../research/ai-futures-ecosystem/source-2026-09-27.md', import.meta.url),
+    'utf8',
+  );
   const row = /^\| (\d+) \| (.+?) \| \[(.+?)\]\((https:\/\/[^)]+)\) \| \*\*(\d+)\*\* \| (.+?) \|$/u;
   return text
     .split(/\r?\n/u)
@@ -51,8 +85,10 @@ describe('AI futures data', () => {
     for (const entry of entries) {
       assert.match(entry.links.listed, /^https:\/\//u);
       for (const url of [entry.links.listed, entry.links.url]) assert.doesNotMatch(url, /utm_/u, url);
-      if (!entry.links.url.startsWith('https://')) assert.match(entry.verification.note, /certificate/iu, `#${String(entry.rank)} explains its http link`);
-      if (entry.verification.status === 'redirected') assert.notEqual(entry.links.url, entry.links.listed, `#${String(entry.rank)}`);
+      if (!entry.links.url.startsWith('https://'))
+        assert.match(entry.verification.note, /certificate/iu, `#${String(entry.rank)} explains its http link`);
+      if (entry.verification.status === 'redirected')
+        assert.notEqual(entry.links.url, entry.links.listed, `#${String(entry.rank)}`);
     }
   });
 
@@ -67,8 +103,10 @@ describe('AI futures data', () => {
   });
 
   test('descriptions are plain: no hype vocabulary, no forbidden evidence label', () => {
-    const hype = /\b(?:leading|cutting[- ]edge|world[- ]class|groundbreaking|revolutionary|state[- ]of[- ]the[- ]art|best[- ]in[- ]class|premier|unparalleled)\b/iu;
-    for (const entry of entries) if (entry.description !== null) assert.doesNotMatch(entry.description, hype, `#${String(entry.rank)}`);
+    const hype =
+      /\b(?:leading|cutting[- ]edge|world[- ]class|groundbreaking|revolutionary|state[- ]of[- ]the[- ]art|best[- ]in[- ]class|premier|unparalleled)\b/iu;
+    for (const entry of entries)
+      if (entry.description !== null) assert.doesNotMatch(entry.description, hype, `#${String(entry.rank)}`);
     assert.doesNotMatch(JSON.stringify(raw), /EMPIRICALLY-OBSERVED/u);
   });
 
@@ -90,38 +128,251 @@ describe('AI futures data', () => {
         100,
       );
     }
-  });});
+  });
+});
 
-describe('horizon scope', () => {
+describe('field line', () => {
   const { entries } = futures();
-  const layout = scopeLayout(entries);
+  const line = fieldLine(entries);
 
-  test('one glyph per entry, inside its kind sector and its fit band, none overlapping', () => {
-    assert.equal(layout.glyphs.length, 100);
-    assert.equal(BAND_DEPTH.reduce((sum, depth) => sum + depth, 0), SCOPE.R - SCOPE.r0);
-    const sector = 180 / KINDS.length;
-    for (const glyph of layout.glyphs) {
-      const entry = entries[glyph.rank - 1];
+  test('one point per source, at the centre of its rank column, on a line within one fit point of its fit', () => {
+    assert.equal(line.points.length, 100);
+    const { min, max } = fitRange(entries);
+    assert.equal(min, 65);
+    assert.equal(max, 100);
+    const span = FIELD.height - FIELD.top - FIELD.bottom;
+    for (const point of line.points) {
+      const entry = entries[point.rank - 1];
       assert.ok(entry !== undefined);
-      assert.equal(glyph.kind, entry.kind);
-      assert.equal(glyph.band, bandOf(entry.fit));
-      const r = Math.hypot(glyph.x - SCOPE.cx, SCOPE.cy - glyph.y);
-      const ro = SCOPE.R - BAND_DEPTH.slice(0, glyph.band).reduce((sum, depth) => sum + depth, 0);
-      assert.ok(r <= ro + 0.5 && r >= ro - (BAND_DEPTH[glyph.band] ?? 0) - 0.5, `#${String(glyph.rank)} radius ${String(r)} outside its band`);
-      const k = KINDS.findIndex((kind) => kind.key === glyph.kind);
-      assert.ok(glyph.angle <= 180 - k * sector && glyph.angle >= 180 - (k + 1) * sector, `#${String(glyph.rank)} outside its sector`);
-      assert.ok(glyph.delay >= 0 && glyph.delay <= SWEEP_S);
+      assert.equal(point.x, fieldX(point.rank, 100));
+      const exact = FIELD.top + ((max - entry.fit) / (max - min)) * span;
+      assert.ok(
+        Math.abs(point.y - exact) <= line.unit + 0.2,
+        `#${String(point.rank)} is ${String(Math.abs(point.y - exact))} from its fit`,
+      );
     }
-    for (const a of layout.glyphs) for (const b of layout.glyphs) if (a.rank < b.rank) assert.ok(Math.hypot(a.x - b.x, a.y - b.y) >= SCOPE.spacing - 0.2, `#${String(a.rank)} and #${String(b.rank)} overlap`);
+    assert.equal(line.points[0]?.y, line.peak);
+    assert.equal(line.points.at(-1)?.y, line.base);
   });
 
-  test('bands cover the supplier’s fit range with the highest band on the horizon', () => {
-    assert.equal(bandOf(100), 0);
-    assert.equal(bandOf(65), BANDS.length - 1);
-    assert.throws(() => bandOf(64));
-    assert.equal(layout.rings.at(-1)?.r, SCOPE.R);
-    assert.equal(layout.edges.length, KINDS.length + 1);
-    for (const kind of KINDS) assert.match(GLYPHS[kind.key], /^M[-\d.\s,MLHVAZahvlz]+$/u);
+  test('the line never rises down the ranking, and the halftone stays below it', () => {
+    for (let i = 1; i < line.points.length; i += 1)
+      assert.ok((line.points[i]?.y ?? 0) >= (line.points[i - 1]?.y ?? 0) - 0.05);
+    assert.match(line.d, /^M[\d.\s]+(?:C[\d.\s-]+)+$/u);
+    assert.ok(line.halftone.length > 0);
+    const dots = [...line.halftone.matchAll(/M([\d.]+) ([\d.]+)a([\d.]+)/gu)].map((m) => ({
+      x: Number(m[1]) + Number(m[3]),
+      y: Number(m[2]),
+    }));
+    for (const dot of dots) {
+      const col = Math.min(99, Math.max(0, Math.round(dot.x / (FIELD.width / 100) - 0.5)));
+      const neighbours = [line.points[Math.max(0, col - 1)], line.points[col], line.points[Math.min(99, col + 1)]].map(
+        (p) => p?.y ?? 0,
+      );
+      assert.ok(dot.y >= Math.min(...neighbours), `a halftone dot at ${String(dot.x)} sits above the line`);
+      assert.ok(dot.y <= line.base + 0.01);
+    }
+  });
+
+  test('the monotone cubic passes through its knots and never overshoots them', () => {
+    const knots: [number, number][] = [
+      [0, 10],
+      [10, 10],
+      [20, 30],
+      [30, 31],
+      [40, 60],
+    ];
+    const curve = monotone(knots);
+    for (const [x, y] of knots) assert.ok(Math.abs(monotoneAt(curve, x) - y) < 1e-9);
+    for (let x = 0; x <= 40; x += 0.5) {
+      const y = monotoneAt(curve, x);
+      assert.ok(y >= 10 - 1e-9 && y <= 60 + 1e-9);
+    }
+    for (let x = 0.5; x <= 40; x += 0.5) assert.ok(monotoneAt(curve, x) >= monotoneAt(curve, x - 0.5) - 1e-9);
+    assert.equal(monotonePath([]), '');
+  });
+});
+
+describe('field map (treemap by geography)', () => {
+  const { entries } = futures();
+  const map = fieldMap(entries);
+
+  test('one tile per source inside its geography’s boundary, tiles never overlapping', () => {
+    assert.equal(map.tiles.length, 100);
+    assert.deepEqual(
+      map.clusters.map((cluster) => cluster.geo),
+      presentGeos(entries).map((geo) => geo.key),
+    );
+    for (const tile of map.tiles) {
+      const entry = entries[tile.rank - 1];
+      assert.ok(entry !== undefined);
+      assert.equal(tile.geo, entry.geo);
+      assert.equal(tile.kind, entry.kind);
+      const cluster = map.clusters.find((c) => c.geo === tile.geo);
+      assert.ok(cluster !== undefined);
+      assert.ok(
+        tile.x >= cluster.x + MAP.pad - 0.2 && tile.x + tile.w <= cluster.x + cluster.w - MAP.pad + 0.3,
+        `#${String(tile.rank)} leaves its cluster horizontally`,
+      );
+      assert.ok(
+        tile.y >= cluster.y + MAP.pad - 0.2 && tile.y + tile.h <= cluster.y + cluster.h - MAP.pad + 0.3,
+        `#${String(tile.rank)} leaves its cluster vertically`,
+      );
+      assert.ok(tile.x + tile.w <= map.width + 0.3 && tile.y + tile.h <= map.height + 0.3);
+    }
+    for (const a of map.tiles)
+      for (const b of map.tiles)
+        if (a.rank < b.rank) {
+          const overlapX = Math.min(a.x + a.w, b.x + b.w) - Math.max(a.x, b.x);
+          const overlapY = Math.min(a.y + a.h, b.y + b.h) - Math.max(a.y, b.y);
+          assert.ok(overlapX <= 0.3 || overlapY <= 0.3, `#${String(a.rank)} and #${String(b.rank)} overlap`);
+        }
+    for (let i = 1; i < map.clusters.length; i += 1) {
+      const prev = map.clusters[i - 1];
+      const next = map.clusters[i];
+      assert.ok(
+        prev !== undefined && next !== undefined && next.y >= prev.y + prev.h + 10,
+        'clusters leave room for their labels',
+      );
+    }
+  });
+
+  test('tile area is one scale × fit in every cluster, and reading order is rank order', () => {
+    for (const tile of map.tiles) {
+      const entry = entries[tile.rank - 1];
+      assert.ok(entry !== undefined);
+      const area = tile.w * tile.h;
+      assert.ok(
+        Math.abs(area / (map.scale * entry.fit) - 1) < 0.03,
+        `#${String(tile.rank)} area ${String(area)} is not ∝ fit`,
+      );
+    }
+    for (const cluster of map.clusters) {
+      const tiles = map.tiles.filter((tile) => tile.geo === cluster.geo);
+      const reading = [...tiles].sort((a, b) => a.y - b.y || a.x - b.x).map((tile) => tile.rank);
+      assert.deepEqual(
+        reading,
+        tiles.map((tile) => tile.rank),
+      );
+      assert.equal(tiles.filter((tile) => tile.icon).length, Math.min(MAP.icons, tiles.length));
+      assert.ok(tiles.slice(0, MAP.icons).every((tile) => tile.icon));
+    }
+  });
+
+  test('partition keeps order and balances weight', () => {
+    const runs = partition([5, 5, 5, 5, 5, 5], (v) => v, 3);
+    assert.deepEqual(runs, [
+      [5, 5],
+      [5, 5],
+      [5, 5],
+    ]);
+    assert.deepEqual(
+      partition([1, 2, 3], (v) => v, 1),
+      [[1, 2, 3]],
+    );
+  });
+});
+
+describe('who ranks where (kind share)', () => {
+  const { entries } = futures();
+
+  test('every rank’s shares sum to 1 over a window that never leaves the list', () => {
+    const raw = kindShare(entries, SHARE_WINDOW, 0);
+    assert.equal(raw.length, 100);
+    for (const row of raw) {
+      assert.equal(row.length, KINDS.length);
+      assert.ok(Math.abs(row.reduce((a, b) => a + b, 0) - 1) < 1e-9);
+      for (const value of row) assert.ok(Number.isInteger(Math.round(value * SHARE_WINDOW * 1e6) / 1e6));
+    }
+    const first = raw[0];
+    const top = entries.slice(0, SHARE_WINDOW);
+    assert.deepEqual(
+      first,
+      KINDS.map((kind) => top.filter((entry) => entry.kind === kind.key).length / SHARE_WINDOW),
+    );
+    for (const row of kindShare(entries)) assert.ok(Math.abs(row.reduce((a, b) => a + b, 0) - 1) < 1e-9);
+  });
+
+  test('bands stack to the full plot; each carries a label inside the plot and labels never collide', () => {
+    for (const box of [SHARE_WIDE, SHARE_NARROW]) {
+      const bands = shareBands(entries, box);
+      assert.equal(bands.length, KINDS.length);
+      const labels = bands.flatMap((band) => (band.label === null ? [] : [band.label]));
+      assert.equal(labels.length, KINDS.length, `every band is labelled at ${String(box.width)}`);
+      for (const label of labels) {
+        assert.ok(label.x >= box.left && label.x + label.w <= box.width - box.right + 0.1);
+        assert.ok(label.y >= box.top && label.y + label.h <= box.height - box.bottom + 0.1);
+      }
+      for (const a of labels)
+        for (const b of labels)
+          if (a !== b)
+            assert.ok(a.x + a.w <= b.x || b.x + b.w <= a.x || a.y + a.h <= b.y || b.y + b.h <= a.y, 'labels overlap');
+      for (const band of bands) assert.match(band.d, /^M[\d.\s]+(?:L[\d.\s]+)+Z$/u);
+      assert.ok(labelWidth('Measurement', box.font) > labelWidth('Labs', box.font));
+    }
+  });
+});
+
+describe('fit by geography (unit histogram)', () => {
+  const { entries } = futures();
+
+  test('fit bands cover 65–100 in fives, the lone maximum joining the band below', () => {
+    assert.deepEqual(fitBands(65, 100), [
+      { min: 65, max: 69 },
+      { min: 70, max: 74 },
+      { min: 75, max: 79 },
+      { min: 80, max: 84 },
+      { min: 85, max: 89 },
+      { min: 90, max: 94 },
+      { min: 95, max: 100 },
+    ]);
+    assert.deepEqual(fitBands(66, 72), [
+      { min: 66, max: 69 },
+      { min: 70, max: 72 },
+    ]);
+  });
+
+  test('one unit per source in its fit column, stacked without overlap, band labels carrying real rank spans', () => {
+    for (const box of [HIST_WIDE, HIST_NARROW]) {
+      const hist = unitHistogram(entries, box);
+      assert.equal(hist.units.length, 100);
+      assert.equal(hist.columns.length, 36);
+      const columnOf = new Map(hist.columns.map((column) => [column.fit, column.x]));
+      for (const unit of hist.units) {
+        const entry = entries[unit.rank - 1];
+        assert.ok(entry !== undefined);
+        assert.equal(unit.x, columnOf.get(entry.fit));
+        assert.ok(unit.y < hist.base && unit.y > 0);
+        assert.ok(unit.x > 0 && unit.x < box.width);
+      }
+      const seen = new Set(hist.units.map((unit) => `${String(unit.x)}:${String(unit.y)}`));
+      assert.equal(seen.size, 100, 'two units share a slot');
+      for (let i = 1; i < hist.columns.length; i += 1)
+        assert.ok((hist.columns[i]?.x ?? 0) - (hist.columns[i - 1]?.x ?? 0) >= hist.column - 0.2);
+      for (const band of hist.bands) {
+        const ranks = entries
+          .filter((entry) => entry.fit >= band.min && entry.fit <= band.max)
+          .map((entry) => entry.rank);
+        assert.equal(band.first, Math.min(...ranks));
+        assert.equal(band.last, Math.max(...ranks));
+        assert.ok(band.top >= box.top - 0.1);
+      }
+    }
+  });
+});
+
+describe('pictograms', () => {
+  test('one stroke path per kind on the 24-unit grid', () => {
+    assert.equal(ICON_VIEWBOX, '0 0 24 24');
+    for (const kind of KINDS) {
+      const d = ICONS[kind.key];
+      assert.match(d, /^M[-\d.\s,MLHVCSAZmlhvcsaz]+$/u, kind.key);
+      for (const value of d.match(/-?\d+(?:\.\d+)?/gu) ?? [])
+        assert.ok(Math.abs(Number(value)) <= 24, `${kind.key} leaves the grid`);
+    }
+    assert.equal(new Set(KINDS.map((kind) => ICONS[kind.key])).size, KINDS.length, 'two kinds share a pictogram');
+    for (const kind of KINDS) assert.ok(KIND_ROW[kind.key].split(/\s+/u).length <= 6);
+    for (const geo of GEOS) assert.ok(GEO_NAME[geo.key].split(/\s+/u).length <= 6);
   });
 });
 
