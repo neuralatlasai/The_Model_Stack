@@ -45,6 +45,8 @@ function selfPart(doc: HeaderSource): string | null {
     case 'frontmatter':
       return 'Front matter';
     case 'volume':
+      // A volume has no ancestors to name it; its own label opens the header like every other page.
+      return doc.header.number === null ? null : `Volume ${doc.header.number}`;
     case 'part':
     case 'chapter':
     case 'appendix':

@@ -1,19 +1,21 @@
 /**
- * Library behaviour (components/shell/LibraryExplorer.astro): stat band,
- * manuscript map, readout, and ledger are one instrument.
+ * Library behaviour (components/shell/LibraryExplorer.astro): prerequisite
+ * weave, manuscript map, readout, and catalogue are one instrument.
  *
- * - Point at (or focus) a chapter tile or a ledger row: the chapter is ringed
- *   in the map and marked in the ledger; every chapter it builds on (blue) and
- *   unlocks (oxblood) lights in both, transitively, each tagged with its
- *   distance (↑1 = a direct prerequisite); direct links are drawn over the
- *   map. The readout gives its thesis, state, measures, degree, and sections.
+ * - Point at (or focus) a weave column, a chapter tile, or a catalogue entry:
+ *   the chapter is ringed in weave and map and marked in the catalogue; every
+ *   chapter it builds on (oxblood) and unlocks (ink) lights in all three,
+ *   transitively, each tagged with its distance (↑1 = a direct prerequisite);
+ *   its arches light in the weave and its direct links are drawn over the map.
+ *   The readout gives its thesis, state, measures, degree, and sections.
  * - Point at a section cell (map or ledger): the chapter focuses and the
  *   readout names that section in its section list.
- * - Point at a part label (map) or a part head (ledger): its six chapters
- *   stand out and the readout lists them with their progress.
- * - "Read by" chips: pointing at one previews the map in that measure (a
- *   lens: each tile shows its value and a bar; the readout ranks the top six);
- *   clicking pins it until another is chosen ("state" returns to rest).
+ * - Point at a part (weave band, map label, catalogue head): its six chapters
+ *   stand out everywhere and the readout lists them with their progress.
+ * - "Read by" chips: pointing at one previews the map and the weave in that
+ *   measure (a lens: each tile shows its value and a bar, the weave's halftone
+ *   columns re-measure; the readout ranks the top six); clicking pins it until
+ *   another is chosen ("state" returns to rest).
  * - Keyboard: the map is one tab stop (roving tabindex); arrows move across
  *   the 11 × 6 grid, Home/End along a row, Ctrl+Home/End to the first/last
  *   chapter, Enter opens, Escape clears. Each ledger section strip is one tab
@@ -44,6 +46,7 @@ const ChapterSchema = z.object({
   written: z.boolean(),
   state: z.string(),
   summary: z.string(),
+  evidence: z.string().nullable(),
   plan: z.string(),
   words: z.number(),
   figures: z.number().int(),
@@ -77,7 +80,6 @@ const LENSES = new Set(['chapters', 'sections', 'words', 'figures', 'equations',
 
 const reducedMotion = (): boolean => matchMedia('(prefers-reduced-motion: reduce)').matches;
 const grouped = (n: number): string => Math.round(n).toString().replace(/\B(?=(\d{3})+(?!\d))/gu, ',');
-const compact = (n: number): string => (n <= 0 ? '—' : n < 1000 ? String(n) : `${(n / 1000).toFixed(n < 10000 ? 1 : 0)}k`);
 
 /** Breadth-first distances from `start` along `next` (start excluded). */
 function distances(start: number, next: (n: number) => readonly number[]): Map<number, number> {
@@ -122,14 +124,27 @@ export function initLibraryExplorer(ctx: PageContext): void {
   const ledger = root.querySelector<HTMLElement>('#lib-ledger');
   const links = root.querySelector<SVGSVGElement>('[data-lib-links]');
   const readout = root.querySelector<HTMLElement>('[data-lib-readout]');
+  const weave = root.querySelector<HTMLElement>('[data-lib-weave]');
   if (body === null || grid === null || ledger === null || readout === null) return;
 
   const tiles = new Map<number, HTMLElement>();
   for (const tile of grid.querySelectorAll<HTMLElement>('.lib-tile[data-lib-n]')) tiles.set(Number(tile.dataset['libN']), tile);
   const tileLinks = new Map<number, HTMLAnchorElement>();
   for (const link of grid.querySelectorAll<HTMLAnchorElement>('[data-lib-tile]')) tileLinks.set(Number(link.dataset['libTile']), link);
-  const rows = new Map<number, HTMLTableRowElement>();
-  for (const row of ledger.querySelectorAll<HTMLTableRowElement>('tr[data-lib-n]')) rows.set(Number(row.dataset['libN']), row);
+  const rows = new Map<number, HTMLElement>();
+  for (const row of ledger.querySelectorAll<HTMLElement>('.lib-ch[data-lib-n]')) rows.set(Number(row.dataset['libN']), row);
+  const cols = new Map<number, HTMLElement>();
+  for (const col of weave?.querySelectorAll<HTMLElement>('.lib-wc[data-lib-n]') ?? []) cols.set(Number(col.dataset['libN']), col);
+  const arcs = [...(weave?.querySelectorAll<SVGPathElement>('path[data-p]') ?? [])].map((path) => ({
+    path,
+    p: Number(path.dataset['p']),
+    n: Number(path.dataset['n']),
+  }));
+  const weaveParts = new Map<number, HTMLElement>();
+  for (const band of weave?.querySelectorAll<HTMLElement>('.lib-wp') ?? []) {
+    const n = Number(band.querySelector<HTMLElement>('[data-lib-partlink]')?.dataset['libPartlink']);
+    if (Number.isFinite(n)) weaveParts.set(n, band);
+  }
   const mapRows = new Map<number, HTMLElement>();
   for (const row of grid.querySelectorAll<HTMLElement>('.lib-row[data-lib-part]')) mapRows.set(Number(row.dataset['libPart']), row);
   const ledgerParts = new Map<number, HTMLElement>();
@@ -152,13 +167,26 @@ export function initLibraryExplorer(ctx: PageContext): void {
   for (const el of Object.values(out)) if (el !== null) initial.set(el, [...el.childNodes].map((node) => node.cloneNode(true)));
 
   const text = (el: HTMLElement | null, value: string): void => {
-    if (el !== null) el.textContent = value;
+    if (el === null) return;
+    el.textContent = value;
+    // Long titles step down a size so every title fits its two reserved lines.
+    if (el === out.title) el.dataset['len'] = value.length > 64 ? 'l' : value.length > 50 ? 'm' : 's';
   };
   const make = <K extends keyof HTMLElementTagNameMap>(tag: K, className: string, content = ''): HTMLElementTagNameMap[K] => {
     const el = doc.createElement(tag);
     if (className !== '') el.className = className;
     if (content !== '') el.textContent = content;
     return el;
+  };
+  /** A list row's text: two lines at most, a size smaller when long, so titles are never cut. */
+  const itemText = (value: string): HTMLElement => {
+    const span = make('span', 'lib-ro__itemtext', value);
+    if (value.length > 44) span.dataset['len'] = 'l';
+    return span;
+  };
+  /** The kicker: a boxed badge, then plain text. */
+  const kicker = (badge: string, rest: string): void => {
+    out.kicker?.replaceChildren(make('span', 'lib-badge', badge), ...(rest === '' ? [] : [doc.createTextNode(` ${rest}`)]));
   };
   const setRows = (pairs: readonly (readonly [string, string])[]): void => {
     out.rows?.replaceChildren(
@@ -198,16 +226,17 @@ export function initLibraryExplorer(ctx: PageContext): void {
     delete readout.dataset['domain'];
   };
 
+  // Each section is a link; its words appear in the list head when it is pointed at.
   const sectionItems = (chapter: Chapter): HTMLElement[] =>
     chapter.sections.map((section, index) => {
-      const item = make('li', `lib-ro__item${section.written ? '' : ' is-planned'}`);
-      item.dataset['libItem'] = String(index);
-      item.append(
-        make('span', `lib-ro__cell${section.written ? ' is-written' : ''}`),
-        make('span', 'lib-ro__num', section.number),
-        make('span', 'lib-ro__itemtext', section.title),
-        make('span', 'lib-ro__val', section.written ? `${compact(section.words)} w` : 'planned'),
-      );
+      const item = make('li', '');
+      const link = make('a', `lib-ro__item is-section${section.written ? '' : ' is-planned'}`);
+      link.href = section.url;
+      link.title = `${section.number} ${section.title}`;
+      link.tabIndex = -1;
+      link.dataset['libItem'] = String(index);
+      link.append(make('span', `lib-ro__cell${section.written ? ' is-written' : ''}`), make('span', 'lib-ro__num', section.number), itemText(section.title));
+      item.append(link);
       return item;
     });
 
@@ -217,18 +246,19 @@ export function initLibraryExplorer(ctx: PageContext): void {
   const describeChapter = (chapter: Chapter): void => {
     const part = partOf.get(chapter.part);
     if (part !== undefined) readout.dataset['domain'] = part.domain;
-    text(out.kicker, `Chapter ${chapter.number} · Part ${part?.numeral ?? ''} · ${part?.title ?? ''}`);
+    kicker(`Ch ${chapter.number}`, `Part ${part?.numeral ?? ''}`);
     text(out.title, chapter.title);
     const drafted = chapter.sections.filter((section) => section.written).length;
-    text(out.state, `${chapter.state} · ${chapter.words > 0 ? `${grouped(chapter.words)} words` : 'no words yet'}`);
+    const status = chapter.written ? 'draft' : drafted > 0 ? 'in progress' : 'planned';
+    text(out.state, `${status} · ${chapter.words > 0 ? `${grouped(chapter.words)} words` : 'no words yet'}`);
     const planned = chapter.plan === '' ? '' : ` It is planned to produce ${chapter.plan}.`;
-    text(
-      out.thesis,
+    out.thesis?.replaceChildren(
+      ...(chapter.evidence === null || chapter.summary === '' ? [] : [make('span', 'lib-ev', chapter.evidence), doc.createTextNode(' ')]),
       chapter.summary !== ''
         ? chapter.summary
         : drafted > 0
           ? `No thesis on the chapter page yet; ${String(drafted)} of its ${String(chapter.sections.length)} sections are drafted.${planned}`
-          : `Planned: six sections outlined, no manuscript yet.${planned}`,
+          : `Planned: ${String(chapter.sections.length)} sections outlined, no manuscript yet.${planned}`,
     );
     setRows([
       ['figures · equations', `${String(chapter.figures)} · ${String(chapter.equations)}`],
@@ -244,26 +274,52 @@ export function initLibraryExplorer(ctx: PageContext): void {
   const describePart = (part: Part): void => {
     readout.dataset['domain'] = part.domain;
     const members = part.chapters.map((n) => chapterOf.get(n)).filter((c): c is Chapter => c !== undefined);
-    text(out.kicker, `Part ${part.numeral} · ${String(part.chapters.length)} chapters`);
+    kicker(`Part ${part.numeral}`, `${String(part.chapters.length)} chapters`);
     text(out.title, part.title);
-    text(out.state, `${String(part.written)}/${String(part.chapters.length)} chapters · ${String(part.sectionsWritten)}/${String(part.sectionsTotal)} sections · ${grouped(part.words)} words`);
-    text(out.thesis, part.outcome === '' ? 'No outcome is recorded for this part.' : `Outcome — ${part.outcome}.`);
+    text(out.state, `${String(part.written)} of ${String(part.chapters.length)} written · ${grouped(part.words)} words`);
     const inside = new Set(part.chapters);
-    const external = (list: (c: Chapter) => readonly number[]): number => new Set(members.flatMap(list).filter((n) => !inside.has(n))).size;
+    const outside = (list: (c: Chapter) => readonly number[]): number[] => [...new Set(members.flatMap(list).filter((n) => !inside.has(n)))];
+    // Which other parts the part draws on and feeds, as numeral runs (III–VI, IX and XI).
+    const partsOf = (chapters: readonly number[]): string => {
+      const ns = [...new Set(chapters.map((n) => chapterOf.get(n)?.part ?? 0))].filter((n) => n > 0).sort((a, b) => a - b);
+      const runs: string[] = [];
+      for (let i = 0; i < ns.length; ) {
+        let j = i;
+        while (j + 1 < ns.length && (ns[j + 1] ?? 0) === (ns[j] ?? 0) + 1) j += 1;
+        const from = partOf.get(ns[i] ?? 0)?.numeral ?? '';
+        const to = partOf.get(ns[j] ?? 0)?.numeral ?? '';
+        runs.push(j === i ? from : `${from}–${to}`);
+        i = j + 1;
+      }
+      const word = ns.length === 1 ? 'Part' : 'Parts';
+      return runs.length <= 1 ? `${word} ${runs[0] ?? ''}` : `${word} ${runs.slice(0, -1).join(', ')} and ${runs.at(-1) ?? ''}`;
+    };
+    const upstream = outside((c) => c.prereqs);
+    const downstream = outside((c) => c.unlocks);
+    const reach =
+      upstream.length > 0 && downstream.length > 0
+        ? `It builds on ${partsOf(upstream)} and unlocks ${partsOf(downstream)}.`
+        : upstream.length > 0
+          ? `It builds on ${partsOf(upstream)}; no later part depends on it.`
+          : downstream.length > 0
+            ? `It builds on no other part and unlocks ${partsOf(downstream)}.`
+            : '';
+    text(out.thesis, `${part.outcome === '' ? 'No outcome is recorded for this part.' : `Outcome: ${part.outcome}.`} ${reach}`.trim());
     setRows([
       ['figures · equations', `${String(members.reduce((s, c) => s + c.figures, 0))} · ${String(members.reduce((s, c) => s + c.equations, 0))}`],
       ['chapters with a thesis', `${String(members.filter((c) => c.summary !== '').length)} / ${String(members.length)}`],
-      ['builds on (outside)', `${String(external((c) => c.prereqs))} chapters`],
-      ['unlocks (outside)', `${String(external((c) => c.unlocks))} chapters`],
+      ['builds on (outside)', `${String(upstream.length)} chapters`],
+      ['unlocks (outside)', `${String(downstream.length)} chapters`],
     ]);
-    setListHead('Chapters', 'sections drafted');
+    setListHead('Chapters', `${String(part.sectionsWritten)} of ${String(part.sectionsTotal)} sections drafted`);
     out.list?.replaceChildren(
       ...members.map((chapter) => {
         const drafted = chapter.sections.filter((section) => section.written).length;
         const item = make('li', `lib-ro__item${chapter.written ? '' : ' is-planned'}`);
         const cell = make('span', 'lib-ro__cell is-part');
         cell.style.setProperty('--fill', `${String(Math.round((drafted / Math.max(1, chapter.sections.length)) * 100))}%`);
-        item.append(cell, make('span', 'lib-ro__num', chapter.number), make('span', 'lib-ro__itemtext', chapter.short), make('span', 'lib-ro__val', `${String(drafted)}/${String(chapter.sections.length)}`));
+        item.append(cell, make('span', 'lib-ro__num', chapter.number), itemText(chapter.short));
+        item.title = `${String(drafted)} of ${String(chapter.sections.length)} sections drafted`;
         return item;
       }),
     );
@@ -275,6 +331,7 @@ export function initLibraryExplorer(ctx: PageContext): void {
   let currentPart: number | null = null;
   let currentSection: number | null = null;
   let cancelDraw: (() => void) | null = null;
+  let lit: SVGPathElement[] = [];
 
   const clearSection = (): void => {
     currentSection = null;
@@ -292,10 +349,15 @@ export function initLibraryExplorer(ctx: PageContext): void {
     for (const tile of tiles.values()) tile.classList.remove('is-focus', 'is-up', 'is-down', 'is-direct', 'is-peek');
     for (const row of rows.values()) {
       row.classList.remove('is-focus', 'is-up', 'is-down', 'is-direct');
-      row.cells[0]?.removeAttribute('data-hop');
+      row.querySelector('.lib-ch__n')?.removeAttribute('data-hop');
     }
     for (const row of mapRows.values()) row.classList.remove('is-part');
     for (const part of ledgerParts.values()) part.classList.remove('is-part');
+    weave?.classList.remove('has-focus', 'has-part');
+    for (const col of cols.values()) col.classList.remove('is-focus', 'is-up', 'is-down', 'is-direct', 'is-part', 'is-peek');
+    for (const band of weaveParts.values()) band.classList.remove('is-part');
+    for (const arc of lit) arc.classList.remove('is-up', 'is-down', 'is-direct', 'is-part');
+    lit = [];
     links?.replaceChildren();
   };
   const reset = (): void => {
@@ -400,7 +462,21 @@ export function initLibraryExplorer(ctx: PageContext): void {
     }
     for (const [k, row] of rows) {
       const hop = mark(row, k);
-      if (hop !== null) row.cells[0]?.setAttribute('data-hop', hop);
+      if (hop !== null) row.querySelector('.lib-ch__n')?.setAttribute('data-hop', hop);
+    }
+    if (weave !== null) {
+      weave.classList.add('has-focus');
+      for (const [k, col] of cols) mark(col, k);
+      const upstream = new Set([n, ...up.keys()]);
+      const downstream = new Set([n, ...down.keys()]);
+      for (const arc of arcs) {
+        const role =
+          arc.n === n || (upstream.has(arc.p) && upstream.has(arc.n)) ? 'is-up' : arc.p === n || (downstream.has(arc.p) && downstream.has(arc.n)) ? 'is-down' : null;
+        if (role === null) continue;
+        arc.path.classList.add(role);
+        if (arc.n === n || arc.p === n) arc.path.classList.add('is-direct');
+        lit.push(arc.path);
+      }
     }
     describeChapter(chapter);
     drawLinks(chapter);
@@ -432,6 +508,17 @@ export function initLibraryExplorer(ctx: PageContext): void {
     ledger.classList.add('has-part');
     mapRows.get(n)?.classList.add('is-part');
     ledgerParts.get(n)?.classList.add('is-part');
+    if (weave !== null) {
+      weave.classList.add('has-part');
+      weaveParts.get(n)?.classList.add('is-part');
+      const inside = new Set(part.chapters);
+      for (const k of part.chapters) cols.get(k)?.classList.add('is-part');
+      for (const arc of arcs) {
+        if (!inside.has(arc.p) && !inside.has(arc.n)) continue;
+        arc.path.classList.add('is-part');
+        lit.push(arc.path);
+      }
+    }
     describePart(part);
   };
 
@@ -456,7 +543,7 @@ export function initLibraryExplorer(ctx: PageContext): void {
       }
       return;
     }
-    const p = numberFrom(target, '.lib-row__label, .lib-part__head', 'libPartlink') ?? (target instanceof Element && target.closest('.lib-part__head') !== null ? numberFrom(target, '.lib-part', 'libPart') : null);
+    const p = numberFrom(target, '[data-lib-partlink]', 'libPartlink') ?? (target instanceof Element && target.closest('.lib-part__head') !== null ? numberFrom(target, '.lib-part', 'libPart') : null);
     if (p !== null) focusPart(p);
   };
 
@@ -464,6 +551,9 @@ export function initLibraryExplorer(ctx: PageContext): void {
     route(event.target);
   }, { signal });
   ledger.addEventListener('pointerover', (event) => {
+    route(event.target);
+  }, { signal });
+  weave?.addEventListener('pointerover', (event) => {
     route(event.target);
   }, { signal });
   body.addEventListener('pointerleave', reset, { signal });
@@ -479,11 +569,14 @@ export function initLibraryExplorer(ctx: PageContext): void {
   // Readout chips preview their chapter in the map.
   readout.addEventListener('pointerover', (event) => {
     const n = numberFrom(event.target, '[data-lib-jump]', 'libJump');
-    for (const tile of tiles.values()) tile.classList.remove('is-peek');
-    if (n !== null) tiles.get(n)?.classList.add('is-peek');
+    for (const el of [...tiles.values(), ...cols.values()]) el.classList.remove('is-peek');
+    if (n !== null) {
+      tiles.get(n)?.classList.add('is-peek');
+      cols.get(n)?.classList.add('is-peek');
+    }
   }, { signal });
   readout.addEventListener('pointerleave', () => {
-    for (const tile of tiles.values()) tile.classList.remove('is-peek');
+    for (const el of [...tiles.values(), ...cols.values()]) el.classList.remove('is-peek');
   }, { signal });
 
   // ── lenses: the map re-reads in one measure; the readout ranks it ─────────
@@ -501,7 +594,7 @@ export function initLibraryExplorer(ctx: PageContext): void {
     const part = partOf.get(chapter.part);
     if (part !== undefined) cell.dataset['domain'] = part.domain;
     cell.style.setProperty('--fill', `${String(Math.round((value / Math.max(1, max)) * 100))}%`);
-    item.append(cell, make('span', 'lib-ro__num', chapter.number), make('span', 'lib-ro__itemtext', chapter.short), make('span', 'lib-ro__val', label));
+    item.append(cell, make('span', 'lib-ro__num', chapter.number), itemText(chapter.short), make('span', 'lib-ro__val', label));
     return item;
   };
   const describeLens = (lens: string): void => {
@@ -515,20 +608,20 @@ export function initLibraryExplorer(ctx: PageContext): void {
     const top = present[0];
     const written = model.chapters.filter((c) => c.written).length;
     if (lens === 'chapters') {
-      text(out.kicker, 'Lens · chapters written');
+      kicker('Lens', 'chapters written');
       text(out.title, `${String(written)} of ${String(model.chapters.length)} chapters written`);
       text(out.state, `${String(present.length)} more with sections drafted`);
       text(out.thesis, 'Written chapters stay solid; planned ones fade. Below: the chapters closest to being written — planned chapter pages whose sections are already drafted.');
     } else {
       const drafted = model.chapters.reduce((sum, c) => sum + c.sections.filter((x) => x.written).length, 0);
-      text(out.kicker, `Lens · ${measure.name.toLowerCase()}`);
+      kicker('Lens', measure.name.toLowerCase());
       text(out.title, lens === 'sections' ? `${String(drafted)} of ${String(model.chapters.reduce((s2, c) => s2 + c.sections.length, 0))} sections drafted` : `${measure.name}, chapter by chapter`);
       text(out.state, `${grouped(total)} ${measure.unit} in ${String(present.length)} of ${String(model.chapters.length)} chapters`);
       text(
         out.thesis,
         lens === 'sections'
           ? 'Every drafted section is a filled cell; tile colour steps back so the cells carry the picture. Below: the chapters with the most sections drafted.'
-          : `Each tile now shows its chapter's ${measure.unit}, with a bar relative to the largest; chapters with none fade. Below: the six chapters with the most.`,
+          : `Each tile shows its chapter's ${measure.unit} as a bar against the largest, and the weave's halftone columns re-measure; chapters with none fade. Below: the six with the most.`,
       );
     }
     setRows([
@@ -541,10 +634,25 @@ export function initLibraryExplorer(ctx: PageContext): void {
     out.list?.replaceChildren(...present.slice(0, 6).map((x) => rankItem(x.c, x.v, lens === 'chapters' || lens === 'sections' ? x.c.sections.length : max, lens === 'chapters' || lens === 'sections' ? `${String(x.v)}/${String(x.c.sections.length)}` : grouped(x.v))));
     out.links?.replaceChildren();
   };
+  // The weave's scale note names what its halftone measures and the largest value.
+  const scale = weave?.querySelector<HTMLElement>('[data-lib-scale]') ?? null;
+  const rescale = (lens: string | null): void => {
+    if (scale === null) return;
+    const key = lens === 'figures' || lens === 'equations' || lens === 'works' ? lens : 'words';
+    const measure = MEASURES[key];
+    if (measure === undefined) return;
+    const top = model.chapters.reduce<Chapter | undefined>((best, c) => (best === undefined || measure.of(c) > measure.of(best) ? c : best), undefined);
+    if (top === undefined || measure.of(top) <= 0) {
+      scale.replaceChildren();
+      return;
+    }
+    scale.replaceChildren(make('b', '', key === 'works' ? 'works cited' : measure.unit), ` per chapter · max ${grouped(measure.of(top))} (ch ${top.number})`);
+  };
   let pinnedLens: string | null = null;
   const setLens = (lens: string | null): void => {
     const on = lens !== null && LENSES.has(lens) ? lens : null;
     root.dataset['lens'] = on ?? 'none';
+    rescale(on);
     for (const chip of chipsOfLens) chip.classList.toggle('is-on', chip.dataset['libLens'] === (on ?? 'none'));
     if (on !== null) {
       clearLight();

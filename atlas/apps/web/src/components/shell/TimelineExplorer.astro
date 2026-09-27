@@ -64,6 +64,10 @@ const threads = [...new Map(rows.filter((row) => row.chapter !== null && Number.
   .sort((a, b) => a[0] - b[0])
   .map(([n, chapter]) => ({ n, chapter, count: rows.filter((row) => row.n === n).length }));
 const pad = (n: number): string => String(n).padStart(2, '0');
+const glyphOf = (key: string): string => {
+  const relation = RELATIONS.find(([, k]) => k === key)?.[0];
+  return relation === undefined ? '' : RELATION_GLYPHS[relation];
+};
 const yMin = Math.min(...rows.map((row) => row.year));
 const yMax = Math.max(...rows.map((row) => row.year));
 ---
@@ -85,13 +89,21 @@ const yMax = Math.max(...rows.map((row) => row.year));
       }
     </div>
     <div class="tlx-filters__row" role="group" aria-label="Follow one chapter's lineage">
-      <span class="tlx-filters__label">Threads</span>
+      <span class="tlx-filters__label">Chapters</span>
       {
         threads.map(({ n, chapter, count }) => (
-          <button type="button" class="tlx-thread" data-tlx-thread={n} aria-pressed="false" title={chapter?.title ?? ''}>
-            <span class="tlx-thread__n">{pad(n)}</span>
-            {chapter?.shortTitle ?? ''}
-            <span class="tlx-chip__count">{count}</span>
+          <button
+            type="button"
+            class="tlx-thread"
+            data-tlx-thread={n}
+            data-tlx-title={chapter?.title ?? ''}
+            data-tlx-short={chapter?.shortTitle ?? ''}
+            data-tlx-url={chapter?.url ?? ''}
+            aria-pressed="false"
+            aria-label={`Chapter ${pad(n)} ${chapter?.shortTitle ?? ''}: ${String(count)} entries`}
+            title={`${pad(n)} ${chapter?.shortTitle ?? ''} · ${String(count)}`}
+          >
+            {pad(n)}
           </button>
         ))
       }
@@ -105,8 +117,11 @@ const yMax = Math.max(...rows.map((row) => row.year));
           <section class="tlc-year" id={`year-${String(group.year)}`} data-year={group.year} aria-labelledby={`year-h-${String(group.year)}`}>
             <h2 class="tlc-year__label" id={`year-h-${String(group.year)}`}>
               {group.year}
-              <span class="tlc-year__n">
-                {group.rows.length} {group.rows.length === 1 ? 'entry' : 'entries'}
+              <span class="tlc-year__units" aria-hidden="true">
+                {group.rows.map((row) => <i class={`tlx--${row.key}`} />)}
+              </span>
+              <span class="sh-visually-hidden">
+                , {group.rows.length} {group.rows.length === 1 ? 'entry' : 'entries'}
               </span>
             </h2>
             <ol class="tlc-entries">
@@ -166,19 +181,15 @@ const yMax = Math.max(...rows.map((row) => row.year));
           aria-label={`${String(rows.length)} lineage entries, years down, one column per relation. Arrow keys step through them in time order; Enter scrolls the chronicle to one.`}
           data-tlm-svg
         >
-          {map.lanes.map((lane, index) => {
-            // Full relation names, staggered on two rows so each may span two lanes.
-            const row = index % 2 === 0 ? 11 : 25;
-            const last = index === map.lanes.length - 1;
-            return (
-              <g class={`tlm__lane tlx--${lane.key}`} aria-hidden="true">
-                <line class="tlm__lane-rule" x1={lane.cx} x2={lane.cx} y1={row + 4} y2={map.bottom} />
-                <text class="tlm__lane-label" x={last ? lane.x1 : lane.cx} y={row} text-anchor={last ? 'end' : 'middle'}>
-                  {lane.lines[0]} {lane.lines[1]}
-                </text>
-              </g>
-            );
-          })}
+          {map.lanes.map((lane) => (
+            // One glyph per lane — the same glyph the chips, entries, and legend use for the relation.
+            <g class={`tlm__lane tlx--${lane.key}`} aria-hidden="true">
+              <line class="tlm__lane-rule" x1={lane.cx} x2={lane.cx} y1={map.top - 10} y2={map.bottom} />
+              <text class="tlm__lane-glyph" x={lane.cx} y={map.top - 16}>
+                {glyphOf(lane.key)}
+              </text>
+            </g>
+          ))}
           <g class="tlm__years">
             {map.years.map((year) => (
               <a href={`#year-${String(year.year)}`} tabindex="-1" data-tlm-year={year.year} aria-hidden="true">
@@ -219,9 +230,7 @@ const yMax = Math.max(...rows.map((row) => row.year));
         <div class="tlm__readout" data-tlm-readout aria-live="polite">
           <p class="tlm__readout-kicker" data-tlm-kicker>Reading</p>
           <p class="tlm__readout-title" data-tlm-title>Scroll the chronicle</p>
-          <p class="tlm__readout-meta" data-tlm-meta>
-            The band marks the years in view; the ring is the entry at the reading line. Point at a dot to name it and light its chapter's thread.
-          </p>
+          <p class="tlm__readout-meta" data-tlm-meta>Point at a dot or an entry.</p>
         </div>
         <div class="tlm__tally" aria-hidden="true">
           <p class="tlm__tally-head">
@@ -235,7 +244,7 @@ const yMax = Math.max(...rows.map((row) => row.year));
             {
               relationCounts.map(({ relation, key, count }) => (
                 <li class={`tlx--${key}`}>
-                  <span class="tlm__legend-dot" />
+                  <span class="tlm__legend-glyph" aria-hidden="true">{RELATION_GLYPHS[relation]}</span>
                   <span class="tlm__legend-name">{relation}</span>
                   <span class="tlm__legend-n" data-tlm-count={key}>
                     0

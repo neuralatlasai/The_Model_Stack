@@ -2,31 +2,34 @@
 /**
  * Library: the manuscript as an instrument (lib/library-model.ts).
  *
- *   lens     "read by": re-reads every tile in one measure (sections,
- *            words, figures, equations, works cited); the readout ranks it
+ *   weave    the 66 chapters on one axis in book order; every prerequisite
+ *            edge an arch above it (oxblood where both chapters are written),
+ *            a halftone column below each chapter for its words (or the
+ *            measure the lens selects), the parts as bands beneath
  *   map      the book as one table: 3 volumes → 11 part rows × 6 chapter
  *            tiles; every tile carries its 6 sections as cells, filled when
- *            drafted — all 396 sections visible at once. Tiles take their
- *            part's domain colour: solid = chapter written, hollow = planned
- *   readout  a fixed-size panel beside map and ledger (sticky): the chapter's
- *            thesis, state, measures, degree, and its sections; or a part's
- *            chapters; or, at rest, where the writing stands
- *   ledger   every chapter, part by part: title and thesis (one line),
- *            section strip, relative words, figures · equations, state
+ *            drafted. Written = solid part colour; planned = hatched
+ *   readout  a fixed-size sticky panel: the chapter's thesis, state,
+ *            measures, degree, sections, and links; or a part's chapters; or
+ *            a lens ranking; at rest, where the writing stands and the key
+ *   ledger   every chapter, part by part, as a two-column catalogue: title,
+ *            thesis, section strip, words, figures, equations, state
  *
- * Connected (client library-explorer.ts): a tile, a cell, or a ledger row
- * focuses its chapter everywhere — the chapters it builds on and unlocks
- * light across map and ledger (transitive; direct links drawn and marked with
- * their distance), and the readout names it. Server-rendered: every chapter,
- * section, and part is a real link; the ledger is the complete text form.
+ * Connected (client library-explorer.ts): a weave column, a tile, a cell, or
+ * a catalogue entry focuses its chapter everywhere — what it builds on
+ * (oxblood) and unlocks (ink) light in weave, map, and catalogue with their
+ * distance, the direct links are drawn over the map, and the readout names
+ * it. Server-rendered: every chapter, section, and part is a real link; the
+ * catalogue is the complete text form.
  */
 import { grouped } from '../../lib/format.ts';
 import { jsonForHtml } from '../../lib/json.ts';
-import { compactCount, type LibraryModel } from '../../lib/library-model.ts';
+import { compactCount, WEAVE, weaveLayout, type LibraryModel } from '../../lib/library-model.ts';
+import { PART_ICON } from '../../lib/part-icons.ts';
 
 interface Props {
   model: LibraryModel;
-  edges: number;
+  edges: readonly (readonly [number, number])[];
 }
 
 const { model, edges } = Astro.props;
@@ -37,6 +40,17 @@ const chaptersOf = (numbers: readonly number[]) => numbers.map((n) => byN.get(n)
 const partsOf = (numbers: readonly number[]) => numbers.map((n) => partByN.get(n)).filter((p) => p !== undefined);
 const pct = (value: number, max: number): string => `${String(Math.round((Math.max(0, value) / Math.max(1, max)) * 1000) / 10)}%`;
 const ratio = (value: number, max: number): string => String(Math.round((Math.max(0, value) / Math.max(1, max)) * 1000) / 1000);
+const measures = (c: { words: number; figures: number; equations: number; works: number }): string =>
+  `--w:${ratio(c.words, totals.maxWords)};--f:${ratio(c.figures, totals.maxFigures)};--e:${ratio(c.equations, totals.maxEquations)};--r:${ratio(c.works, totals.maxWorks)}`;
+const stateClass = (c: { written: boolean; sectionsWritten: number }): string => (c.written ? 'is-written' : c.sectionsWritten > 0 ? 'is-planned has-draft' : 'is-planned');
+
+// The weave: one axis, arches for prerequisites.
+const weave = weaveLayout(model.parts, edges);
+const written = new Set(model.chapters.filter((chapter) => chapter.written).map((chapter) => chapter.n));
+const at = (s: number): string => String(Math.round((s / weave.slots) * 100000) / 1000);
+const inDraft = model.chapters.filter((chapter) => !chapter.written && chapter.sectionsWritten > 0);
+const liveArcs = weave.arcs.filter((arc) => written.has(arc.p) && written.has(arc.n)).length;
+const wordiest = model.chapters.reduce<(typeof model.chapters)[number] | undefined>((best, chapter) => (best === undefined || chapter.words > best.words ? chapter : best), undefined);
 
 // At rest, the readout says where the writing stands — computed, part by part.
 const begun = model.parts.filter((part) => part.sectionsWritten > 0);
@@ -52,13 +66,19 @@ const quietRange =
 const standing = `${begun
   .map((part) =>
     part.written === part.chapters.length
-      ? `Part ${part.numeral} complete`
+      ? `Part ${part.numeral} is complete`
       : part.written > 0
-        ? `Part ${part.numeral}: ${String(part.written)} of ${String(part.chapters.length)} chapters, ${String(part.sectionsWritten)} of ${String(part.sectionsTotal)} sections`
-        : `Part ${part.numeral}: ${String(part.sectionsWritten)} of ${String(part.sectionsTotal)} sections drafted`,
+        ? `Part ${part.numeral} has ${String(part.written)} of ${String(part.chapters.length)} chapters written and ${String(part.sectionsWritten)} of ${String(part.sectionsTotal)} sections drafted`
+        : `Part ${part.numeral} has ${String(part.sectionsWritten)} of ${String(part.sectionsTotal)} sections drafted`,
   )
-  .join(' · ')}. ${quietRange}`;
-const partsUnderWay = begun.length;
+  .join('; ')}. ${quietRange}`;
+
+// …and where the weave is densest: the chapters most built upon, and the most dependent.
+const byUnlocks = [...model.chapters].sort((a, b) => b.unlocks.length - a.unlocks.length || a.n - b.n).slice(0, 3);
+const mostPrereqs = Math.max(0, ...model.chapters.map((chapter) => chapter.prereqs.length));
+const dependent = model.chapters.filter((chapter) => chapter.prereqs.length === mostPrereqs && mostPrereqs > 0);
+const listed = (items: readonly string[]): string => (items.length <= 1 ? (items[0] ?? '') : `${items.slice(0, -1).join(', ')} and ${items.at(-1) ?? ''}`);
+const weaveNote = `Most built upon: ${listed(byUnlocks.map((chapter) => `${chapter.number} ${chapter.short} (${String(chapter.unlocks.length)} direct)`))}. Most dependent: ${dependent.length > 1 ? 'chapters' : 'chapter'} ${listed(dependent.map((chapter) => chapter.number))}, with ${String(mostPrereqs)} prerequisites${dependent.length > 1 ? ' each' : ''}.`;
 
 const clientModel = {
   parts: model.parts.map((part) => ({
@@ -83,6 +103,7 @@ const clientModel = {
     written: chapter.written,
     state: chapter.state,
     summary: chapter.summary,
+    evidence: chapter.evidence,
     plan: chapter.plan,
     words: chapter.words,
     figures: chapter.figures,
@@ -95,46 +116,111 @@ const clientModel = {
 };
 
 const LENS_CHOICES = [
-  ['sections', 'sections', `${grouped(totals.sectionsWritten)}/${grouped(totals.sections)}`],
-  ['words', 'words', compactCount(totals.words)],
-  ['figures', 'figures', grouped(totals.figures)],
-  ['equations', 'equations', grouped(totals.equations)],
-  ['works', 'works cited', grouped(totals.references)],
+  ['none', 'state'],
+  ['sections', 'sections'],
+  ['words', 'words'],
+  ['figures', 'figures'],
+  ['equations', 'equations'],
+  ['works', 'works cited'],
 ] as const;
 
 const LEGEND = [
-  ['tile-written', 'written chapter (part colour)'],
-  ['tile-planned', 'planned chapter'],
-  ['cell-written', 'drafted section'],
-  ['cell-planned', 'planned section'],
-  ['up', 'builds on · ↑n steps upstream'],
-  ['down', 'unlocks · ↓n steps downstream'],
+  ['written', 'written chapter'],
+  ['draft', 'in progress · sections drafted'],
+  ['planned', 'planned chapter'],
+  ['cell', 'drafted section'],
+  ['dots', 'words, as halftone'],
+  ['arc', 'prerequisite · oxblood if both written'],
 ] as const;
 ---
 
 <section class="lib" data-library-explorer data-lens="none" aria-label="The manuscript">
   <div class="lib-body" data-lib-body>
     <div class="lib-main">
-      <figure class="lib-map" aria-labelledby="lib-map-title">
-        <figcaption class="lib-map__head">
-          <span class="lib-map__title" id="lib-map-title">Manuscript map</span>
-          <span class="lib-map__note">one row per part · one tile per chapter · one cell per section</span>
+      <figure class="lib-weave" aria-labelledby="lib-weave-title">
+        <figcaption class="lib-head">
+          <span class="lib-head__title" id="lib-weave-title">Prerequisite weave</span>
+          <span class="lib-head__note">{grouped(edges.length)} links · {liveArcs} between written chapters</span>
+          <span class="sh-visually-hidden">
+            Each arch joins a chapter to one it builds on; the map and the catalogue below carry the same chapters as links.
+          </span>
         </figcaption>
-        <div class="lib-lens" role="group" aria-label="Read the map by a measure" data-lib-lensbar>
-          <span class="lib-lens__label">Read by</span>
-          <button type="button" class="lib-lens__chip" data-lib-lens="none" aria-pressed="true">state</button>
-          {
-            LENS_CHOICES.map(([key, label, count]) => (
-              <button type="button" class="lib-lens__chip" data-lib-lens={key} aria-pressed="false">
-                {label} <span class="lib-lens__n">{count}</span>
-              </button>
-            ))
-          }
+        <div class="lib-weave__stage" aria-hidden="true" style={`--slots:${String(weave.slots)}`} data-lib-weave>
+          <svg class="lib-weave__arcs" viewBox={`0 0 ${String(WEAVE.width)} ${String(WEAVE.height)}`} preserveAspectRatio="none" focusable="false">
+            {
+              weave.arcs.map((arc, index) => (
+                <path
+                  d={arc.d}
+                  pathLength="1"
+                  class:list={['lib-arc', { 'is-live': written.has(arc.p) && written.has(arc.n) }]}
+                  data-p={arc.p}
+                  data-n={arc.n}
+                  style={`--i:${String(index)}`}
+                />
+              ))
+            }
+          </svg>
+          <ol class="lib-weave__cols">
+            {
+              model.chapters.map((chapter) => (
+                <li
+                  class:list={['lib-wc', stateClass(chapter)]}
+                  data-lib-n={chapter.n}
+                  data-num={chapter.number}
+                  data-domain={chapter.domain}
+                  data-zero={[chapter.words === 0 ? 'w' : '', chapter.figures === 0 ? 'f' : '', chapter.equations === 0 ? 'e' : '', chapter.works === 0 ? 'r' : ''].join(' ').trim()}
+                  style={`--x:${at(weave.x.get(chapter.n) ?? 0)};${measures(chapter)}`}
+                >
+                  <a href={chapter.url} tabindex="-1" class="lib-wc__hit">
+                    <i class="lib-wc__node" />
+                    <i class="lib-wc__dots" />
+                  </a>
+                </li>
+              ))
+            }
+          </ol>
+          <p class="lib-weave__scale" data-lib-scale>
+            {wordiest !== undefined && wordiest.words > 0 && (
+              <>
+                <b>words</b> per chapter · max {grouped(wordiest.words)} (ch {wordiest.number})
+              </>
+            )}
+          </p>
+          <ol class="lib-weave__parts">
+            {
+              weave.parts.map((span) => {
+                const part = partByN.get(span.n);
+                return part === undefined ? null : (
+                  <li class="lib-wp" data-domain={part.domain} style={`--x0:${at(span.from)};--x1:${at(span.to)}`}>
+                    <a href={`#lib-part-${String(part.n)}`} tabindex="-1" data-lib-partlink={part.n}>
+                      {part.numeral}
+                    </a>
+                  </li>
+                );
+              })
+            }
+          </ol>
         </div>
+      </figure>
+
+      <figure class="lib-map" aria-labelledby="lib-map-title">
+        <figcaption class="lib-head">
+          <span class="lib-head__title" id="lib-map-title">Manuscript map</span>
+          <span class="lib-lens" role="group" aria-label="Read the map by a measure" data-lib-lensbar>
+            <span class="lib-lens__label" aria-hidden="true">Read by</span>
+            {
+              LENS_CHOICES.map(([key, label]) => (
+                <button type="button" class="lib-lens__chip" data-lib-lens={key} aria-pressed={key === 'none' ? 'true' : 'false'}>
+                  {label}
+                </button>
+              ))
+            }
+          </span>
+        </figcaption>
         <div
           class="lib-grid"
           role="group"
-          aria-label={`${String(totals.chapters)} chapters in ${String(model.parts.length)} parts; ${String(totals.chaptersWritten)} written, ${String(totals.sectionsWritten)} of ${String(totals.sections)} sections drafted. Arrow keys move between chapters; Enter opens one.`}
+          aria-label={`${String(totals.chapters)} chapters in ${String(model.parts.length)} parts. Arrow keys move between chapters; Enter opens one.`}
           data-lib-grid
         >
           {
@@ -145,27 +231,30 @@ const LEGEND = [
                     Volume {volume.numeral} · {volume.title}
                   </a>
                   <span class="lib-vol__stat">
-                    {volume.written}/{volume.chapters} ch · {volume.sectionsWritten}/{volume.sectionsTotal} §
+                    {volume.written}/{volume.chapters} chapters · {volume.sectionsWritten}/{volume.sectionsTotal} sections
                   </span>
                 </p>
                 {partsOf(volume.parts).map((part) => (
-                  <div class="lib-row" data-domain={part.domain} data-lib-part={part.n}>
+                  <div class:list={['lib-row', { 'is-begun': part.sectionsWritten > 0 }]} data-domain={part.domain} data-lib-part={part.n}>
                     <a class="lib-row__label" href={`#lib-part-${String(part.n)}`} tabindex="-1" data-lib-partlink={part.n}>
-                      <span class="lib-row__num">{part.numeral}</span>
-                      <span class="lib-row__title">{part.title}</span>
+                      <span class="lib-chip" aria-hidden="true">
+                        <svg viewBox="0 0 24 24" width="14" height="14" focusable="false">
+                          <path d={PART_ICON[part.n] ?? ''} />
+                        </svg>
+                      </span>
+                      <span class="lib-row__text">
+                        <span class="lib-row__num">{part.numeral}</span> {part.title}
+                      </span>
                       <span class="lib-row__meter" aria-hidden="true">
                         <i style={`inline-size:${pct(part.sectionsWritten, part.sectionsTotal)}`} />
-                      </span>
-                      <span class="lib-row__stat">
-                        {part.sectionsWritten}/{part.sectionsTotal} § · {compactCount(part.words)}
                       </span>
                     </a>
                     {chaptersOf(part.chapters).map((chapter) => (
                       <div
-                        class:list={['lib-tile', chapter.written ? 'is-written' : 'is-planned', { 'has-draft': !chapter.written && chapter.sectionsWritten > 0 }]}
+                        class:list={['lib-tile', stateClass(chapter)]}
                         data-lib-n={chapter.n}
                         data-zero={[chapter.words === 0 ? 'w' : '', chapter.figures === 0 ? 'f' : '', chapter.equations === 0 ? 'e' : '', chapter.works === 0 ? 'r' : ''].join(' ').trim()}
-                        style={`--w:${ratio(chapter.words, totals.maxWords)};--f:${ratio(chapter.figures, totals.maxFigures)};--e:${ratio(chapter.equations, totals.maxEquations)};--r:${ratio(chapter.works, totals.maxWorks)}`}
+                        style={measures(chapter)}
                       >
                         <a
                           class="lib-tile__link"
@@ -174,15 +263,8 @@ const LEGEND = [
                           data-lib-tile={chapter.n}
                           aria-label={`${chapter.number} ${chapter.title}. ${chapter.state}; ${String(chapter.sectionsWritten)} of ${String(chapter.sections.length)} sections drafted; ${grouped(chapter.words)} words. Builds on ${String(chapter.prereqs.length)}, unlocks ${String(chapter.unlocks.length)}.`}
                         >
-                          <span class="lib-tile__n">{chapter.number}</span>
-                          <span class="lib-tile__t">{chapter.short}</span>
+                          <span class="lib-tile__n">{chapter.number}</span> <span class="lib-tile__t">{chapter.short}</span>
                         </a>
-                        <span class="lib-tile__m" aria-hidden="true">
-                          <span data-m="words">{compactCount(chapter.words)}</span>
-                          <span data-m="figures">{chapter.figures > 0 ? chapter.figures : '—'}</span>
-                          <span data-m="equations">{chapter.equations > 0 ? chapter.equations : '—'}</span>
-                          <span data-m="works">{chapter.works > 0 ? chapter.works : '—'}</span>
-                        </span>
                         <span class="lib-tile__hop" aria-hidden="true" data-lib-hop />
                         <span class="lib-tile__cells">
                           {chapter.sections.length === 0 ? (
@@ -200,7 +282,15 @@ const LEGEND = [
                           )}
                         </span>
                         <span class="lib-tile__lens" aria-hidden="true">
-                          <i />
+                          <span class="lib-tile__bar">
+                            <i />
+                          </span>
+                          <span class="lib-tile__m">
+                            <span data-m="words">{compactCount(chapter.words)}</span>
+                            <span data-m="figures">{chapter.figures > 0 ? chapter.figures : '—'}</span>
+                            <span data-m="equations">{chapter.equations > 0 ? chapter.equations : '—'}</span>
+                            <span data-m="works">{chapter.works > 0 ? chapter.works : '—'}</span>
+                          </span>
                         </span>
                       </div>
                     ))}
@@ -214,12 +304,9 @@ const LEGEND = [
       </figure>
 
       <section class="lib-ledger" id="lib-ledger" aria-labelledby="lib-ledger-title">
-        <div class="lib-ledger__head">
-          <h2 class="lib-ledger__title" id="lib-ledger-title">Every chapter, part by part</h2>
-          <p class="lib-ledger__cols" aria-hidden="true">
-            <span>No.</span><span>Chapter · thesis</span><span>Sections</span><span>Words</span><span>Fig·Eq</span><span>State</span>
-          </p>
-        </div>
+        <h2 class="lib-head lib-ledger__title" id="lib-ledger-title">
+          <span class="lib-head__title">Every chapter, part by part</span>
+        </h2>
         {
           model.volumes.map((volume) => (
             <div class="lib-lvol">
@@ -227,13 +314,15 @@ const LEGEND = [
                 <a href={volume.url}>
                   Volume {volume.numeral} · {volume.title}
                 </a>
-                <span class="lib-lvol__stat">
-                  {volume.written} of {volume.chapters} chapters written · {volume.sectionsWritten} of {volume.sectionsTotal} sections drafted
-                </span>
               </h3>
               {partsOf(volume.parts).map((part) => (
                 <div class="lib-part" id={`lib-part-${String(part.n)}`} data-domain={part.domain} data-lib-part={part.n}>
-                  <div class="lib-part__head">
+                  <div class:list={['lib-part__head', { 'is-begun': part.sectionsWritten > 0 }]}>
+                    <span class="lib-chip" aria-hidden="true">
+                      <svg viewBox="0 0 24 24" width="15" height="15" focusable="false">
+                        <path d={PART_ICON[part.n] ?? ''} />
+                      </svg>
+                    </span>
                     <h4 class="lib-part__title">
                       <a href={part.url}>
                         <span class="lib-part__num">Part {part.numeral}</span> {part.title}
@@ -249,76 +338,58 @@ const LEGEND = [
                         {part.written}/{part.chapters.length} chapters · {part.sectionsWritten}/{part.sectionsTotal} sections · {grouped(part.words)} words
                       </span>
                     </p>
-                    {part.outcome !== null && <p class="lib-part__outcome">Outcome — {part.outcome}</p>}
+                    {part.outcome !== null && (
+                      <p class="lib-part__outcome">
+                        <span>Outcome</span> {part.outcome}
+                      </p>
+                    )}
                   </div>
-                  <table class="lib-table">
-                    <caption class="sh-visually-hidden">
-                      Chapters of Part {part.numeral}, {part.title}
-                    </caption>
-                    <colgroup>
-                      <col class="lib-col lib-col--n" />
-                      <col class="lib-col lib-col--main" />
-                      <col class="lib-col lib-col--strip" />
-                      <col class="lib-col lib-col--words" />
-                      <col class="lib-col lib-col--fe" />
-                      <col class="lib-col lib-col--state" />
-                    </colgroup>
-                    <thead class="sh-visually-hidden">
-                      <tr>
-                        <th scope="col">No.</th>
-                        <th scope="col">Chapter and thesis</th>
-                        <th scope="col">Sections drafted</th>
-                        <th scope="col">Words</th>
-                        <th scope="col">Figures · equations</th>
-                        <th scope="col">State</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {chaptersOf(part.chapters).map((chapter) => (
-                        <tr class:list={['lib-ch', chapter.written ? 'is-written' : 'is-planned']} data-lib-n={chapter.n}>
-                          <td class="lib-ch__n">{chapter.number}</td>
-                          <td class="lib-ch__main">
-                            <a class="lib-ch__title" href={chapter.url} data-lib-row={chapter.n}>
-                              {chapter.title}
-                            </a>
-                            {chapter.summary !== '' ? (
-                              <span class="lib-ch__thesis">{chapter.summary}</span>
-                            ) : (
-                              <span class="lib-ch__thesis lib-ch__thesis--none">{chapter.plan !== '' ? `Planned artifact — ${chapter.plan}` : 'No thesis yet — the chapter is planned.'}</span>
-                            )}
-                          </td>
-                          <td class="lib-ch__strip">
-                            <span class="lib-strip" role="group" aria-label={`Sections of chapter ${chapter.number}: ${String(chapter.sectionsWritten)} of ${String(chapter.sections.length)} drafted`}>
+                  <ol class="lib-cat" aria-label={`Chapters of Part ${part.numeral}`}>
+                    {chaptersOf(part.chapters).map((chapter) => (
+                      <li class:list={['lib-ch', stateClass(chapter)]} data-lib-n={chapter.n}>
+                        <span class="lib-ch__n">{chapter.number}</span>
+                        <div class="lib-ch__body">
+                          <a class="lib-ch__title" href={chapter.url} data-lib-row={chapter.n}>
+                            {chapter.title}
+                          </a>
+                          {chapter.summary !== '' ? (
+                            <p class="lib-ch__thesis">
+                              {chapter.evidence !== null && <span class="lib-ev">{chapter.evidence}</span>} {chapter.summary}
+                            </p>
+                          ) : (
+                            <p class="lib-ch__thesis lib-ch__thesis--plan">{chapter.plan !== '' ? `Planned artifact: ${chapter.plan}.` : 'Planned; no thesis yet.'}</p>
+                          )}
+                          <p class="lib-ch__meta">
+                            <span
+                              class="lib-strip"
+                              role="group"
+                              aria-label={`Sections of chapter ${chapter.number}: ${String(chapter.sectionsWritten)} of ${String(chapter.sections.length)} drafted`}
+                            >
                               {chapter.sections.map((section, index) => (
                                 <a
                                   class:list={['lib-cell', section.written ? 'is-written' : 'is-planned']}
                                   href={section.url}
                                   data-lib-s={index}
+                                  title={`${section.number} ${section.title}`}
                                   aria-label={`${section.number} ${section.title} — ${section.written ? 'drafted' : 'planned'}`}
                                 />
                               ))}
                             </span>
-                            <span class="lib-ch__count">
-                              {chapter.sectionsWritten}/{chapter.sections.length}
+                            <span class="lib-ch__stat">
+                              {[
+                                chapter.words > 0 ? `${grouped(chapter.words)} words` : 'no words yet',
+                                chapter.figures > 0 ? `${String(chapter.figures)} fig` : null,
+                                chapter.equations > 0 ? `${String(chapter.equations)} eq` : null,
+                              ]
+                                .filter((part) => part !== null)
+                                .join(' · ')}
                             </span>
-                          </td>
-                          <td class="lib-ch__words">
-                            <span class="lib-bar" aria-hidden="true">
-                              <i style={`inline-size:${pct(chapter.words, totals.maxWords)}`} />
-                            </span>
-                            <span class="lib-ch__num">{chapter.words > 0 ? grouped(chapter.words) : '—'}</span>
-                          </td>
-                          <td class="lib-ch__fe">
-                            {chapter.figures} · {chapter.equations}
-                          </td>
-                          <td class="lib-ch__state">
-                            <i class="lib-state-key" aria-hidden="true" />
-                            {chapter.written ? 'draft' : 'planned'}
-                          </td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
+                            <span class="lib-ch__state">{chapter.written ? 'draft' : chapter.sectionsWritten > 0 ? 'in progress' : 'planned'}</span>
+                          </p>
+                        </div>
+                      </li>
+                    ))}
+                  </ol>
                 </div>
               ))}
             </div>
@@ -329,17 +400,15 @@ const LEGEND = [
 
     <aside class="lib-panel" aria-label="Library readout">
       <div class="lib-readout" aria-live="polite" data-lib-readout>
-        <p class="lib-ro__kicker" data-lib-kicker>The manuscript, today</p>
-        <p class="lib-ro__title" data-lib-title>{totals.chaptersWritten} of {totals.chapters} chapters written</p>
-        <p class="lib-ro__state" data-lib-state>
-          {totals.sectionsWritten}/{totals.sections} sections drafted · {grouped(totals.words)} words
-        </p>
-        <p class="lib-ro__thesis" data-lib-thesis>{standing} Point at a chapter to read its thesis and trace what it builds on and unlocks.</p>
+        <p class="lib-ro__kicker" data-lib-kicker><span class="lib-badge">Readout</span></p>
+        <p class="lib-ro__title" data-lib-title>The manuscript, today</p>
+        <p class="lib-ro__state" data-lib-state>Point at any chapter or part</p>
+        <p class="lib-ro__thesis" data-lib-thesis>{standing} {weaveNote}</p>
         <dl class="lib-ro__rows" data-lib-rows>
           <div><dt>figures · equations</dt><dd><a href="/figures/">{grouped(totals.figures)}</a> · <a href="/equations/">{grouped(totals.equations)}</a></dd></div>
           <div><dt>works cited</dt><dd><a href="/papers/">{grouped(totals.references)}</a> · {totals.spine} spine</dd></div>
-          <div><dt>prerequisite links</dt><dd>{grouped(edges)}</dd></div>
-          <div><dt>parts under way</dt><dd>{partsUnderWay} / {model.parts.length}</dd></div>
+          <div><dt>parts under way</dt><dd>{begun.length} / {model.parts.length}</dd></div>
+          <div><dt>in progress</dt><dd>{inDraft.length === 0 ? '—' : inDraft.map((chapter) => `ch ${chapter.number}`).join(' · ')}</dd></div>
         </dl>
         <p class="lib-ro__listhead" data-lib-listhead><span>Key</span><span></span></p>
         <ol class="lib-ro__list" data-lib-list>
@@ -352,7 +421,10 @@ const LEGEND = [
             ))
           }
         </ol>
-        <p class="lib-ro__links" data-lib-links-out></p>
+        <p class="lib-ro__links" data-lib-links-out>
+          <span class="lib-links__group"><span class="lib-links__label">builds on</span><span class="lib-links__key is-up">↑1</span><span class="lib-links__none">steps upstream</span></span>
+          <span class="lib-links__group"><span class="lib-links__label">unlocks</span><span class="lib-links__key is-down">↓1</span><span class="lib-links__none">steps downstream</span></span>
+        </p>
       </div>
     </aside>
   </div>
@@ -360,8 +432,8 @@ const LEGEND = [
   {
     model.shelf.length > 0 && (
       <section class="lib-shelf" aria-labelledby="lib-shelf-title">
-        <h2 class="lib-shelf__title" id="lib-shelf-title">
-          Front matter and appendices
+        <h2 class="lib-head lib-shelf__title" id="lib-shelf-title">
+          <span class="lib-head__title">Front matter and appendices</span>
         </h2>
         <ol class="lib-shelf__list" role="list">
           {model.shelf.map((item) => (

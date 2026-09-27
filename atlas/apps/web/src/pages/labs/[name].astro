@@ -11,6 +11,7 @@ import StackUses from '../../components/shell/StackUses.astro';
 import ReaderLayout from '../../layouts/ReaderLayout.astro';
 import EntityMap from '../../components/shell/EntityMap.astro';
 import { getGraph, getRegistry } from '../../lib/atlas.ts';
+import { labMarks } from '../../lib/entity-marks.ts';
 import { buildLabsModel } from '../../lib/entity-model.ts';
 import { getStackModel } from '../../lib/stack.ts';
 import '../../styles/entity-map.css';
@@ -28,6 +29,7 @@ const lab = registry.labs.find((entry) => entry.id === id);
 if (lab === undefined) throw new Error(`labs/[name]: ${id} missing from the registry`);
 const labsModel = buildLabsModel(graph, registry, await getStackModel());
 const labRow = labsModel.labs.find((candidate) => candidate.url === lab.atlasUrl) ?? null;
+const mark = labRow === null ? '' : (labMarks(labsModel.labs).get(labRow.key) ?? '');
 const identity = ['Lab', lab.rank === null ? null : `reference-stack position ${String(lab.rank)}`]
   .filter((part): part is string => part !== null)
   .join(' · ');
@@ -42,20 +44,41 @@ const identity = ['Lab', lab.rank === null ? null : `reference-stack position ${
 >
   <Breadcrumbs crumbs={[{ title: 'Labs', number: null, url: '/labs/' }]} current={lab.name} />
   <article class="sh-article">
-    <PageHeader identity={identity} title={lab.name} meta={`Identifier ${lab.id}`}>
-      {
-        lab.surfaces.length > 0 && (
-          <ul class="sh-actions">
-            {lab.surfaces.map((surface) => (
-              <li>
-                <a href={surface.url} rel="external">
-                  {surface.label}
-                </a>
-              </li>
-            ))}
-          </ul>
-        )
-      }
+    <PageHeader identity={identity} title={lab.name}>
+      <div class="em-brand">
+        {
+          mark !== '' && (
+            <span class:list={['em-mark', { 'is-idle': (labRow?.chapters.length ?? 0) === 0 }]} aria-hidden="true">
+              {mark}
+            </span>
+          )
+        }
+        <span class="em-brand__fact">
+          {
+            labRow === null || labRow.chapters.length === 0 ? (
+              'not yet drawn on by a written chapter'
+            ) : (
+              <>
+                <b>{labRow.chapters.length}</b> written {labRow.chapters.length === 1 ? 'chapter' : 'chapters'} · <b>{labRow.sections}</b>{' '}
+                {labRow.sections === 1 ? 'section' : 'sections'}
+              </>
+            )
+          }
+        </span>
+        {
+          lab.surfaces.length > 0 && (
+            <ul class="sh-actions">
+              {lab.surfaces.map((surface) => (
+                <li>
+                  <a href={surface.url} rel="external">
+                    {surface.label}
+                  </a>
+                </li>
+              ))}
+            </ul>
+          )
+        }
+      </div>
     </PageHeader>
 
     {labRow !== null && <EntityMap kind="lab" name={lab.name} chapters={labsModel.chapters} parts={labsModel.parts} used={labRow.chapters} uses={labRow.uses} />}

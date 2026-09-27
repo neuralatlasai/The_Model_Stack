@@ -76,6 +76,22 @@ export function initTimelineExplorer(ctx: PageContext): void {
     }
   };
 
+  const describeThread = (chip: HTMLElement): void => {
+    const chapter = chip.dataset['tlxThread'] ?? '';
+    const own = entries.filter((entry) => entry.dataset['chapter'] === chapter);
+    const yearsOf = own.map((entry) => Number(entry.dataset['year'] ?? Number.NaN)).filter(Number.isFinite);
+    const span = yearsOf.length === 0 ? '' : ` · ${String(Math.min(...yearsOf))}–${String(Math.max(...yearsOf))}`;
+    if (out.kicker !== null) out.kicker.textContent = `Chapter ${chip.textContent.trim()} · ${String(own.length)} entr${own.length === 1 ? 'y' : 'ies'}${span}`;
+    if (out.title !== null) out.title.textContent = chip.dataset['tlxTitle'] ?? '';
+    if (out.meta !== null) {
+      out.meta.textContent = Object.entries(RELATION_NAMES)
+        .map(([key, name]) => [name, own.filter((entry) => entry.dataset['relation'] === key).length] as const)
+        .filter(([, n]) => n > 0)
+        .map(([name, n]) => `${String(n)} ${name}`)
+        .join(' · ');
+    }
+  };
+
   // ── connected states ───────────────────────────────────────────────────────
   const clearFocus = (): void => {
     for (const entry of entries) entry.classList.remove('is-focus', 'is-thread');
@@ -226,11 +242,15 @@ export function initTimelineExplorer(ctx: PageContext): void {
   const threadChips = [...root.querySelectorAll<HTMLButtonElement>('[data-tlx-thread]')];
   for (const chip of threadChips) {
     const chapter = chip.dataset['tlxThread'] ?? '';
-    chip.addEventListener('pointerenter', () => {
+    const preview = (): void => {
       clearFocus();
       lightThread(chapter);
-    }, { signal: ctl.signal });
-    chip.addEventListener('pointerleave', clearFocus, { signal: ctl.signal });
+      describeThread(chip);
+    };
+    chip.addEventListener('pointerenter', preview, { signal: ctl.signal });
+    chip.addEventListener('focus', preview, { signal: ctl.signal });
+    chip.addEventListener('pointerleave', release, { signal: ctl.signal });
+    chip.addEventListener('blur', release, { signal: ctl.signal });
     chip.addEventListener('click', () => {
       pinnedThread = pinnedThread === chapter ? null : chapter;
       for (const other of threadChips) other.setAttribute('aria-pressed', String(other.dataset['tlxThread'] === pinnedThread));

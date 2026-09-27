@@ -31,7 +31,7 @@ import { getGraph, getRegistry } from '../../lib/atlas.ts';
 import { buildLabsModel, weightOf, type LabRow } from '../../lib/entity-model.ts';
 import { jsonForHtml } from '../../lib/json.ts';
 import { labConstellation } from '../../lib/lab-constellation.ts';
-import { monograms } from '../../lib/monogram.ts';
+import { labMarks } from '../../lib/entity-marks.ts';
 import { getStackModel } from '../../lib/stack.ts';
 import { chapterFragment } from '../../lib/urls.ts';
 import '../../styles/entities.css';
@@ -44,15 +44,14 @@ const active = model.labs.filter((lab) => lab.chapters.length > 0);
 const idle = model.labs.filter((lab) => lab.chapters.length === 0);
 const chapterNo = (n: number): string => model.chapters[String(n)]?.number ?? String(n).padStart(2, '0');
 const footprint = (lab: LabRow): number => lab.chapters.length * 1000 + lab.sections;
-const labMarks = monograms(model.labs.map((lab) => lab.name));
-const markOf = new Map(model.labs.map((lab, index) => [lab.key, labMarks[index] ?? lab.name.slice(0, 2)]));
+const markOf = labMarks(model.labs);
 const domainOf = new Map(stack.parts.map((part) => [part.n, part.domain]));
 
 // The constellation's axis: the parts that hold a written chapter; the rest share one planned zone.
 const field = labConstellation(active, model.parts, model.chapters);
 const drawings = [
   { variant: 'wide', field },
-  { variant: 'compact', field: labConstellation(active, model.parts, model.chapters, { width: 420, r0: 8, rk: 1.75, plannedW: 52 }) },
+  { variant: 'compact', field: labConstellation(active, model.parts, model.chapters, { width: 420, r0: 10.5, rk: 1.55, plannedW: 52 }) },
 ] as const;
 const axisParts = model.parts.filter((part) => field.bands.some((band) => band.part === part.n));
 const restParts = model.parts.filter((part) => !axisParts.includes(part));
@@ -67,7 +66,7 @@ const byPart = (lab: LabRow) =>
     .map((part) => ({ part, sections: part.chapters.reduce((sum, n) => sum + (lab.sectionsByChapter[String(n)] ?? 0), 0) }))
     .filter((entry) => entry.sections > 0);
 const maxSections = Math.max(1, ...active.map((lab) => lab.sections));
-const monoSize = (mark: string, r: number): number => Math.min(12.5, (2 * r - 7) / (0.62 * Math.max(2, mark.length)));
+const monoSize = (mark: string, r: number): number => Math.max(6.5, Math.min(12.5, (2 * r - 6) / (0.62 * Math.max(2, mark.length))));
 
 // The readout rests on the lab with the broadest footprint (client entity-explorer.ts returns to it).
 const broadest = [...active].sort((a, b) => footprint(b) - footprint(a))[0];
@@ -170,11 +169,9 @@ const clientModel = { ...model, marks: Object.fromEntries(markOf), domains: Obje
                       >
                         <circle class="lc-mark__hit" cx={mark.x} cy={mark.y} r={mark.r + 3} />
                         <circle class="lc-mark__disc" cx={mark.x} cy={mark.y} r={mark.r} />
-                        {size >= 6 && (
-                          <text class="lc-mark__mono" x={mark.x} y={mark.y + size * 0.36} style={`font-size:${size.toFixed(2)}px`}>
-                            {mono}
-                          </text>
-                        )}
+                        <text class="lc-mark__mono" x={mark.x} y={mark.y + size * 0.36} style={`font-size:${size.toFixed(2)}px`}>
+                          {mono}
+                        </text>
                       </a>
                     );
                   })}

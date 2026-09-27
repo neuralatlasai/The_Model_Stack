@@ -54,7 +54,7 @@ const persistName =
       Close
     </button>
   </div>
-  <ul role="tree" class="sh-tree-list" aria-labelledby="knowledge-tree-title">
+  <ul role="tree" class="sh-tree-list" aria-labelledby="knowledge-tree-title" style={`--tree-num:${String(Math.max(0, ...graph.tree.map((node) => node.number?.length ?? 0)))}ch`}>
     <TreeBranch nodes={graph.tree} level={1} state={state} focusId={focusId} entityOf={entityOf} />
   </ul>
 </nav>

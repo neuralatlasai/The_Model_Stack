@@ -31,7 +31,7 @@ const views = inlineViews(nodes, import.meta.env.BASE_URL);
       {view.kind === 'strong' && <strong><Astro.self nodes={view.children} /></strong>}
       {view.kind === 'delete' && <del><Astro.self nodes={view.children} /></del>}
       {view.kind === 'plain' && <Astro.self nodes={view.children} />}
-      {view.kind === 'code' && <code class="rb-icode">{view.value}</code>}
+      {view.kind === 'code' && <code class:list={['rb-icode', { 'rb-icode--long': view.value.length > 28 }]}>{view.value}</code>}
       {view.kind === 'math' && <span class="rb-math" set:html={view.html} />}
       {view.kind === 'link' && <a class={view.className} href={view.href} title={view.title} rel={view.rel} data-node={view.node}><Astro.self nodes={view.children} /></a>}
       {view.kind === 'cite' && <CiteLink citeKey={view.key} resolved={view.resolved} />}

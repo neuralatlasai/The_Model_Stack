@@ -35,6 +35,8 @@ export function initFiguresExplorer(ctx: PageContext): void {
     list: root.querySelector<HTMLElement>('[data-fx-list]'),
   };
   const initial = { kicker: out.kicker?.textContent ?? '', title: out.title?.textContent ?? '', meta: out.meta?.textContent ?? '' };
+  // The idle list (live instruments by chapter) is server-rendered; keep a copy to restore.
+  const initialList = [...(out.list?.children ?? [])].map((node) => node.cloneNode(true));
   const shown = root.querySelector<HTMLElement>('[data-fx-shown]');
   const clearButton = root.querySelector<HTMLButtonElement>('[data-fx-clear]');
 
@@ -64,6 +66,7 @@ export function initFiguresExplorer(ctx: PageContext): void {
   };
   const reset = (): void => {
     write(initial.kicker, initial.title, initial.meta, []);
+    out.list?.replaceChildren(...initialList.map((node) => node.cloneNode(true)));
   };
 
   // ── lighting ───────────────────────────────────────────────────────────────

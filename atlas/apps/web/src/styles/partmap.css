@@ -38,13 +38,23 @@
   align-items: start;
 }
 
-/* Outside chapters */
+/* Outside chapters: one row per part — the part numeral, then number chips. */
 .pm-side__label {
-  margin: 0 0 0.35rem;
+  display: flex;
+  justify-content: space-between;
+  gap: 0.5rem;
+  margin: 0 0 0.5rem;
+  padding-block-end: 0.3rem;
+  border-block-end: 1.5px solid currentColor;
   font: 600 10px var(--font-mono);
   letter-spacing: 0.1em;
   text-transform: uppercase;
   color: var(--ink-3);
+}
+
+.pm-side__count {
+  font-weight: 400;
+  letter-spacing: 0;
 }
 
 .pm-side--in .pm-side__label {
@@ -61,68 +71,91 @@
   color: var(--ink-3);
 }
 
+.pm-group {
+  display: grid;
+  grid-template-columns: 1.75rem minmax(0, 1fr);
+  align-items: start;
+  gap: 3px;
+}
+
 .pm-group + .pm-group {
-  margin-top: 0.45rem;
+  margin-top: 3px;
 }
 
 .pm-group__head {
-  margin: 0 0 0.15rem;
-  font: 10px var(--font-mono);
+  margin: 0;
+  font: 600 10px/22px var(--font-mono);
   color: var(--ink-3);
 }
 
 .pm-chips {
-  display: grid;
+  display: flex;
+  flex-wrap: wrap;
   gap: 2px;
   margin: 0;
   padding: 0;
   list-style: none;
 }
 
+/* A chapter as a boxed number: solid rule when written, dashed while planned. */
 .pm-chip {
   display: grid;
-  grid-template-columns: 1.5rem minmax(0, 1fr);
-  gap: 0.3rem;
-  align-items: baseline;
-  padding: 0.12rem 0.35rem;
-  border: 1px solid var(--rule);
-  font: 11.5px/1.35 var(--font-sans);
+  place-items: center;
+  inline-size: 22px;
+  block-size: 22px;
+  border: 1px dashed var(--rule-strong);
+  border-radius: 5px;
+  font: 600 10.5px/1 var(--font-mono);
+  font-variant-numeric: tabular-nums;
   color: var(--ink-3);
   text-decoration: none;
-  transition: border-color var(--t-hover) ease, color var(--t-hover) ease, opacity var(--t-state) ease;
+  transition:
+    border-color var(--t-hover) ease,
+    background-color var(--t-hover) ease,
+    color var(--t-hover) ease,
+    opacity var(--t-state) ease;
 }
 
 .pm-chip.is-written {
+  border-style: solid;
+  border-color: color-mix(in oklab, var(--ink-3) 70%, var(--paper));
   color: var(--ink-2);
 }
 
-.pm-chip__n {
-  font: 600 10.5px var(--font-mono);
-}
-
 .pm-chip__t {
+  position: absolute;
+  inline-size: 1px;
+  block-size: 1px;
   overflow: hidden;
+  clip-path: inset(50%);
   white-space: nowrap;
-  text-overflow: ellipsis;
 }
 
 .pm-chip:hover,
 .pm-chip:focus-visible,
 .pm-chip.is-focus {
-  border-color: var(--ink-2);
+  border-color: var(--ink);
+  background: var(--paper-raised);
   color: var(--ink);
+}
+
+.pm-chip:focus-visible {
+  outline: 2px solid var(--focus);
+  outline-offset: 1px;
 }
 
 .pm-chip.is-up {
+  border-style: solid;
   border-color: var(--pm-up);
-  box-shadow: inset 2px 0 0 var(--pm-up);
-  color: var(--ink);
+  background: var(--pm-up);
+  color: var(--paper);
 }
 
 .pm-chip.is-down {
+  border-style: solid;
   border-color: var(--pm-down);
-  box-shadow: inset -2px 0 0 var(--pm-down);
-  color: var(--ink);
+  background: var(--pm-down);
+  color: var(--paper);
 }
 
 /* The part's chapters */
@@ -213,15 +246,29 @@
   color: var(--ink-3);
 }
 
+.pm-tile__m {
+  display: grid;
+}
+
 .pm-tile__in {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 3px;
   align-self: end;
 }
 
+.pm-tile__via {
+  flex-basis: 100%;
+}
+
 .pm-tile__ref {
-  display: inline-block;
-  margin-inline-start: 0.2rem;
-  padding: 0 0.2rem;
+  display: inline-grid;
+  place-items: center;
+  min-inline-size: 1.5rem;
+  block-size: 18px;
   border: 1px solid var(--rule-strong);
+  border-radius: 4px;
   color: var(--ink-2);
 }
 
@@ -252,9 +299,10 @@
 
 /* Fixed-geometry readout */
 .pm-readout {
-  margin-top: 0.7rem;
-  padding: 0.55rem 0.75rem;
+  margin-top: 0.75rem;
+  padding: 0.6rem 0.75rem 0.65rem;
   border: 1px solid var(--rule-strong);
+  border-radius: 6px;
   background: var(--paper-raised);
 }
 
@@ -286,6 +334,7 @@
 .pm-readout__body {
   display: -webkit-box;
   block-size: 4.35em;
+  text-wrap: pretty;
   margin-top: 0.2rem !important;
   font: 12.5px/1.45 var(--font-sans);
   color: var(--ink-2);
@@ -299,13 +348,17 @@
     grid-template-columns: minmax(0, 1fr);
   }
 
-  .pm-tiles {
+  /* the part's own tiles lead; a volume row keeps its label above its tiles */
+  .pm-flow > .pm-tiles {
     order: -1;
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 
-  .pm-chips {
-    grid-template-columns: repeat(auto-fill, minmax(9rem, 1fr));
+  /* Stacked, the readout sizes to what it says instead of clamping. */
+  .pm-readout__title,
+  .pm-readout__body {
+    display: block;
+    block-size: auto;
   }
 }
 
@@ -400,10 +453,6 @@
 .pm--volume .pm-rows {
   grid-column: 1 / -1;
   order: -1;
-}
-
-.pm--volume .pm-chips {
-  grid-template-columns: repeat(auto-fill, minmax(10.5rem, 1fr));
 }
 
 .pm--volume .pm-tile {

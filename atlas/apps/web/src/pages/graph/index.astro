@@ -1,11 +1,13 @@
 ---
 /**
- * Graph (UI_UX §13, §73): not a thousand-node hairball. The index lists the
- * research domains and their chapters; each entry opens that node's Map —
- * a constrained neighbourhood (prerequisites left, dependents right,
- * siblings and alternatives above and below) with a navigable text twin.
+ * Graph (UI_UX §13, §73): not a thousand-node hairball. The dependency map
+ * (StackExplorer.astro) shows every chapter and every declared prerequisite;
+ * each node opens that node's Map — a constrained neighbourhood (prerequisites
+ * left, dependents right, siblings and alternatives above and below). Below
+ * it, the text twin: one row per part with its chapters, plus the reference
+ * matter; pointing at a chapter marks what it builds on and what it unlocks.
  */
-import { DOMAIN_LABELS, type DomainKey, type GraphNode } from '@atlas/core';
+import { DOMAIN_LABELS, type GraphNode } from '@atlas/core';
 import PageHeader from '../../components/shell/PageHeader.astro';
 import ReaderLayout from '../../layouts/ReaderLayout.astro';
 import { getGraph } from '../../lib/atlas.ts';
@@ -18,16 +20,15 @@ import { getStackModel } from '../../lib/stack.ts';
 
 const [graph, stackModel] = await Promise.all([getGraph(), getStackModel()]);
 const parts = nodesOfType(graph, 'part');
-const byDomain = new Map<DomainKey, GraphNode[]>();
-for (const part of parts) byDomain.set(part.domain, [...(byDomain.get(part.domain) ?? []), part]);
-const domains = [...byDomain.entries()];
 const reference = [...nodesOfType(graph, 'frontmatter'), ...nodesOfType(graph, 'appendix')].filter((node) => node.id !== 'ms.root');
 const chaptersOf = (part: GraphNode) => childrenOf(graph, part).filter((child) => child.entityType === 'chapter');
+/** "Part I — Scientific Foundations" → "Scientific Foundations" (the numeral is drawn separately). */
+const partTitle = (part: GraphNode): string => part.title.replace(/^Part\s+[IVXLC]+\s*[—–-]\s*/u, '');
 ---
 
 <ReaderLayout
   title="Graph"
-  description="The knowledge graph of The Model Stack by research domain; every node opens a constrained neighbourhood map."
+  description="The knowledge graph of The Model Stack: every chapter and prerequisite as one map; every node opens a constrained neighbourhood map."
   canonicalPath="/graph/"
   currentId={null}
   navKey="graph"
@@ -35,50 +36,55 @@ const chaptersOf = (part: GraphNode) => childrenOf(graph, part).filter((child) =
   <PageHeader
     identity="Research Atlas / Graph"
     title="Graph"
-    lede="Choose a node to see its local neighbourhood: what it depends on, what it enables, and what sits beside it."
+    lede="Every chapter and every declared prerequisite as one map. Choose a node to open its neighbourhood: what it depends on, what it enables, what sits beside it."
     meta={`${grouped(Object.keys(graph.nodes).length)} nodes · ${grouped(graph.edges.length)} typed edges`}
   />
 
   <StackExplorer model={stackModel} />
 
-  {
-    domains.map(([domain, domainParts]) => (
-      <section class="sh-section sh-graph-domain" data-domain={domain} aria-labelledby={`domain-${domain}`}>
-        <h2 id={`domain-${domain}`}>{DOMAIN_LABELS[domain]}</h2>
-        {domainParts.map((part) => (
-          <div class="sh-graph-part">
-            <h3 class="sh-graph-part-title">
-              <a href={mapUrl(part.url)}>
-                <span class="sh-num">Part {part.number}</span> {part.title}
-              </a>
-            </h3>
-            <ol class="sh-index-list sh-index-list--columns">
+  <section class="sh-section gx-parts sh-universe" aria-labelledby="gx-parts-title">
+    <h2 id="gx-parts-title">Every node’s map</h2>
+    <ol class="gx-parts__list" role="list">
+      {
+        parts.map((part) => (
+          <li class="gx-part" data-domain={part.domain}>
+            <a class="gx-part__head" href={mapUrl(part.url)}>
+              <span class="gx-part__num">{part.number}</span>
+              <span class="gx-part__title">{partTitle(part)}</span>
+            </a>
+            <ol class="gx-part__chapters" role="list">
               {chaptersOf(part).map((chapter) => (
-                <li class:list={['sh-index-row', { 'sh-index-row--planned': !chapter.hasManuscript }]}>
-                  <span class="sh-num">{chapter.number}</span>
-                  <a href={mapUrl(chapter.url)}>{chapter.shortTitle}</a>
+                <li class:list={['sh-universe-chapter', 'gx-part__chapter', { 'is-planned': !chapter.hasManuscript }]}>
+                  <a href={mapUrl(chapter.url)} data-chapter-link={chapter.id}>
+                    <span class="sh-universe-chapter-num">{chapter.number}</span>
+                    <span class="gx-part__name">{chapter.shortTitle}</span>
+                  </a>
                 </li>
               ))}
             </ol>
-          </div>
-        ))}
-      </section>
-    ))
-  }
-
-  {
-    reference.length > 0 && (
-      <section class="sh-section" aria-labelledby="domain-reference">
-        <h2 id="domain-reference">{DOMAIN_LABELS.reference}</h2>
-        <ol class="sh-index-list sh-index-list--columns">
-          {reference.map((node) => (
-            <li class:list={['sh-index-row', { 'sh-index-row--planned': !node.hasManuscript }]}>
-              <span class="sh-num">{node.number ?? ''}</span>
-              <a href={mapUrl(node.url)}>{node.shortTitle}</a>
-            </li>
-          ))}
-        </ol>
-      </section>
-    )
-  }
+          </li>
+        ))
+      }
+      {
+        reference.length > 0 && (
+          <li class="gx-part" data-domain="reference">
+            <span class="gx-part__head">
+              <span class="gx-part__num" aria-hidden="true">·</span>
+              <span class="gx-part__title">{DOMAIN_LABELS.reference}</span>
+            </span>
+            <ol class="gx-part__chapters" role="list">
+              {reference.map((node) => (
+                <li class:list={['gx-part__chapter', { 'is-planned': !node.hasManuscript }]}>
+                  <a href={mapUrl(node.url)}>
+                    <span class="sh-universe-chapter-num">{node.number ?? ''}</span>
+                    <span class="gx-part__name">{node.shortTitle}</span>
+                  </a>
+                </li>
+              ))}
+            </ol>
+          </li>
+        )
+      }
+    </ol>
+  </section>
 </ReaderLayout>

@@ -36,6 +36,12 @@ const size = (n: number): number => (n === 0 ? 0 : Math.round((0.5 + 0.5 * Math.
 const live = figures.filter((figure) => figure.states > 0).length;
 const placements = (['rail', 'inline', 'wide'] as const).map((placement) => ({ placement, n: figures.filter((figure) => figure.placement === placement).length }));
 const maxRow = Math.max(1, ...chapters.map((chapter) => count(chapter, null)));
+// Idle readout: where the live (scroll-driven) instruments are, most first.
+const liveByChapter = chapters
+  .map((chapter) => ({ chapter, live: figures.filter((figure) => figure.chapter === chapter && figure.states > 0).length, total: count(chapter, null) }))
+  .filter((row) => row.live > 0)
+  .sort((a, b) => b.live - a.live || a.chapter - b.chapter)
+  .slice(0, 5);
 ---
 
 <section class="fx" data-figures-explorer aria-label="Figures of the book">
@@ -43,7 +49,7 @@ const maxRow = Math.max(1, ...chapters.map((chapter) => count(chapter, null)));
     <div class="fx-matrix-wrap">
       <p class="fx-head">
         <span>Coverage</span>
-        <span class="fx-head__note">chapters × kinds · square size = figures · point at a cell, row, or column</span>
+        <span class="fx-head__note">chapters × kinds · square size = figures</span>
       </p>
       <div class="fx-matrix-scroll">
         <div class="fx-matrix" role="grid" aria-label="Figures by chapter and kind. Arrow keys move between cells; Enter filters the ledger." data-fx-matrix style={`--fx-cols:${String(KIND_ORDER.length)}`}>
@@ -119,41 +125,53 @@ const maxRow = Math.max(1, ...chapters.map((chapter) => count(chapter, null)));
     </div>
 
     <aside class="fx-readout" aria-live="polite" data-fx-readout>
-      <p class="fx-readout__kicker" data-fx-kicker>{figures.length} figures · {live} live</p>
+      <p class="fx-readout__kicker" data-fx-kicker>Live instruments, by chapter</p>
       <p class="fx-readout__title" data-fx-title>The visual grammar, chapter by chapter</p>
-      <p class="fx-readout__meta" data-fx-meta>Point at a cell for its figures, a row for a chapter's mix, a column for what a kind is for.</p>
-      <ol class="fx-readout__list" data-fx-list></ol>
+      <p class="fx-readout__meta" data-fx-meta>Point at a cell, row, or column.</p>
+      <ol class="fx-readout__list" data-fx-list>
+        {
+          liveByChapter.map((row) => (
+            <li>
+              <b>{pad(row.chapter)}</b> {chapterNodes.get(row.chapter)?.shortTitle ?? `Chapter ${pad(row.chapter)}`} · {row.live} live of {row.total}
+            </li>
+          ))
+        }
+      </ol>
     </aside>
   </div>
 
   <div class="fx-filters" id="fx-ledger">
     <div class="fx-filters__row" role="group" aria-label="Kinds">
       <span class="fx-filters__label">Kind</span>
-      {KIND_ORDER.map((kind) => (
-        <button type="button" class={`fx-chip fx-fam--${KIND_INFO[kind].family}`} data-fx-kind={kind} aria-pressed="false">
-          <i aria-hidden="true"></i>
-          {kind} <span class="fx-chip__n">{count(null, kind)}</span>
-        </button>
-      ))}
+      <div class="fx-filters__chips">
+        {KIND_ORDER.map((kind) => (
+          <button type="button" class={`fx-chip fx-fam--${KIND_INFO[kind].family}`} data-fx-kind={kind} aria-pressed="false">
+            <i aria-hidden="true"></i>
+            {kind} <span class="fx-chip__n">{count(null, kind)}</span>
+          </button>
+        ))}
+      </div>
     </div>
     <div class="fx-filters__row" role="group" aria-label="Placement and state">
       <span class="fx-filters__label">Where</span>
-      {placements.map(({ placement, n }) => (
-        <button type="button" class="fx-chip" data-fx-place={placement} aria-pressed="false">
-          {placement} <span class="fx-chip__n">{n}</span>
+      <div class="fx-filters__chips">
+        {placements.map(({ placement, n }) => (
+          <button type="button" class="fx-chip" data-fx-place={placement} aria-pressed="false">
+            {placement} <span class="fx-chip__n">{n}</span>
+          </button>
+        ))}
+        <button type="button" class="fx-chip fx-chip--live" data-fx-live aria-pressed="false">
+          <i aria-hidden="true"></i>live only <span class="fx-chip__n">{live}</span>
         </button>
-      ))}
-      <button type="button" class="fx-chip fx-chip--live" data-fx-live aria-pressed="false">
-        <i aria-hidden="true"></i>live only <span class="fx-chip__n">{live}</span>
-      </button>
-      <button type="button" class="fx-chip fx-chip--clear" data-fx-clear hidden>
-        clear cell filter
-      </button>
-      <label class="fx-search">
-        <span class="sh-visually-hidden">Filter figures by title or number</span>
-        <input type="search" placeholder="Filter by title or number…" data-fx-search autocomplete="off" spellcheck="false" />
-      </label>
-      <span class="fx-shown" data-fx-shown aria-live="polite">{figures.length} of {figures.length}</span>
+        <button type="button" class="fx-chip fx-chip--clear" data-fx-clear hidden>
+          clear cell filter
+        </button>
+        <label class="fx-search">
+          <span class="sh-visually-hidden">Filter figures by title or number</span>
+          <input type="search" placeholder="Filter by title or number…" data-fx-search autocomplete="off" spellcheck="false" />
+        </label>
+        <span class="fx-shown" data-fx-shown aria-live="polite">{figures.length} of {figures.length}</span>
+      </div>
     </div>
   </div>
 

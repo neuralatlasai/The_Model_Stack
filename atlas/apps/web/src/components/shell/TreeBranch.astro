@@ -41,6 +41,12 @@ interface Props {
 
 const { nodes, level, state, focusId, entityOf } = Astro.props;
 const MARKED_ENTITIES = new Set(['volume', 'part', 'chapter']);
+/**
+ * Labels in one list share a left edge: the mono number column is as wide as
+ * the widest number among the siblings ("III" beside "I", "5.1" beside the
+ * unnumbered "Verification 05"), set once per group as --tree-num.
+ */
+const numberWidth = (list: readonly TreeNode[]): number => Math.max(0, ...list.map((item) => item.number?.length ?? 0));
 ---
 
 {
@@ -79,14 +85,18 @@ const MARKED_ENTITIES = new Set(['volume', 'part', 'chapter']);
             aria-current={state.currentId === node.id ? 'page' : undefined}
             tabindex={node.id === focusId ? '0' : '-1'}
           >
-            {node.number !== null && <span class="sh-tree-num">{node.number}</span>}
+            {node.number !== null ? (
+              <span class="sh-tree-num">{node.number}</span>
+            ) : (
+              numberWidth(nodes) > 0 && <span class="sh-tree-num" aria-hidden="true" />
+            )}
             <span class="sh-tree-label">{node.shortTitle}</span>
             {!node.hasManuscript && <span class="sh-visually-hidden"> (planned)</span>}
             <span class="sh-tree-progress" data-progress={node.id} aria-hidden="true" />
           </a>
         </div>
         {renderChildren && (
-          <ul role="group" id={groupId} class="sh-tree-group" hidden={!expanded}>
+          <ul role="group" id={groupId} class="sh-tree-group" hidden={!expanded} style={`--tree-num:${String(numberWidth(node.children))}ch`}>
             <Astro.self nodes={node.children} level={level + 1} state={state} focusId={focusId} entityOf={entityOf} />
           </ul>
         )}

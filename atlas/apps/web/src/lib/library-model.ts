@@ -34,7 +34,10 @@ export interface LibraryChapter {
   readonly domain: string;
   readonly written: boolean;
   readonly state: string;
+  /** The chapter's thesis without its leading "Thesis." / "LABEL — thesis." marker. */
   readonly summary: string;
+  /** The evidence label that prefixed the thesis (e.g. `derived`), or null. */
+  readonly evidence: string | null;
   /** The book plan's artifact for the chapter (what it will produce); '' when the plan records none. */
   readonly plan: string;
   readonly words: number;
@@ -122,7 +125,11 @@ const tally = (items: readonly { readonly nodeId: string }[]): Map<string, numbe
   return out;
 };
 
-export function buildLibraryModel(graph: AtlasGraph, registry: Registry, stack: StackModel): LibraryModel {
+/**
+ * `theses` maps a chapter node id to its full thesis (the compiled document's
+ * header); without it the graph's summary, an excerpt capped for previews, is used.
+ */
+export function buildLibraryModel(graph: AtlasGraph, registry: Registry, stack: StackModel, theses: ReadonlyMap<string, string> = new Map()): LibraryModel {
   const figureCount = tally(registry.objects.filter((object) => object.kind === 'figure'));
 
   // Works cited per chapter: a reference counts once for every chapter that records a use or holds a citing page.
@@ -152,6 +159,7 @@ export function buildLibraryModel(graph: AtlasGraph, registry: Registry, stack: 
           figures: figureCount.get(section.id) ?? 0,
         }));
       const words = (node?.wordCount ?? 0) + children.reduce((sum, child) => sum + child.wordCount, 0);
+      const thesis = splitThesis(theses.get(chapter.id) ?? node?.summary ?? '');
       return {
         n: chapter.n,
         number: chapter.number,
@@ -162,7 +170,8 @@ export function buildLibraryModel(graph: AtlasGraph, registry: Registry, stack: 
         domain: chapter.domain,
         written: chapter.written,
         state: node === undefined ? 'planned' : stateLabel(node.state),
-        summary: node?.summary ?? '',
+        summary: thesis.text,
+        evidence: thesis.label,
         plan: node?.plan?.artifact ?? '',
         words,
         figures: chapter.figures,
@@ -251,6 +260,75 @@ export function buildLibraryModel(graph: AtlasGraph, registry: Registry, stack: 
   };
 
   return { volumes, parts, chapters, shelf, totals };
+}
+
+/** Prerequisite weave geometry: an SVG box `WEAVE.width × WEAVE.height`, baseline at the bottom. */
+export const WEAVE = { width: 1000, height: 120, gap: 1.1 } as const;
+
+export interface WeaveArc {
+  /** The prerequisite chapter. */
+  readonly p: number;
+  /** The chapter that builds on it. */
+  readonly n: number;
+  readonly d: string;
+}
+
+export interface WeaveLayout {
+  /** Width of the chapter axis in slots (one per chapter plus the gaps between parts). */
+  readonly slots: number;
+  /** Chapter number → centre on the axis, in slots. */
+  readonly x: ReadonlyMap<number, number>;
+  readonly parts: readonly { readonly n: number; readonly from: number; readonly to: number }[];
+  /** Longest first, so short arcs are drawn on top. */
+  readonly arcs: readonly WeaveArc[];
+}
+
+/**
+ * Lays the chapters out on one axis in book order, part by part with a gap
+ * between parts, and draws every prerequisite edge as an arch above the axis
+ * whose height grows with its span. Pure: the component renders it, tests pin it.
+ */
+export function weaveLayout(parts: readonly { readonly n: number; readonly chapters: readonly number[] }[], edges: readonly (readonly [number, number])[]): WeaveLayout {
+  const x = new Map<number, number>();
+  const spans: { n: number; from: number; to: number }[] = [];
+  let slot = 0;
+  parts.forEach((part, index) => {
+    if (index > 0) slot += WEAVE.gap;
+    const from = slot;
+    for (const n of part.chapters) {
+      x.set(n, slot + 0.5);
+      slot += 1;
+    }
+    spans.push({ n: part.n, from, to: slot });
+  });
+  const slots = Math.max(1, slot);
+  const unit = (s: number): number => (s / slots) * WEAVE.width;
+  const base = WEAVE.height;
+  const arcs = edges
+    .filter(([p, n]) => x.has(p) && x.has(n) && p !== n)
+    .map(([p, n]) => {
+      const a = unit(x.get(p) ?? 0);
+      const b = unit(x.get(n) ?? 0);
+      const span = Math.abs(b - a);
+      // Height grows sub-linearly with span, so long arches never flatten into a ceiling.
+      const lift = ((4 + (base - 8) * (span / WEAVE.width) ** 0.7) * 4) / 3;
+      const f = (v: number): string => String(Math.round(v * 10) / 10);
+      return { p, n, span, d: `M${f(a)} ${f(base)}C${f(a)} ${f(base - lift)} ${f(b)} ${f(base - lift)} ${f(b)} ${f(base)}` };
+    })
+    .sort((a, b) => b.span - a.span || a.n - b.n || a.p - b.p)
+    .map(({ p, n, d }) => ({ p, n, d }));
+  return { slots, x, parts: spans, arcs };
+}
+
+/**
+ * A chapter summary may open with a marker: `Thesis. …` or `DERIVED — thesis. …`.
+ * The marker is apparatus, not prose: strip it, keeping an evidence label
+ * (lower-cased) when one is given.
+ */
+export function splitThesis(summary: string): { readonly text: string; readonly label: string | null } {
+  const match = /^(?:([A-Za-z][A-Za-z -]*?)\s+—\s+)?thesis\.\s+/iu.exec(summary.trim());
+  if (match === null) return { text: summary.trim(), label: null };
+  return { text: summary.trim().slice(match[0].length), label: match[1]?.toLowerCase() ?? null };
 }
 
 /** `26293` → `26.3k`; `940` → `940`; `0` → `—`. Compact word counts for tiles. */

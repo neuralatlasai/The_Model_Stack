@@ -1,14 +1,14 @@
 /**
  * Evaluation ecosystem behaviour (components/shell/EvalEcosystemExplorer.astro):
- * the priority table, readout, domain × kind matrix, chapter panel, filters,
+ * the priority table, chapter chart, readout, domain × kind matrix, filters,
  * and ledger are one instrument.
  *
  * - Point at a cell or a ledger row: the readout names the entry (rank, kind,
  *   domain, maintainer, rationale, links, chapters) and its chapters and
  *   matrix cell light. Click (or Enter) pins it so its links can be followed;
  *   Esc or a second click releases.
- * - Point at a matrix row, column, or cell, or at a chapter: its entries light
- *   in the table and the readout summarises the group; click filters to it.
+ * - Point at a matrix row, column, or cell, or at a chapter column: its entries
+ *   light in the table and the readout summarises the group; click filters.
  * - Flags, access, and text filters drive table and ledger together, with a
  *   live "shown" count. Column buttons sort the ledger in place.
  * - Keyboard: the table is one tab stop; arrows move by cell and by row.
@@ -48,6 +48,7 @@ type Island = z.infer<typeof IslandSchema>;
 type Entry = Island['entries'][number];
 
 const KIND_LABEL: Readonly<Record<string, string>> = { leaderboard: 'Leaderboard / index', benchmark: 'Benchmark', framework: 'Framework / harness', platform: 'Platform / service' };
+const KIND_SHORT: Readonly<Record<string, string>> = { leaderboard: 'Leaderboard', benchmark: 'Benchmark', framework: 'Framework', platform: 'Platform' };
 const KIND_PLURAL: Readonly<Record<string, string>> = { leaderboard: 'leaderboards', benchmark: 'benchmarks', framework: 'frameworks', platform: 'platforms' };
 const pad = (n: number): string => String(n).padStart(2, '0');
 const host = (href: string): string => {
@@ -96,7 +97,14 @@ export function initEvalEcosystem(ctx: PageContext): void {
 
   // ── readout ────────────────────────────────────────────────────────────────
   const set = (name: keyof typeof out, ...content: (Node | string)[]): void => {
-    out[name]?.replaceChildren(...content);
+    const el = out[name];
+    if (el === null) return;
+    el.replaceChildren(...content);
+    // Long titles step down a size so every title fits its two reserved lines.
+    if (name === 'title') {
+      const length = el.textContent.length;
+      el.dataset['len'] = length > 62 ? 'l' : length > 46 ? 'm' : 's';
+    }
   };
   const link = (href: string, text: string, external: boolean, className?: string): HTMLAnchorElement => {
     const a = doc.createElement('a');
@@ -113,34 +121,54 @@ export function initEvalEcosystem(ctx: PageContext): void {
     b.textContent = text;
     return b;
   };
+  const span = (className: string, text: string): HTMLElement => {
+    const el = doc.createElement('span');
+    el.className = className;
+    el.textContent = text;
+    return el;
+  };
+  /** The kicker: a boxed badge, then plain text. */
+  const kicker = (badge: string, rest: string, domain?: string): void => {
+    const b = span('eco-badge', badge);
+    if (domain !== undefined) b.classList.add(`eco-d--${domain}`);
+    set('kicker', b, ...(rest === '' ? [] : [` ${rest}`]));
+  };
 
   const describe = (entry: Entry, pinnedNow: boolean): void => {
-    const domainName = root.querySelector(`[data-eco-domain="${entry.domain}"]`)?.textContent.trim() ?? entry.domain;
-    set('kicker', [`#${pad(entry.rank)}`, entry.core ? 'core tier' : null, KIND_LABEL[entry.kind] ?? entry.kind, domainName, pinnedNow ? 'pinned · Esc releases' : null].filter((part) => part !== null).join(' · '));
+    const domainName = root.querySelector(`[data-eco-domain="${entry.domain}"] .eco-mx__label`)?.textContent.trim() ?? entry.domain;
+    kicker(`#${pad(entry.rank)}`, [KIND_SHORT[entry.kind] ?? entry.kind, domainName, pinnedNow ? 'pinned' : null].filter((part) => part !== null).join(' · '), entry.domain);
     set('title', entry.current === null ? entry.name : `${entry.name} (now ${entry.current})`);
-    set('meta', [entry.org, entry.released, entry.access, entry.type].filter((part) => part !== null && part !== '').join(' · '));
-    set('why', entry.why, ...(entry.note === null ? [] : [' ', label('Checked'), ` ${entry.note}`]));
+    set('meta', [entry.org, entry.released, entry.access].filter((part) => part !== null && part !== '').join(' · '));
+    // The rationale, verbatim; its verification note stays in the ledger row.
+    set('why', entry.why);
     const links: Node[] = [];
-    if (entry.official !== null) links.push(link(entry.official, `${host(entry.official)} ↗`, true));
-    if (entry.repo !== null && entry.repo !== entry.official) links.push(link(entry.repo, 'code ↗', true));
-    if (entry.paper !== null) links.push(link(entry.paper, 'paper ↗', true));
+    if (entry.official !== null) links.push(link(entry.official, host(entry.official), true));
+    if (entry.repo !== null && entry.repo !== entry.official) links.push(link(entry.repo, 'code', true));
+    if (entry.paper !== null) links.push(link(entry.paper, 'paper', true));
     for (const source of entry.sources) links.push(link(source.href, `list source [${String(source.n)}]`, true, 'is-quiet'));
     if (links.length === 0) set('links', label('No primary link confirmed yet'));
     else set('links', label('Links '), ...joined(links));
-    const book: (Node | string)[] = [];
+    // Chapters as boxed chips (named-in-text first, in oxblood), then the works the atlas cites.
+    const namedChapters = new Set(entry.named.map((mention) => Number.parseInt(mention.number, 10)));
+    const book: Node[] = [];
     for (const n of entry.chapters) {
       const chapter = chapterInfo.get(n);
-      if (chapter?.url !== null && chapter?.url !== undefined) book.push(link(chapter.url, `ch ${pad(n)}`, false, chapter.planned ? 'is-planned' : undefined));
+      if (chapter?.url === null || chapter?.url === undefined) continue;
+      const chip = link(chapter.url, pad(n), false, `eco-bk${namedChapters.has(n) ? ' is-named' : ''}${chapter.planned ? ' is-planned' : ''}`);
+      chip.title = chapter.title;
+      book.push(chip);
     }
-    const named = entry.named.slice(0, 4).map((mention) => link(mention.url, mention.number, false, 'is-named'));
-    const papers = entry.papers.slice(0, 3).map((paper) => link(paper.url, paper.key, false));
-    set('book', label('In the book '), ...joined(book, ' '), ...(named.length > 0 ? [' · named in ', ...joined(named, ' ')] : []), ...(papers.length > 0 ? [' · cites ', ...joined(papers, ' ')] : []));
+    for (const paper of entry.papers.slice(0, 2)) book.push(link(paper.url, paper.key, false, 'eco-bk is-paper'));
+    set('book', ...(book.length === 0 ? [span('eco-none', 'no chapter anchor')] : book));
   };
-  const summarise = (kicker: string, title: string, list: readonly Entry[], extra: (Node | string)[] = []): void => {
-    set('kicker', kicker);
+  const summarise = (badge: string, rest: string, title: string, list: readonly Entry[], extra: (Node | string)[] = [], domain?: string): void => {
+    kicker(badge, rest, domain);
     set('title', title);
-    const byKind = Object.entries(Object.groupBy(list, (entry) => entry.kind)).map(([kind, group]) => `${String(group?.length ?? 0)} ${KIND_PLURAL[kind] ?? kind}`);
-    set('meta', byKind.join(' · '));
+    // What the group holds beyond its size: the core tier, the book, open code.
+    const core = list.filter((entry) => entry.core).length;
+    const named = list.filter((entry) => entry.named.length > 0).length;
+    const code = list.filter((entry) => entry.repo !== null).length;
+    set('meta', `${String(core)} core · ${String(named)} named in the book · ${String(code)} with code`);
     set('why', list.slice(0, 12).map((entry) => `${String(entry.rank)} ${entry.name}`).join(' · ') + (list.length > 12 ? ' …' : ''));
     set('links', ...extra);
     set('book', '');
@@ -275,7 +303,7 @@ export function initEvalEcosystem(ctx: PageContext): void {
     const domain = button.dataset['ecoDomain'] ?? '';
     const light = (): void => {
       const list = lightGroup((entry) => entry.domain === domain, button);
-      summarise(`domain · ${String(list.length)} entries`, button.textContent.trim(), list);
+      summarise('Domain', `${String(list.length)} systems`, button.title === '' ? domain : button.title, list, [], domain);
     };
     hoverable(button, light);
     button.addEventListener('click', () => {
@@ -286,7 +314,7 @@ export function initEvalEcosystem(ctx: PageContext): void {
     const kind = button.dataset['ecoKind'] ?? '';
     const light = (): void => {
       const list = lightGroup((entry) => entry.kind === kind, button);
-      summarise(`kind · ${String(list.length)} entries`, KIND_LABEL[kind] ?? kind, list);
+      summarise('Kind', `${String(list.length)} systems`, KIND_LABEL[kind] ?? kind, list);
     };
     hoverable(button, light);
     button.addEventListener('click', () => {
@@ -298,8 +326,8 @@ export function initEvalEcosystem(ctx: PageContext): void {
     const kind = button.dataset['ecoCellKind'] ?? '';
     const light = (): void => {
       const list = lightGroup((entry) => entry.domain === domain && entry.kind === kind, button);
-      const domainName = root.querySelector(`[data-eco-domain="${domain}"]`)?.textContent.trim() ?? domain;
-      summarise(`${domainName} × ${KIND_PLURAL[kind] ?? kind} · ${String(list.length)}`, `${domainName} ${KIND_PLURAL[kind] ?? kind}`, list);
+      const domainName = root.querySelector(`[data-eco-domain="${domain}"] .eco-mx__label`)?.textContent.trim() ?? domain;
+      summarise(String(list.length), 'systems', `${domainName} × ${KIND_PLURAL[kind] ?? kind}`, list, [], domain);
     };
     hoverable(button, light);
     button.addEventListener('click', () => {
@@ -314,7 +342,7 @@ export function initEvalEcosystem(ctx: PageContext): void {
       const list = lightGroup((entry) => entry.chapters.includes(n), button);
       const named = list.filter((entry) => entry.named.some((mention) => mention.url.includes(`/ch${pad(n)}-`))).length;
       const extra = info?.url === null || info?.url === undefined ? [] : [link(info.url, info.planned ? `Chapter ${pad(n)} (planned) →` : `Open chapter ${pad(n)} →`, false)];
-      summarise(`chapter ${pad(n)} · ${String(list.length)} entries${named > 0 ? ` · ${String(named)} named in the text` : ''}`, info?.title ?? `Chapter ${pad(n)}`, list, extra);
+      summarise(`Ch ${pad(n)}`, `${String(list.length)} systems${named > 0 ? ` · ${String(named)} named` : ''}`, info?.title ?? `Chapter ${pad(n)}`, list, extra);
     };
     hoverable(button, light);
     button.addEventListener('click', () => {

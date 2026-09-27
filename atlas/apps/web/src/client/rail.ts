@@ -50,11 +50,16 @@ export function initRail(ctx: PageContext): void {
 
   const railVisible = (): boolean => root !== null && isRendered(root);
 
-  /** The region's own heading text (the server renders it; no page data needed). */
+  /**
+   * The region's own title (the server renders it; no page data needed): the
+   * heading's title span, not the whole h2, whose text also carries the
+   * ordinal and the visually hidden "Link to …" anchor label.
+   */
   const regionTitle = (anchor: string | null): string => {
     if (anchor === null) return '';
     const section = doc.querySelector(`[${ATTR.region}="${CSS.escape(anchor)}"]`);
-    const heading = section?.querySelector('h2')?.textContent.trim() ?? '';
+    const title = section?.querySelector('h2 .rb-region__text') ?? section?.querySelector('h2');
+    const heading = title?.textContent.trim() ?? '';
     return heading === '' ? anchor : heading;
   };
 

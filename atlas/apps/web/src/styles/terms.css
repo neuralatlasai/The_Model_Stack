@@ -9,21 +9,21 @@
  */
 
 .tmx {
-  --tmx-cell: color-mix(in oklab, var(--ink-3) 27%, var(--paper));
-  --tmx-cell-linked: color-mix(in oklab, var(--ink-3) 64%, var(--paper));
+  --tmx-cell: color-mix(in oklab, var(--ink-3) 24%, var(--paper));
+  --tmx-cell-linked: color-mix(in oklab, var(--ink) 72%, var(--paper));
   --tmx-out: var(--accent);
   --tmx-in: var(--ev-inference);
   --tmx-rail-h: 44px;
-  margin-top: 1.25rem;
+  margin-top: 1.1rem;
 }
 
 /* ── owner strip + readout ─────────────────────────────────────────────── */
 .tmx-top {
   display: grid;
-  grid-template-columns: minmax(0, 1fr) 280px;
-  gap: 1.5rem;
+  grid-template-columns: minmax(0, 1fr) 292px;
+  gap: 1rem 1.75rem;
   align-items: start;
-  padding-block: 0.8rem 0.9rem;
+  padding-block: 0.7rem 1rem;
   border-block-start: 1.5px solid var(--ink);
 }
 
@@ -32,21 +32,27 @@
 }
 
 .tmx-head {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 0.2rem 1rem;
-  margin: 0 0 0.45rem;
-  font: 600 10.5px var(--font-mono);
-  letter-spacing: 0.1em;
-  text-transform: uppercase;
-  color: var(--ink-2);
+  margin: 0 0 0.8rem;
 }
 
-.tmx-head__note {
-  font-weight: 400;
-  letter-spacing: 0.02em;
-  text-transform: none;
+.tmx-key {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  font: 11px/1.4 var(--font-mono);
   color: var(--ink-3);
+}
+
+.tmx-key::before {
+  content: '';
+  inline-size: 8px;
+  block-size: 11px;
+  border-radius: 1.5px;
+  background: var(--tmx-cell);
+}
+
+.tmx-key--linked::before {
+  background: var(--tmx-cell-linked);
 }
 
 .tmx-strip {
@@ -57,7 +63,7 @@
 
 .tmx-ch {
   display: grid;
-  grid-template-columns: 11rem minmax(0, 1fr) 3.6rem;
+  grid-template-columns: 15rem minmax(0, 1fr) 3.6rem;
   align-items: center;
   gap: 0.5rem;
   min-block-size: 25px;
@@ -107,9 +113,8 @@
 }
 
 .tmx-ch__t {
-  overflow: hidden;
-  white-space: nowrap;
-  text-overflow: ellipsis;
+  line-height: 1.25;
+  text-wrap: pretty;
 }
 
 .tmx-ch.is-here .tmx-ch__t {
@@ -136,6 +141,7 @@
   inline-size: 11px;
   min-inline-size: 4px;
   block-size: 15px;
+  border-radius: 1.5px;
   background: var(--tmx-cell);
   outline: none;
   transition:
@@ -192,9 +198,11 @@
   color: var(--accent);
 }
 
-/* Fixed-geometry readout. */
+/* Fixed-geometry readout (the gx- readout grammar). */
 .tmx-readout {
-  padding: 0.65rem 0.8rem 0.7rem;
+  position: sticky;
+  top: calc(var(--sh-topbar-h, 52px) + 14px);
+  padding: 0.8rem 0.95rem 0.85rem;
   border: 1px solid var(--rule-strong);
   background: var(--paper-raised);
 }
@@ -205,7 +213,10 @@
 }
 
 .tmx-readout__kicker {
-  block-size: 1.4em;
+  block-size: calc(1.4em + 0.5rem + 1px);
+  padding-bottom: 0.5rem;
+  margin-bottom: 0.5rem !important;
+  border-bottom: 1px solid var(--rule);
   font: 600 10.5px/1.4 var(--font-mono);
   letter-spacing: 0.08em;
   text-transform: uppercase;
@@ -216,9 +227,8 @@
 
 .tmx-readout__title {
   display: -webkit-box;
-  block-size: 2.6em;
-  margin-top: 0.25rem !important;
-  font: 500 16px/1.3 var(--font-serif);
+  block-size: 2.5em;
+  font: 500 19px/1.25 var(--font-serif);
   color: var(--ink);
   -webkit-box-orient: vertical;
   -webkit-line-clamp: 2;
@@ -228,6 +238,7 @@
 .tmx-readout__meta {
   display: -webkit-box;
   block-size: 5.8em;
+  margin-top: 0.35rem !important;
   font: 12px/1.45 var(--font-sans);
   color: var(--ink-3);
   -webkit-box-orient: vertical;
@@ -282,7 +293,7 @@
   padding: 0 0.6rem;
   background: var(--paper-raised);
   border: 1px solid var(--rule-strong);
-  border-radius: 2px;
+  border-radius: 6px;
   font: 13px var(--font-sans);
   color: var(--ink);
 }
@@ -305,11 +316,11 @@
 }
 
 .tmx-clear {
-  min-block-size: 28px;
-  padding: 0 0.55rem;
+  min-block-size: 30px;
+  padding: 0 0.6rem;
   background: none;
   border: 1px solid var(--accent);
-  border-radius: 2px;
+  border-radius: 6px;
   font: 12px var(--font-sans);
   color: var(--accent);
   cursor: pointer;
@@ -432,7 +443,8 @@
   grid-template-columns: repeat(auto-fill, minmax(min(100%, 31rem), 1fr));
   column-gap: 1.6rem;
   max-width: none;
-  margin: 0;
+  /* Entries pad their hover wash; the negative margin keeps their text on the page's left edge. */
+  margin: 0 -0.4rem;
 }
 
 .tmx-entry {
@@ -448,20 +460,28 @@
 }
 
 .tmx-entry.is-focus {
-  background: color-mix(in oklab, var(--accent-wash) 70%, transparent);
+  --tmx-entry-bg: color-mix(in oklab, var(--accent-wash) 70%, var(--paper));
+
+  background: var(--tmx-entry-bg);
 }
 
 .tmx-entry.is-lit {
-  background: color-mix(in oklab, var(--accent-wash) 40%, transparent);
+  --tmx-entry-bg: color-mix(in oklab, var(--accent-wash) 40%, var(--paper));
+
+  background: var(--tmx-entry-bg);
 }
 
 .tmx-entry.is-out {
-  background: color-mix(in oklab, var(--accent-wash) 55%, transparent);
+  --tmx-entry-bg: color-mix(in oklab, var(--accent-wash) 55%, var(--paper));
+
+  background: var(--tmx-entry-bg);
   box-shadow: inset 2px 0 0 var(--tmx-out);
 }
 
 .tmx-entry.is-in {
-  background: color-mix(in oklab, var(--tmx-in) 9%, transparent);
+  --tmx-entry-bg: color-mix(in oklab, var(--tmx-in) 9%, var(--paper));
+
+  background: var(--tmx-entry-bg);
   box-shadow: inset 2px 0 0 var(--tmx-in);
 }
 
@@ -531,9 +551,9 @@
 .tmx-owner {
   overflow: hidden;
   min-inline-size: 0;
-  padding: 0 0.35rem;
+  padding: 0 0.4rem;
   border: 1px solid var(--rule);
-  border-radius: 2px;
+  border-radius: 5px;
   font: 11.5px/1.55 var(--font-sans);
   white-space: nowrap;
   text-overflow: ellipsis;
@@ -601,8 +621,8 @@
   inset-block-end: 0;
   inset-inline-end: 0;
   z-index: 1;
-  padding: 0 0 0 0.5rem;
-  background: var(--paper);
+  padding: 0 0 0 1.6rem;
+  background: linear-gradient(to right, transparent, var(--tmx-entry-bg, var(--paper)) 1.3rem);
   border: 0;
   font: 10.5px/1.45rem var(--font-mono);
   color: var(--accent);
@@ -637,6 +657,10 @@
 @media (max-width: 1099.98px) {
   .tmx-top {
     grid-template-columns: minmax(0, 1fr);
+  }
+
+  .tmx-readout {
+    position: static;
   }
 }
 

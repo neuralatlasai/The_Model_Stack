@@ -46,7 +46,7 @@ const selfNumber = doc.meta.section ?? doc.header.number;
           <ol class="rb-pos__list" role="list">
             {group.items.slice(0, LIMIT).map((item) => (
               <li>
-                <a class="rb-pos__link" href={href(item.url)}>
+                <a class="rb-pos__link" href={href(item.url)} title={item.title}>
                   {item.number !== null && <span class="rb-pos__num">{item.number}</span>}
                   <span class="rb-pos__title">{item.title}</span>
                 </a>

@@ -23,7 +23,7 @@ import ReaderLayout from '../../layouts/ReaderLayout.astro';
 import { getGraph, getRegistry } from '../../lib/atlas.ts';
 import { buildSystemsModel, type SystemRow } from '../../lib/entity-model.ts';
 import { jsonForHtml } from '../../lib/json.ts';
-import { monograms } from '../../lib/monogram.ts';
+import { systemFootprint, systemMarks } from '../../lib/entity-marks.ts';
 import { getStackModel } from '../../lib/stack.ts';
 import { chapterFragment } from '../../lib/urls.ts';
 import '../../styles/entities.css';
@@ -49,25 +49,14 @@ const bands = [...model.layers]
 const layerTag = (index: number): string => (index === -1 ? 'L?' : `L${String(index + 1)}`);
 const weight = (count: number): number => (count === 0 ? 0 : count === 1 ? 1 : count <= 3 ? 2 : count <= 6 ? 3 : 4);
 
-// Marks: a monogram from the recorded name (vendor prefixes dropped: "NVIDIA NCCL" → "NCCL"; lib/monogram.ts).
-const VENDORS = ['NVIDIA', 'AMD', 'Intel', 'Google', 'Microsoft', 'Apple', 'PyTorch', 'MosaicML', 'ROCm'];
-const systemMarks = monograms(
-  model.systems.map((system) => system.name),
-  { vendors: VENDORS },
-);
-const markOf = new Map(model.systems.map((system, index) => [system.key, systemMarks[index] ?? system.name.slice(0, 2)]));
-// Footprint: the sections of written chapters that analyse the system — a coverage row's "Sections"
-// count, or, where a chapter only lists it among its implementations, the sections that list it (at least one).
-const footprintOf = (system: SystemRow): number =>
-  system.chapters.reduce((sum, n) => {
-    const rows = system.uses.filter((use) => use.ch === n);
-    const counted = rows.length > 0 ? rows.reduce((total, use) => total + use.count, 0) : (system.listedIn[String(n)]?.length ?? 0);
-    return sum + Math.max(1, counted);
-  }, 0);
-const footprints = new Map(model.systems.map((system) => [system.key, footprintOf(system)]));
+// Marks and footprints (lib/entity-marks.ts): a monogram of the recorded name ("NVIDIA NCCL" → "NCCL"),
+// and the sections of written chapters that analyse the system.
+const markOf = systemMarks(model.systems);
+const footprints = new Map(model.systems.map((system) => [system.key, systemFootprint(system)]));
 const maxFootprint = Math.max(1, ...footprints.values());
 const discSize = (sections: number): number => (sections === 0 ? 20 : Math.round(20 + 16 * Math.sqrt(sections / maxFootprint)));
-const monoFont = (mark: string, d: number): number => Math.min(11, (d - 5) / (0.62 * Math.max(2, mark.length)));
+// The monogram fits the disc down to 7.5px; a longer mark widens the disc into a capsule of the same height.
+const monoFont = (mark: string, d: number): number => Math.max(7.5, Math.min(11, (d - 5) / (0.62 * Math.max(2, mark.length))));
 
 // Systems per chapter (written chapters), and plan mentions (planned chapters).
 const systemsOf = new Map<number, SystemRow[]>();
@@ -198,7 +187,7 @@ const layerName = (index: number): string => model.layers.find((layer) => layer.
                               style={`--d:${String(d)}px;--mf:${font.toFixed(2)}px`}
                               aria-hidden="true"
                             >
-                              {font >= 6.5 ? mark : ''}
+                              {mark}
                             </span>
                           );
                         })()}

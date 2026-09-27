@@ -791,8 +791,9 @@ html[data-depth='implementation'] .sh-depth-option[data-depth-option='implementa
     display: flex;
     gap: 1px;
     border: 1px solid var(--rule-strong);
-    border-radius: 3px;
+    border-radius: 8px;
     background: var(--rule-strong);
+    box-shadow: 0 6px 18px -8px color-mix(in oklab, var(--ink) 45%, transparent);
     overflow: hidden;
   }
 
@@ -804,10 +805,17 @@ html[data-depth='implementation'] .sh-depth-option[data-depth-option='implementa
     background: var(--paper);
     color: var(--ink);
     font: 500 13px/1 var(--font-sans);
+    letter-spacing: 0.01em;
+    transition: background-color var(--t-hover) ease;
   }
 
   .sh-dock-button:hover {
     background: var(--paper-raised);
+  }
+
+  .sh-dock-button:focus-visible {
+    outline: 2px solid var(--focus);
+    outline-offset: -3px;
   }
 }
 
@@ -907,6 +915,7 @@ html[data-depth='implementation'] .sh-depth-option[data-depth-option='implementa
 
 .sh-tree-num {
   flex: none;
+  min-inline-size: var(--tree-num, auto);
   font-family: var(--font-mono);
   font-size: 11.5px;
   font-variant-numeric: lining-nums tabular-nums;
@@ -960,15 +969,16 @@ html[data-depth='implementation'] .sh-depth-option[data-depth-option='implementa
   background: var(--accent);
 }
 
-/* Domain tick on the part that contains the current page. */
+/* Domain dot on the part that contains the current page (a dot, so it never reads as a collapse control). */
 .sh-tree-item[data-entity='part']:has([aria-current='page']) > .sh-tree-row > .sh-tree-link::after {
   content: '';
   position: absolute;
-  right: 0.3rem;
+  right: 0.45rem;
   top: 50%;
-  width: 10px;
-  height: 3px;
-  margin-top: -1px;
+  width: 6px;
+  height: 6px;
+  margin-top: -3px;
+  border-radius: 50%;
   background: var(--domain-local, var(--domain));
 }
 
@@ -1074,7 +1084,7 @@ html[data-depth='implementation'] .sh-depth-option[data-depth-option='implementa
 }
 
 .sh-page-title {
-  margin: 0 0 0.7rem;
+  margin: 0 0 1rem;
   font-size: var(--fs-h1);
 }
 
@@ -1088,9 +1098,9 @@ html[data-depth='implementation'] .sh-depth-option[data-depth-option='implementa
 }
 
 .sh-lede {
-  margin: 0 0 0.75rem;
-  font-size: 21px;
-  line-height: 1.5;
+  margin: 0 0 1rem;
+  font-size: var(--fs-h3);
+  line-height: 1.45;
   color: var(--ink-2);
 }
 
@@ -1376,7 +1386,10 @@ html[data-depth='implementation'] .sh-depth-option[data-depth-option='implementa
 
 /* ── tables ────────────────────────────────────────────────────────────────── */
 
+/* position: relative makes the scroll box the containing block, so visually
+ * hidden (absolute) label text inside a cell cannot escape it and widen the page. */
 .sh-table-scroll {
+  position: relative;
   max-width: 100%;
   overflow-x: auto;
 }

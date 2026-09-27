@@ -80,7 +80,6 @@ const chapters = chapterKeys.map((n) => {
   return { n, key: String(n), node, title: node?.shortTitle ?? `Chapter ${pad(n)}`, members, sections };
 });
 const linked = (slug: string): boolean => (outOf.get(slug)?.length ?? 0) > 0 || (inOf.get(slug)?.length ?? 0) > 0;
-const edgeCount = [...outOf.values()].reduce((sum, outs) => sum + outs.length, 0);
 const eqAnchor = (number: string): string => `/equations/#eq-index-${number.replace('.', '-')}`;
 const textOf = (term: GlossaryTerm): string => `${term.term} ${proseOf(term.definition)} ${term.ownerTitle}`.toLowerCase().replace(/\s+/gu, ' ');
 ---
@@ -88,9 +87,13 @@ const textOf = (term: GlossaryTerm): string => `${term.term} ${proseOf(term.defi
 <section class="tmx" data-terms-explorer aria-label="Glossary terms, their owners, and the terms they mention">
   <div class="tmx-top">
     <div class="tmx-inst">
-      <p class="tmx-head">
-        <span>Owners</span>
-        <span class="tmx-head__note">one row per chapter · one cell per term, grouped by owning section · solid = linked to other terms</span>
+      <p class="gx-head tmx-head">
+        <span class="gx-head__title">Owners</span>
+        <span class="gx-head__note">one cell per term, by section</span>
+        <span class="gx-head__keys" aria-hidden="true">
+          <span class="tmx-key tmx-key--linked">linked</span>
+          <span class="tmx-key">standalone</span>
+        </span>
       </p>
       <div class="tmx-strip" role="group" aria-label="Owning chapters. Arrow keys move; Enter filters the terms to a chapter; Escape clears." data-tmx-strip>
         {
@@ -119,9 +122,9 @@ const textOf = (term: GlossaryTerm): string => `${term.term} ${proseOf(term.defi
     </div>
 
     <aside class="tmx-readout" aria-live="polite" data-tmx-readout>
-      <p class="tmx-readout__kicker" data-tmx-kicker>{terms.length} terms · {edgeCount} mentions</p>
-      <p class="tmx-readout__title" data-tmx-title>Defined once, linked everywhere</p>
-      <p class="tmx-readout__meta" data-tmx-meta>Point at a term, a chapter, or a letter: its owner, its definition, the terms it mentions (→) and the terms that mention it (←). Most mentioned:</p>
+      <p class="tmx-readout__kicker" data-tmx-kicker>owners and mentions</p>
+      <p class="tmx-readout__title" data-tmx-title>Point at a term, a chapter, or a letter</p>
+      <p class="tmx-readout__meta" data-tmx-meta>→ the terms a definition names · ← the definitions that name it. Most named:</p>
       <ol class="tmx-readout__list" data-tmx-list>
         {
           [...inOf.entries()]

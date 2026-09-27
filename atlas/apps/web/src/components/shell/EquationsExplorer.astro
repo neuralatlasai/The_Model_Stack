@@ -93,7 +93,7 @@ const rowText = (row: Row): string =>
     <div class="eqx-inst">
       <p class="eqx-head">
         <span>Symbol threads</span>
-        <span class="eqx-head__note">one cell per equation · solid = declares its variables · point at a symbol, chapter, or cell</span>
+        <span class="eqx-head__note">one cell per equation · solid = declares its variables · hatched = none</span>
       </p>
       <div class="eqx-strip" role="group" aria-label="Chapters. Arrow keys move; Enter filters the index to a chapter; Escape clears." data-eqx-strip>
         {
@@ -124,9 +124,9 @@ const rowText = (row: Row): string =>
     </div>
 
     <aside class="eqx-readout" aria-live="polite" data-eqx-readout>
-      <p class="eqx-readout__kicker" data-eqx-kicker>{rows.length} equations · {threads.length} threads</p>
+      <p class="eqx-readout__kicker" data-eqx-kicker>Most widely shared symbols</p>
       <p class="eqx-readout__title" data-eqx-title>Notation, followed across the book</p>
-      <p class="eqx-readout__meta" data-eqx-meta>Point at a symbol, a chapter, or an equation. Symbols are read from each equation's TeX; meanings come from the chapters' declared variables.</p>
+      <p class="eqx-readout__meta" data-eqx-meta>Point at a symbol, chapter, or cell.</p>
       <ol class="eqx-readout__list" data-eqx-list>
         {
           [...threads]
@@ -148,7 +148,7 @@ const rowText = (row: Row): string =>
   <div class="eqx-symbols">
     <p class="eqx-head">
       <span>Symbols</span>
-      <span class="eqx-head__note">{threads.length} used by two or more equations · count = equations · click to pin as a filter</span>
+      <span class="eqx-head__note">used by two or more equations · count = equations · click to pin</span>
     </p>
     <div class="eqx-symidx" role="group" aria-label="Shared symbols. Arrow keys move; Enter pins a symbol as a filter; Escape clears." data-eqx-symidx>
       {

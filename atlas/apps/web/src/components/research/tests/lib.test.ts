@@ -226,6 +226,11 @@ describe('header anatomy', () => {
     assert.equal(identityLine(doc), 'Volume I / Part I / Chapter 05 — Minimal Transformer / Section 5.2');
   });
 
+  it('names a volume, which has no ancestors, by its own number', () => {
+    const volume = { ...doc, header: { ...HEADER, number: 'I' }, meta: { ...META, entityType: 'volume' as const }, route: { ...ROUTE, breadcrumbs: [] } };
+    assert.equal(identityLine(volume), 'Volume I');
+  });
+
   it('prefers the authored identity line', () => {
     const authored = { ...doc, header: { ...HEADER, identityLine: 'VOLUME I / PART I — SCIENTIFIC FOUNDATIONS / CHAPTER 05' } };
     assert.equal(identityLine(authored), 'VOLUME I / PART I — SCIENTIFIC FOUNDATIONS / CHAPTER 05');

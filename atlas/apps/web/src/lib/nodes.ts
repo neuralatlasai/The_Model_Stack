@@ -54,7 +54,8 @@ export function identityLine(graph: AtlasGraph, node: GraphNode): string {
         segments.push(`VOLUME ${item.number ?? ''}`.trim());
         break;
       case 'part':
-        segments.push(`PART ${item.number ?? ''} — ${item.title.toUpperCase()}`.trim());
+        // part titles already read "Part I — …"; keep one "PART I —"
+        segments.push(`PART ${item.number ?? ''} — ${item.title.replace(/^Part\s+[IVXLC]+\s*[—–-]\s*/u, '').toUpperCase()}`.trim());
         break;
       case 'chapter':
         segments.push(`CHAPTER ${item.number ?? ''}`.trim());

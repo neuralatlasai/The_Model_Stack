@@ -1,8 +1,8 @@
 ---
 /**
- * Versioning line (UI_UX §65): last updated, editorial status, edition, and
- * compile date. Edition 1.0 records no revision history, and the line says so
- * rather than offering a "View changes" link with nothing behind it.
+ * Versioning line (UI_UX §65): last updated, editorial status, edition,
+ * compile date, and source file. Edition 1.0 records no revision history, so
+ * the line offers no "View changes" link with nothing behind it.
  */
 import type { EditorialStatus } from '@atlas/core';
 import { formatDay, isoDate, stateLabel } from '../../lib/format.ts';
@@ -36,5 +36,4 @@ const compiledIso = isoDate(manifest.compiledAt);
       Source <code>docs/{sourcePath}</code>
     </span>
   )}
-  <span>Revision history: not recorded in this edition</span>
 </p>

@@ -15,6 +15,9 @@ interface Props {
 }
 
 const { crumbs, current } = Astro.props;
+/** "Volume I" and "Part II" already carry their numeral; only other crumbs get the mono number. */
+const showNumber = (crumb: Crumb): crumb is Crumb & { readonly number: string } =>
+  crumb.number !== null && !crumb.title.split(/\s+/u).includes(crumb.number);
 ---
 
 {
@@ -24,7 +27,7 @@ const { crumbs, current } = Astro.props;
         {crumbs.map((crumb) => (
           <li class="sh-crumb">
             <a href={crumb.url}>
-              {crumb.number !== null && <span class="sh-crumb-num">{crumb.number}</span>}
+              {showNumber(crumb) && <span class="sh-crumb-num">{crumb.number}</span>}
               {crumb.title}
             </a>
           </li>

@@ -12,6 +12,7 @@ import ReaderLayout from '../layouts/ReaderLayout.astro';
 import { getGraph, getRegistry } from '../lib/atlas.ts';
 import { grouped } from '../lib/format.ts';
 import { mentionGraph } from '../lib/term-network.ts';
+import '../styles/explorer.css';
 import '../styles/terms.css';
 
 const [registry, graph] = await Promise.all([getRegistry(), getGraph()]);

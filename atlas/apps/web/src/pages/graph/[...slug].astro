@@ -1,26 +1,28 @@
 ---
 /**
  * Map mode for one node (UI_UX §13): the constrained semantic neighbourhood —
- * prerequisites on the left, dependents on the right, siblings and
- * alternatives above and below — laid out deterministically at build time
- * (@atlas/visual layoutNeighbourhood, no force layout) and rendered as static
- * SVG, followed by the same relations as navigable lists.
+ * prerequisites on the left, what it enables on the right, siblings above and
+ * mechanism alternatives below — as a responsive HTML instrument
+ * (lib/neighbourhood-map.ts), never a force layout. The wires between the
+ * boxes are drawn by the client (graph-map.ts) from the rendered boxes, so the
+ * map reflows at any width; without JavaScript the columns and their headings
+ * still read left to right. Pointing at any node (in the map or in the text
+ * twin below) lights every place it appears, its wire, and the readout.
  */
 import type { GetStaticPaths } from 'astro';
 import { isNodeId, neighbourhood, type NodeId } from '@atlas/core';
-import { layoutNeighbourhood } from '@atlas/visual';
-import { NeighbourhoodGraph } from '@atlas/visual/svg';
 import Breadcrumbs from '../../components/shell/Breadcrumbs.astro';
 import ModeTabs from '../../components/shell/ModeTabs.astro';
 import PageHeader from '../../components/shell/PageHeader.astro';
-import RelationList from '../../components/shell/RelationList.astro';
 import ReaderLayout from '../../layouts/ReaderLayout.astro';
 import { getGraph, getManifest } from '../../lib/atlas.ts';
 import { nodesWithCompare } from '../../lib/compare.ts';
 import { plural } from '../../lib/format.ts';
 import { modeLinks } from '../../lib/modes.ts';
+import { MAP_ROLE_NOTES, neighbourhoodMap, tidyIdentity, type MapGroup, type MapItem } from '../../lib/neighbourhood-map.ts';
 import { enclosing, identityLine } from '../../lib/nodes.ts';
 import { mapUrl, pathParam } from '../../lib/urls.ts';
+import '../../styles/explorer.css';
 
 type Props = { readonly id: NodeId };
 
@@ -43,14 +45,7 @@ const [graph, manifest, withCompare] = await Promise.all([getGraph(), getManifes
 const hood = neighbourhood(graph, id);
 if (hood === null) throw new Error(`graph/[...slug]: ${id} is not in the graph`);
 const { node } = hood;
-
-const scene = layoutNeighbourhood({
-  center: node,
-  prerequisites: hood.prerequisites,
-  dependents: hood.dependents,
-  siblings: hood.siblings,
-  alternatives: hood.alternatives,
-});
+const map = neighbourhoodMap(hood);
 
 const chapter = enclosing(graph, node.id, 'chapter');
 const chapterNumber = chapter !== null && chapter.number !== null ? Number.parseInt(chapter.number, 10) : Number.NaN;
@@ -66,6 +61,12 @@ const crumbs = hood.ancestors.map((ancestor) => ({ title: ancestor.shortTitle, n
 const total =
   hood.prerequisites.length + hood.dependents.length + hood.siblings.length + hood.alternatives.length + hood.related.length;
 const title = node.number === null ? node.title : `${node.number} ${node.title}`;
+const state = compiled.has(node.id) ? 'manuscript' : 'planned';
+const identity = tidyIdentity(identityLine(graph, node)) || 'Reference';
+const centerKicker = `this ${map.center.kind} · ${state}`;
+const itemKicker = (role: string, item: MapItem): string =>
+  [role, item.tag, item.kind, item.written ? 'manuscript' : 'planned'].filter((part) => part !== null && part !== '').join(' · ');
+const groupId = (group: MapGroup): string => `rel-${group.role}`;
 ---
 
 <ReaderLayout
@@ -77,47 +78,186 @@ const title = node.number === null ? node.title : `${node.number} ${node.title}`
   navKey="graph"
 >
   <Breadcrumbs crumbs={[{ title: 'Graph', number: null, url: '/graph/' }, ...crumbs]} current={node.shortTitle} />
-  <article class="sh-article sh-map" data-node-id={node.id}>
-    <PageHeader
-      identity={`Map · ${identityLine(graph, node) || 'Reference'}`}
-      title={title}
-      meta={`${plural(total, 'related node')} · ${compiled.has(node.id) ? 'manuscript' : 'planned'}`}
-    />
+  <article class="sh-article sh-map gx-page" data-node-id={node.id}>
+    <PageHeader identity={`Map · ${identity}`} title={title} meta={`${plural(total, 'related node')} · ${state}`} />
     <ModeTabs links={links} current="map" />
 
-    <div class="sh-wide sh-map-figure">
-      <NeighbourhoodGraph scene={scene} />
-    </div>
+    <section class="gmap gx-inst" data-graph-map aria-labelledby="gmap-title">
+      <p class="gx-head">
+        <span class="gx-head__title" id="gmap-title">Neighbourhood</span>
+        <span class="gx-head__note">what it needs · what it enables</span>
+        <span class="gx-head__keys" aria-hidden="true">
+          <span class="gx-key gx-key--up">builds on</span>
+          <span class="gx-key gx-key--down">enables</span>
+        </span>
+      </p>
 
-    <section class="sh-section sh-map-text" aria-labelledby="relations-heading">
+      <div class="gx-body">
+        <div class="gx-main gmap__field" data-gmap-field>
+          {
+            map.siblings.items.length > 0 && (
+              <div class="gmap__band gmap__band--siblings" data-gmap-band="siblings">
+                <p class="gmap__label">
+                  Siblings <span class="gmap__label-n">{hood.siblings.length}</span>
+                </p>
+                <ul class="gmap__boxes" role="list">
+                  {map.siblings.items.map((item) => (
+                    <li>
+                      <a class:list={['gmap__box', { 'is-planned': !item.written }]} href={item.map} data-gmap-id={item.id} data-gmap-role="sibling" data-gmap-kicker={itemKicker('sibling', item)} data-gmap-title={item.title} data-gmap-summary={item.summary ?? ''}>
+                        {item.tag !== null && <span class="gmap__tag">{item.tag}</span>}
+                        <span class="gmap__name">{item.short}</span>
+                      </a>
+                    </li>
+                  ))}
+                  {map.siblings.more > 0 && (
+                    <li>
+                      <a class="gmap__box gmap__box--more" href="#rel-siblings">+{map.siblings.more} more</a>
+                    </li>
+                  )}
+                </ul>
+              </div>
+            )
+          }
+
+          <div class="gmap__core">
+            <div class="gmap__col gmap__col--pre" data-gmap-col="prerequisites">
+              <p class="gmap__label">
+                Prerequisites <span class="gmap__label-n">{hood.prerequisites.length}</span>
+              </p>
+              {
+                map.prerequisites.items.length === 0 ? (
+                  <p class="gmap__none">none declared</p>
+                ) : (
+                  <ul class="gmap__boxes gmap__boxes--stack" role="list">
+                    {map.prerequisites.items.map((item) => (
+                      <li>
+                        <a class:list={['gmap__box', { 'is-planned': !item.written }]} href={item.map} data-gmap-id={item.id} data-gmap-role="up" data-gmap-kicker={itemKicker('prerequisite', item)} data-gmap-title={item.title} data-gmap-summary={item.summary ?? ''}>
+                          {item.tag !== null && <span class="gmap__tag">{item.tag}</span>}
+                          <span class="gmap__name">{item.short}</span>
+                        </a>
+                      </li>
+                    ))}
+                    {map.prerequisites.more > 0 && (
+                      <li>
+                        <a class="gmap__box gmap__box--more" href="#rel-prerequisites">+{map.prerequisites.more} more</a>
+                      </li>
+                    )}
+                  </ul>
+                )
+              }
+            </div>
+
+            <div class="gmap__center" data-gmap-center data-gmap-id={map.center.id}>
+              <p class="gmap__center-kicker">{centerKicker}</p>
+              <a class:list={['gmap__center-title', { 'is-long': map.center.short.length > 34 }]} href={node.url}>
+                {map.center.tag !== null && <span class="gmap__chip">{map.center.tag}</span>}
+                <span>{map.center.short}</span>
+              </a>
+
+            </div>
+
+            <div class="gmap__col gmap__col--dep" data-gmap-col="dependents">
+              <p class="gmap__label">
+                Enables <span class="gmap__label-n">{hood.dependents.length}</span>
+              </p>
+              {
+                map.dependents.items.length === 0 ? (
+                  <p class="gmap__none">none declared</p>
+                ) : (
+                  <ul class="gmap__boxes gmap__boxes--stack" role="list">
+                    {map.dependents.items.map((item) => (
+                      <li>
+                        <a class:list={['gmap__box', { 'is-planned': !item.written }]} href={item.map} data-gmap-id={item.id} data-gmap-role="down" data-gmap-kicker={itemKicker('enables', item)} data-gmap-title={item.title} data-gmap-summary={item.summary ?? ''}>
+                          {item.tag !== null && <span class="gmap__tag">{item.tag}</span>}
+                          <span class="gmap__name">{item.short}</span>
+                        </a>
+                      </li>
+                    ))}
+                    {map.dependents.more > 0 && (
+                      <li>
+                        <a class="gmap__box gmap__box--more" href="#rel-dependents">+{map.dependents.more} more</a>
+                      </li>
+                    )}
+                  </ul>
+                )
+              }
+            </div>
+          </div>
+
+          {
+            map.alternatives.items.length > 0 && (
+              <div class="gmap__band gmap__band--alternatives" data-gmap-band="alternatives">
+                <p class="gmap__label">
+                  Alternatives <span class="gmap__label-n">{hood.alternatives.length}</span>
+                </p>
+                <ul class="gmap__boxes" role="list">
+                  {map.alternatives.items.map((item) => (
+                    <li>
+                      <a class:list={['gmap__box', { 'is-planned': !item.written }]} href={item.map} data-gmap-id={item.id} data-gmap-role="alternative" data-gmap-kicker={itemKicker('alternative', item)} data-gmap-title={item.title} data-gmap-summary={item.summary ?? ''}>
+                        {item.tag !== null && <span class="gmap__tag">{item.tag}</span>}
+                        <span class="gmap__name">{item.short}</span>
+                      </a>
+                    </li>
+                  ))}
+                  {map.alternatives.more > 0 && (
+                    <li>
+                      <a class="gmap__box gmap__box--more" href="#rel-alternatives">+{map.alternatives.more} more</a>
+                    </li>
+                  )}
+                </ul>
+              </div>
+            )
+          }
+          <svg class="gmap__wires" aria-hidden="true" data-gmap-wires>
+            <defs>
+              <marker id="gmap-arrow-up" viewBox="0 0 8 8" refX="7" refY="4" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+                <path d="M0 0 L8 4 L0 8 z" class="gmap__arrow gmap__arrow--up" />
+              </marker>
+              <marker id="gmap-arrow-down" viewBox="0 0 8 8" refX="7" refY="4" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+                <path d="M0 0 L8 4 L0 8 z" class="gmap__arrow gmap__arrow--down" />
+              </marker>
+            </defs>
+          </svg>
+        </div>
+
+        <aside class="gx-readout gmap__readout" aria-live="polite" data-gmap-readout>
+          <p class="gx-ro__kicker" data-gmap-rk>{centerKicker}</p>
+          <p class="gx-ro__title" data-gmap-rt>{node.title}</p>
+          <p class="gx-ro__text" data-gmap-rs>{map.center.summary ?? 'No summary is recorded for this node.'}</p>
+          <p class="gx-ro__hint">point at any box</p>
+        </aside>
+      </div>
+    </section>
+
+    <section class="sh-section gx-twin" aria-labelledby="relations-heading" data-gmap-twin>
       <h2 id="relations-heading">Relations</h2>
-      <RelationList
-        id="rel-prerequisites"
-        title="Prerequisites"
-        note="What must be understood first (declared learning dependencies)."
-        nodes={hood.prerequisites}
-      />
-      <RelationList
-        id="rel-dependents"
-        title="Enables"
-        note="Declared downstream nodes and nodes that list this one as a prerequisite."
-        nodes={hood.dependents}
-      />
-      <RelationList
-        id="rel-alternatives"
-        title="Alternatives"
-        note="Concept-level siblings: mechanisms that solve the same problem differently."
-        nodes={hood.alternatives}
-      />
-      <RelationList id="rel-siblings" title="Siblings" note="Same editorial parent." nodes={hood.siblings} />
-      <RelationList id="rel-children" title="Contains" note="Editorial children." nodes={hood.children} />
-      <RelationList
-        id="rel-related"
-        title="Related"
-        note="Non-dependency links: trade-offs and contrasts."
-        nodes={hood.related}
-      />
-      {total === 0 && hood.children.length === 0 && <p class="sh-empty">No typed relations are declared for this node.</p>}
+      {
+        map.twin.length === 0 ? (
+          <p class="sh-empty">No typed relations are declared for this node.</p>
+        ) : (
+          <div class="gx-twin__grid">
+            {map.twin.map((group) => (
+              <section class="gx-twin__group" aria-labelledby={groupId(group)}>
+                <h3 class="gx-twin__title" id={groupId(group)}>
+                  {group.label} <span class="sh-count">{group.items.length}</span>
+                </h3>
+                <p class="gx-twin__note">{MAP_ROLE_NOTES[group.role]}</p>
+                <ol class="gx-twin__list" role="list">
+                  {group.items.map((item) => (
+                    <li class:list={['gx-twin__row', { 'is-planned': !item.written }]} data-gmap-id={item.id} data-gmap-kicker={itemKicker(group.label.toLowerCase(), item)} data-gmap-title={item.title} data-gmap-summary={item.summary ?? ''}>
+                      <span class="gx-twin__tag">{item.tag ?? ''}</span>
+                      <a href={item.url}>{item.title}</a>
+                      <a class="gx-twin__map" href={item.map} aria-label={`Map of ${item.title}`}>
+                        map
+                      </a>
+                    </li>
+                  ))}
+                </ol>
+              </section>
+            ))}
+          </div>
+        )
+      }
     </section>
   </article>
 </ReaderLayout>

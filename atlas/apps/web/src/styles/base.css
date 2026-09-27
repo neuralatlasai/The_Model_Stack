@@ -456,7 +456,8 @@ summary {
   }
 }
 
-/* display-size ledes hyphenate only long words, never short ones like "occu-pies" */
+/* display-size ledes: no short-word breaks like "occu-pies", but enough
+   hyphenation that a two-line lede doesn't open wide word gaps */
 :where(.sh-lede, .sx-lede, .rb-header__thesis, .bs-thesis) {
-  hyphenate-limit-chars: 10 4 4;
+  hyphenate-limit-chars: 9 4 3;
 }

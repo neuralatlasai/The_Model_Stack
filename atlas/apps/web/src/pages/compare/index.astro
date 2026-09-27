@@ -2,15 +2,27 @@
 /**
  * Compare index: every node with authored sibling differentials, by chapter
  * (fragment `#ch-05` is where a chapter page's Compare mode lands).
+ *
+ *   field    one row per chapter; every alternative is one column of six
+ *            cells — the six differential questions, filled where answered —
+ *            grouped under the node it is an alternative to (lib/compare-field.ts)
+ *   readout  the node or alternative under the pointer: its name, why it
+ *            exists, the primitive it changes, and how completely it is answered
+ *   list     the text twin: each node, its alternatives, a link to its table
+ *
+ * Connected (client compare-field.ts): a node lights in the field and in the
+ * list together; an alternative's column names itself in the readout.
  */
 import { isNodeId, type GraphNode, type ResearchDocument } from '@atlas/core';
 import PageHeader from '../../components/shell/PageHeader.astro';
 import ReaderLayout from '../../layouts/ReaderLayout.astro';
 import { getDocument, getGraph } from '../../lib/atlas.ts';
 import { nodesWithCompare, siblingBlocks } from '../../lib/compare.ts';
+import { fieldNode, gapNote, type FieldNode } from '../../lib/compare-field.ts';
 import { grouped } from '../../lib/format.ts';
 import { enclosing, nodesOfType } from '../../lib/nodes.ts';
 import { chapterFragment, compareUrl } from '../../lib/urls.ts';
+import '../../styles/explorer.css';
 
 const [graph, ids] = await Promise.all([getGraph(), nodesWithCompare()]);
 const docs: ResearchDocument[] = [];
@@ -20,18 +32,29 @@ docs.sort((a, b) => (order.get(a.meta.id) ?? Number.MAX_SAFE_INTEGER) - (order.g
 
 interface ChapterGroup {
   readonly chapter: GraphNode;
-  readonly docs: ResearchDocument[];
+  readonly nodes: FieldNode[];
 }
 const groups: ChapterGroup[] = [];
 for (const chapter of nodesOfType(graph, 'chapter')) {
   const members = docs.filter((doc) => isNodeId(doc.meta.id) && enclosing(graph, doc.meta.id, 'chapter')?.id === chapter.id);
-  if (members.length > 0) groups.push({ chapter, docs: members });
+  if (members.length === 0) continue;
+  groups.push({
+    chapter,
+    nodes: members.map((doc) =>
+      fieldNode({ id: doc.meta.id, number: doc.header.number, title: doc.header.title, href: compareUrl(doc.route.url), siblings: siblingBlocks(doc) }),
+    ),
+  });
 }
 const fragmentOf = (chapter: GraphNode): string => {
   const number = chapter.number === null ? Number.NaN : Number.parseInt(chapter.number, 10);
   return Number.isFinite(number) ? chapterFragment(number) : chapter.id;
 };
-const alternatives = docs.reduce((sum, doc) => sum + siblingBlocks(doc).length, 0);
+const all = groups.flatMap((group) => group.nodes);
+const alternatives = all.reduce((sum, node) => sum + node.alternatives.length, 0);
+const answered = all.reduce((sum, node) => sum + node.answered, 0);
+const possible = all.reduce((sum, node) => sum + node.possible, 0);
+const nodeKicker = (node: FieldNode): string => `§${node.number} · ${String(node.alternatives.length)} alternatives`;
+const nodeText = (node: FieldNode): string => node.alternatives.map((alternative) => alternative.name).join(' · ');
 ---
 
 <ReaderLayout
@@ -43,32 +66,116 @@ const alternatives = docs.reduce((sum, doc) => sum + siblingBlocks(doc).length, 
   <PageHeader
     identity="Research Atlas / Compare"
     title="Compare"
-    lede="For each mechanism, its alternatives side by side on one axis: what each changes and why it exists. Differences are emphasised; nothing is ranked."
-    meta={`${grouped(docs.length)} nodes · ${grouped(alternatives)} authored differentials`}
+    lede="Every mechanism beside its alternatives, question by question: why each exists, what it changes, what it breaks. Differences are emphasised; nothing is ranked."
+    meta={`${grouped(all.length)} nodes · ${grouped(alternatives)} authored alternatives · ${grouped(answered)} of ${grouped(possible)} answers stated`}
   />
 
   {
     groups.length === 0 ? (
       <p class="sh-empty">No compiled node carries sibling differentials yet.</p>
     ) : (
-      groups.map((group) => (
-        <section class="sh-section" id={fragmentOf(group.chapter)} aria-labelledby={`cmp-${fragmentOf(group.chapter)}`}>
-          <h2 id={`cmp-${fragmentOf(group.chapter)}`}>
-            <a href={group.chapter.url}>
-              <span class="sh-num">{group.chapter.number}</span> {group.chapter.title}
-            </a>
-          </h2>
-          <ol class="sh-index-list">
-            {group.docs.map((doc) => (
-              <li class="sh-index-row sh-index-row--wrap">
-                <span class="sh-num">{doc.header.number ?? ''}</span>
-                <a href={compareUrl(doc.route.url)}>{doc.header.title}</a>
-                <span class="sh-index-meta">{siblingBlocks(doc).map((sibling) => sibling.name).join(' · ')}</span>
+      <>
+        <section class="cmpx gx-inst" aria-labelledby="cmpx-title" data-compare-field>
+          <p class="gx-head">
+            <span class="gx-head__title" id="cmpx-title">Alternatives field</span>
+            <span class="gx-head__note">one column per alternative · six questions</span>
+            <span class="gx-head__keys" aria-hidden="true">
+              <span class="cmpx-key cmpx-key--on">answered</span>
+              <span class="cmpx-key">not stated</span>
+            </span>
+          </p>
+          <div class="gx-body">
+            <div class="gx-main cmpx__rows">
+              {groups.map((group) => (
+                <div class="cmpx__row">
+                  <a class="cmpx__ch" href={`#${fragmentOf(group.chapter)}`}>
+                    <span class="cmpx__ch-n">{group.chapter.number}</span>
+                    <span class="cmpx__ch-t">{group.chapter.shortTitle}</span>
+                  </a>
+                  <div class="cmpx__nodes">
+                    {group.nodes.map((node) => (
+                      <a
+                        class="cmpx__node"
+                        href={node.href}
+                        data-cmp-id={node.id}
+                        data-cmp-kicker={nodeKicker(node)}
+                        data-cmp-title={node.title}
+                        data-cmp-text={nodeText(node)}
+                        data-cmp-gap={gapNote(node.answered, node.possible)}
+                        aria-label={`${node.number} ${node.title}: ${String(node.alternatives.length)} alternatives`}
+                      >
+                        <span class="cmpx__cols" aria-hidden="true">
+                          {node.alternatives.map((alternative, index) => (
+                            <span
+                              class="cmpx__alt"
+                              data-cmp-alt={index + 1}
+                              data-cmp-name={alternative.name}
+                              data-cmp-why={alternative.why}
+                              data-cmp-change={alternative.change}
+                              data-cmp-stated={alternative.stated.filter(Boolean).length}
+                            >
+                              {alternative.stated.map((on) => (
+                                <i class:list={['cmpx__cell', { 'is-on': on }]} />
+                              ))}
+                            </span>
+                          ))}
+                        </span>
+                        <span class="cmpx__num">{node.number}</span>
+                      </a>
+                    ))}
+                  </div>
+                  <span class="cmpx__count">{group.nodes.reduce((sum, node) => sum + node.alternatives.length, 0)}</span>
+                </div>
+              ))}
+            </div>
+
+            <aside class="gx-readout cmpx__readout" aria-live="polite" data-cmp-readout>
+              <p class="gx-ro__kicker" data-cmp-rk>{all.length} nodes · {alternatives} alternatives</p>
+              <p class="gx-ro__title" data-cmp-rt>Point at a column or a node</p>
+              <p class="gx-ro__text" data-cmp-rx>
+                Six cells per column, top to bottom: why it exists · assumption changed · objective changed · problem
+                solved · failure introduced · primitive replaced.
+              </p>
+              <dl class="gx-ro__rows cmpx__rows-ro">
+                <div><dt>changes</dt><dd data-cmp-rc>—</dd></div>
+                <div><dt>answers</dt><dd data-cmp-ra>{grouped(answered)} of {grouped(possible)} stated</dd></div>
+              </dl>
+            </aside>
+          </div>
+        </section>
+
+        <section class="sh-section cmp-list" aria-labelledby="cmp-list-title" data-cmp-list>
+          <h2 id="cmp-list-title">Every comparison</h2>
+          <ol class="cmp-list__chapters" role="list">
+            {groups.map((group) => (
+              <li class="cmp-ch" id={fragmentOf(group.chapter)}>
+                <a class="cmp-ch__head" href={group.chapter.url}>
+                  <span class="cmp-ch__n">{group.chapter.number}</span>
+                  <span class="cmp-ch__t">{group.chapter.title}</span>
+                </a>
+                <ol class="cmp-ch__nodes" role="list">
+                  {group.nodes.map((node) => (
+                    <li
+                      class="cmp-node"
+                      data-cmp-id={node.id}
+                      data-cmp-kicker={nodeKicker(node)}
+                      data-cmp-title={node.title}
+                      data-cmp-text={nodeText(node)}
+                      data-cmp-gap={gapNote(node.answered, node.possible)}
+                    >
+                      <span class="cmp-node__n">{node.number}</span>
+                      <a class="cmp-node__t" href={node.href}>
+                        {node.title}
+                      </a>
+                      <span class="cmp-node__alts">{node.alternatives.map((alternative) => alternative.name).join(' · ')}</span>
+                    </li>
+                  ))}
+                </ol>
               </li>
             ))}
           </ol>
         </section>
-      ))
+      </>
     )
   }
 </ReaderLayout>

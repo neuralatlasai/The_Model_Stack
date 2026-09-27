@@ -48,12 +48,17 @@ const [graph, registry, manifest, withCompare] = await Promise.all([
 ]);
 const pageData = await buildPageData(doc);
 const presentation = presentDocument(doc);
-const stackModel = doc.meta.chapter === null && doc.meta.entityType !== 'part' ? null : await getStackModel();
+const stackModel = doc.meta.chapter === null && doc.meta.entityType !== 'part' && doc.meta.entityType !== 'volume' ? null : await getStackModel();
 // Part pages: the part as a flow (PartMap) and the mini map focused on its six chapters.
 const needsLibrary = doc.meta.entityType === 'part' || doc.meta.entityType === 'volume';
 const flowStack = needsLibrary ? (stackModel ?? (await getStackModel())) : null;
 const libraryModel = flowStack === null ? null : buildLibraryModel(graph, registry, flowStack);
 const partFocus = doc.meta.entityType === 'part' && stackModel !== null ? (stackModel.parts.find((part) => part.n === doc.meta.part) ?? null) : null;
+// Volume pages: the mini map focused on every chapter of the volume's parts.
+const volumeFocus = doc.meta.entityType === 'volume' && stackModel !== null ? (stackModel.volumes.find((volume) => volume.n === doc.meta.volume) ?? null) : null;
+const volumeChapters = volumeFocus === null || stackModel === null ? [] : stackModel.parts.filter((part) => volumeFocus.parts.includes(part.n)).flatMap((part) => part.chapters);
+// A top-level document (a volume) has no ancestors; the atlas itself is its crumb, so every reading page opens on the same line.
+const crumbs = doc.route.breadcrumbs.length > 0 ? doc.route.breadcrumbs : [{ title: 'Atlas', number: null, url: '/' }];
 // Equation → rail calculator linkage, read by blocks/Equation.astro ("▸ run").
 Astro.locals.equationRunners = new Map(
   doc.figures.flatMap((figure) =>
@@ -94,7 +99,7 @@ const jsonLd = documentJsonLd({ doc, graph, registry, site: Astro.site, edition:
   depthControl={true}
   jsonLd={jsonLd}
 >
-  <Breadcrumbs crumbs={doc.route.breadcrumbs} current={doc.header.title} />
+  <Breadcrumbs crumbs={crumbs} current={doc.header.title} />
   <article class="sh-article" data-node-id={doc.meta.id}>
     <DocumentHeader doc={doc} />
     <ModeTabs links={links} current="read" />
@@ -109,7 +114,7 @@ const jsonLd = documentJsonLd({ doc, graph, registry, site: Astro.site, edition:
         <div class="sh-apparatus">
           <p class="sh-apparatus__head">
             <span class="sh-apparatus__title">Research apparatus</span>
-            <span class="sh-apparatus__note">how this chapter is sourced, routed, and audited</span>
+            <span class="sh-apparatus__note">sourcing, routing, and audit</span>
           </p>
           {presentation.apparatus.map((region) => (
             <RegionView region={region} doc={doc} ordinal={presentation.ordinals.get(region.anchor) ?? null} />
@@ -128,6 +133,9 @@ const jsonLd = documentJsonLd({ doc, graph, registry, site: Astro.site, edition:
     {stackModel !== null && doc.meta.chapter !== null && <MiniStack model={stackModel} focus={doc.meta.chapter} />}
     {stackModel !== null && partFocus !== null && (
       <MiniStack model={stackModel} focus={partFocus.chapters} label={`Part ${partFocus.numeral} · ${partFocus.title}`} />
+    )}
+    {stackModel !== null && volumeFocus !== null && volumeChapters.length > 0 && (
+      <MiniStack model={stackModel} focus={volumeChapters} label={`Volume ${volumeFocus.numeral} · ${volumeFocus.title}`} />
     )}
     <RailPanel doc={doc} pageData={pageData} ordinals={presentation.ordinals} />
     <Minimap doc={doc} outline={presentation.outline} ordinals={presentation.ordinals} />

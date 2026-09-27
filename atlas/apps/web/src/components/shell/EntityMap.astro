@@ -2,16 +2,19 @@
 /**
  * Where a system or lab sits in the book (system and lab pages).
  *
- *   stack    (systems) the eight reference-stack layers, bottom to top, with
- *            this system's layer open: its sibling systems as links, this one
- *            marked, analysed ones solid
+ *   stack    (systems) the eight reference-stack layers as slabs, top to
+ *            bottom, this system's layer open: its sibling systems as links,
+ *            this one marked, analysed ones solid
  *   book     eleven part lanes × six chapter dots: solid = a written chapter
  *            draws on it (size = sections), dashed = a planned chapter's plan
  *            names it, faint = neither
- *   readout  fixed size: what the pointed chapter takes from it, with the
- *            sections and the evidence label the chapter assigned
+ *   readout  fixed size: what the chapter under the pointer takes from it,
+ *            with its sections and evidence label — resting on the chapter
+ *            that draws on it most — and the index of every such chapter,
+ *            each a bar of its sections
  *
- * Server-rendered links throughout; client entity-map.ts fills the readout.
+ * Server-rendered links throughout; client entity-map.ts connects dots, index
+ * rows, and the readout.
  */
 import type { EntityChapter, EntityPart, EntityUse } from '../../lib/entity-model.ts';
 import { STACK_LAYERS } from '@atlas/core';
@@ -49,38 +52,49 @@ const sectionListOf = (n: number): string =>
     .filter((use) => use.ch === n && use.sections !== '')
     .map((use) => use.sections)
     .join('; ');
+const metaOf = (n: number): string =>
+  usedSet.has(n)
+    ? [sectionListOf(n) === '' ? null : `§ ${sectionListOf(n)}`, labelOf(n) === '' ? null : labelOf(n)].filter((part) => part !== null).join(' · ')
+    : plannedSet.has(n)
+      ? 'planned — the chapter plan names it; no manuscript yet'
+      : '';
 const maxSections = Math.max(1, ...used.map(sectionsOf));
 const radius = (n: number): number => 3.6 + 3.4 * Math.sqrt(sectionsOf(n) / maxSections);
+
+// Rest: the chapter that draws on it most (ties: book order); the readout opens on it.
+const rest = [...used].sort((a, b) => sectionsOf(b) - sectionsOf(a) || a - b)[0] ?? [...plannedSet][0];
+const restChapter = rest === undefined ? undefined : chapters[String(rest)];
+const index = [
+  ...[...usedSet].sort((a, b) => a - b).map((n) => ({ n, planned: false })),
+  ...[...plannedSet].sort((a, b) => a - b).map((n) => ({ n, planned: true })),
+];
 
 const W = 300;
 const X0 = 40;
 const DX = 43;
 const LANE = 20;
-const lanes = parts.map((part, index) => ({ part, y: 12 + index * LANE + (part.volume - 1) * 6 }));
+const lanes = parts.map((part, i) => ({ part, y: 12 + i * LANE + (part.volume - 1) * 6 }));
 const H = (lanes.at(-1)?.y ?? 0) + 14;
 const noun = kind === 'system' ? 'system' : 'lab';
+const written = Object.values(chapters).filter((chapter) => chapter.written).length;
+const total = Object.keys(chapters).length;
 ---
 
 <section class="em" data-entity-map aria-labelledby="em-title">
   <p class="em-head">
     <span class="em-head__title" id="em-title">Where it sits</span>
-    <span class="em-head__note">
-      {used.length === 0
-        ? `no written chapter draws on this ${noun} yet`
-        : `${String(used.length)} written chapter${used.length === 1 ? '' : 's'} draw on it`}
-      {plannedSet.size > 0 && ` · named in ${String(plannedSet.size)} chapter plan${plannedSet.size === 1 ? '' : 's'}`}
-    </span>
+    <span class="em-head__note">dot size = sections</span>
   </p>
 
   <div class:list={['em-body', { 'has-stack': layer !== null }]}>
     {
       layer !== null && (
         <ol class="em-stack" aria-label="Reference-stack layers, top to bottom">
-          {[...STACK_LAYERS.map((layerName, index) => ({ layerName, index }))].reverse().map(({ layerName, index }) => (
-            <li class:list={['em-layer', { 'is-here': index === layer.index }]}>
-              <span class="em-layer__tag">L{index + 1}</span>
+          {[...STACK_LAYERS.map((layerName, i) => ({ layerName, i }))].reverse().map(({ layerName, i }) => (
+            <li class:list={['em-layer', { 'is-here': i === layer.index }]}>
+              <span class="em-layer__tag">L{i + 1}</span>
               <span class="em-layer__name">{layerName}</span>
-              {index === layer.index && (
+              {i === layer.index && (
                 <span class="em-layer__systems">
                   {layer.siblings.map((sibling) => (
                     <a class:list={['em-sib', { 'is-self': sibling.self, 'is-analysed': sibling.analysed }]} href={sibling.url} aria-current={sibling.self ? 'page' : undefined}>
@@ -97,61 +111,106 @@ const noun = kind === 'system' ? 'system' : 'lab';
 
     <figure class="em-book">
       <svg class="em-svg" viewBox={`0 0 ${String(W)} ${String(H)}`} role="group" aria-label={`The book's chapters: those that draw on ${name} are filled; planned chapters whose plan names it are dashed.`} data-em-svg>
-        {lanes.map(({ part, y }) => (
-          <g class="em-lane">
-            <line x1={X0 - 10} x2={W - 8} y1={y} y2={y} />
-            <a href={part.url}>
-              <text x="2" y={y + 3.5}>
-                {part.numeral}
-                <title>
-                  Part {part.numeral} — {part.title}
-                </title>
-              </text>
-            </a>
-          </g>
-        ))}
-        {lanes.flatMap(({ part, y }) =>
-          part.chapters.map((n, index) => {
-            const chapter = chapters[String(n)];
-            if (chapter === undefined) return null;
-            const state = usedSet.has(n) ? 'is-used' : plannedSet.has(n) ? 'is-planned-use' : 'is-none';
-            return (
-              <a
-                class:list={['em-dot', state, { 'is-written': chapter.written }]}
-                href={chapter.url}
-                data-em-n={n}
-                data-em-title={`${chapter.number} ${chapter.title}`}
-                data-em-what={state === 'is-used' ? whatOf(n) : ''}
-                data-em-meta={state === 'is-used' ? [sectionListOf(n) === '' ? null : `§ ${sectionListOf(n)}`, labelOf(n) === '' ? null : labelOf(n)].filter((part) => part !== null).join(' · ') : state === 'is-planned-use' ? 'planned — the chapter plan names it; no manuscript yet' : ''}
-                tabindex={state === 'is-none' ? -1 : 0}
-                aria-label={`${chapter.number} ${chapter.title}${state === 'is-used' ? `: draws on ${name}` : state === 'is-planned-use' ? `: planned, its plan names ${name}` : ''}`}
-              >
-                <circle cx={X0 + index * DX} cy={y} r={state === 'is-used' ? radius(n) : 4} />
+        {
+          lanes.map(({ part, y }) => (
+            <g class="em-lane">
+              <line x1={X0 - 10} x2={W - 8} y1={y} y2={y} />
+              <a href={part.url} tabindex="-1">
+                <text x="2" y={y + 3.5}>
+                  {part.numeral}
+                  <title>
+                    Part {part.numeral} — {part.title}
+                  </title>
+                </text>
               </a>
-            );
-          }),
-        )}
+            </g>
+          ))
+        }
+        {
+          lanes.flatMap(({ part, y }) =>
+            part.chapters.map((n, i) => {
+              const chapter = chapters[String(n)];
+              if (chapter === undefined) return null;
+              const state = usedSet.has(n) ? 'is-used' : plannedSet.has(n) ? 'is-planned-use' : 'is-none';
+              return (
+                <a
+                  class:list={['em-dot', state, { 'is-written': chapter.written, 'is-rest': n === rest }]}
+                  href={chapter.url}
+                  data-em-n={n}
+                  data-em-title={`${chapter.number} ${chapter.title}`}
+                  data-em-what={state === 'is-used' ? whatOf(n) : ''}
+                  data-em-meta={metaOf(n)}
+                  data-em-sections={state === 'is-used' ? sectionsOf(n) : undefined}
+                  tabindex={state === 'is-none' ? -1 : 0}
+                  aria-label={`${chapter.number} ${chapter.title}${state === 'is-used' ? `: draws on ${name}` : state === 'is-planned-use' ? `: planned, its plan names ${name}` : ''}`}
+                >
+                  <circle cx={X0 + i * DX} cy={y} r={state === 'is-used' ? radius(n) : 4} />
+                </a>
+              );
+            }),
+          )
+        }
       </svg>
       <figcaption class="em-key" aria-hidden="true">
-        <span><i class="em-key__used" />draws on it (size = sections)</span>
-        {kind === 'system' && <span><i class="em-key__planned" />named in a chapter plan</span>}
+        <span><i class="em-key__used" />draws on it</span>
+        {plannedSet.size > 0 && <span><i class="em-key__planned" />named in a plan</span>}
         <span><i class="em-key__none" />not yet</span>
       </figcaption>
     </figure>
 
-    <div class="em-readout" aria-live="polite" data-em-readout>
-      <p class="em-readout__kicker" data-em-kicker>{name}</p>
-      <p class="em-readout__title" data-em-rtitle>
-        {used.length > 0 ? 'Point at a filled dot' : plannedSet.size > 0 ? 'Point at a dashed dot' : 'Not yet analysed'}
-      </p>
-      <p class="em-readout__meta" data-em-rmeta>
-        {used.length > 0
-          ? `What each chapter takes from this ${noun}, its sections and evidence label.`
-          : plannedSet.size > 0
-            ? `These chapters' plans name this ${noun}; they are not written yet.`
-            : `Only ${String(Object.values(chapters).filter((chapter) => chapter.written).length)} of 66 chapters are written, so a gap is the book's, not a verdict on the ${noun}.`}
-      </p>
-      <p class="em-readout__what" data-em-rwhat></p>
+    <div class="em-readout" aria-live="polite" data-em-readout data-em-rest={rest}>
+      <div class="em-ro__grid">
+      <div class="em-ro__detail">
+        <p class="em-readout__kicker" data-em-kicker>
+          {
+            restChapter === undefined
+              ? name
+              : usedSet.has(rest ?? -1)
+                ? `${used.length > 1 ? 'Most sections · ' : ''}ch ${restChapter.number} · ${String(sectionsOf(rest ?? -1))} §`
+                : `ch ${restChapter.number} · planned`
+          }
+        </p>
+        <p class="em-readout__title" data-em-rtitle>
+          {restChapter === undefined ? 'Not yet analysed' : `${restChapter.number} ${restChapter.title}`}
+        </p>
+        <p class="em-readout__meta" data-em-rmeta>
+          {rest === undefined ? `${String(written)} of ${String(total)} chapters are written; none draws on this ${noun} yet.` : metaOf(rest)}
+        </p>
+        <p class="em-readout__what" data-em-rwhat>{rest === undefined ? '' : whatOf(rest)}</p>
+      </div>
+      {
+        index.length > 0 && (
+          <div class="em-ro__index">
+            <p class="em-ro__head">
+              <span>Chapters</span>
+              <span>sections</span>
+            </p>
+            <ol class="em-ro__list" role="list">
+              {index.map(({ n, planned: isPlanned }) => {
+                const chapter = chapters[String(n)];
+                if (chapter === undefined) return null;
+                const sections = sectionsOf(n);
+                return (
+                  <li>
+                    <a
+                      class:list={['em-ro__row', { 'is-planned': isPlanned, 'is-rest': n === rest }]}
+                      href={chapter.url}
+                      data-em-row={n}
+                      tabindex="-1"
+                      style={`--f:${isPlanned ? '0' : (sections / maxSections).toFixed(3)}`}
+                    >
+                      <span class="em-ro__n">{chapter.number}</span>
+                      <span class="em-ro__t">{chapter.short}</span>
+                      <span class="em-ro__c">{isPlanned ? 'plan' : sections === 0 ? 'listed' : `${String(sections)} §`}</span>
+                    </a>
+                  </li>
+                );
+              })}
+            </ol>
+          </div>
+        )
+      }
+      </div>
     </div>
   </div>
 </section>

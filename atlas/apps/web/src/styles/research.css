@@ -107,6 +107,17 @@ html[data-depth='research'] [data-depth-min='implementation'] {
   max-inline-size: min(var(--analysis), 100%);
 }
 
+/* Where the column is barely wider than the measure (≤ 50rem: 1440 px with
+ * tree and rail, 1024–1279 px with the rail), a wide block would overhang the
+ * prose by a few dozen pixels — a ragged right edge, not a breakout — so it
+ * holds the measure there; figures scale to their legibility floor and wide
+ * tables scroll in their own frame. */
+@container (max-width: 50rem) {
+  .rb-region > .rb-wide {
+    max-inline-size: var(--measure);
+  }
+}
+
 .rb-region > * + *,
 .rb-flow > * + * {
   margin-block-start: var(--gap-argument);
@@ -133,6 +144,29 @@ html[data-depth='research'] [data-depth-min='implementation'] {
 .rb-p + .rb-list,
 .rb-eq + .rb-eq {
   margin-block-start: var(--gap-related);
+}
+
+/* Prose rhythm: a paragraph break is one step (1rem) — closer than a new
+ * argument, clearly more than a line. A heading holds its first block at
+ * 0.75rem so the title reads as the head of what follows. */
+:is(.rb-region, .rb-flow) > .rb-p + .rb-p,
+:where([data-node-id]) > .rb-p + .rb-p {
+  margin-block-start: 1rem;
+}
+
+.rb-region > .rb-region__title + * {
+  margin-block-start: var(--gap-related);
+}
+
+/* The first region after the mode tabs opens under the tabs' own rule: no
+ * second hairline, and the tabs' 2.25rem instead of a section break. */
+.sh-modes + .rb-region {
+  margin-block-start: 0;
+}
+
+.sh-modes + .rb-region > .rb-region__title {
+  padding-block-start: 0;
+  border-block-start: 0;
 }
 
 /* ── 4 headings ──────────────────────────────────────────────────────── */
@@ -163,15 +197,6 @@ html[data-depth='research'] [data-depth-min='implementation'] {
   font-variant-numeric: tabular-nums;
   letter-spacing: 0;
   color: var(--domain, var(--accent));
-}
-
-@container (min-width: 900px) {
-  .rb-region__ordinal {
-    position: absolute;
-    inset-inline-end: calc(100% + 1rem);
-    inset-block-start: var(--gap-related);
-    line-height: calc(var(--fs-h2) * 1.2);
-  }
 }
 
 .rb-h {
@@ -285,7 +310,7 @@ html[data-depth='research'] [data-depth-min='implementation'] {
 /* ── 6 prose and inline objects ──────────────────────────────────────── */
 
 .rb-p {
-  margin-block: 0;
+  margin-block-end: 0;
   hyphens: auto;
   overflow-wrap: break-word;
   text-wrap: pretty;
@@ -336,6 +361,12 @@ html[data-depth='research'] [data-depth-min='implementation'] {
   overflow-wrap: break-word;
 }
 
+/* A long identifier or call (Inline.astro marks > 28 characters) may break
+ * anywhere, so a justified line is never stretched to push it down whole. */
+.rb-icode--long {
+  word-break: break-all;
+}
+
 .rb-math > .katex {
   font-size: 1.08em;
 }
@@ -355,6 +386,13 @@ html[data-depth='research'] [data-depth-min='implementation'] {
   white-space: nowrap;
   color: var(--accent);
   text-decoration: none;
+}
+
+/* In a line that is only a list of keys (the References region) the keys
+ * sit on the baseline with their separators, not raised like note calls. */
+.rb-region--references .rb-cite {
+  inset-block-start: 0;
+  font-size: var(--fs-tech);
 }
 
 a.rb-cite:hover {
@@ -673,7 +711,9 @@ a.rb-cite:hover {
   align-items: baseline;
   justify-content: space-between;
   gap: 1rem;
-  margin-block-end: 0.1rem;
+  margin-block-end: 0.25rem;
+  /* a wrapped term stays one heading, not two lines a body-line apart */
+  line-height: 1.3;
 }
 
 .rb-def__term {
@@ -775,7 +815,7 @@ a.rb-cite:hover {
 
 /* ── 10 equations (UI_UX §16) ────────────────────────────────────────
  * An equation is a research object, not a line of prose: the number hangs at
- * the left in the domain accent, the math sits centred between hairlines,
+ * the left in the domain accent, the math starts at the column edge between hairlines,
  * tools appear on hover, and the variable legend is a readable grid. */
 
 .rb-eq {
@@ -806,6 +846,11 @@ a.rb-cite:hover {
   background: linear-gradient(to right, var(--accent-wash), transparent 60%);
 }
 
+/* The landing wash replaces the scroll cue (its paper covers would show on the wash). */
+.rb-eq:target .rb-eq__math {
+  background: none;
+}
+
 .rb-eq__label {
   grid-column: 1;
   margin: 0;
@@ -832,7 +877,7 @@ a.rb-eq__num:hover {
   padding-block: 0.15rem;
   overflow-x: auto;
   overflow-y: hidden;
-  text-align: center;
+  text-align: start;
   scrollbar-width: thin;
 }
 
@@ -840,8 +885,29 @@ a.rb-eq__num:hover {
   grid-column: 2;
 }
 
-.rb-eq__math .katex-display {
+/* Display math holds the column's left edge (the number column, then the
+ * math, the "where" note and the legend all start on shared lines). */
+.rb-eq__math .katex-display,
+.rb-eqi__math .katex-display {
   margin: 0;
+  overflow: visible;
+  text-align: start;
+}
+
+.rb-eq__math .katex-display > .katex {
+  text-align: start;
+}
+
+/* Scroll cue for anything wider than its column (long equations, wide
+ * figures and tables on phones): a soft shadow shows on the side that
+ * still has content; the paper-coloured covers scroll with the content and
+ * hide the shadow once an end is reached. */
+:is(.rb-eq__math, .rb-eqi__math, .rb-figure .vg-scroll, .rb-table__scroll, .rb-alg__body) {
+  background:
+    linear-gradient(to right, var(--paper) 40%, transparent) left / 1.5rem 100% no-repeat local,
+    linear-gradient(to left, var(--paper) 40%, transparent) right / 1.5rem 100% no-repeat local,
+    radial-gradient(farthest-side at 0 50%, color-mix(in oklab, var(--ink) 24%, transparent), transparent) left / 0.75rem 100% no-repeat scroll,
+    radial-gradient(farthest-side at 100% 50%, color-mix(in oklab, var(--ink) 24%, transparent), transparent) right / 0.75rem 100% no-repeat scroll;
 }
 
 /* KaTeX sets display math at 1.21 × the 19 px body; ~20 px keeps long
@@ -912,9 +978,10 @@ a.rb-eq__num:hover {
 /* Variable legend: symbol in serif italic, meaning in sans, as a grid. */
 .rb-eq__legend {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(13.5rem, 1fr));
+  grid-template-columns: repeat(auto-fit, minmax(13.5rem, 1fr));
   gap: 0.15rem 1.5rem;
-  margin: 0.6rem 0 0;
+  /* the rows' hover wash reaches 0.3rem left; their text holds the math's edge */
+  margin: 0.6rem 0 0 -0.3rem;
   padding-inline-start: 0;
   font-family: var(--font-sans);
   font-size: 13.5px;
@@ -1281,6 +1348,19 @@ a.rb-eq__num:hover {
   overflow-x: auto;
 }
 
+/* The reading flow owns the space around a figure (one --gap-argument, like
+ * every other block); the figure keeps only its own hairlines and padding. */
+.rb-figure > .rb-figure__inline > .vg-figure {
+  margin-block: 0;
+}
+
+/* A figure that opens its region sits under the region's own rule: no second
+ * hairline (of a different length) a heading's height below the first. */
+.rb-region__title + .rb-figure > .rb-figure__inline > .vg-figure {
+  padding-block-start: 0.25rem;
+  border-block-start: 0;
+}
+
 /* Rail-placed figure: a marker in the column on desktop, the full figure
  * below the rail breakpoint (the rail is a sheet there, UI_UX §56–57). */
 .rb-figmark {
@@ -1394,11 +1474,12 @@ a.rb-eq__num:hover {
 
 .rb-grid__key {
   padding-inline-end: 1rem;
+  padding-block-start: calc(0.4rem + 0.3em);
   font-size: var(--fs-meta);
   font-weight: 600;
   font-variant-caps: all-small-caps;
   letter-spacing: 0.05em;
-  line-height: 1.9;
+  line-height: 1.35;
   color: var(--ink-3);
 }
 
@@ -1708,6 +1789,12 @@ a.rb-sibstrip__name:hover {
   display: none;
 }
 
+/* A region with no instruments leaves no gap: the panel steps out of the
+ * rail's rhythm until the client reveals a group, a live figure, or a pin. */
+.rb-rail:not(:has(> .rb-rail-group:not([hidden]), > .rb-rail__inspector:not([hidden]), .rb-live:not([hidden]))) {
+  display: none;
+}
+
 /* Only one group is visible at a time (client rail.ts); without JS they stack, separated by a rule. */
 .rb-rail-group + .rb-rail-group {
   margin-block-start: 0;
@@ -1773,6 +1860,17 @@ a.rb-sibstrip__name:hover {
 
 .rb-instrument--figure > * {
   max-inline-size: 100%;
+}
+
+/* Calculators on reading pages: tighter segments so a control keeps one row
+ * in the 300 px rail, and the chip radius. */
+:is(.sh-rail, .rb-figure) .vg-calc__segmented {
+  border-radius: 5px;
+  overflow: hidden;
+}
+
+:is(.sh-rail, .rb-figure) .vg-calc__option span {
+  padding-inline: 0.3rem;
 }
 
 /* Key/value rows with dotted leaders and right-aligned values. */
@@ -1876,8 +1974,10 @@ a.rb-sibstrip__name:hover {
   display: flex;
   justify-content: space-between;
   margin: 0;
-  font-variant-caps: all-small-caps;
+  padding-block-end: 0.1rem;
+  font-size: 10px;
   letter-spacing: 0.08em;
+  text-transform: uppercase;
   color: var(--ink-3);
   border-block-end: 1px dotted var(--rule);
 }
@@ -1971,6 +2071,7 @@ a.rb-sibstrip__name:hover {
 .rb-cites__work {
   font-family: var(--font-sans);
   color: var(--ink);
+  overflow-wrap: anywhere;
 }
 
 .rb-cites__venue {
@@ -2196,8 +2297,8 @@ a.rb-secidx__title:hover {
 }
 
 /* Concept-map text equivalent: present for screen readers and on request, not a second copy of the figure. */
-.rb-textequiv {
-  margin-block-start: var(--gap-related);
+.rb-region > .rb-textequiv {
+  margin-block-start: 0.5rem;
   font-size: var(--fs-tech);
 }
 
@@ -2306,6 +2407,13 @@ a.rb-secidx__title:hover {
   border-block-start: 0;
 }
 
+/* The first instrument of a group has no rule above it, so no padding either:
+ * it starts on the rail's 2rem rhythm like the blocks above it. */
+.rb-instrument:first-of-type,
+.rb-instrument:first-of-type > .vg-place--rail {
+  padding-block-start: 0;
+}
+
 .rb-instrument__head {
   font-family: var(--font-mono);
   font-size: 10.5px;
@@ -2314,9 +2422,10 @@ a.rb-secidx__title:hover {
   text-transform: uppercase;
 }
 
-/* The minimap follows the instruments, separated by a heavy rule. */
+/* The minimap follows the instruments, separated by a heavy rule. Every
+ * rail block sits 2rem from the next (0.5rem here + the rail body's gap). */
 .rb-rail + .rb-minimap {
-  margin-block-start: var(--gap-section);
+  margin-block-start: 0.5rem;
   padding-block-start: 0.6rem;
   border-block-start: 1.5px solid var(--ink);
 }
@@ -2500,7 +2609,7 @@ a.rb-secidx__title:hover {
   position: sticky;
   inset-block-start: -1.25rem;
   z-index: 2;
-  margin: -1.25rem -1.25rem 1.1rem;
+  margin: -1.25rem -1.25rem 0.5rem;
   padding: 1.1rem 1.25rem 0.7rem;
   background: var(--paper);
   border-block-end: 1.5px solid var(--ink);
@@ -2608,6 +2717,16 @@ a.rb-secidx__title:hover {
   white-space: nowrap;
 }
 
+/* In the bottom sheet (< 1024 px) the sheet's own head is sticky; the track
+ * scrolls with the sheet body instead of sliding over that head. */
+@media (max-width: 1023.98px) {
+  .rb-track {
+    position: static;
+    margin: 0 0 0.5rem;
+    padding: 0 0 0.7rem;
+  }
+}
+
 /* The per-region state line is now carried by the track; keep the group header compact. */
 .rb-track ~ .rb-rail .rb-rail-group__state {
   display: none;
@@ -2678,6 +2797,13 @@ a.rb-secidx__title:hover {
   inline-size: 44%;
 }
 
+/* Row heads read as titles, not as a second header row (base.css caps every th). */
+.rb-glance tbody th {
+  font-weight: 400;
+  letter-spacing: 0;
+  text-transform: none;
+}
+
 .rb-glance__sec a {
   display: flex;
   gap: 0.6rem;
@@ -2696,9 +2822,17 @@ a.rb-secidx__title:hover {
   color: var(--domain, var(--accent));
 }
 
+/* "ver" stands in for a verification row's number only where titles are hidden (phones). */
+.rb-glance__num--text {
+  visibility: hidden;
+  font-size: 10.5px;
+  letter-spacing: 0.04em;
+  color: var(--ink-3);
+}
+
 .rb-glance__title {
   font-family: var(--font-sans);
-  font-size: 13px;
+  font-size: 13.5px;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
@@ -2928,6 +3062,10 @@ a.rb-secidx__title:hover {
     display: none;
   }
 
+  .rb-glance__num--text {
+    visibility: visible;
+  }
+
   .rb-glance__sec {
     inline-size: auto;
   }
@@ -2952,14 +3090,16 @@ a.rb-secidx__title:hover {
 /* ── mini stack map (rail head on chapter pages) ─────────────────────────── */
 
 .sx-mini {
-  margin: 0 0 1rem;
+  /* the readout's reserved second line is the space below */
+  margin: 0;
   font-family: var(--font-mono);
 }
 
 .sx-mini__head {
   display: flex;
+  flex-wrap: wrap;
   justify-content: space-between;
-  gap: 0.5rem;
+  gap: 0.15rem 0.5rem;
   margin-bottom: 0.3rem;
   font-size: 10.5px;
   font-weight: 600;
@@ -2969,6 +3109,7 @@ a.rb-secidx__title:hover {
 }
 
 .sx-mini__counts {
+  white-space: nowrap;
   font-weight: 400;
   letter-spacing: 0.02em;
   text-transform: none;
@@ -3092,13 +3233,16 @@ a.rb-secidx__title:hover {
 }
 
 .sx-mini__readout {
-  min-height: 1.4em;
+  display: -webkit-box;
+  block-size: 2.8em;
   margin: 0.25rem 0 0;
   overflow: hidden;
   font-size: 11px;
+  line-height: 1.4;
   color: var(--ink);
-  text-overflow: ellipsis;
-  white-space: nowrap;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+  line-clamp: 2;
 }
 
 /* Section index ↔ at-a-glance cross-lighting (client chapter-links.ts). */

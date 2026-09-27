@@ -62,7 +62,32 @@ function closure(start: number, next: (n: number) => readonly number[]): Set<num
   return seen;
 }
 
+/**
+ * The structure views that share this entry: a node's Map, the compare field
+ * and table, and the evidence ledger are split out and loaded only on pages
+ * whose markup carries them.
+ */
+function initStructureViews(ctx: PageContext): void {
+  const { doc, ctl } = ctx;
+  if (doc.querySelector('[data-graph-map]') !== null) {
+    void import('./graph-map.ts').then((module) => {
+      if (!ctl.disposed) module.initGraphMap(ctx);
+    });
+  }
+  if (doc.querySelector('[data-compare-field]') !== null) {
+    void import('./compare-field.ts').then((module) => {
+      if (!ctl.disposed) module.initCompareField(ctx);
+    });
+  }
+  if (doc.querySelector('[data-evidence-ledger]') !== null) {
+    void import('./evidence-ledger.ts').then((module) => {
+      if (!ctl.disposed) module.initEvidenceLedger(ctx);
+    });
+  }
+}
+
 export function initStackExplorer(ctx: PageContext): void {
+  initStructureViews(ctx);
   const { doc, ctl } = ctx;
   const root = doc.querySelector<HTMLElement>('[data-stack-explorer]');
   if (root === null) return;
@@ -96,6 +121,7 @@ export function initStackExplorer(ctx: PageContext): void {
     title: readout.title?.textContent ?? '',
     summary: readout.summary?.textContent ?? '',
     rows: readout.rows?.innerHTML ?? '',
+    links: readout.links?.innerHTML ?? '',
   };
 
   const chapter = (n: number): Chapter | undefined => model.chapters[String(n)];
@@ -147,7 +173,7 @@ export function initStackExplorer(ctx: PageContext): void {
     if (readout.title !== null) readout.title.textContent = initial.title;
     if (readout.summary !== null) readout.summary.textContent = initial.summary;
     if (readout.rows !== null) readout.rows.innerHTML = initial.rows; // server-rendered markup restored verbatim
-    readout.links?.replaceChildren();
+    if (readout.links !== null) readout.links.innerHTML = initial.links;
   };
 
   // ── states ───────────────────────────────────────────────────────────────
@@ -184,7 +210,7 @@ export function initStackExplorer(ctx: PageContext): void {
 
     const part = partOf(n);
     setReadout(
-      `CHAPTER ${target.number} · PART ${part?.numeral ?? ''} · ${(part?.title ?? '').toUpperCase()}`,
+      `CHAPTER ${target.number} · PART ${part?.numeral ?? ''} · ${target.written ? 'WRITTEN' : 'PLANNED'}`,
       target.title,
       target.summary,
       [

@@ -2,11 +2,12 @@
 /**
  * Display equation as a research object (UI_UX §16).
  *
- *   (5.4) │            Q = n W_Q, …                         ¶ · TeX · inspect · ▸ run
+ *   (5.4) │ Q = n W_Q, …                                    ¶ · TeX · inspect · ▸ run
  *         │ L   layers        S   tokens per sequence       H_kv  KV heads …
  *
  * - The number hangs at the left in the domain accent and is the anchor link.
- * - The math is centred between hairlines; long equations scroll inside the frame.
+ * - The math starts at the column's left edge between hairlines; long equations
+ *   scroll inside the frame, with a shadow on the side that has more.
  * - Tools appear on hover/focus: copy link, copy TeX, inspect variables in the
  *   rail, and — when a rail calculator executes this equation — "run", which
  *   jumps to that instrument (the equation and its executable form are linked).
