@@ -85,6 +85,11 @@ export function initBrain3D(ctx: PageContext, fig: HTMLElement, reduced: boolean
         uLight: { value: new THREE.Vector3(-0.5, 0.8, 0.6) },
         uOpacity: { value: opacity },
         uFill: { value: 0 },
+        uPorcelain: { value: 0 },
+        uCrease: { value: 2.4 },
+        uFocus: { value: new THREE.Vector3() },
+        uFocusK: { value: 0 },
+        uGlow: { value: new THREE.Color() },
       },
       vertexShader: GLASS_VERTEX,
       fragmentShader: GLASS_FRAGMENT,
@@ -141,7 +146,8 @@ export function initBrain3D(ctx: PageContext, fig: HTMLElement, reduced: boolean
   } catch {
     buildHere();
   }
-  const stemGeo = new THREE.CylinderGeometry(0.075, 0.11, 0.42, 48, 6, true);
+  // brainstem: wide under the brain (the pons), tapering downward
+  const stemGeo = new THREE.CylinderGeometry(0.115, 0.055, 0.46, 48, 6, true);
   disposables.push(stemGeo);
   addGlass(stemGeo, (mesh) => {
     mesh.position.set(0.2, -0.6, 0);
@@ -293,9 +299,13 @@ export function initBrain3D(ctx: PageContext, fig: HTMLElement, reduced: boolean
     for (const m of [glassBack, glassFront]) {
       const u = m.uniforms as { uRim: { value: THREE.Color }; uBody: { value: THREE.Color } };
       u.uRim.value.set(night ? 0x9cc8ff : 0x23466f);
-      u.uBody.value.set(night ? 0x141b26 : 0xfbf7ee);
+      u.uBody.value.set(night ? 0x141b26 : 0xf7f2e8);
     }
     (glassFront.uniforms as { uFill: { value: number } }).uFill.value = night ? 0.72 : 0.9;
+    // paper: an opaque porcelain form, correctly occluded; night: see-through glass
+    (glassFront.uniforms as { uPorcelain: { value: number } }).uPorcelain.value = night ? 0 : 1;
+    glassFront.depthWrite = !night;
+    glassBack.visible = night;
     for (const m of glowMaterials) {
       (m.uniforms as { uPaper: { value: number } }).uPaper.value = night ? 0 : 1;
       m.blending = night ? THREE.AdditiveBlending : THREE.NormalBlending;
@@ -420,9 +430,15 @@ export function initBrain3D(ctx: PageContext, fig: HTMLElement, reduced: boolean
   };
   let targetYaw = brain.rotation.y;
   let targetPitch = brain.rotation.x;
+  // the focused part's region, lit on the cortex (see GLASS_FRAGMENT uFocus)
+  let focusRegion: { p: readonly number[]; domain: string } | undefined;
+  let focusK = 0;
+  const focusView = new THREE.Vector3();
+  const ROSE = new THREE.Color(0xcb8c8c);
   const focus = (part: number | null, k: string, t: string): void => {
     focusPart = part;
     const region = part === null ? undefined : regionAt.get(part);
+    focusRegion = region;
     if (region !== undefined) {
       targetYaw = Math.atan2(-region.p[0], region.p[2]) * 0.85;
       targetPitch = 0.1 + region.p[1] * 0.35;
@@ -558,6 +574,10 @@ export function initBrain3D(ctx: PageContext, fig: HTMLElement, reduced: boolean
     // field of view); the beads follow it too, so they stay small beside it
     const k = Math.min(1.1, Math.max(0.3, rect.height / 560)) * 0.7;
     for (const material of glowMaterials) (material.uniforms as { uScale: { value: number } }).uScale.value = 4.4 * k;
+    // crease shading reads the normal's change per pixel, which grows as the
+    // brain gets fewer device pixels; scale it so every screen sees one tone
+    const crease = 2.4 * Math.max(0.35, Math.min(1.4, (rect.height * renderer.getPixelRatio()) / 736));
+    for (const m of [glassBack, glassFront]) (m.uniforms as { uCrease: { value: number } }).uCrease.value = crease;
   };
   ctl.observe(new ResizeObserver(resize)).observe(host);
   resize();
@@ -608,6 +628,19 @@ export function initBrain3D(ctx: PageContext, fig: HTMLElement, reduced: boolean
     brain.rotation.y = aim + offset;
     brain.rotation.x = aimPitch + (reduced ? 0 : Math.sin(now / 2600) * 0.025);
     setGlass(cortexAt < 0 ? 0 : reduced ? 1 : Math.min(1, (now - cortexAt) / 450));
+    focusK += ((focusRegion === undefined ? 0 : 1) - focusK) * (reduced ? 1 : Math.min(1, dt * 2));
+    if (focusRegion !== undefined) {
+      brain.updateMatrixWorld();
+      focusView.set(focusRegion.p[0] ?? 0, focusRegion.p[1] ?? 0, focusRegion.p[2] ?? 0);
+      brain.localToWorld(focusView).applyMatrix4(camera.matrixWorldInverse);
+    }
+    for (const m of [glassBack, glassFront]) {
+      const u = m.uniforms as { uFocus: { value: THREE.Vector3 }; uFocusK: { value: number }; uGlow: { value: THREE.Color } };
+      u.uFocus.value.copy(focusView);
+      u.uFocusK.value = focusK;
+      // paper: a soft rose from the oxblood accent; night: the part's own glow
+      if (focusRegion !== undefined) u.uGlow.value.copy(night ? tint(focusRegion.domain) : ROSE);
+    }
 
     if (!reduced && now > nextAmbient && live.length > 0) {
       const focused = focusPart === null ? [] : everyFibre.filter(({ fibre }) => partOf(fibre.from) === focusPart || partOf(fibre.to) === focusPart);

@@ -1,19 +1,23 @@
 /**
  * Shaders for the home page's 3D brain (brain3d.ts):
  *
- *   glass   Fresnel glass — nearly clear where the surface faces the viewer,
- *           dense at grazing angles, with a specular glint; drawn back faces
- *           first (faint), then front faces
+ *   glass   Fresnel glass at night — nearly clear where the surface faces the
+ *           viewer, dense at grazing angles, with a specular glint; drawn back
+ *           faces first (faint), then front faces. On paper (uPorcelain) an
+ *           opaque sculpted porcelain form. Either way the region of the part
+ *           in view glows in the part's colour (uFocus, uFocusK, uGlow)
  *   bead    points as lit glass beads on paper (sphere shading + highlight
  *           inside a faint halo) or as additive glows at night (uPaper 0)
  */
 export const GLASS_VERTEX = /* glsl */ `
   varying vec3 vN;
   varying vec3 vV;
+  varying vec3 vP;
   void main() {
     vec4 mv = modelViewMatrix * vec4(position, 1.0);
     vN = normalize(normalMatrix * normal);
     vV = normalize(-mv.xyz);
+    vP = mv.xyz;
     gl_Position = projectionMatrix * mv;
   }
 `;
@@ -24,8 +28,14 @@ export const GLASS_FRAGMENT = /* glsl */ `
   uniform vec3 uLight;
   uniform float uOpacity;
   uniform float uFill;
+  uniform float uPorcelain;
+  uniform float uCrease;
+  uniform vec3 uFocus;
+  uniform float uFocusK;
+  uniform vec3 uGlow;
   varying vec3 vN;
   varying vec3 vV;
+  varying vec3 vP;
   void main() {
     vec3 n = normalize(vN);
     if (!gl_FrontFacing) n = -n;
@@ -40,6 +50,32 @@ export const GLASS_FRAGMENT = /* glsl */ `
     vec3 col = mix(body, uRim, clamp(fres * 1.15, 0.0, 1.0)) + vec3(spec) * 0.6;
     float a = (0.03 + fres * 0.78 + spec * 0.45 + diff * 0.025) * uOpacity;
     a = max(a, uFill * uOpacity);
+    // porcelain (paper theme): an opaque, sculpted ivory form — wrapped key
+    // light, soft fill, sky/ground ambient, creases darkened where the normal
+    // turns fastest on screen, a warm translucent edge instead of an ink rim
+    if (uPorcelain > 0.5) {
+      float wrap = clamp((dot(n, l) + 0.45) / 1.45, 0.0, 1.0);
+      float fill = max(dot(n, normalize(vec3(0.75, 0.15, 0.55))), 0.0);
+      float sky = 0.5 + 0.5 * n.y;
+      float crease = clamp(length(fwidth(n)) * uCrease, 0.0, 1.0);
+      vec3 shade = mix(vec3(0.8, 0.765, 0.715), vec3(1.0, 0.99, 0.97), wrap);
+      shade += vec3(0.04, 0.038, 0.034) * fill + vec3(0.03) * sky;
+      shade *= 1.0 - 0.3 * crease;
+      shade *= 1.0 - 0.18 * fres;
+      shade += vec3(0.07, 0.04, 0.012) * fres;
+      float sheen = pow(max(dot(reflect(-l, n), v), 0.0), 26.0) * 0.24;
+      col = uBody * shade + vec3(sheen);
+      a = uOpacity;
+    }
+    // the part in view: its region glows softly in the part's colour
+    float fd = length(vP - uFocus);
+    float glow = uFocusK * exp(-fd * fd / 0.16);
+    if (uPorcelain > 0.5) {
+      col = mix(col, uGlow, glow * 0.4);
+    } else {
+      col += uGlow * glow * 0.45;
+      a = max(a, glow * 0.3 * uOpacity);
+    }
     gl_FragColor = vec4(col, clamp(a, 0.0, 1.0));
   }
 `;

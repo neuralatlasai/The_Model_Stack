@@ -893,8 +893,16 @@ html[data-gl='1'] .hb:not(.is-2d) .hb-stage {
   background-image: radial-gradient(circle, var(--dx-dot) 1.3px, transparent 1.65px);
   background-size: 7px 7px;
   background-position: center;
-  -webkit-mask-image: linear-gradient(to bottom, #000 0%, #000 48%, rgb(0 0 0 / 0.45) 76%, transparent 100%);
-  mask-image: linear-gradient(to bottom, #000 0%, #000 48%, rgb(0 0 0 / 0.45) 76%, transparent 100%);
+  /* a clean halo around the brain (its size follows the field height, like the
+     brain's), the field fading out below */
+  -webkit-mask-image:
+    radial-gradient(ellipse 74cqh 50cqh at 50% 45%, transparent 58%, #000 100%),
+    linear-gradient(to bottom, #000 0%, #000 48%, rgb(0 0 0 / 0.45) 76%, transparent 100%);
+  -webkit-mask-composite: source-in;
+  mask-image:
+    radial-gradient(ellipse 74cqh 50cqh at 50% 45%, transparent 58%, #000 100%),
+    linear-gradient(to bottom, #000 0%, #000 48%, rgb(0 0 0 / 0.45) 76%, transparent 100%);
+  mask-composite: intersect;
   pointer-events: none;
 }
 
