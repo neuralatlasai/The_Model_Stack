@@ -1,0 +1,57 @@
+---
+/**
+ * AI futures: a supplied, ranked list of 100 sources on the trajectory,
+ * control, and alignment of frontier AI, each re-checked against its own site,
+ * as one connected instrument (components/shell/AiFuturesExplorer.astro,
+ * client ai-futures.ts) linked into the book.
+ * `#aif-N` lands on entry N; `#kind-…` / `#geo-…` select a kind or geography.
+ */
+import type { NodeId } from '@atlas/core';
+import AiFuturesExplorer from '../components/shell/AiFuturesExplorer.astro';
+import PageHeader from '../components/shell/PageHeader.astro';
+import ReaderLayout from '../layouts/ReaderLayout.astro';
+import { KINDS, futures } from '../lib/ai-futures.ts';
+import { getGraph, listDocuments } from '../lib/atlas.ts';
+import '../styles/ai-futures.css';
+
+const [graph, docs] = await Promise.all([getGraph(), listDocuments()]);
+const { entries, meta } = futures();
+const asOf = new Date(`${meta.asOf}T00:00:00Z`).toLocaleDateString('en-GB', { day: 'numeric', month: 'long', year: 'numeric', timeZone: 'UTC' });
+const fits = entries.map((entry) => entry.fit);
+const appendix = graph.nodes['ms.appendix.j' as NodeId] ?? null;
+const SOURCE = `https://github.com/neuralatlasai/The_Model_Stack/blob/main/${meta.source}`;
+---
+
+<ReaderLayout
+  title="AI futures"
+  description="One hundred sources on the trajectory, control, and alignment of frontier AI — scenarios, forecasts, capability measurement, alignment and control research, safety frameworks, governance, and the US and Chinese labs — each checked against its own site."
+  canonicalPath="/ai-futures/"
+  currentId={null}
+  navKey="futures"
+>
+  <PageHeader
+    identity="Research Atlas / AI futures"
+    title="AI futures"
+    lede="Where frontier AI is heading and how it is to be controlled and aligned: the scenario, forecasting, measurement, alignment, safety-framework, and policy sources that track it, and the US and Chinese labs and institutes they track."
+    meta={`${String(entries.length)} sources · ${String(KINDS.length)} kinds`}
+  />
+  <dl class="aif-note">
+    <div>
+      <dt>Ranking</dt>
+      <dd>Order and AI-2027 fit score ({Math.min(...fits)}–{Math.max(...fits)}) are the supplier’s editorial judgement, not atlas findings.</dd>
+    </div>
+    <div>
+      <dt>Descriptions</dt>
+      <dd>Rewritten from each source’s own site (OFFICIAL-DOCUMENTATION); kinds and chapter anchors are DERIVED.</dd>
+    </div>
+    <div>
+      <dt>Links</dt>
+      <dd>
+        Each carries its status — verified, address updated, or UNVERIFIED — as checked on {asOf} ·{' '}
+        <a href={SOURCE} rel="external">the supplied list</a>
+        {appendix !== null && <> · <a href={appendix.url}>Appendix J</a></>}
+      </dd>
+    </div>
+  </dl>
+  <AiFuturesExplorer graph={graph} docs={docs} />
+</ReaderLayout>

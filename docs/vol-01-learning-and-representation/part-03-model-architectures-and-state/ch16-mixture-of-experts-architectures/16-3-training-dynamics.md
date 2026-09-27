@@ -24,7 +24,7 @@ benchmarks: []
 datasets: []
 status: {maturity: active, disputed: false}
 evidence_summary: {labels_used: [KNOWN, DERIVED, MATHEMATICALLY-DERIVED, PAPER-REPORTED, OFFICIAL-DOCUMENTATION, UNVERIFIED, NOT-DISCLOSED], empirically_observed: false}
-updated_at: 2026-09-25
+updated_at: 2026-09-26
 editorial_status: manuscript_draft
 ---
 
@@ -52,36 +52,42 @@ An auxiliary loss changes optimization gradients. A selection bias changes which
 
 ## Formulation
 
-**MATHEMATICALLY-DERIVED — top-one reference.** Let \(M>0\) tokens have routing probabilities \(p_{t,e}\), \(E\) experts, and one pre-capacity selection per token. Define assignment fraction \(f_e\) and mean probability \(\bar p_e\):
+**MATHEMATICALLY-DERIVED — top-one reference.** Let $M>0$ tokens have routing probabilities $p_{t,e}$, $E$ experts, and one pre-capacity selection per token. Define assignment fraction $f_e$ and mean probability $\bar p_e$:
 
 $$
 f_e=\frac{1}{M}\sum_{t=1}^{M}\mathbf1[e=\arg\max_j p_{t,j}],
 \qquad
 \bar p_e=\frac{1}{M}\sum_{t=1}^{M}p_{t,e},
 \qquad
-\mathcal L_{\mathrm{bal}}=\lambda E\sum_{e=1}^{E}f_e\bar p_e.
+\mathcal L_{\mathrm{bal}}=\alpha_{\mathrm{bal}} E\sum_{e=1}^{E}f_e\bar p_e.
 $$
 *(Eq. 16.7)*
 
-This is the Switch-style auxiliary form [P10], stated for a fixed scope with coefficient \(\lambda\ge0\). Both distributions are normalized under the defined top-one, pre-capacity convention. Top-k and post-drop statistics need their own denominator.
+where $f_e$ = pre-capacity assignment fraction, $\bar p_e$ = mean router probability, and $\alpha_{\mathrm{bal}}$ = auxiliary coefficient.
 
-Treating \(f_e\) as fixed in differentiation gives
+This is the Switch-style auxiliary form [P10, R16.9], stated for a fixed scope with coefficient $\alpha_{\mathrm{bal}}\ge0$. Both distributions are normalized under the defined top-one, pre-capacity convention. Top-k and post-drop statistics need their own denominator.
+
+Treating $f_e$ as fixed in differentiation gives
 
 $$
 \frac{\partial\mathcal L_{\mathrm{bal}}}{\partial z_{t,j}}
-=\frac{\lambda E}{M}p_{t,j}
+=\frac{\alpha_{\mathrm{bal}} E}{M}p_{t,j}
 \left(f_j-\sum_{e=1}^{E}f_ep_{t,e}\right).
 $$
 *(Eq. 16.8)*
 
-The derivative follows from the softmax Jacobian. It encourages changes relative to the current observed load, but it is not a proof that the joint routing/training system converges to perfect balance. At uniform \(f_e=\bar p_e=1/E\), the auxiliary value is \(\lambda\); a scalar loss near that value alone is insufficient to establish a balanced realized histogram.
+where $z_{t,j}$ is one router logit and assignment fractions are held fixed in the local derivative.
 
-For a generic bias controller, define selection scores \(s_{t,e}+b_e\), count \(n_e\), total assignments \(A>0\), and update rate \(\eta\ge0\):
+The derivative follows from the softmax Jacobian. It encourages changes relative to the current observed load, but it is not a proof that the joint routing/training system converges to perfect balance. At uniform $f_e=\bar p_e=1/E$, the auxiliary value is $\alpha_{\mathrm{bal}}$; a scalar loss near that value alone is insufficient to establish a balanced realized histogram.
+
+For a generic bias controller, define selection scores $s_{t,e}+b_e$, count $n_e$, total assignments $A>0$, and update rate $\eta\ge0$:
 
 $$
 b_e^{\mathrm{new}}=b_e+\eta\left(\frac{1}{E}-\frac{n_e}{A}\right).
 $$
 *(Eq. 16.9)*
+
+where $b_e$ = selection bias, $\eta$ = controller update rate, $n_e$ = observed expert assignments, and $A$ = total assignments in scope.
 
 This is an illustrative proportional controller, **not the exact update rule of every loss-free method**. It increases underloaded experts' selection bias. Whether combination weights use biased or original scores is a separate contract.
 
@@ -92,7 +98,9 @@ $$
 $$
 *(Eq. 16.10)*
 
-It equals one under exact equal counts and can approach \(E\) when one expert receives all assignments. It does not identify the quality or semantic specialization of those assignments.
+where $\rho$ is a dimensionless maximum-to-mean ratio and the count denominator is measured before or after capacity as explicitly declared.
+
+It equals one under exact equal counts and can approach $E$ when one expert receives all assignments. It does not identify the quality or semantic specialization of those assignments.
 
 
 ~~~figure
@@ -142,6 +150,18 @@ Parameter updates need careful interpretation. An expert that receives no exampl
 
 Specialization and balance can coexist at different scopes. Domain-specific preferences need not produce global overload if the data mixture distributes demand. Forcing equal use within every individual sequence can impose a stronger constraint than required for cluster-level execution. The right trade-off is empirical and depends on deployment distribution as well as training stability.
 
+### Logit magnitude is distinct from load balance
+
+**PAPER-REPORTED.** ST-MoE studies router z-loss as a numerical-stability intervention [R16.8]. Its role should not be collapsed into expert-count balancing.
+
+**MATHEMATICALLY-DERIVED.** Write $a_t=\log\sum_e\exp(z_{t,e})$ and the reference penalty as $\mathcal L_z=(\lambda_z/M)\sum_t a_t^2$, where $\lambda_z\ge0$. Differentiating gives $\partial\mathcal L_z/\partial z_{t,e}=(2\lambda_z/M)a_t p_{t,e}$. This acts through logit magnitude and the log-partition value; Eq. 16.8 instead depends on observed expert load.
+
+Softmax has a common-shift symmetry: adding the same scalar $c_t$ to every logit in one row leaves its probabilities unchanged, while its log-partition becomes $a_t+c_t$. Choosing $c_t=-a_t$ makes that row's z-penalty zero without changing probabilities or top-k ordering in exact arithmetic. Thus a low z-loss does not certify high routing entropy, balanced expert use, or useful specialization.
+
+Conversely, equal assignment counts do not bound logit magnitude. Adding a large common offset preserves those counts while changing the z-penalty. A stability audit therefore needs separate measurements of non-finite events, score margins, log-partition magnitude, and assignment distribution. Stable softmax evaluation remains necessary even when an auxiliary magnitude penalty is present.
+
+**PROPOSAL.** Compare load balancing and z-loss in a factorial experiment with fixed initialization, data order, and precision. Include each intervention alone and their combination, and predeclare how task loss, failure frequency, and load statistics are evaluated. A coefficient that suppresses divergence while damaging quality is a measured trade-off, not an unconditional stability improvement.
+
 ## Algorithm
 
 **DERIVED — instrumented balancing update.**
@@ -164,7 +184,7 @@ INVARIANT: statistics use the declared population and normalization
 9. Stop at the finite budget and evaluate held-out domains and load regimes.
 ~~~
 
-Histogram construction costs \(O(A+E)\) per scope with indexed expert identifiers. Distributed aggregation communicates at least the selected statistics under the chosen algorithm; it does not require transferring every token representation merely to compute counts. State synchronization must match the process group that defines the scope.
+Histogram construction costs $O(A+E)$ per scope with indexed expert identifiers. Distributed aggregation communicates at least the selected statistics under the chosen algorithm; it does not require transferring every token representation merely to compute counts. State synchronization must match the process group that defines the scope.
 
 ## Implementation
 
@@ -242,5 +262,4 @@ Save model, optimizer, controller state, scope definitions, loss normalization, 
 
 ## References
 
-[P10](references.md#p10); [P13](references.md#p13); [R16.3](references.md#r163); [R16.4](references.md#r164); [R16.5](references.md#r165).
-
+[P10](references.md#p10); [P13](references.md#p13); [R16.3](references.md#r163); [R16.4](references.md#r164); [R16.5](references.md#r165); [R16.8](references.md#r168); [R16.9](references.md#r169).

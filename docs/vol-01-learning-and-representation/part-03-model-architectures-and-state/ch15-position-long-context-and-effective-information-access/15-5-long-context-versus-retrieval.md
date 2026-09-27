@@ -52,7 +52,7 @@ Long context moves more selection work into the model's attention and reasoning.
 
 ## Formulation
 
-**MATHEMATICALLY-DERIVED.** Let \(E_i\) be the event that required component \(i\) is present and usable in the constructed context. For \(k\ge1\), complete coverage is \(E_{\mathrm{all}}=\bigcap_{i=1}^{k}E_i\). Without assuming independent selection errors,
+**MATHEMATICALLY-DERIVED.** Let $E_i$ be the event that required component $i$ is present and usable in the constructed context. For $k\ge1$, complete coverage is $E_{\mathrm{all}}=\bigcap_{i=1}^{k}E_i$. Without assuming independent selection errors,
 
 $$
 \max\!\left(0,\sum_{i=1}^{k}\Pr(E_i)-(k-1)\right)
@@ -63,7 +63,7 @@ $$
 
 The lower bound follows by applying the union bound to missing components; the upper bound follows because complete coverage implies each individual event. Multiplying marginal recall values is unjustified unless independence is established under the evaluation design.
 
-For answer-correctness event \(A\), the law of total probability gives
+For answer-correctness event $A$, the law of total probability gives
 
 $$
 \Pr(A)=
@@ -75,7 +75,7 @@ $$
 
 Correct answers without complete context are possible through prior knowledge or chance. A grounded-task scoring rule can require complete support, but that must be declared. Do not silently equate answer accuracy with evidence recall.
 
-For a fixed accounting horizon of \(N>0\) queries, define costs in one consistent unit:
+For a fixed accounting horizon of $N>0$ queries, define costs in one consistent unit:
 
 $$
 \overline C_{\mathrm{retrieve}}
@@ -183,7 +183,7 @@ INVARIANT: every retained passage maps to an eligible source revision
 8. Return the context or an explicit inability to satisfy declared requirements.
 ~~~
 
-For \(n\) bounded candidates, sorting costs \(O(n\log n)\) comparisons plus comparator cost. Do not hide repeated tokenization or model scoring inside a supposedly constant-time comparator. Precompute bounded scalar ranking keys. Selection remains a heuristic unless a separate optimization guarantee is proved.
+For $n$ bounded candidates, sorting costs $O(n\log n)$ comparisons plus comparator cost. Do not hide repeated tokenization or model scoring inside a supposedly constant-time comparator. Precompute bounded scalar ranking keys. Selection remains a heuristic unless a separate optimization guarantee is proved.
 
 ## Implementation
 

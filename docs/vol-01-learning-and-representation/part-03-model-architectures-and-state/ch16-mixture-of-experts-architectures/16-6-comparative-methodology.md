@@ -24,7 +24,7 @@ benchmarks: []
 datasets: []
 status: {maturity: active, disputed: false}
 evidence_summary: {labels_used: [KNOWN, DERIVED, MATHEMATICALLY-DERIVED, PAPER-REPORTED, OFFICIAL-DOCUMENTATION, UNVERIFIED, NOT-DISCLOSED], empirically_observed: false}
-updated_at: 2026-09-25
+updated_at: 2026-09-26
 editorial_status: manuscript_draft
 ---
 
@@ -52,7 +52,7 @@ These comparisons cannot generally be satisfied by one dense model. Present mult
 
 ## Formulation
 
-**MATHEMATICALLY-DERIVED.** Consider equal-width ungated experts with hidden width \(h\), top-k routed activation, and \(s\) always-active shared experts of the same width. Ignoring routing and non-FFN costs, dense hidden widths matching selected-expert arithmetic and total expert parameters are respectively
+**MATHEMATICALLY-DERIVED.** Consider equal-width ungated experts with hidden width $h$, top-k routed activation, and $s$ always-active shared experts of the same width. Ignoring routing and non-FFN costs, dense hidden widths matching selected-expert arithmetic and total expert parameters are respectively
 
 $$
 h_{\mathrm{dense,active}}=(k+s)h,\qquad
@@ -60,9 +60,11 @@ h_{\mathrm{dense,total}}=(E+s)h.
 $$
 *(Eq. 16.17)*
 
+where $s$ = always-active shared experts of width $h$; both matches exclude router and non-FFN costs.
+
 These are leading-term layer matches, not full-model equality. Router cost, dense attention, different activations, padding, and communication must be restored in an end-to-end comparison.
 
-For a mathematical occupancy reference only, suppose tokens independently select uniformly distributed subsets of \(k\) distinct experts from \(E\). For a fixed expert \(e\), \(p=k/E\), so
+For a mathematical occupancy reference only, suppose tokens independently select uniformly distributed subsets of $k$ distinct experts from $E$. For a fixed expert $e$, $p=k/E$, so
 
 $$
 \mathbb E[n_e]=Mp,\qquad
@@ -71,20 +73,24 @@ $$
 $$
 *(Eq. 16.18)*
 
-The union expectation follows because a given expert is untouched with probability \((1-k/E)^M\), then by summing touch indicators. This is an explicit synthetic reference distribution, **not an assumption about learned routing**. Correlated tokens and nonuniform preferences change these quantities.
+where $p=k/E$ only under the stated independent uniform token-selection reference, and $U$ is the batch-wide expert union.
 
-Let measured request latency have cumulative distribution \(F_L\). Define a quantile and a joint acceptance rule:
+The union expectation follows because a given expert is untouched with probability $(1-k/E)^M$, then by summing touch indicators. This is an explicit synthetic reference distribution, **not an assumption about learned routing**. Correlated tokens and nonuniform preferences change these quantities.
+
+Let measured request latency have cumulative distribution $F_{\mathrm{lat}}$. Define a quantile and a joint acceptance rule:
 
 $$
-q_\tau=\inf\{\ell:F_L(\ell)\ge\tau\},\qquad
+q_\upsilon=\inf\{\ell:F_{\mathrm{lat}}(\ell)\ge\upsilon\},\qquad
 Q\ge Q_{\min},\quad
 r_{\mathrm{drop}}\le r_{\max},\quad
-q_\tau\le L_{\max},\quad
+q_\upsilon\le L_{\max},\quad
 M_{\mathrm{peak}}\le M_{\max}.
 $$
 *(Eq. 16.19)*
 
-Here \(Q\) is the predeclared quality metric and the remaining quantities use fixed workload and counting boundaries. Communication bytes remain a reported metric even when no hard byte limit is imposed. Thresholds are experimental choices to declare before seeing outcomes.
+where $0<\upsilon<1$ is the latency quantile level, $Q$ is declared task quality, and the thresholds are predeclared quality, drop, latency, and memory limits.
+
+Here $Q$ is the predeclared quality metric and the remaining quantities use fixed workload and counting boundaries. Communication bytes remain a reported metric even when no hard byte limit is imposed. Thresholds are experimental choices to declare before seeing outcomes.
 
 
 ~~~figure
@@ -136,6 +142,18 @@ Latency requires a complete attempt policy. Define admission, batching, warm-up,
 
 Uncertainty belongs to each relevant axis. Task scores need independent evaluation units; latency estimates need enough requests and a workload sampling design; rare overload events need a sufficiently long observation horizon. Repeated timing of one warm synthetic batch does not establish production tail behavior.
 
+### Separate trace replay from closed-loop evaluation
+
+**DERIVED.** A fixed routing trace is valuable because it holds logical assignments constant while comparing execution layouts. It can isolate the cost of permutation, grouped computation, placement, or communication. It cannot establish the task quality of a router that would have made different selections, and it cannot capture future routing changes caused by altered training updates.
+
+A complete study therefore has two stages. First, replay identical accepted assignments and coefficients to verify numerical equivalence and measure execution under controlled demand. Second, run the full candidate in its natural closed loop, allowing its actual router, capacity policy, and generated history to determine later inputs. Preserve the configuration identifier across both stages, but do not present replay measurements as if they included every closed-loop dependency.
+
+Use paired task examples when estimating quality differences between candidates. The pairing can reduce irrelevant variation, but repeated perturbations of one source still share a sampling unit. Report uncertainty across independent documents, tasks, or training seeds according to the actual claim. For training comparisons, one favorable seed cannot establish a stable advantage when the intervention changes divergence risk.
+
+The evaluation hierarchy should mirror the proposed causal explanation. An active-count claim needs a tensor inventory. An execution-efficiency claim needs assignment-preserving traces. A specialization claim needs controlled interventions and domain evidence. A deployment claim additionally needs accepted and failed request populations, resource limits, and tail behavior. Evidence from one level can support a prerequisite without settling the next level.
+
+> **Open question.** Does an execution improvement remain beneficial after the workload includes correlated domain bursts and rare-expert activation? · *what evidence would settle it:* predeclared closed-loop workload strata with joint quality, load, drop, communication, completion, and tail-latency records, rather than only a balanced replay trace.
+
 ## Algorithm
 
 **DERIVED — predeclared comparison study.**
@@ -158,7 +176,7 @@ INVARIANT: every reported comparison identifies matched and unmatched quantities
 9. Report feasible configurations and trade-offs without collapsing them to one rank.
 ~~~
 
-Streaming histogram updates cost \(O(A+E)\) per logged routing scope. Exact retention of every assignment scales with total routed work, so long runs need a declared bounded retention or sampling policy. Approximate quantile sketches require their own error contract; they are not silently interchangeable with exact offline quantiles.
+Streaming histogram updates cost $O(A+E)$ per logged routing scope. Exact retention of every assignment scales with total routed work, so long runs need a declared bounded retention or sampling policy. Approximate quantile sketches require their own error contract; they are not silently interchangeable with exact offline quantiles.
 
 ## Implementation
 
@@ -239,4 +257,3 @@ Publish architecture inventories, matched-budget definitions, data splits, train
 ## References
 
 [P10](references.md#p10); [P13](references.md#p13); [R16.4](references.md#r164); [R16.5](references.md#r165); [verification protocol](verification.md).
-

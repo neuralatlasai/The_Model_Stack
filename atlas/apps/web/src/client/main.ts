@@ -97,6 +97,15 @@ const FEATURES: readonly Feature[] = [
     },
   ],
   [
+    'ai-futures',
+    (ctx) => {
+      if (ctx.doc.querySelector('[data-aif-explorer]') === null) return;
+      void import('./ai-futures.ts').then((module) => {
+        if (!ctx.ctl.disposed) module.initAiFutures(ctx);
+      });
+    },
+  ],
+  [
     'library-explorer',
     (ctx) => {
       if (ctx.doc.querySelector('[data-library-explorer]') === null) return;

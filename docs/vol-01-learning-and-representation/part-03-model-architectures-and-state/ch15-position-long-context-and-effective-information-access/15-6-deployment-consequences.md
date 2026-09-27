@@ -52,7 +52,7 @@ Chunking solves a different problem. It limits the amount presented in one opera
 
 ## Formulation
 
-**MATHEMATICALLY-DERIVED.** Let \(T_{\mathrm{fixed}}\) count serialized instructions and fixed metadata, \(T_{\mathrm{evidence}}\) selected evidence, \(T_{\mathrm{history}}\) retained interaction history, and \(T_{\mathrm{output}}\) the reserved generated-token budget. Under a runtime with a combined context limit \(T_{\mathrm{limit}}\),
+**MATHEMATICALLY-DERIVED.** Let $T_{\mathrm{fixed}}$ count serialized instructions and fixed metadata, $T_{\mathrm{evidence}}$ selected evidence, $T_{\mathrm{history}}$ retained interaction history, and $T_{\mathrm{output}}$ the reserved generated-token budget. Under a runtime with a combined context limit $T_{\mathrm{limit}}$,
 
 $$
 T_{\mathrm{fixed}}+T_{\mathrm{evidence}}+T_{\mathrm{history}}
@@ -62,7 +62,7 @@ $$
 
 Count tokens after complete serialization with the relevant tokenizer. This inequality applies to the stated combined-budget model; services with additional or different counters need their own verified constraints. Hidden implementation budgets remain **NOT-DISCLOSED**, not guessed.
 
-For an illustrative cache with constant marginal state \(\kappa\) bytes per retained token, consider \(n\ge1\) requests sharing a prefix of \(P\) tokens and each having \(S\) private suffix tokens. Ideal physical sharing gives
+For an illustrative cache with constant marginal state $\kappa$ bytes per retained token, consider $n\ge1$ requests sharing a prefix of $P$ tokens and each having $S$ private suffix tokens. Ideal physical sharing gives
 
 $$
 M_{\mathrm{separate}}=\kappa n(P+S),\qquad
@@ -71,9 +71,9 @@ M_{\mathrm{shared}}=\kappa(P+nS),\qquad
 $$
 *(Eq. 15.18)*
 
-These are logical payload counts. Page rounding, metadata, temporary buffers, alignment, and copy-on-write behavior add implementation-specific terms. Obtain \(\kappa\) from the actual cache representation in Chapter 14; mixed layer types may require a piecewise accounting function.
+These are logical payload counts. Page rounding, metadata, temporary buffers, alignment, and copy-on-write behavior add implementation-specific terms. Obtain $\kappa$ from the actual cache representation in Chapter 14; mixed layer types may require a piecewise accounting function.
 
-For a nonempty sequence of \(T\) tokens, chunk width \(w\ge1\), and integer overlap \(0\le o<w\), start chunks at stride \(w-o\) and stop once a chunk reaches the end. Then
+For a nonempty sequence of $T$ tokens, chunk width $w\ge1$, and integer overlap $0\le o<w$, start chunks at stride $w-o$ and stop once a chunk reaches the end. Then
 
 $$
 N_{\mathrm{chunks}}=
@@ -177,7 +177,7 @@ INVARIANT: every admitted answer task retains its declared required support
 8. When the finite fallback list is exhausted, return a specific non-admission reason.
 ~~~
 
-Termination follows from the finite fallback list, not from assuming each summary becomes shorter. Bound candidate generation and repeated tokenization. For \(F\) fallback candidates of at most \(T_{\max}\) serialized tokens, validation is \(O(FT_{\max})\) excluding model-based transformation costs, which must be separately budgeted.
+Termination follows from the finite fallback list, not from assuming each summary becomes shorter. Bound candidate generation and repeated tokenization. For $F$ fallback candidates of at most $T_{\max}$ serialized tokens, validation is $O(FT_{\max})$ excluding model-based transformation costs, which must be separately budgeted.
 
 ## Implementation
 

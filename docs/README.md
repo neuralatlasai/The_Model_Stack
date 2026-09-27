@@ -224,6 +224,7 @@ The book develops one central relationship: a learning objective induces a repre
 | G | Curricula, reference ecosystems, and independent measurement | [appendix-g-curricula-reference-ecosystems-and-independent-measurement.md](appendices/appendix-g-curricula-reference-ecosystems-and-independent-measurement.md) |
 | H | Editorial specification, metadata, and coverage audit | [appendix-h-editorial-specification-metadata-and-coverage-audit.md](appendices/appendix-h-editorial-specification-metadata-and-coverage-audit.md) |
 | I | Evaluation ecosystem, 2026 — frameworks, benchmarks, and platforms in priority order | [appendix-i-evaluation-ecosystem-2026.md](appendices/appendix-i-evaluation-ecosystem-2026.md) |
+| J | AI futures, 2026 — forecasting, control, and alignment sources in supplied rank order | [appendix-j-ai-futures-2026.md](appendices/appendix-j-ai-futures-2026.md) |
 
 ## Editorial status
 

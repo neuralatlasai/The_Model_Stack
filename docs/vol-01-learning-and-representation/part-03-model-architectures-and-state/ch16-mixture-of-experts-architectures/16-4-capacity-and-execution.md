@@ -24,7 +24,7 @@ benchmarks: []
 datasets: []
 status: {maturity: active, disputed: false}
 evidence_summary: {labels_used: [KNOWN, DERIVED, MATHEMATICALLY-DERIVED, PAPER-REPORTED, OFFICIAL-DOCUMENTATION, UNVERIFIED, NOT-DISCLOSED], empirically_observed: false}
-updated_at: 2026-09-25
+updated_at: 2026-09-26
 editorial_status: manuscript_draft
 ---
 
@@ -52,34 +52,40 @@ Dropless execution preserves eligible assignments under its supported resource r
 
 ## Formulation
 
-**MATHEMATICALLY-DERIVED.** Let \(M>0\) tokens each select \(k\) experts, giving \(A=Mk\) assignments. Let \(n_e\) be pre-capacity expert counts with \(\sum_e n_e=A\). For an explicitly defined generalized assignment-based capacity factor \(c>0\),
+**MATHEMATICALLY-DERIVED.** Let $M>0$ tokens each select $k$ experts, giving $A=Mk$ assignments. Let $n_e$ be pre-capacity expert counts with $\sum_e n_e=A$. For an explicitly defined generalized assignment-based capacity factor $c_{\mathrm{cap}}>0$,
 
 $$
-C=\left\lceil\frac{cA}{E}\right\rceil,\qquad
-D=\sum_{e=1}^{E}\max(0,n_e-C),\qquad
-r_{\mathrm{assignment\ drop}}=\frac{D}{A}.
+C_{\mathrm{exp}}=\left\lceil\frac{c_{\mathrm{cap}}A}{E}\right\rceil,\qquad
+A_{\mathrm{drop}}=\sum_{e=1}^{E}\max(0,n_e-C_{\mathrm{exp}}),\qquad
+r_{\mathrm{assignment\ drop}}=\frac{A_{\mathrm{drop}}}{A}.
 $$
 *(Eq. 16.11)*
 
+where $C_{\mathrm{exp}}$ = slots per expert, $c_{\mathrm{cap}}$ = capacity factor, and $A_{\mathrm{drop}}$ = rejected assignments.
+
 This is the chapter's top-k assignment convention. A source using tokens per expert under top-one routing or a different routing-group size may define its capacity factor differently. Record the denominator before comparing factors.
 
-For fixed-capacity padded execution, accepted assignments number \(A-D\), whereas reserved slots number \(EC\). For a dropless row-block representation with block size \(b\ge1\),
+For fixed-capacity padded execution, accepted assignments number $A-A_{\mathrm{drop}}$, whereas reserved slots number $EC_{\mathrm{exp}}$. For a dropless row-block representation with block size $q_{\mathrm{blk}}\ge1$,
 
 $$
-\widetilde n_e=b\left\lceil\frac{n_e}{b}\right\rceil,\qquad
-0\le\sum_e(\widetilde n_e-n_e)\le E(b-1).
+\widetilde n_e=q_{\mathrm{blk}}\left\lceil\frac{n_e}{q_{\mathrm{blk}}}\right\rceil,\qquad
+0\le\sum_e(\widetilde n_e-n_e)\le E(q_{\mathrm{blk}}-1).
 $$
 *(Eq. 16.12)*
 
+where $q_{\mathrm{blk}}$ is a positive integer row-block size and $\widetilde n_e$ is the block-rounded row count.
+
 The bound follows from integer rounding per expert; zero-load experts contribute no rounded rows under this convention. It models row padding only, not all block-sparse metadata or feature-dimension alignment.
 
-Let assignment \(a\) retain source token \(t(a)\), expert \(e(a)\), and combination coefficient \(g_a\). With accepted assignment set \(\mathcal A_{\mathrm{keep}}\),
+Let assignment $a$ retain source token $t(a)$, expert $e(a)$, and combination coefficient $g_a$. With accepted assignment set $\mathcal A_{\mathrm{keep}}$,
 
 $$
 y_t=\sum_{\substack{a\in\mathcal A_{\mathrm{keep}}\\t(a)=t}}
 g_a f_{e(a)}(x_t).
 $$
 *(Eq. 16.13)*
+
+where $t(a),e(a),g_a$ identify an accepted assignment's token, expert, and coefficient; $\mathcal A_{\mathrm{keep}}$ contains accepted edges only.
 
 Changing the accepted set changes this operator. Renormalizing surviving coefficients is another intervention and must be stated explicitly. Shared and residual branches remain governed by their separate contracts.
 
@@ -94,8 +100,8 @@ anchor: formulation
 evidence: MATHEMATICALLY-DERIVED
 source: "DERIVED:eq-16.11"
 alt: "Illustrative loads 8, 4, 2, 2 across four experts and sixteen assignments. Reserved slots can be sufficient in aggregate while one expert still overflows."
-spec: {"tex":"C=\\lceil4c\\rceil,\\quad D=\\sum_e\\max(0,n_e-C)","equation":"16.11","inputs":[{"symbol":"c","label":"capacity factor","default":1,"min":0.5,"max":2,"format":"fixed2"}],"outputs":[{"symbol":"capacity","label":"slots per expert","formula":"ceil(4*c)","format":"integer"},{"symbol":"drops","label":"dropped assignments","formula":"max(0,8-ceil(4*c))+max(0,4-ceil(4*c))+2*max(0,2-ceil(4*c))","format":"integer"},{"symbol":"reserved","label":"reserved slots","formula":"4*ceil(4*c)","format":"integer"}]}
-states: [{"anchor":"formulation","label":"Mean capacity","variables":{"c":1},"note":"Sixteen slots still drop four assignments in this skewed fixture."},{"anchor":"mechanism","label":"Additional capacity","variables":{"c":1.5},"note":"More slots reduce overflow but increase reservation."},{"anchor":"failure-modes","label":"No overflow fixture","variables":{"c":2},"note":"Avoiding drops reserves twice the logical assignments here."}]
+spec: {"tex":"C_{\\mathrm{exp}}=\\lceil4c_{\\mathrm{cap}}\\rceil,\\quad A_{\\mathrm{drop}}=\\sum_e\\max(0,n_e-C_{\\mathrm{exp}})","equation":"16.11","inputs":[{"symbol":"cap","label":"capacity factor","default":1,"min":0.5,"max":2,"format":"fixed2"}],"outputs":[{"symbol":"capacity","label":"slots per expert","formula":"ceil(4*cap)","format":"integer"},{"symbol":"drops","label":"dropped assignments","formula":"max(0,8-ceil(4*cap))+max(0,4-ceil(4*cap))+2*max(0,2-ceil(4*cap))","format":"integer"},{"symbol":"reserved","label":"reserved slots","formula":"4*ceil(4*cap)","format":"integer"}]}
+states: [{"anchor":"formulation","label":"Mean capacity","variables":{"cap":1},"note":"Sixteen slots still drop four assignments in this skewed fixture."},{"anchor":"mechanism","label":"Additional capacity","variables":{"cap":1.5},"note":"More slots reduce overflow but increase reservation."},{"anchor":"failure-modes","label":"No overflow fixture","variables":{"cap":2},"note":"Avoiding drops reserves twice the logical assignments here."}]
 ~~~
 
 
@@ -107,7 +113,7 @@ Record dropped gate mass as well as dropped edge count. Losing a small-weight br
 
 Padding fills execution shapes, not training examples. Empty slots must not contribute to task loss, balancing counts, or returned token outputs. A mask that is correct for expert computation can still be wrong for diagnostics if padded rows are counted as routed demand.
 
-Dropless execution replaces fixed admission limits with an execution layout that can represent the realized counts within resource bounds. The total number of logical assignments remains \(A\), but destination buffers and expert batch sizes vary. Block rounding or grouped operations can improve scheduling opportunities without changing the logical set.
+Dropless execution replaces fixed admission limits with an execution layout that can represent the realized counts within resource bounds. The total number of logical assignments remains $A$, but destination buffers and expert batch sizes vary. Block rounding or grouped operations can improve scheduling opportunities without changing the logical set.
 
 
 ~~~figure
@@ -129,7 +135,17 @@ The backward path has the same identity obligation. Gradients from every survivi
 
 Grouped GEMM executes multiple expert matrix products through a grouped interface or scheduler. Its benefit depends on group sizes, matrix shapes, dtype, and implementation. Many tiny expert groups may remain inefficient. Fusing permutation or combining operations can reduce memory traffic, but correctness still requires the assignment-preservation contract.
 
-Temporary memory includes copied token rows, expert intermediates, output rows, indices, offsets, and communication buffers. Logical dispatch input payload alone is approximately \(Adb_a\) bytes for width \(d\) and \(b_a\) bytes per activation, before alignment and replication. Activation byte width and Eq. 16.12's row-block size have different units. Retain both fields explicitly rather than combining them into one padding multiplier. Peak allocation additionally depends on whether input, intermediate, and output buffers coexist or can be safely reused.
+Temporary memory includes copied token rows, expert intermediates, output rows, indices, offsets, and communication buffers. Logical dispatch input payload alone is approximately $Adb_a$ bytes for width $d$ and $b_a$ bytes per activation, before alignment and replication. Activation byte width and Eq. 16.12's row-block size have different units. Retain both fields explicitly rather than combining them into one padding multiplier. Peak allocation additionally depends on whether input, intermediate, and output buffers coexist or can be safely reused.
+
+### Worked assignment trace and backward check
+
+**MATHEMATICALLY-DERIVED.** Consider two scalar inputs $x_1,x_2$, two experts $f_1(x)=2x$ and $f_2(x)=-x$, and fixed top-two coefficients $3/4$ and $1/4$. This deliberately small fixture isolates execution correctness; it is not a model-quality example. Each token has two assignment records, so expert-major gathering produces rows $[x_1,x_2]$ for expert 1 and $[x_1,x_2]$ for expert 2.
+
+The expert outputs are $[2x_1,2x_2]$ and $[-x_1,-x_2]$. Weighted scatter-add reconstructs $y_1=1.25x_1$ and $y_2=1.25x_2$. An inverse operation that overwrites the first expert's contribution with the second returns the wrong function despite producing the correct output shape. With coefficients held fixed, each diagonal derivative is 1.25 and each cross-token derivative is zero. This checks both branch accumulation and token identity.
+
+Now discard only token 1's assignment to expert 1. The assignment-drop fraction is $1/4$, half the tokens lose at least one branch, and no token loses all routed branches. Without renormalization, token 1's routed output becomes $-0.25x_1$; with surviving-weight renormalization it becomes $-x_1$. The residual stream, if present, is added separately. These different outcomes cannot be represented faithfully by one unlabeled drop-rate number.
+
+**DERIVED.** Repeat the fixture after permuting input-token order, expert-major row order, and physical expert placement. Identity-preserving execution should reconstruct the corresponding reordered outputs within the declared numerical tolerance. Add a negative control that intentionally loses one inverse identifier, so the audit demonstrates that it can detect the defect it is designed to prevent.
 
 ## Algorithm
 
@@ -153,7 +169,7 @@ INVARIANT: each accepted assignment appears exactly once before combination
 9. Report useful rows, padded rows, drops, and temporary-buffer capacity.
 ~~~
 
-Counting and prefix offsets cost \(O(A+E)\); feature gathering and scattering cost \(O(Ad)\). This avoids comparison sorting when expert identifiers occupy a known bounded integer range. Checked offsets and preallocation prevent overflow or unbounded writes. Parallel stable placement needs a verified ordering strategy; the reference does not assume atomics alone preserve order.
+Counting and prefix offsets cost $O(A+E)$; feature gathering and scattering cost $O(Ad)$. This avoids comparison sorting when expert identifiers occupy a known bounded integer range. Checked offsets and preallocation prevent overflow or unbounded writes. Parallel stable placement needs a verified ordering strategy; the reference does not assume atomics alone preserve order.
 
 ## Implementation
 

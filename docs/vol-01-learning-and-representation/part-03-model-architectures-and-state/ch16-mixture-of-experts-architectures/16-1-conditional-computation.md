@@ -24,7 +24,7 @@ benchmarks: []
 datasets: []
 status: {maturity: active, disputed: false}
 evidence_summary: {labels_used: [KNOWN, DERIVED, MATHEMATICALLY-DERIVED, PAPER-REPORTED, OFFICIAL-DOCUMENTATION, UNVERIFIED, NOT-DISCLOSED], empirically_observed: false}
-updated_at: 2026-09-25
+updated_at: 2026-09-26
 editorial_status: manuscript_draft
 ---
 
@@ -52,7 +52,7 @@ Sparse activation is usually local to selected sublayers. Attention, normalizati
 
 ## Formulation
 
-**MATHEMATICALLY-DERIVED.** For one MoE feed-forward layer, let \(E\) be the number of equal-sized routed experts, \(k\in\{1,\ldots,E\}\) selected experts per token, \(P_e\) parameters per routed expert, \(P_s\) parameters in always-active shared expert branches, and \(P_r\) router parameters. Let \(P_d\) denote other always-active parameters inside the explicitly chosen accounting boundary. Then
+**MATHEMATICALLY-DERIVED.** For one MoE feed-forward layer, let $E$ be the number of equal-sized routed experts, $k\in\{1,\ldots,E\}$ selected experts per token, $P_e$ parameters per routed expert, $P_s$ parameters in always-active shared expert branches, and $P_r$ router parameters. Let $P_d$ denote other always-active parameters inside the explicitly chosen accounting boundary. Then
 
 $$
 P_{\mathrm{total}}=P_d+P_s+P_r+EP_e,\qquad
@@ -60,9 +60,11 @@ P_{\mathrm{active,token}}=P_d+P_s+P_r+kP_e.
 $$
 *(Eq. 16.1)*
 
+where $E$ = routed experts, $k$ = selected experts per token, and $P_d,P_s,P_r,P_e$ are the declared dense, shared, router, and per-expert parameter counts.
+
 This counts the router's full scoring parameters when all expert scores are computed. It assumes distinct expert tensors and excludes tied-parameter double counting. Heterogeneous experts require a sum over the actual selected sizes.
 
-For an ungated two-matrix expert of model width \(d\) and hidden width \(h\), ignoring biases, normalization, and elementwise operations,
+For an ungated two-matrix expert of model width $d$ and hidden width $h$, ignoring biases, normalization, and elementwise operations,
 
 $$
 P_e=2dh,\qquad F_{e,\mathrm{forward}}\approx4dh
@@ -70,9 +72,11 @@ P_e=2dh,\qquad F_{e,\mathrm{forward}}\approx4dh
 $$
 *(Eq. 16.2)*
 
-The FLOP convention counts a multiply and addition separately. A three-matrix gated expert instead has \(3dh\) matrix parameters and approximately \(6dh\) matrix FLOPs. Use the actual expert form from Chapter 13.
+where $d$ = representation width, $h$ = expert hidden width, $P_e$ = matrix parameters, and $F_{e,\mathrm{forward}}$ = leading forward matrix FLOPs per token.
 
-Let \(\mathcal S_t\) be token \(t\)'s selected expert set. Across a batch of \(M\) tokens,
+The FLOP convention counts a multiply and addition separately. A three-matrix gated expert instead has $3dh$ matrix parameters and approximately $6dh$ matrix FLOPs. Use the actual expert form from Chapter 13.
+
+Let $\mathcal S_t$ be token $t$'s selected expert set. Across a batch of $M$ tokens,
 
 $$
 U=\left|\bigcup_{t=1}^{M}\mathcal S_t\right|,\qquad
@@ -80,7 +84,9 @@ k\le U\le\min(E,Mk).
 $$
 *(Eq. 16.3)*
 
-The union of touched experts can approach the full expert collection even though every token selects only \(k\). Per-token activation and per-batch weight access are different quantities.
+where $M$ = routed tokens, $\mathcal S_t$ = selected experts for token $t$, and $U$ = distinct experts touched by the batch.
+
+The union of touched experts can approach the full expert collection even though every token selects only $k$. Per-token activation and per-batch weight access are different quantities.
 
 
 ~~~figure
@@ -102,7 +108,7 @@ states: [{"anchor":"formulation","label":"Top two","variables":{"E":64,"k":2,"Pe
 
 **DERIVED.** A token passes through the router, gathers selected expert outputs, combines them with specified coefficients, and continues through the residual architecture. This selection changes the function family. It is not the same operation as pruning a dense network after training or placing dense weights on more devices.
 
-Increasing \(E\) at fixed \(k,d,h\) increases routed parameter capacity without increasing the leading selected-expert matrix arithmetic per token. However, a dense linear router over all experts costs \(O(MdE)\), and expert selection has its own cost. The complete layer cost is therefore not exactly constant in \(E\).
+Increasing $E$ at fixed $k,d,h$ increases routed parameter capacity without increasing the leading selected-expert matrix arithmetic per token. However, a dense linear router over all experts costs $O(MdE)$, and expert selection has its own cost. The complete layer cost is therefore not exactly constant in $E$.
 
 Parameter storage persists independently of whether an expert receives a particular token. In training, expert weights, gradients, and optimizer states have their own allocation and sharding rules. A zero gradient for one batch does not imply that the corresponding optimizer state has disappeared. In inference, offloading inactive experts can reduce device residency but adds transfer and scheduling costs.
 
@@ -126,7 +132,19 @@ Arithmetic intensity depends on tokens per expert. A large prefill batch may acc
 
 Capacity has two meanings that must remain separate. Statistical capacity concerns representational possibilities and learned behavior. Runtime expert capacity concerns how many routed assignments an execution policy admits. A large total parameter count establishes neither useful specialization nor a no-drop execution guarantee.
 
-For the illustrative equal-sized case, the routed-only total-to-active ratio is \(E/k\). The full-model ratio is smaller when always-active components contribute substantially. It can also differ across tokens for variable-\(k\) or heterogeneous-expert routing. Report the distribution or exact policy instead of one unexplained headline number.
+For the illustrative equal-sized case, the routed-only total-to-active ratio is $E/k$. The full-model ratio is smaller when always-active components contribute substantially. It can also differ across tokens for variable-$k$ or heterogeneous-expert routing. Report the distribution or exact policy instead of one unexplained headline number.
+
+Parameter activation also needs a convention for lookup tables. A token embedding lookup touches selected rows, whereas a dense output projection generally evaluates its full matrix. Counting every parameter in a framework tensor as active can therefore differ from counting the individual stored values read for that token. Equation 16.1 applies to its declared MoE feed-forward boundary; extending it to an entire model requires explicitly resolving embedding rows, tied output weights, and other conditional components. Keep the counting rule consistent across the sparse model and its dense baseline rather than selecting whichever convention produces the larger ratio.
+
+### Capacity requires sufficient exposure
+
+**DERIVED.** Stored parameters can be allocated before they are adequately trained. Under the explicitly synthetic uniform-selection reference of Eq. 16.18, a corpus containing $D$ routed tokens supplies an expected $Dk/E$ assignments to each expert. Doubling expert count at fixed tokens and top-k halves that expected exposure. This is an accounting consequence of the reference distribution, not a prediction that learned routing is uniform. The practical research question is whether the added experts receive enough diverse, useful updates to justify their storage.
+
+An illustrative parameter ledger makes the full-model boundary concrete. Take 64 routed experts with one million parameters each, top-two selection, four million shared-expert parameters, twelve million other always-active parameters, and a quarter-million router parameters. Equation 16.1 gives 80.25 million total parameters and 18.25 million activated parameters per token. The routed-only ratio is 32, whereas the full-boundary ratio is approximately 4.40. Neither number is a speedup. Every quantity in this fixture is an authored configuration rather than a named model specification.
+
+There is also a symmetry in expert naming. Permuting expert functions together with the corresponding router outputs preserves the represented function under a consistent routing contract. Consequently, an expert identifier has no intrinsic semantic meaning. A claim that one expert represents a particular scientific domain must survive controlled evaluation, and comparisons across checkpoints must account for possible permutation of identities.
+
+> **Open question.** At a fixed training-token and active-compute budget, when do additional experts improve held-out quality rather than mainly increase underexposed storage? · *what evidence would settle it:* a predeclared expert-count sweep with per-expert exposure, update norms, domain coverage, and quality under separately matched dense baselines.
 
 ## Algorithm
 
@@ -149,7 +167,7 @@ INVARIANT: each physical parameter tensor is counted once in total storage
 8. Report omitted optimizer, activation, cache, and communication terms explicitly.
 ~~~
 
-For \(M\) tokens with at most \(k\) assignments, trace aggregation can run in \(O(Mk+E)\) using bounded expert-index arrays. Avoid repeated full-model scans per token. Sorting arbitrary tensor identifiers adds comparator and lookup cost; a prebuilt inventory separates that work from the hot accounting path.
+For $M$ tokens with at most $k$ assignments, trace aggregation can run in $O(Mk+E)$ using bounded expert-index arrays. Avoid repeated full-model scans per token. Sorting arbitrary tensor identifiers adds comparator and lookup cost; a prebuilt inventory separates that work from the hot accounting path.
 
 ## Implementation
 
@@ -230,4 +248,3 @@ Preserve the parameter inventory, tensor identity rules, expert configuration, r
 ## References
 
 [P10](references.md#p10); [P13](references.md#p13); [R16.1](references.md#r161); [R16.4](references.md#r164); [R16.5](references.md#r165).
-

@@ -52,7 +52,7 @@ The visibility mask is a separate object. A position transform may distinguish t
 
 ## Formulation
 
-**MATHEMATICALLY-DERIVED.** Use column vectors. Let token embedding \(e_t\) and absolute position vector \(p_t\) lie in \(\mathbb R^{d_{\mathrm{model}}}\); let \(W_Q,W_K\) map these vectors to a head of width \(d_k\). Then
+**MATHEMATICALLY-DERIVED.** Use column vectors. Let token embedding $e_t$ and absolute position vector $p_t$ lie in $\mathbb R^{d_{\mathrm{model}}}$; let $W_Q,W_K$ map these vectors to a head of width $d_k$. Then
 
 $$
 h_t=e_t+p_t,\qquad
@@ -60,9 +60,9 @@ q_t^\top k_s=(e_t+p_t)^\top W_Q^\top W_K(e_s+p_s).
 $$
 *(Eq. 15.1)*
 
-Expansion gives content–content, content–position, position–content, and position–position terms. None alone establishes dependence exclusively on the offset \(s-t\). The expression also explains why replacing a trained absolute embedding with a different positional mechanism is a model intervention.
+Expansion gives content–content, content–position, position–content, and position–position terms. None alone establishes dependence exclusively on the offset $s-t$. The expression also explains why replacing a trained absolute embedding with a different positional mechanism is a model intervention.
 
-For an even rotary dimension \(d_r\le d_k\), define a base \(a>1\), pair index \(j\in\{0,\ldots,d_r/2-1\}\), angular frequency \(\omega_j\), and block rotation \(R_j(t)\):
+For an even rotary dimension $d_r\le d_k$, define a base $a>1$, pair index $j\in\{0,\ldots,d_r/2-1\}$, angular frequency $\omega_j$, and block rotation $R_j(t)$:
 
 $$
 \omega_j=a^{-2j/d_r},\quad
@@ -75,9 +75,9 @@ R_j(t)=
 $$
 *(Eq. 15.2)*
 
-The identity follows from orthogonality and composition of rotations; \(R\) is the block diagonal operator on the rotary subspace. Any unrotated coordinates retain their ordinary dot product. It requires identical frequencies and coordinate pairing on both operands. [R15.1] supplies the rotary mechanism; the equality is reproduced here as a mathematical contract.
+The identity follows from orthogonality and composition of rotations; $R$ is the block diagonal operator on the rotary subspace. Any unrotated coordinates retain their ordinary dot product. It requires identical frequencies and coordinate pairing on both operands. [R15.1] supplies the rotary mechanism; the equality is reproduced here as a mathematical contract.
 
-For an ALiBi-style causal head \(i\), write the logit before masking as
+For an ALiBi-style causal head $i$, write the logit before masking as
 
 $$
 u_{i,t,s}=\frac{q_{i,t}^{\top}k_{i,s}}{\sqrt{d_k}}-a_i(t-s),
@@ -85,7 +85,7 @@ u_{i,t,s}=\frac{q_{i,t}^{\top}k_{i,s}}{\sqrt{d_k}}-a_i(t-s),
 $$
 *(Eq. 15.3)*
 
-Here \(a_i\) is a head slope, distinct from the rotary base \(a\). The sign penalizes older keys under this causal coordinate convention. This expression describes the bias family, not a replacement for the source's complete slope schedule [R15.2].
+Here $a_i$ is a head slope, distinct from the rotary base $a$. The sign penalizes older keys under this causal coordinate convention. This expression describes the bias family, not a replacement for the source's complete slope schedule [R15.2].
 
 Finally, rotary phase difference and its real-valued period are
 
@@ -94,7 +94,7 @@ $$
 $$
 *(Eq. 15.4)*
 
-\(P_j\) is measured in position units; it need not be an integer token period. One pair wrapping does not imply that the entire multi-frequency representation repeats.
+$P_j$ is measured in position units; it need not be an integer token period. One pair wrapping does not imply that the entire multi-frequency representation repeats.
 
 ~~~figure
 id: fig-15.3
@@ -126,7 +126,7 @@ states:
 
 **PAPER-REPORTED.** RoFormer applies rotary position encoding to query and key representations [R15.1]. ALiBi uses head-dependent linear attention biases and investigates extrapolation from shorter training inputs [R15.2]. Preserve their distinction: a rotation changes content-dependent dot products; an additive bias contributes a distance-dependent preference.
 
-**DERIVED.** Learned absolute tables require \(T_{\mathrm{table}}d_{\mathrm{model}}\) stored embedding parameters. Extending the allocated table creates positions whose values need a specified initialization and training procedure. Analytic sinusoidal or rotary functions avoid that particular table bound but retain questions about exposure and numerical precision.
+**DERIVED.** Learned absolute tables require $T_{\mathrm{table}}d_{\mathrm{model}}$ stored embedding parameters. Extending the allocated table creates positions whose values need a specified initialization and training procedure. Analytic sinusoidal or rotary functions avoid that particular table bound but retain questions about exposure and numerical precision.
 
 Relative vectors and relative scalar biases also differ. Vector-valued relative terms can interact with queries; scalar biases directly adjust logits. Clipping or bucketing offsets merges positional categories. Such merging can be deliberate, but it removes distinctions that a finer representation would preserve. Avoid describing every relative-position method as one interchangeable implementation.
 
@@ -183,7 +183,7 @@ INVARIANT: logical locations and allowed token pairs agree across both paths
 8. Record every failing coordinate, mask edge, and configuration; then terminate.
 ~~~
 
-The transformation audit costs \(O(BT(H_q+H_{kv})d_r)\); the deliberately small dense reference additionally costs quadratic attention work. Bound \(T\) before allocation. The audit is a correctness check, so replacing it with an approximate attention operator would invalidate its purpose.
+The transformation audit costs $O(BT(H_q+H_{kv})d_r)$; the deliberately small dense reference additionally costs quadratic attention work. Bound $T$ before allocation. The audit is a correctness check, so replacing it with an approximate attention operator would invalidate its purpose.
 
 ## Implementation
 

@@ -4758,6 +4758,13 @@
       "title": "Evaluation ecosystem, 2026 — frameworks, benchmarks, and platforms in priority order",
       "slug": "appendix-i-evaluation-ecosystem-2026",
       "path": "appendices/appendix-i-evaluation-ecosystem-2026.md"
+    },
+    {
+      "id": "ms.appendix.j",
+      "letter": "J",
+      "title": "AI futures, 2026 — forecasting, control, and alignment sources in supplied rank order",
+      "slug": "appendix-j-ai-futures-2026",
+      "path": "appendices/appendix-j-ai-futures-2026.md"
     }
   ],
   "front_matter": [

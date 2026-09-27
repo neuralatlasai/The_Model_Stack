@@ -44,7 +44,7 @@ A uniform position rescaling compresses a longer coordinate interval into a shor
 
 ## Intuition
 
-**MATHEMATICALLY-DERIVED.** Under a uniform stretch factor \(\alpha>1\), a token separation of one becomes a transformed separation of \(1/\alpha\). A formerly familiar long separation may return to the original phase range, but the model must resolve compressed local differences. Extension cannot be understood only at the final token.
+**MATHEMATICALLY-DERIVED.** Under a uniform stretch factor $\alpha>1$, a token separation of one becomes a transformed separation of $1/\alpha$. A formerly familiar long separation may return to the original phase range, but the model must resolve compressed local differences. Extension cannot be understood only at the final token.
 
 Frequency adjustment makes this trade-off nonuniform across rotary pairs. A high-frequency pair and a low-frequency pair have different numbers of rotations over the training window. Treating them identically is one design; selectively rescaling them is another. Neither follows from the maximum target length alone.
 
@@ -52,7 +52,7 @@ Frequency adjustment makes this trade-off nonuniform across rotary pairs. A high
 
 ## Formulation
 
-**MATHEMATICALLY-DERIVED.** Let \(T_0>0\) be the reference training length and \(T_1\ge T_0\) a target length, both in tokens. For coordinate \(p\in[0,T_1)\), uniform interpolation uses
+**MATHEMATICALLY-DERIVED.** Let $T_0>0$ be the reference training length and $T_1\ge T_0$ a target length, both in tokens. For coordinate $p\in[0,T_1)$, uniform interpolation uses
 
 $$
 \alpha=\frac{T_1}{T_0},\qquad p'=\frac{p}{\alpha},\qquad
@@ -60,7 +60,7 @@ $$
 $$
 *(Eq. 15.5)*
 
-The transformed half-open interval lies within \([0,T_0)\). This ratio maps intervals; it does not equate the last integer coordinate in each interval. Position scaling and frequency scaling are equivalent inside the rotary phase product when every other operation is unchanged.
+The transformed half-open interval lies within $[0,T_0)$. This ratio maps intervals; it does not equate the last integer coordinate in each interval. Position scaling and frequency scaling are equivalent inside the rotary phase product when every other operation is unchanged.
 
 To reason about selective scaling, define the following illustrative family:
 
@@ -73,7 +73,7 @@ $$
 
 This is a chapter-authored interpolation family, **not the complete YaRN implementation**. A zero coefficient interpolates that frequency; a unit coefficient preserves it. Reproducing a named method additionally requires its actual band boundaries, ramp, magnitude treatment, and training procedure [R15.4].
 
-If both transformed query and key vectors are multiplied by \(\eta>0\), then
+If both transformed query and key vectors are multiplied by $\eta>0$, then
 
 $$
 \frac{(\eta R(t)q)^\top(\eta R(s)k)}{\sqrt{d_k}}
@@ -81,7 +81,7 @@ $$
 $$
 *(Eq. 15.7)*
 
-Scaling both operands by \(\eta\) multiplies the dot-product contribution by \(\eta^2\). It does not scale independently added biases unless the implementation explicitly does so. This distinction prevents conflating a positional change with a softmax-temperature change.
+Scaling both operands by $\eta$ multiplies the dot-product contribution by $\eta^2$. It does not scale independently added biases unless the implementation explicitly does so. This distinction prevents conflating a positional change with a softmax-temperature change.
 
 ~~~figure
 id: fig-15.6
@@ -111,9 +111,9 @@ states:
 
 ## Mechanism
 
-**DERIVED.** There are three distinct levers. Coordinate interpolation changes the argument of each rotary pair. Base adjustment changes the frequency spectrum: replacing the base in \(\omega_j=a^{-2j/d_r}\) affects different indices differently. Attention magnitude adjustment changes logit concentration. Combining them requires recording the composed operator, not merely a method label.
+**DERIVED.** There are three distinct levers. Coordinate interpolation changes the argument of each rotary pair. Base adjustment changes the frequency spectrum: replacing the base in $\omega_j=a^{-2j/d_r}$ affects different indices differently. Attention magnitude adjustment changes logit concentration. Combining them requires recording the composed operator, not merely a method label.
 
-A useful dimensionless diagnostic is the number of rotations over the reference interval, \(T_0\omega_j/(2\pi)\). Frequencies with many rotations and frequencies with less than one rotation present different extrapolation geometry. This diagnostic motivates inspecting bands; it does not determine optimal boundaries without training or evaluation.
+A useful dimensionless diagnostic is the number of rotations over the reference interval, $T_0\omega_j/(2\pi)$. Frequencies with many rotations and frequencies with less than one rotation present different extrapolation geometry. This diagnostic motivates inspecting bands; it does not determine optimal boundaries without training or evaluation.
 
 **PAPER-REPORTED.** YaRN develops a particular combination of interpolation choices and attention scaling [R15.4]. LongRoPE2 uses a search objective and mixed-window training to address its investigated extension setting [R15.5]. Neither paper supplies a theorem that arbitrary checkpoints retain all shorter-context capabilities after extension.
 
@@ -172,7 +172,7 @@ INVARIANT: sealed test examples do not influence candidate selection
 8. Evaluate the sealed matrix once; report failures as well as accepted cells.
 ~~~
 
-For \(C\) bounded candidates, total work is the sum of their adaptation and evaluation costs, not the cost of the selected checkpoint alone. Candidate selection itself can use a linear scan over precomputed metrics. Budgeting by successful candidates conceals search expenditure.
+For $C$ bounded candidates, total work is the sum of their adaptation and evaluation costs, not the cost of the selected checkpoint alone. Candidate selection itself can use a linear scan over precomputed metrics. Budgeting by successful candidates conceals search expenditure.
 
 ## Implementation
 

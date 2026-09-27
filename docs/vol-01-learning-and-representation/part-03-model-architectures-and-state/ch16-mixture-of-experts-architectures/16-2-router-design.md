@@ -24,7 +24,7 @@ benchmarks: []
 datasets: []
 status: {maturity: active, disputed: false}
 evidence_summary: {labels_used: [KNOWN, DERIVED, MATHEMATICALLY-DERIVED, PAPER-REPORTED, OFFICIAL-DOCUMENTATION, UNVERIFIED, NOT-DISCLOSED], empirically_observed: false}
-updated_at: 2026-09-25
+updated_at: 2026-09-26
 editorial_status: manuscript_draft
 ---
 
@@ -52,7 +52,7 @@ A router score is also not automatically a calibrated probability that an expert
 
 ## Formulation
 
-**MATHEMATICALLY-DERIVED.** Let \(X\in\mathbb R^{M\times d}\) contain \(M\) token representations and \(W_r\in\mathbb R^{d\times E}\) router weights. Ignoring router bias for the reference case,
+**MATHEMATICALLY-DERIVED.** Let $X\in\mathbb R^{M\times d}$ contain $M$ token representations and $W_r\in\mathbb R^{d\times E}$ router weights. Ignoring router bias for the reference case,
 
 $$
 Z=XW_r,\qquad
@@ -61,9 +61,11 @@ p_{t,e}=\frac{\exp(z_{t,e})}{\sum_{j=1}^{E}\exp(z_{t,j})},\qquad
 $$
 *(Eq. 16.4)*
 
+where $X$ has shape $[M,d]$, $W_r$ has shape $[d,E]$, $Z$ has shape $[M,E]$, and $p_{t,e}$ is the full-softmax score.
+
 Use numerically stable softmax in implementation. Define deterministic ties by expert identifier in the reference. A production kernel's tie behavior requires separate verification.
 
-For expert functions \(f_e:\mathbb R^d\rightarrow\mathbb R^d\), two distinct combination rules are
+For expert functions $f_e:\mathbb R^d\rightarrow\mathbb R^d$, two distinct combination rules are
 
 $$
 y_t^{\mathrm{mass}}=\sum_{e\in\mathcal S_t}p_{t,e}f_e(x_t),\qquad
@@ -73,9 +75,11 @@ y_t^{\mathrm{renorm}}=
 $$
 *(Eq. 16.5)*
 
+where $f_e$ maps a token representation to an expert output and the denominator sums only over the selected expert set.
+
 These outputs generally differ. The second preserves unit selected mass; the first retains information about probability mass assigned outside the chosen set. Shared branches, if present, are added under their own specified scaling rule.
 
-For fixed selected set and \(k=1\), selected renormalization makes the coefficient exactly one:
+For fixed selected set and $k=1$, selected renormalization makes the coefficient exactly one:
 
 $$
 \frac{p_{t,e}}{p_{t,e}}=1,\qquad
@@ -83,6 +87,8 @@ $$
 \left(\frac{p_{t,e}}{p_{t,e}}\right)=0.
 $$
 *(Eq. 16.6)*
+
+where the selected expert is fixed locally, its probability is positive, and the derivative excludes a discrete selection-boundary crossing.
 
 This local derivative assumes positive probability and no selection-boundary crossing. The hard selection remains discontinuous. It explains why casually renormalizing a top-one gate can remove a task-gradient path through the mixture coefficient. Other auxiliary or surrogate paths may still train the router.
 
@@ -132,6 +138,18 @@ Expert-choice routing instead imposes capacity from the expert side. **PAPER-REP
 
 Specialization requires more than load histograms. Compare routing by controlled domains, input features, and task requirements, then intervene on selected experts or routing decisions. Balanced counts can coexist with similar expert functions, and distinct counts can reflect superficial tokens rather than useful task decomposition. Preserve uncertainty and avoid naming experts from anecdotal examples.
 
+### Causality and dependence on other batch members
+
+> **Proposition 16.1.** A stateless token-local MoE sublayer preserves causal dependence if its input representation is causal, expert functions are token-local, parameters are fixed during the forward pass, and selection and acceptance do not depend on future tokens or other examples.
+
+*Proof sketch — MATHEMATICALLY-DERIVED.* Under these conditions, the scores, selected indices, coefficients, and expert outputs for token $t$ are all functions of its causal representation $x_t$ and fixed parameters. Their weighted sum therefore depends only on the same permitted prefix. Hard selection can make that function discontinuous without introducing a new information dependency.
+
+The conditions matter. Consider an expert with capacity one and a policy retaining the highest-scoring assignment in a two-token group. Holding the first token fixed while changing the second can change whether the first token is accepted. Its output can then change even though its own representation and scores are identical. If the second token is a future token in the same autoregressive sequence, this is a causal-dependence violation for that reference policy. If it belongs to another request, it is a dependence on co-batching.
+
+Expert-choice selection over a token pool has a related scope question: each expert's selected set depends on the pool against which scores compete. This does not make the method universally invalid; it means that encoder, autoregressive, and batched-serving settings require different admissible selection scopes. A causal attention mask alone does not prove that the complete layer is causal.
+
+**PROPOSAL.** Add two intervention tests: modify future tokens while holding the prefix fixed, and replace unrelated co-batched examples while holding the target request fixed. Compare selections, admission decisions, and outputs separately. Declare any permitted batch dependence rather than misclassifying it as numerical noise.
+
 ## Algorithm
 
 **DERIVED — deterministic token-choice reference.**
@@ -153,7 +171,7 @@ INVARIANT: every selected expert is eligible and each token has k distinct selec
 8. Return outputs together with scores, selections, and coefficient checks.
 ~~~
 
-A streaming bounded heap gives worst-case \(O(ME\log(k+1))\) selection work and \(O(k)\) selection state per token after scores are available. Full sorting costs \(O(ME\log E)\) and is unnecessary when only k selections are needed. Score computation adds \(O(MdE)\). Treat score comparison as constant-time only after finite scalar scores are computed and validated.
+A streaming bounded heap gives worst-case $O(ME\log(k+1))$ selection work and $O(k)$ selection state per token after scores are available. Full sorting costs $O(ME\log E)$ and is unnecessary when only k selections are needed. Score computation adds $O(MdE)$. Treat score comparison as constant-time only after finite scalar scores are computed and validated.
 
 ## Implementation
 
@@ -234,4 +252,3 @@ Retain scores, selected indices, eligible sets, normalization settings, tie rule
 ## References
 
 [P10](references.md#p10); [R16.4](references.md#r164); [R16.5](references.md#r165); [R16.7](references.md#r167).
-

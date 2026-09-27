@@ -52,7 +52,7 @@ Longer examples also change which dependencies are trainable. If every packed do
 
 ## Formulation
 
-**MATHEMATICALLY-DERIVED.** Consider \(B\) equal-length causal sequences of \(T\) valid tokens, with \(M=BT\) total tokens and self-attention including the diagonal. The number of permitted query–key pairs per head and layer is
+**MATHEMATICALLY-DERIVED.** Consider $B$ equal-length causal sequences of $T$ valid tokens, with $M=BT$ total tokens and self-attention including the diagonal. The number of permitted query–key pairs per head and layer is
 
 $$
 N_{\mathrm{pairs}}=B\frac{T(T+1)}{2}
@@ -60,9 +60,9 @@ N_{\mathrm{pairs}}=B\frac{T(T+1)}{2}
 $$
 *(Eq. 15.8)*
 
-At fixed \(M\), pair count grows approximately linearly with \(T\). This counts permitted interactions, not exact executed FLOPs: a backend may execute padded tiles, recompute intermediates, or use a different sparsity pattern.
+At fixed $M$, pair count grows approximately linearly with $T$. This counts permitted interactions, not exact executed FLOPs: a backend may execute padded tiles, recompute intermediates, or use a different sparsity pattern.
 
-For \(k\) independently packed documents of lengths \(n_1,\ldots,n_k\), with \(T=\sum_i n_i\), the difference between one concatenated causal sequence and block-isolated causal attention is
+For $k$ independently packed documents of lengths $n_1,\ldots,n_k$, with $T=\sum_i n_i$, the difference between one concatenated causal sequence and block-isolated causal attention is
 
 $$
 N_{\mathrm{concat}}=\frac{T(T+1)}{2},\quad
@@ -73,7 +73,7 @@ $$
 
 The removed pairs are precisely the cross-document causal interactions. Removing them changes the task when those interactions carry required evidence.
 
-For distributed valid-token loss, let rank \(r\) own valid targets \(\mathcal V_r\), count \(v_r\), and token losses \(\ell_{r,t}\). The global token mean is
+For distributed valid-token loss, let rank $r$ own valid targets $\mathcal V_r$, count $v_r$, and token losses $\ell_{r,t}$. The global token mean is
 
 $$
 \mathcal L=
@@ -176,7 +176,7 @@ INVARIANT: target eligibility and attention visibility preserve document semanti
 9. Stop at the finite stage budget, save state, and evaluate held-out length cells.
 ~~~
 
-If a reducer averages gradients across \(P\) ranks, local loss sums require a factor \(P/\sum_r v_r\) to reproduce Eq. 15.10, under that stated reducer convention. A summing reducer requires a different factor. Gradient accumulation adds another counting boundary; normalize over the intended complete optimizer batch.
+If a reducer averages gradients across $P$ ranks, local loss sums require a factor $P/\sum_r v_r$ to reproduce Eq. 15.10, under that stated reducer convention. A summing reducer requires a different factor. Gradient accumulation adds another counting boundary; normalize over the intended complete optimizer batch.
 
 ## Implementation
 

@@ -24,7 +24,7 @@ benchmarks: []
 datasets: []
 status: {maturity: active, disputed: false}
 evidence_summary: {labels_used: [KNOWN, DERIVED, MATHEMATICALLY-DERIVED, PAPER-REPORTED, OFFICIAL-DOCUMENTATION, UNVERIFIED, NOT-DISCLOSED], empirically_observed: false}
-updated_at: 2026-09-25
+updated_at: 2026-09-26
 editorial_status: manuscript_draft
 ---
 
@@ -52,16 +52,18 @@ A router selects logical experts under its architecture contract. A dispatcher c
 
 ## Formulation
 
-**MATHEMATICALLY-DERIVED.** For a reference dispatcher, let \(A_{\mathrm{remote}}\) be the number of remote token–expert assignments in one forward pass, \(d\) the representation width, and \(b_a\) bytes per communicated activation value. If each remote assignment sends one full input row and returns one full output row,
+**MATHEMATICALLY-DERIVED.** For a reference dispatcher, let $A_{\mathrm{remote}}$ be the number of remote token–expert assignments in one forward pass, $d$ the representation width, and $b_a$ bytes per communicated activation value. If each remote assignment sends one full input row and returns one full output row,
 
 $$
 B_{\mathrm{forward,logical}}=2A_{\mathrm{remote}}db_a.
 $$
 *(Eq. 16.14)*
 
+where $A_{\mathrm{remote}}$ = remote assignments, $d$ = activation width, and $b_a$ = bytes per communicated value.
+
 Count each logical transfer once, rather than adding both endpoint counters. This excludes metadata, padding, protocol overhead, retransmissions, tensor-parallel collectives, and backward communication. If a backend deduplicates a token sent to multiple experts on one destination, the assignment-level expression overcounts that backend's input payload; use its actual transfer unit.
 
-Let device \(r\) perform \(F_r\) FLOPs and transfer \(B_r\) bytes across an explicitly defined bottleneck boundary. If \(\Pi_r\) and \(\Beta_r\) are applicable upper bounds on its compute and transfer rates, then
+Let device $r$ perform $F_r$ FLOPs and transfer $B_r$ bytes across an explicitly defined bottleneck boundary. If $\Pi_r$ and $\Beta_r$ are applicable upper bounds on its compute and transfer rates, then
 
 $$
 t_{\mathrm{region}}\ge
@@ -69,15 +71,19 @@ t_{\mathrm{region}}\ge
 $$
 *(Eq. 16.15)*
 
-This is only a lower bound. Dependencies, launch overhead, contention, and imperfect overlap can increase time. Use consistent byte-count boundaries for \(B_r\) and \(\Beta_r\); aggregate fabric bandwidth is not automatically a per-rank rate.
+where $F_r$ = device FLOPs, $B_r$ = bytes at the declared boundary, and $\Pi_r,\Beta_r$ = corresponding rate upper bounds.
 
-For \(r_e\ge1\) identical physical replicas of logical expert \(e\), each with parameter payload \(P_e b_w\) bytes,
+This is only a lower bound. Dependencies, launch overhead, contention, and imperfect overlap can increase time. Use consistent byte-count boundaries for $B_r$ and $\Beta_r$; aggregate fabric bandwidth is not automatically a per-rank rate.
+
+For $r_e\ge1$ identical physical replicas of logical expert $e$, each with parameter payload $P_e b_w$ bytes,
 
 $$
 M_{e,\mathrm{weights}}=r_eP_e b_w,\qquad
 \Delta M_{e,\mathrm{weights}}=(r_e-1)P_e b_w.
 $$
 *(Eq. 16.16)*
+
+where $r_e$ = synchronized replicas, $P_e$ = expert parameters, and $b_w$ = stored bytes per parameter.
 
 This counts weight replicas only. Training adds gradient and optimizer synchronization and storage. Inference replicas require consistent weights and model configuration.
 
@@ -131,6 +137,16 @@ Overlap requires independent work. A shared branch may execute while remote rout
 
 Measure exposed communication on the critical path, not only the duration of communication calls. Faster communication can leave the end-to-end time unchanged if another stage dominates. Conversely, increased overlap can reduce exposed time without reducing transferred bytes. Keep volume, duration, and exposure as separate metrics.
 
+### Transfer units and replica-update equivalence
+
+**DERIVED.** Communication accounting starts by choosing a transfer unit. In an assignment-per-transfer dispatcher, one token selected by two remote experts creates two input-row transfers. A destination-aware dispatcher can send that token once to a destination that hosts both experts, then expand its local assignments. If the destination also combines contributions before returning them, its return traffic changes as well. These are different physical realizations of the same logical assignment graph, provided that coefficients and accumulation remain correct.
+
+Consequently, compare Eq. 16.14 with a trace only after establishing whether the trace counts token–expert edges, distinct token–destination pairs, packets, or endpoint bytes. A reported reduction caused by deduplication is meaningful, but it cannot be verified against the wrong unit. Network compression introduces another distinction between logical activation payload and transmitted representation, with numerical validation required if compression changes values.
+
+Training replicas need an analogous identity check for updates. If two replicas process unequal numbers of examples, averaging their local mean gradients equally does not generally reproduce the gradient of the combined assignment set. The correct weighting follows the declared global objective and valid-target normalization, as developed in [15.3](../ch15-position-long-context-and-effective-information-access/15-3-long-sequence-training.md). Replication changes physical execution; preserving one logical expert requires preserving its intended aggregate update.
+
+**PROPOSAL.** Before a large distributed run, compare a single-owner reference with a two-replica execution on a deliberately uneven assignment split. Check expert outputs, input gradients, expert-weight gradients, and one optimizer update. Then alter placement while holding logical assignments fixed. Only after these checks should a performance study attribute differences to placement, replication, or overlap rather than to a changed learning rule.
+
 ## Algorithm
 
 **DERIVED — ownership-preserving distributed dispatch.**
@@ -153,7 +169,7 @@ INVARIANT: each logical assignment executes on one valid owner or equivalent rep
 9. Record bytes, rank work, link boundaries, exposed communication, and failures.
 ~~~
 
-Count construction and packing are linear in assignments plus destination bookkeeping. A dense peer-count table uses \(O(P^2)\) entries across \(P\) ranks; its scale is bounded by the chosen communicator, not by an unbounded token dataset. Sparse destination maps may reduce metadata when communication is sparse, but their negotiation and lookup costs must be included.
+Count construction and packing are linear in assignments plus destination bookkeeping. A dense peer-count table uses $O(P^2)$ entries across $P$ ranks; its scale is bounded by the chosen communicator, not by an unbounded token dataset. Sparse destination maps may reduce metadata when communication is sparse, but their negotiation and lookup costs must be included.
 
 ## Implementation
 
@@ -234,4 +250,3 @@ Archive placement maps, process groups, routing traces, split sizes, replica ide
 ## References
 
 [P13](references.md#p13); [R16.4](references.md#r164); [R16.5](references.md#r165); [R16.6](references.md#r166).
-

@@ -52,16 +52,16 @@ Evidence position is a vector when several facts are required. Placing all facts
 
 ## Formulation
 
-**DERIVED.** Define a test cell \(c=(T,\mathbf p,d,k,\tau)\): token length \(T\); evidence positions \(\mathbf p\); distractor specification \(d\); required-fact count \(k\); and task family \(\tau\). Preserve both absolute token offsets and normalized positions. Normalization must specify its denominator and evidence-span convention.
+**DERIVED.** Define a test cell $c=(T,\mathbf p,d,k,\tau)$: token length $T$; evidence positions $\mathbf p$; distractor specification $d$; required-fact count $k$; and task family $\tau$. Preserve both absolute token offsets and normalized positions. Normalization must specify its denominator and evidence-span convention.
 
-**MATHEMATICALLY-DERIVED.** For binary success \(Y_{c,i}\in\{0,1\}\) on \(n_c>0\) independently sampled examples from a fixed cell distribution,
+**MATHEMATICALLY-DERIVED.** For binary success $Y_{c,i}\in\{0,1\}$ on $n_c>0$ independently sampled examples from a fixed cell distribution,
 
 $$
 \widehat q_c=\frac{1}{n_c}\sum_{i=1}^{n_c}Y_{c,i}.
 $$
 *(Eq. 15.11)*
 
-A conservative simultaneous lower bound across \(K\ge1\) predeclared cells is
+A conservative simultaneous lower bound across $K\ge1$ predeclared cells is
 
 $$
 q_c^{\mathrm{lower}}
@@ -71,9 +71,9 @@ q_c^{\mathrm{lower}}
 $$
 *(Eq. 15.12)*
 
-The bound uses the one-sided concentration inequality for independent bounded observations within each cell, followed by a union bound over cells. Set the per-cell failure probability to \(\delta/K\); solving \(\exp(-2n_c\epsilon_c^2)=\delta/K\) gives the displayed margin. Cross-cell independence is unnecessary for the union bound. Reusing correlated variants as independent examples within a cell violates the premise.
+The bound uses the one-sided concentration inequality for independent bounded observations within each cell, followed by a union bound over cells. Set the per-cell failure probability to $\delta/K$; solving $\exp(-2n_c\epsilon_c^2)=\delta/K$ gives the displayed margin. Cross-cell independence is unnecessary for the union bound. Reusing correlated variants as independent examples within a cell violates the premise.
 
-Let \(\mathcal G\) be a finite length grid and \(\mathcal C(T)\) its predeclared cells. For quality threshold \(q_\star\), define the passing tested lengths:
+Let $\mathcal G$ be a finite length grid and $\mathcal C(T)$ its predeclared cells. For quality threshold $q_\star$, define the passing tested lengths:
 
 $$
 \mathcal G_{\mathrm{pass}}

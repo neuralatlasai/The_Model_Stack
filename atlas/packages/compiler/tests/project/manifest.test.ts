@@ -16,10 +16,10 @@ describe('parseManifest', () => {
     assert.equal(parts.length, 11);
     assert.equal(chapters.length, 66);
     assert.equal(sections.length, 396);
-    // A–H from book_plan.md, plus I: the evaluation ecosystem (added 2026-09-25).
+    // A–H from book_plan.md, plus I: the evaluation ecosystem (added 2026-09-25) and J: AI futures (added 2026-09-27).
     assert.deepEqual(
       manifest.appendices.map((appendix) => appendix.letter),
-      ['A', 'B', 'C', 'D', 'E', 'F', 'G', 'H', 'I'],
+      ['A', 'B', 'C', 'D', 'E', 'F', 'G', 'H', 'I', 'J'],
     );
     assert.equal(manifest.front_matter.length, 3);
     const chapter5 = must(chapters.find((chapter) => chapter.id === 'ms.chapter.5'));

@@ -24,7 +24,7 @@ benchmarks: []
 datasets: []
 status: {maturity: active, disputed: false}
 evidence_summary: {labels_used: [KNOWN, DERIVED, MATHEMATICALLY-DERIVED, PAPER-REPORTED, OFFICIAL-DOCUMENTATION, UNVERIFIED, NOT-DISCLOSED], empirically_observed: false}
-updated_at: 2026-09-25
+updated_at: 2026-09-26
 editorial_status: manuscript_draft
 ---
 
@@ -217,7 +217,7 @@ These filled-in queries are reproducible discovery routes. The source register r
 
 ## Status
 
-**Manuscript draft for the 2026 edition.** Primary papers and current official implementation surfaces were inspected on 2026-09-25. The chapter contains six technical sections, nineteen numbered equations, chapter-local figures, and proposed experiments. Historical mechanisms retain their original dates; moving documentation remains explicitly unpinned.
+**Manuscript draft for the 2026 edition.** Primary papers and current official implementation surfaces were inspected on 2026-09-25, with the ST-MoE research extension inspected on 2026-09-26. The chapter contains six technical sections, nineteen numbered equations, chapter-local figures, and proposed experiments. Historical mechanisms retain their original dates; moving documentation remains explicitly unpinned.
 
 **UNVERIFIED:** proposed quality outcomes, expert specialization, training stability, workload-specific throughput, tail latency, energy, and monetary cost. **NOT-DISCLOSED:** implementation or training details absent from inspected sources. Mathematical fixture results validate identities and accounting, not empirical superiority or a universal MoE deployment recommendation.
 

@@ -24,19 +24,19 @@ benchmarks: []
 datasets: []
 status: {maturity: active, disputed: false}
 evidence_summary: {labels_used: [KNOWN, DERIVED, MATHEMATICALLY-DERIVED, PAPER-REPORTED, OFFICIAL-DOCUMENTATION, UNVERIFIED, NOT-DISCLOSED], empirically_observed: false}
-updated_at: 2026-09-25
+updated_at: 2026-09-26
 editorial_status: manuscript_draft
 ---
 
 # Chapter 16 — References and evidence boundaries
 
-Primary sources were inspected on **2026-09-25** through the routes in Instruction/AI_REFERENCE_STACK.md. The chapter's explicit book-plan anchors are Switch Transformers [P10] and DeepSeek-V3 [P13]. Current documentation is distinguished from historical research and from a tested installation.
+Primary sources were inspected on **2026-09-25**, with the additional ST-MoE source inspected on **2026-09-26**, through the routes in Instruction/AI_REFERENCE_STACK.md. The chapter's explicit book-plan anchors are Switch Transformers [P10] and DeepSeek-V3 [P13]. Current documentation is distinguished from historical research and from a tested installation.
 
 ## Typed reference records
 
 | Key | Type | Work | Authors / organisation | Venue / year | Primary URL | Official code | Status | Used for | Accessed |
 |---|---|---|---|---|---|---|---|---|---|
-| P10 | paper | Switch Transformers: Scaling to Trillion Parameter Models with Simple and Efficient Sparsity | Fedus, Zoph, Shazeer | JMLR 2022 / arXiv 2021 | https://arxiv.org/abs/2101.03961 | null | peer-reviewed | Top-one sparse routing and auxiliary balancing; 16.1–16.3 | 2026-09-25 |
+| P10 | paper | Switch Transformers (full title: Switch Transformers: Scaling to Trillion Parameter Models with Simple and Efficient Sparsity) | Fedus, Zoph, Shazeer, Google Research | arXiv 2021 (v2 2022); JMLR | https://arxiv.org/abs/2101.03961 | null | preprint | Top-one sparse routing and auxiliary balancing; 16.1–16.3 | 2026-09-25 |
 | P13 | technical report | DeepSeek-V3 Technical Report | DeepSeek | arXiv 2024 (v2 2025) | https://arxiv.org/abs/2412.19437 | https://github.com/deepseek-ai | preprint | Shared/routed experts, complementary balancing terms, and distributed design; 16.1, 16.3, 16.5 | 2026-09-25 |
 | R16.1 | paper | Outrageously Large Neural Networks: The Sparsely-Gated Mixture-of-Experts Layer | Noam Shazeer et al. | arXiv 2017 | https://arxiv.org/abs/1701.06538 | null | preprint | Conditional expert capacity; 16.1 | 2026-09-25 |
 | R16.2 | paper | MegaBlocks: Efficient Sparse Training with Mixture-of-Experts | Trevor Gale; Deepak Narayanan; Cliff Young; Matei Zaharia | arXiv 2022, v1 | https://arxiv.org/abs/2211.15841 | null | preprint | Block-sparse response to dropping/padding trade-offs; 16.4 | 2026-09-25 |
@@ -45,10 +45,14 @@ Primary sources were inspected on **2026-09-25** through the routes in Instructi
 | R16.5 | documentation | Switch Transformers | Hugging Face Transformers | Moving main documentation; package revision not pinned | https://huggingface.co/docs/transformers/main/en/model_doc/switch_transformers | https://github.com/huggingface/transformers | official documentation | Model-specific implementation and configuration surface; 16.1–16.6 | 2026-09-25 |
 | R16.6 | documentation | Distributed communication package — torch.distributed | PyTorch | Versioned documentation path 2.14 | https://docs.pytorch.org/docs/2.14/distributed.html | https://github.com/pytorch/pytorch | official documentation | All-to-all communication and split-size contract; 16.5 | 2026-09-25 |
 | R16.7 | paper | Mixture-of-Experts with Expert Choice Routing | Yanqi Zhou; Tao Lei; Hanxiao Liu; Nan Du; Yanping Huang; Vincent Zhao; Andrew Dai; Zhifeng Chen; Quoc Le; James Laudon | arXiv 2022; inspected v2 | https://arxiv.org/abs/2202.09368 | null | preprint | Expert-selected token assignment alternative; 16.2 | 2026-09-25 |
+| R16.8 | paper | ST-MoE: Designing Stable and Transferable Sparse Expert Models | Barret Zoph; Irwan Bello; Sameer Kumar; Nan Du; Yanping Huang; Jeff Dean; Noam Shazeer; William Fedus | arXiv 2022; inspected v2 | https://arxiv.org/abs/2202.08906 | null | preprint | Router z-loss and its distinction from load balancing; 16.3 | 2026-09-26 |
+| R16.9 | paper | Switch Transformers: Scaling to Trillion Parameter Models with Simple and Efficient Sparsity | William Fedus; Barret Zoph; Noam Shazeer | JMLR 23(120):1-39, 2022 | https://www.jmlr.org/papers/v23/21-0998.html | null | peer-reviewed | Archival source for routing and auxiliary objective; 16.1-16.3 | 2026-09-25 |
 
 A null code field means that this register does not assert a project-specific repository. The status column describes the cited surface, except where an archival publication was explicitly inspected. It is not an assertion that other works lack peer-reviewed versions.
 
 ## P10
+
+The P10 row retains the book-wide spine metadata for its preprint route. The arXiv record inspected here includes v3; R16.9 separately records the inspected archival edition, so the original spine metadata is not mistaken for the latest revision or the publication status of the JMLR article.
 
 **PAPER-REPORTED.** The [arXiv record](https://arxiv.org/abs/2101.03961), [JMLR archival page](https://www.jmlr.org/papers/v23/21-0998.html), and [archival PDF](https://www.jmlr.org/papers/volume23/21-0998/21-0998.pdf) were inspected. The authors are William Fedus, Barret Zoph, and Noam Shazeer; the archival publication is JMLR 23(120):1–39, 2022.
 
@@ -90,9 +94,16 @@ The chapter avoids claiming package installation, backend activation, universal 
 
 **PAPER-REPORTED.** The [v2 full text](https://arxiv.org/html/2202.09368v2), dated 2022-10-14, was inspected after the abstract endpoint intermittently failed. The mechanism reverses token-choice selection by allowing experts to choose tokens. The chapter discusses assignment constraints without transferring source quality or speed claims.
 
+## R16.8
+
+**PAPER-REPORTED.** The [v2 full text](https://arxiv.org/html/2202.08906v2), especially §3.3–3.4 and Appendix B, was inspected on 2026-09-26. The chapter attributes the router z-loss mechanism, then independently derives its local gradient and common-logit-shift behavior. It does not transfer the paper's stability rates, quality scores, or selected coefficient to another model.
+
+## R16.9
+
+**PAPER-REPORTED.** The [JMLR archival page](https://www.jmlr.org/papers/v23/21-0998.html) and its linked PDF were inspected on 2026-09-25. This is the archival edition of P10, not an independent experimental source. It supplies the stable publication metadata and the routing/auxiliary-loss reference used in the chapter.
+
 ## Evidence audit
 
 **MATHEMATICALLY-DERIVED.** Equations 16.1–16.19 specify their own domains and accounting boundaries. The calculator values are illustrative fixtures. The uniform independent routing model in Eq. 16.18 is a declared synthetic reference, not a claim about learned-router distributions.
 
 **UNVERIFIED.** Model quality, specialization, training convergence, kernel performance, network efficiency, tail latency, energy, and financial cost are not measured in this chapter. Proposed experiments remain proposals. No inspected documentation page converts those unknowns into results.
-

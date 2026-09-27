@@ -1,0 +1,336 @@
+---
+/**
+ * AI futures (lib/ai-futures.ts) as one instrument and one index.
+ *
+ *   scope     a half-disc horizon seen from the observer at the base centre:
+ *             eight sectors = kinds, six rings = the supplier's fit bands
+ *             (highest on the horizon), one glyph per source (shape = kind,
+ *             colour = geography, hollow = UNVERIFIED, tick = address
+ *             updated). A sweep line crosses it every SWEEP_S seconds and
+ *             brightens each glyph it passes. Decorative (aria-hidden): the
+ *             index carries all of its information.
+ *   readout   the glyph or index line under the pointer; click pins
+ *   legend    kind, geography and status chips that also filter
+ *   spine     the book's 66 chapters, a tick where sources connect
+ *   index     the ranked list, one ruled line per source: rank, name, kind,
+ *             geography, description, status symbol
+ *
+ * Connected by client ai-futures.ts; complete without JavaScript.
+ */
+import type { AtlasGraph, ResearchDocument } from '@atlas/core';
+import { GEOS, GLYPHS, KINDS, SCOPE, STATUSES, findMentions, futures, linkLabel, presentGeos, scopeLayout, statusCounts } from '../../lib/ai-futures.ts';
+import { jsonForHtml } from '../../lib/json.ts';
+import { childrenOf, nodesOfType } from '../../lib/nodes.ts';
+
+interface Props {
+  graph: AtlasGraph;
+  docs: readonly ResearchDocument[];
+}
+
+const { graph, docs } = Astro.props;
+const { entries } = futures();
+const mentions = findMentions(entries, docs, graph);
+const layout = scopeLayout(entries);
+const { cx, cy, r0, R, width: W, height: H } = SCOPE;
+
+const pad = (n: number): string => String(n).padStart(2, '0');
+const kindOf = new Map(KINDS.map((kind) => [kind.key, kind]));
+const geoOf = new Map(GEOS.map((geo) => [geo.key, geo]));
+const statusOf = new Map(STATUSES.map((status) => [status.key, status]));
+const geos = presentGeos(entries);
+const statuses = statusCounts(entries);
+
+const rows = entries.map((entry) => {
+  const named = mentions.get(entry.rank) ?? [];
+  const namedChapters = [...new Set(named.map((mention) => mention.chapter))];
+  const chapters = [...new Set([...entry.chapters, ...namedChapters])].sort((a, b) => a - b);
+  return { entry, namedChapters, chapters };
+});
+const rowOf = new Map(rows.map((row) => [row.entry.rank, row]));
+
+const chapterStats = new Map(
+  [...new Set(rows.flatMap((row) => row.chapters))].map((n) => [
+    n,
+    { count: rows.filter((row) => row.chapters.includes(n)).length, named: rows.filter((row) => row.namedChapters.includes(n)).length },
+  ]),
+);
+const maxChapter = Math.max(1, ...[...chapterStats.values()].map((stat) => stat.count));
+const spine = nodesOfType(graph, 'part').map((part) => ({
+  part,
+  chapters: childrenOf(graph, part)
+    .filter((node) => node.entityType === 'chapter')
+    .map((node) => {
+      const n = Number.parseInt(node.number ?? '0', 10);
+      return { n, node, count: chapterStats.get(n)?.count ?? 0, named: chapterStats.get(n)?.named ?? 0 };
+    }),
+}));
+
+// ── scope geometry ───────────────────────────────────────────────────────────
+const at = (r: number, deg: number): [number, number] => [cx + r * Math.cos((deg * Math.PI) / 180), cy - r * Math.sin((deg * Math.PI) / 180)];
+const fmt = (n: number): string => String(Math.round(n * 10) / 10);
+const arc = (r: number): string => `M${fmt(cx - r)} ${fmt(cy)}A${fmt(r)} ${fmt(r)} 0 0 1 ${fmt(cx + r)} ${fmt(cy)}`;
+const trail = (deg: number): string => {
+  const [x, y] = at(R, 180 + deg);
+  return `M${fmt(cx)} ${fmt(cy)}L${fmt(cx - R)} ${fmt(cy)}A${fmt(R)} ${fmt(R)} 0 0 0 ${fmt(x)} ${fmt(y)}Z`;
+};
+const RIM: Readonly<Record<string, string>> = {
+  scenario: 'Scenarios',
+  measurement: 'Measurement',
+  alignment: 'Alignment',
+  framework: 'Frameworks',
+  governance: 'Governance',
+  lab: 'Labs',
+  institute: 'Institutes',
+  compute: 'Compute',
+};
+const STATUS_GLYPH: Readonly<Record<string, string>> = {
+  verified: 'M-4.6 0.4-1.6 3.4 4.8-3.2',
+  redirected: 'M-4.6-4.2v2.9a2.7 2.7 0 0 0 2.7 2.7H4.8M2 -1.8 4.8 1.4 2 4.6',
+  unverified: 'M-2.5-2.3a2.6 2.6 0 1 1 3.5 2.4c-.8.4-1 .9-1 1.8v.5M0 4.7v.2',
+};
+
+const island = {
+  entries: rows.map(({ entry, chapters }) => ({
+    rank: entry.rank,
+    name: entry.name,
+    kind: entry.kind,
+    geo: entry.geo,
+    fit: entry.fit,
+    status: entry.verification.status,
+    description: entry.description,
+    reason: entry.reason,
+    url: entry.links.url,
+    chapters,
+  })),
+};
+---
+
+<section class="aif" data-aif-explorer aria-label="AI futures sources">
+  <script type="application/json" data-aif-data set:html={jsonForHtml(island)} />
+  <svg class="aif-defs" aria-hidden="true" focusable="false" width="0" height="0">
+    {
+      KINDS.map((kind) => (
+        <symbol id={`aif-sym-${kind.key}`} viewBox="-9 -9 18 18">
+          <path d={GLYPHS[kind.key]} />
+        </symbol>
+      ))
+    }
+    {
+      STATUSES.map((status) => (
+        <symbol id={`aif-st-${status.key}`} viewBox="-7 -7 14 14">
+          <path d={STATUS_GLYPH[status.key]} />
+        </symbol>
+      ))
+    }
+  </svg>
+
+  <div class="aif-top">
+    <figure class="aif-scope" data-aif-scope>
+      <svg class="aif-scope__svg" viewBox={`0 0 ${String(W)} ${String(H)}`} aria-hidden="true" focusable="false">
+        <defs>
+          <clipPath id="aif-half"><path d={`${arc(R)}Z`} /></clipPath>
+        </defs>
+        <path class="aif-scope__field" d={`${arc(R)}Z`} />
+        {layout.rings.map((ring, i) => <path class:list={['aif-scope__ring', { 'is-horizon': i === layout.rings.length - 1, 'is-hub': i === 0 }]} d={arc(ring.r)} />)}
+        {
+          layout.edges.slice(1, -1).map((deg) => {
+            const [x1, y1] = at(r0, deg);
+            const [x2, y2] = at(R, deg);
+            return <line class="aif-scope__edge" x1={fmt(x1)} y1={fmt(y1)} x2={fmt(x2)} y2={fmt(y2)} />;
+          })
+        }
+        <line class="aif-scope__base" x1={fmt(cx - R - 8)} y1={fmt(cy)} x2={fmt(cx + R + 8)} y2={fmt(cy)} />
+        {
+          layout.sectors.map(({ kind, mid }) => {
+            const [x, y] = at(R + 14, mid);
+            return (
+              <text class="aif-scope__rim" data-aif-rim={kind} x={fmt(x)} y={fmt(y)} transform={`rotate(${fmt(90 - mid)} ${fmt(x)} ${fmt(y)})`}>
+                {RIM[kind]}
+              </text>
+            );
+          })
+        }
+        {
+          layout.rings.map((ring) => (
+            <>
+              <text class="aif-scope__fit" x={fmt(cx - ring.r)} y={fmt(cy + 21)}>
+                {ring.fit}
+              </text>
+              <text class="aif-scope__fit" x={fmt(cx + ring.r)} y={fmt(cy + 21)}>
+                {ring.fit}
+              </text>
+            </>
+          ))
+        }
+        <text class="aif-scope__caption" x={fmt(cx)} y={fmt(cy + 21)}>supplier fit</text>
+        <path class="aif-scope__eye" d={`M${fmt(cx - 6)} ${fmt(cy)}A6 6 0 0 1 ${fmt(cx + 6)} ${fmt(cy)}Z`} />
+        <g clip-path="url(#aif-half)">
+          <g class="aif-sweep">
+            <path class="aif-sweep__trail" d={trail(24)} />
+            <path class="aif-sweep__trail is-near" d={trail(8)} />
+            <line class="aif-sweep__line" x1={fmt(cx)} y1={fmt(cy)} x2={fmt(cx - R)} y2={fmt(cy)} />
+          </g>
+        </g>
+        <g class="aif-glyphs" data-aif-glyphs>
+          {
+            layout.glyphs.map((glyph) => {
+              const status = rowOf.get(glyph.rank)?.entry.verification.status ?? 'verified';
+              const geo = rowOf.get(glyph.rank)?.entry.geo ?? 'us';
+              return (
+                <g class={`aif-g aif-geo--${geo} is-${status}`} transform={`translate(${fmt(glyph.x)} ${fmt(glyph.y)})`} data-aif-glyph={glyph.rank} style={`--t:${String(glyph.delay)}s`}>
+                  <circle class="aif-g__hit" r="10" />
+                  <path class="aif-g__shape" d={GLYPHS[glyph.kind]} />
+                  {status === 'redirected' && <path class="aif-g__tick" d="M6.2-6.2 9.8-9.8" />}
+                </g>
+              );
+            })
+          }
+        </g>
+      </svg>
+    </figure>
+
+    <aside class="aif-readout" aria-live="polite" data-aif-readout>
+      <p class="aif-readout__kicker" data-aif-kicker>Readout</p>
+      <p class="aif-readout__title" data-aif-title>Point at a glyph</p>
+      <p class="aif-readout__kind" data-aif-kindline>or at any line of the index</p>
+      <p class="aif-readout__desc" data-aif-desc>Click pins; Esc releases.</p>
+      <p class="aif-readout__links" data-aif-links></p>
+    </aside>
+  </div>
+
+  <div class="aif-legend" role="group" aria-label="Filters">
+    <div class="aif-legend__row">
+      {
+        KINDS.map((kind) => {
+          const n = entries.filter((entry) => entry.kind === kind.key).length;
+          return n === 0 ? null : (
+            <button type="button" class="aif-chip" data-aif-kind={kind.key} aria-pressed="false" title={kind.label}>
+              <svg class="aif-sym" viewBox="0 0 18 18" aria-hidden="true" focusable="false"><use href={`#aif-sym-${kind.key}`} /></svg>
+              {kind.short}
+              <span class="aif-chip__n">{n}</span>
+            </button>
+          );
+        })
+      }
+    </div>
+    <div class="aif-legend__row">
+      {
+        geos.map((geo) => (
+          <button type="button" class={`aif-chip aif-geo--${geo.key}`} data-aif-geo={geo.key} aria-pressed="false" title={geo.label}>
+            <i class="aif-swatch" aria-hidden="true" />
+            {geo.code}
+            <span class="aif-chip__n">{entries.filter((entry) => entry.geo === geo.key).length}</span>
+          </button>
+        ))
+      }
+      <span class="aif-legend__sep" aria-hidden="true"></span>
+      {
+        STATUSES.filter((status) => statuses[status.key] > 0).map((status) => (
+          <button type="button" class={`aif-chip aif-st is-${status.key}`} data-aif-status={status.key} aria-pressed="false" title={status.title}>
+            <svg class="aif-st__sym" viewBox="0 0 14 14" aria-hidden="true" focusable="false"><use href={`#aif-st-${status.key}`} /></svg>
+            {status.label}
+            <span class="aif-chip__n">{statuses[status.key]}</span>
+          </button>
+        ))
+      }
+      <label class="aif-search">
+        <span class="sh-visually-hidden">Filter by name, organisation, or description</span>
+        <input type="search" placeholder="Filter…" data-aif-search autocomplete="off" spellcheck="false" />
+      </label>
+      <button type="button" class="aif-clear" data-aif-clear hidden>clear</button>
+      <span class="aif-shown" data-aif-shown aria-live="polite">{entries.length} of {entries.length}</span>
+    </div>
+  </div>
+
+  <figure class="aif-spine">
+    <figcaption class="aif-head"><span>In the book</span><span>sources per chapter</span></figcaption>
+    <ol class="aif-spine__parts" role="list">
+      {
+        spine.map(({ part, chapters }) => (
+          <li class="aif-spine__part">
+            <ol class="aif-spine__chs" role="list">
+              {chapters.map(({ n, node, count, named }) =>
+                count > 0 ? (
+                  <li>
+                    <button
+                      type="button"
+                      class:list={['aif-sp', { 'is-planned': !node.hasManuscript, 'is-named': named > 0 }]}
+                      data-aif-chapter={n}
+                      aria-pressed="false"
+                      style={`--h:${String(Math.round((count / maxChapter) * 100))}`}
+                      aria-label={`Chapter ${pad(n)}, ${node.title}: ${String(count)} sources${named > 0 ? `, ${String(named)} named in the text` : ''}`}
+                      title={`${pad(n)} ${node.title} · ${String(count)}${named > 0 ? ` · ${String(named)} named in the text` : ''}`}
+                    >
+                      <span></span>
+                    </button>
+                  </li>
+                ) : (
+                  <li class="aif-sp is-empty" aria-hidden="true" title={`${pad(n)} ${node.title}`}></li>
+                ),
+              )}
+            </ol>
+            <span class="aif-spine__pn" title={part.title}>
+              {part.number}
+            </span>
+          </li>
+        ))
+      }
+    </ol>
+  </figure>
+
+  <ol class="aif-index" data-aif-index aria-label="The 100 sources in the supplier's order">
+    {
+      rows.map(({ entry, chapters }) => {
+        const status = entry.verification.status;
+        const kind = kindOf.get(entry.kind);
+        const geo = geoOf.get(entry.geo);
+        return (
+          <li
+            id={`aif-${String(entry.rank)}`}
+            class={`aif-line aif-geo--${entry.geo} is-${status}`}
+            data-aif-line={entry.rank}
+            data-kind={entry.kind}
+            data-geo={entry.geo}
+            data-status={status}
+            data-chapters={` ${chapters.join(' ')} `}
+            data-text={`${entry.name} ${entry.short} ${entry.org} ${entry.description ?? ''} ${entry.reason} ${entry.links.url}`.toLowerCase()}
+          >
+            <span class="aif-line__rank" title={`Supplier’s rank ${String(entry.rank)} · AI-2027 fit ${String(entry.fit)}`}>
+              {entry.rank}
+              <small>{entry.fit}</small>
+            </span>
+            <span class="aif-line__name">
+              <a href={entry.links.url} rel="external">
+                {entry.name}
+              </a>
+              {entry.org !== entry.name && <span class="aif-line__org">{entry.org}</span>}
+            </span>
+            <span class="aif-line__kind" title={`${kind?.label ?? entry.kind} · ${geo?.label ?? entry.geo}`}>
+              <svg class="aif-sym" viewBox="0 0 18 18" aria-hidden="true" focusable="false"><use href={`#aif-sym-${entry.kind}`} /></svg>
+              <span class="sh-visually-hidden">{kind?.label},</span>
+              <span class="aif-line__geo">{geo?.code}</span>
+            </span>
+            <span class="aif-line__desc">
+              <span class="aif-line__text">{entry.description === null ? <em class="aif-line__reason">Supplier’s reason: {entry.reason}</em> : entry.description}</span>
+              {
+                status !== 'verified' && entry.verification.note !== '' && (
+                  <details class="aif-check">
+                    <summary>{entry.verification.note}</summary>
+                    {status === 'redirected' && <span class="aif-check__listed">Listed: {entry.links.listed}</span>}
+                  </details>
+                )
+              }
+            </span>
+            <span
+              class={`aif-line__st is-${status}`}
+              title={`${statusOf.get(status)?.label ?? status}${entry.verification.note === '' ? '' : ` — ${entry.verification.note}`} · ${linkLabel(entry.links.url)}`}
+            >
+              <svg class="aif-st__sym" viewBox="0 0 14 14" aria-hidden="true" focusable="false"><use href={`#aif-st-${status}`} /></svg>
+              <span class="sh-visually-hidden">{statusOf.get(status)?.label}</span>
+            </span>
+          </li>
+        );
+      })
+    }
+  </ol>
+</section>
