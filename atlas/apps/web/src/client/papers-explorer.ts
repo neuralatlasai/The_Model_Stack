@@ -2,11 +2,12 @@
  * Papers behaviour (components/shell/PapersExplorer.astro): the citation
  * field, its chapter panel, and the ledger are one instrument.
  *
+ * - At rest the readout names the most-cited work (ringed in the field).
  * - Point at a dot or a ledger row: the readout names the work (key, type,
  *   year, authors, venue, status, what the book uses it for) and the chapters
  *   that draw on it light in the panel.
- * - Point at a chapter: its works light in the field and the ledger; click
- *   pins it as a filter.
+ * - Point at a chapter: its works light in the field and the ledger, and the
+ *   readout gives their type mix and verification; click pins it as a filter.
  * - Type, status, spine, and text filters drive field and ledger together,
  *   with a live "shown" count. Column buttons sort the ledger in place.
  * - Keyboard: the field is one tab stop; arrows step through dots left to
@@ -18,7 +19,8 @@ import type { PageContext } from './page.ts';
 interface Work {
   readonly key: string;
   readonly row: HTMLTableRowElement;
-  readonly mark: SVGAElement | undefined;
+  /** The work's dot in each drawing of the field (wide and compact). */
+  readonly marks: readonly SVGAElement[];
   readonly type: string;
   readonly status: string;
   readonly spine: boolean;
@@ -31,16 +33,22 @@ const pad = (n: string): string => n.padStart(2, '0');
 export function initPapersExplorer(ctx: PageContext): void {
   const { doc, ctl } = ctx;
   const root = doc.querySelector<HTMLElement>('[data-papers-explorer]');
-  const svg = root?.querySelector<SVGSVGElement>('[data-pfx-svg]') ?? null;
+  const svgs = root === null ? [] : [...root.querySelectorAll<SVGSVGElement>('[data-pfx-svg]')];
   const tbody = root?.querySelector<HTMLTableSectionElement>('[data-pfx-table] tbody') ?? null;
-  if (root === null || svg === null || tbody === null) return;
+  if (root === null || svgs.length === 0 || tbody === null) return;
   const signal = ctl.signal;
 
-  const marks = new Map([...svg.querySelectorAll<SVGAElement>('[data-pfx-key]')].map((mark) => [mark.dataset['pfxKey'] ?? '', mark]));
+  const marks = new Map<string, SVGAElement[]>();
+  for (const svg of svgs) {
+    for (const mark of svg.querySelectorAll<SVGAElement>('[data-pfx-key]')) {
+      const key = mark.dataset['pfxKey'] ?? '';
+      marks.set(key, [...(marks.get(key) ?? []), mark]);
+    }
+  }
   const works: Work[] = [...tbody.querySelectorAll<HTMLTableRowElement>('[data-pfx-row]')].map((row) => ({
     key: row.dataset['pfxRow'] ?? '',
     row,
-    mark: marks.get(row.dataset['pfxRow'] ?? ''),
+    marks: marks.get(row.dataset['pfxRow'] ?? '') ?? [],
     type: row.dataset['type'] ?? '',
     status: row.dataset['status'] ?? '',
     spine: row.dataset['spine'] === 'yes',
@@ -52,7 +60,6 @@ export function initPapersExplorer(ctx: PageContext): void {
   const out = {
     kicker: root.querySelector<HTMLElement>('[data-pfx-kicker]'),
     title: root.querySelector<HTMLElement>('[data-pfx-title]'),
-    who: root.querySelector<HTMLElement>('[data-pfx-who]'),
     meta: root.querySelector<HTMLElement>('[data-pfx-meta]'),
     used: root.querySelector<HTMLElement>('[data-pfx-used]'),
   };
@@ -70,10 +77,9 @@ export function initPapersExplorer(ctx: PageContext): void {
     const authors = row.querySelector('.pfx-authors')?.textContent ?? '';
     const status = row.querySelector('.pfx-status')?.textContent.trim() ?? '';
     const year = row.dataset['year'] ?? '';
-    set('kicker', [work.key, work.type, year === '' ? 'undated' : year, work.spine ? 'spine paper' : null].filter((part) => part !== null).join(' · '));
+    set('kicker', [work.key, work.type, year === '' ? 'undated' : year, work.spine ? 'spine' : null].filter((part) => part !== null).join(' · '));
     set('title', title);
-    set('who', authors === '' ? '—' : authors);
-    set('meta', `${row.dataset['venue'] ?? ''} · ${status}`);
+    set('meta', [authors, row.dataset['venue'] ?? '', status].filter((part) => part !== '').join(' · '));
     const used = row.dataset['used'] ?? '';
     if (out.used !== null) {
       const b = doc.createElement('b');
@@ -81,44 +87,62 @@ export function initPapersExplorer(ctx: PageContext): void {
       out.used.replaceChildren(b, used === '' ? '' : ` · used for: ${used}`);
     }
   };
+  const initialUsed = out.used === null ? [] : [...out.used.childNodes].map((node) => node.cloneNode(true));
   const resetReadout = (): void => {
     for (const name of Object.keys(out) as (keyof typeof out)[]) set(name, initial[name]);
+    out.used?.replaceChildren(...initialUsed.map((node) => node.cloneNode(true)));
   };
 
   // ── lighting ───────────────────────────────────────────────────────────────
   let pinnedChapter: string | null = null;
   const clearLight = (): void => {
-    svg.classList.remove('has-focus');
+    for (const svg of svgs) svg.classList.remove('has-focus', 'has-mark');
     for (const work of works) {
       work.row.classList.remove('is-lit');
-      work.mark?.classList.remove('is-lit', 'is-focus');
+      for (const mark of work.marks) mark.classList.remove('is-lit', 'is-focus');
     }
     for (const button of chapterButtons) button.classList.remove('is-lit');
   };
   const focusWork = (work: Work): void => {
     clearLight();
-    work.mark?.classList.add('is-focus');
+    for (const svg of svgs) svg.classList.add('has-mark');
+    for (const mark of work.marks) mark.classList.add('is-focus');
     work.row.classList.add('is-lit');
     for (const button of chapterButtons) button.classList.toggle('is-lit', work.chapters.includes(button.dataset['pfxChapter'] ?? ''));
     describe(work);
   };
   const lightChapter = (n: string): void => {
     clearLight();
-    svg.classList.add('has-focus');
-    let count = 0;
+    for (const svg of svgs) svg.classList.add('has-focus');
+    const cited: Work[] = [];
     for (const work of works) {
       const on = work.chapters.includes(n);
-      if (on) count += 1;
-      work.mark?.classList.toggle('is-lit', on);
+      if (on) cited.push(work);
+      for (const mark of work.marks) mark.classList.toggle('is-lit', on);
       work.row.classList.toggle('is-lit', on && pinnedChapter === null);
     }
     const button = chapterButtons.find((candidate) => candidate.dataset['pfxChapter'] === n);
     button?.classList.add('is-lit');
-    set('kicker', `chapter ${pad(n)} · ${String(count)} works`);
+    // Type mix and verification of the chapter's works: the readout's data lines.
+    const tally = (values: readonly string[]): string =>
+      [...values.reduce((counts, value) => counts.set(value, (counts.get(value) ?? 0) + 1), new Map<string, number>())]
+        .sort((a, b) => b[1] - a[1])
+        .map(([value, count]) => `${String(count)} ${value}`)
+        .join(' · ');
+    const unverified = cited.filter((work) => work.status === 'unv').length;
+    const spine = cited.filter((work) => work.spine).length;
+    const pinned = pinnedChapter === n;
+    set('kicker', `Chapter ${pad(n)} · ${String(cited.length)} works · ${pinned ? 'pinned — click to clear' : 'click to pin'}`);
     set('title', button?.querySelector('.pfx-ch__t')?.textContent ?? '');
-    set('who', 'Its works are lit in the field;');
-    set('meta', pinnedChapter === n ? 'the ledger is filtered to them — click again to clear.' : 'click to filter the ledger to them.');
-    if (out.used !== null) out.used.textContent = '';
+    set('meta', `${tally(cited.map((work) => work.type))} · ${String(spine)} spine · ${String(unverified)} unverified`);
+    if (out.used !== null) {
+      const b = doc.createElement('b');
+      b.textContent = cited
+        .slice(0, 18)
+        .map((work) => work.key)
+        .join(' ');
+      out.used.replaceChildren(b, cited.length > 18 ? ` +${String(cited.length - 18)} more` : '');
+    }
   };
   const release = (): void => {
     clearLight();
@@ -128,15 +152,20 @@ export function initPapersExplorer(ctx: PageContext): void {
 
   const markFrom = (target: EventTarget | null): SVGAElement | null =>
     target instanceof Element ? target.closest<SVGAElement>('[data-pfx-key]') : null;
-  svg.addEventListener('pointerover', (event) => {
-    const work = byKey.get(markFrom(event.target)?.dataset['pfxKey'] ?? '');
-    if (work !== undefined) focusWork(work);
-  }, { signal });
-  svg.addEventListener('pointerleave', release, { signal });
-  svg.addEventListener('focusin', (event) => {
-    const work = byKey.get(markFrom(event.target)?.dataset['pfxKey'] ?? '');
-    if (work !== undefined) focusWork(work);
-  }, { signal });
+  for (const svg of svgs) {
+    svg.addEventListener('pointerover', (event) => {
+      const work = byKey.get(markFrom(event.target)?.dataset['pfxKey'] ?? '');
+      if (work !== undefined) focusWork(work);
+    }, { signal });
+    svg.addEventListener('pointerleave', release, { signal });
+    svg.addEventListener('focusin', (event) => {
+      const work = byKey.get(markFrom(event.target)?.dataset['pfxKey'] ?? '');
+      if (work !== undefined) focusWork(work);
+    }, { signal });
+    svg.addEventListener('focusout', (event) => {
+      if (!(event.relatedTarget instanceof Node) || !svg.contains(event.relatedTarget)) release();
+    }, { signal });
+  }
   tbody.addEventListener('pointerover', (event) => {
     const row = event.target instanceof Element ? event.target.closest<HTMLTableRowElement>('[data-pfx-row]') : null;
     const work = byKey.get(row?.dataset['pfxRow'] ?? '');
@@ -177,7 +206,7 @@ export function initPapersExplorer(ctx: PageContext): void {
         (pinnedChapter === null || work.chapters.includes(pinnedChapter)) &&
         (query === '' || query.split(/\s+/u).every((term) => work.text.includes(term)));
       work.row.hidden = !visible;
-      work.mark?.classList.toggle('is-filtered', !visible);
+      for (const mark of work.marks) mark.classList.toggle('is-filtered', !visible);
       if (visible) count += 1;
     }
     if (shown !== null) shown.textContent = `${String(count)} of ${String(works.length)}`;
@@ -234,30 +263,33 @@ export function initPapersExplorer(ctx: PageContext): void {
     }, { signal });
   }
 
-  // ── keyboard: one tab stop, arrows left to right ───────────────────────────
-  const ordered = [...marks.values()].sort((a, b) => {
-    const ax = Number(a.querySelector('.pfx-mark__dot')?.getAttribute('cx'));
-    const bx = Number(b.querySelector('.pfx-mark__dot')?.getAttribute('cx'));
-    return ax - bx;
-  });
+  // ── keyboard: one tab stop per drawing, arrows left to right ───────────────
   const STEP: Readonly<Record<string, number>> = { ArrowRight: 1, ArrowDown: 1, ArrowLeft: -1, ArrowUp: -1 };
-  svg.addEventListener('keydown', (event) => {
-    const mark = markFrom(event.target);
-    if (mark === null) return;
-    if (event.key === 'Escape') {
-      release();
-      return;
-    }
-    const visible = ordered.filter((other) => !other.classList.contains('is-filtered'));
-    const at = Math.max(0, visible.indexOf(mark));
-    const step = STEP[event.key];
-    const next = event.key === 'Home' ? visible[0] : event.key === 'End' ? visible.at(-1) : step === undefined ? undefined : visible[Math.max(0, Math.min(visible.length - 1, at + step))];
-    if (next === undefined) return;
-    event.preventDefault();
-    for (const other of marks.values()) other.setAttribute('tabindex', '-1');
-    next.setAttribute('tabindex', '0');
-    next.focus();
-  }, { signal });
+  for (const svg of svgs) {
+    const own = [...svg.querySelectorAll<SVGAElement>('[data-pfx-key]')];
+    const ordered = [...own].sort((a, b) => {
+      const ax = Number(a.querySelector('.pfx-mark__dot')?.getAttribute('cx'));
+      const bx = Number(b.querySelector('.pfx-mark__dot')?.getAttribute('cx'));
+      return ax - bx;
+    });
+    svg.addEventListener('keydown', (event) => {
+      const mark = markFrom(event.target);
+      if (mark === null) return;
+      if (event.key === 'Escape') {
+        release();
+        return;
+      }
+      const visible = ordered.filter((other) => !other.classList.contains('is-filtered'));
+      const at = Math.max(0, visible.indexOf(mark));
+      const step = STEP[event.key];
+      const next = event.key === 'Home' ? visible[0] : event.key === 'End' ? visible.at(-1) : step === undefined ? undefined : visible[Math.max(0, Math.min(visible.length - 1, at + step))];
+      if (next === undefined) return;
+      event.preventDefault();
+      for (const other of own) other.setAttribute('tabindex', '-1');
+      next.setAttribute('tabindex', '0');
+      next.focus();
+    }, { signal });
+  }
 
   // Arriving on #type-…: select that type.
   const arrived = /^#type-[a-z0-9-]+$/u.test(location.hash) ? doc.getElementById(location.hash.slice(1)) : null;

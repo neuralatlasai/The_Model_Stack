@@ -64,6 +64,10 @@ const SystemsSchema = z.object({
   parts: z.array(PartSchema),
   layers: z.array(z.object({ index: Int, name: z.string(), systems: z.array(z.string()) })),
   systems: z.array(SystemSchema),
+  /** Monogram per system key (lib/monogram.ts). */
+  marks: z.record(z.string(), z.string()),
+  /** Sections of written chapters that analyse each system. */
+  footprints: z.record(z.string(), Int),
 });
 const LabSchema = z.object({
   key: z.string(),
@@ -76,7 +80,17 @@ const LabSchema = z.object({
   sections: Int,
   uses: z.array(UseSchema),
 });
-const LabsSchema = z.object({ chapters: z.record(z.string(), ChapterSchema), parts: z.array(PartSchema), labs: z.array(LabSchema) });
+const LabsSchema = z.object({
+  chapters: z.record(z.string(), ChapterSchema),
+  parts: z.array(PartSchema),
+  labs: z.array(LabSchema),
+  /** Monogram per lab key (lib/monogram.ts). */
+  marks: z.record(z.string(), z.string()),
+  /** Domain token per part number (part colours). */
+  domains: z.record(z.string(), z.string()),
+  /** Parts on the constellation's axis (those holding a written chapter). */
+  axis: z.array(Int),
+});
 
 type Use = z.output<typeof UseSchema>;
 type Chapter = z.output<typeof ChapterSchema>;
@@ -344,13 +358,20 @@ function initSystems(ctx: PageContext, root: HTMLElement, model: SystemsModel): 
       `H${String(q.x)}`,
     ].join(' ');
   };
+  interface WirePair {
+    chip: Element;
+    part: number;
+    plan: boolean;
+  }
+  let lastWires: { pairs: readonly WirePair[]; outward: boolean; quiet: boolean } | null = null;
   /** Wires between chips and part lanes; `outward` draws from the lane (a chapter's fan) rather than from the chip. */
-  const drawWires = (pairs: readonly { chip: Element; part: number; plan: boolean }[], outward: boolean): void => {
+  const drawWires = (pairs: readonly WirePair[], outward: boolean, quiet = false, still = false): void => {
+    lastWires = { pairs, outward, quiet };
     wires.replaceChildren();
     if (!sideBySide()) return;
     const gx = gutter();
     const seen = new Set<string>();
-    const animate = !reducedMotion();
+    const animate = !reducedMotion() && !quiet && !still;
     for (const { chip, part, plan } of pairs) {
       const key = `${chip.getAttribute('data-es-sys') ?? ''}|${String(part)}|${String(plan)}`;
       if (seen.has(key)) continue;
@@ -359,7 +380,7 @@ function initSystems(ctx: PageContext, root: HTMLElement, model: SystemsModel): 
       if (lane === null) continue;
       const port = chipPort(chip);
       const path = doc.createElementNS('http://www.w3.org/2000/svg', 'path');
-      path.setAttribute('class', plan ? 'es-wire es-wire--plan' : 'es-wire');
+      path.setAttribute('class', `es-wire${plan ? ' es-wire--plan' : ''}${quiet ? ' is-quiet' : ''}`);
       path.setAttribute('d', outward ? route(lane, port, gx) : route(port, lane, gx));
       wires.append(path);
       if (animate && !plan) {
@@ -367,7 +388,7 @@ function initSystems(ctx: PageContext, root: HTMLElement, model: SystemsModel): 
         path.style.strokeDasharray = String(length);
         path.style.strokeDashoffset = String(length);
         void path.getBoundingClientRect();
-        path.style.transition = 'stroke-dashoffset 260ms cubic-bezier(.3,.7,.2,1)';
+        path.style.transition = 'stroke-dashoffset 200ms cubic-bezier(.3,.7,.2,1)';
         path.style.strokeDashoffset = '0';
       }
     }
@@ -397,9 +418,10 @@ function initSystems(ctx: PageContext, root: HTMLElement, model: SystemsModel): 
   let current: (() => void) | null = null;
 
   const clear = (): void => {
+    lastWires = null;
     body.classList.remove('is-active');
     grid.classList.remove('is-active');
-    for (const chip of chips.values()) chip.classList.remove('is-lit', 'is-focus', 'is-peek');
+    for (const chip of chips.values()) chip.classList.remove('is-lit', 'is-focus', 'is-peek', 'is-rest');
     for (const meter of meters.values()) meter.classList.remove('is-hit');
     for (const label of labels.values()) label.classList.remove('is-focus');
     for (const band of bands.values()) {
@@ -419,10 +441,45 @@ function initSystems(ctx: PageContext, root: HTMLElement, model: SystemsModel): 
     body.classList.add('is-active');
     grid.classList.add('is-active');
   };
+  /**
+   * A system at rest or on the idle cycle: its chip ringed, its chapters lit and wired quietly,
+   * nothing dimmed; the readout says what the chapters take from it.
+   */
+  const feature = (system: System, kicker: string): void => {
+    const chip = chips.get(system.key);
+    if (chip === undefined) return;
+    current = () => {
+      feature(system, kicker);
+    };
+    clear();
+    chip.classList.add('is-rest');
+    for (const n of system.chapters) dots.get(n)?.classList.add('is-lit');
+    lightLanes(system.chapters);
+    drawWires(
+      system.chapters.map((n) => ({ chip, part: partOf(n)?.n ?? 0, plan: false })),
+      false,
+      true,
+    );
+    const view = systemView(system);
+    readout.show({
+      ...view,
+      kicker: `${kicker} · ${layerTag(system.layer)}${system.rank === null ? '' : ` · #${String(system.rank)}`}`,
+      foot: [openLink(system.url, `open ${system.name} →`)],
+    });
+  };
+  // Rest: the most-analysed system (server-rendered, then filled here).
+  const restSystem = systems.get(root.dataset['enRest'] ?? '');
+  const rest = (): void => {
+    if (restSystem === undefined) {
+      readout.reset();
+      return;
+    }
+    feature(restSystem, 'Most analysed');
+  };
   const reset = (): void => {
     current = null;
     clear();
-    readout.reset();
+    rest();
   };
   /** Per-layer count of lit systems, shown after each layer's meter. */
   const countHits = (keys: readonly string[]): void => {
@@ -490,6 +547,11 @@ function initSystems(ctx: PageContext, root: HTMLElement, model: SystemsModel): 
       ],
       false,
     );
+    readout.show(systemView(system));
+  };
+
+  /** What the readout says about one system (its uses fitted to the reserved list height). */
+  function systemView(system: System): ReadoutView {
     const layerName = layers.get(system.layer)?.name ?? 'Layer not stated';
     const planNote = system.planned.length > 0 ? ` The plan of ${system.planned.map(pad).join(', ')} also names it.` : '';
     const entries: UseEntry[] = system.chapters.map((n) => {
@@ -505,12 +567,12 @@ function initSystems(ctx: PageContext, root: HTMLElement, model: SystemsModel): 
           };
     });
     for (const n of system.planned) entries.push({ who: chapterChip(n, true), meta: 'planned chapter', tag: '', what: 'Named in the chapter plan’s implementations; not yet written.' });
-    readout.show({
-      kicker: `${layerTag(system.layer)} · ${layerName}${system.rank === null ? '' : ` · reference stack #${String(system.rank)}`}`,
+    return {
+      kicker: `${layerTag(system.layer)} · ${layerName}${system.rank === null ? '' : ` · #${String(system.rank)}`}`,
       title: system.name,
       sub:
         system.chapters.length > 0
-          ? `Analysed by ${plural(system.chapters.length, 'written chapter')}.${planNote}`
+          ? `Analysed by ${plural(system.chapters.length, 'written chapter')} · ${plural(model.footprints[system.key] ?? 0, 'section')}.${planNote}`
           : `Not yet analysed by a written chapter — ${String(written)} of ${String(total)} chapters are written.${planNote}`,
       rows: [
         ['surfaces', surfaces(system)],
@@ -518,8 +580,8 @@ function initSystems(ctx: PageContext, root: HTMLElement, model: SystemsModel): 
       ],
       list: { uses: entries, empty: 'No written chapter names this system yet; its page links the documentation and code the reference stack lists.', more: 'on the system’s page' },
       foot: [openLink(system.url, `open ${system.name} →`), ' · Esc clears'],
-    });
-  };
+    };
+  }
 
   const focusChapter = (n: number): void => {
     const chapter = chapterOf(n);
@@ -623,7 +685,7 @@ function initSystems(ctx: PageContext, root: HTMLElement, model: SystemsModel): 
         ['chapters', chapters.size === 0 ? ['—'] : [...chapters].sort((a, b) => a - b).map((n) => chapterChip(n))],
       ],
       list: { nodes: lines },
-      foot: ['Ledger below lists every system with its surfaces · Esc clears'],
+      foot: [openLink('#ledger', 'ledger ↓'), ' · Esc clears'],
     });
   };
 
@@ -825,31 +887,104 @@ function initSystems(ctx: PageContext, root: HTMLElement, model: SystemsModel): 
   ctl.defer(() => {
     cancelAnimationFrame(frame);
   });
+  // The side column (readout + chapter grid) is sticky beside the stack: scrolling moves the
+  // grid against the chips, so the wires are redrawn in place, without animation.
+  let scrollFrame = 0;
+  window.addEventListener(
+    'scroll',
+    () => {
+      if (lastWires === null) return;
+      cancelAnimationFrame(scrollFrame);
+      scrollFrame = requestAnimationFrame(() => {
+        if (lastWires !== null) drawWires(lastWires.pairs, lastWires.outward, lastWires.quiet, true);
+      });
+    },
+    { signal, passive: true },
+  );
+  ctl.defer(() => {
+    cancelAnimationFrame(scrollFrame);
+  });
+
+  // ── alive: at rest a slow highlight cycles through the most-analysed systems ──
+  // Paused while the pointer or focus is inside the instrument, off-screen, or the tab hidden;
+  // never started under reduced motion.
+  const cycle = [...model.systems]
+    .filter((system) => system.chapters.length > 0)
+    .sort((a, b) => (model.footprints[b.key] ?? 0) - (model.footprints[a.key] ?? 0) || b.chapters.length - a.chapters.length)
+    .slice(0, 8);
+  if (!reducedMotion() && cycle.length > 1) {
+    let onScreen = false;
+    let step = 0;
+    ctl
+      .observe(
+        new IntersectionObserver((entries) => {
+          onScreen = entries.some((entry) => entry.isIntersecting);
+        }),
+      )
+      .observe(body);
+    const timer = setInterval(() => {
+      if (!onScreen || doc.hidden || root.matches(':hover') || root.contains(doc.activeElement) || body.classList.contains('is-active')) return;
+      step = (step + 1) % cycle.length;
+      const system = cycle[step];
+      if (system !== undefined) feature(system, `Footprint ${String(step + 1)} of ${String(cycle.length)}`);
+    }, 3800);
+    ctl.defer(() => {
+      clearInterval(timer);
+    });
+  }
+  rest();
 }
 
 // ── labs ───────────────────────────────────────────────────────────────────
 
 type Order = 'rank' | 'footprint';
+const SVG_NS = 'http://www.w3.org/2000/svg';
+const CYCLE_MS = 3800;
+const CYCLE_TOP = 6;
 
 function initLabs(ctx: PageContext, root: HTMLElement, model: LabsModel): void {
   const { doc, ctl } = ctx;
   const signal = ctl.signal;
   const wrap = root.querySelector<HTMLElement>('[data-el-matrix]');
+  const hero = root.querySelector<HTMLElement>('[data-lc]');
+  // Two drawings of the constellation (wide, compact); CSS shows one, both are kept in step.
+  const svgs = [...root.querySelectorAll<SVGSVGElement>('[data-lc-svg]')];
   const readout = createReadout(doc, root);
   const tables = [...root.querySelectorAll<HTMLTableElement>('[data-el-grain]')];
-  if (wrap === null || readout === null || tables.length === 0) return;
+  if (wrap === null || hero === null || svgs.length === 0 || readout === null || tables.length === 0) return;
 
   const labs = new Map(model.labs.map((lab) => [lab.key, lab]));
+  const active = model.labs.filter((lab) => lab.chapters.length > 0);
   const chapterOf = (n: number): Chapter | undefined => model.chapters[String(n)];
   const partByN = (n: number): Part | undefined => model.parts.find((part) => part.n === n);
   const partOf = (n: number): Part | undefined => model.parts.find((part) => part.chapters.includes(n));
+  const axisParts = model.axis.map(partByN).filter((part): part is Part => part !== undefined);
   const chapterList = Object.values(model.chapters);
   const written = chapterList.filter((chapter) => chapter.written).length;
   const visible = (): HTMLTableElement | undefined => tables.find((table) => getComputedStyle(table).display !== 'none') ?? tables[0];
   const rowsOf = (table: HTMLTableElement): HTMLTableRowElement[] => [...table.querySelectorAll<HTMLTableRowElement>('tbody tr[data-el-row]')];
   const idleLinks = [...root.querySelectorAll<HTMLAnchorElement>('[data-el-idle]')];
+  const allDiscs = svgs.flatMap((svg) => [...svg.querySelectorAll<SVGAElement>('[data-lc-lab]')]);
+  const discsOf = (key: string): SVGAElement[] => allDiscs.filter((disc) => disc.dataset['lcLab'] === key);
+  const centreOf = (svg: SVGSVGElement, key: string): { x: number; y: number; r: number } | null => {
+    const circle = svg.querySelector(`[data-lc-lab="${CSS.escape(key)}"] .lc-mark__disc`);
+    if (circle === null) return null;
+    return { x: Number(circle.getAttribute('cx')), y: Number(circle.getAttribute('cy')), r: Number(circle.getAttribute('r')) };
+  };
+  const shared = (a: Lab, b: Lab): number => a.chapters.filter((n) => b.chapters.includes(n)).length;
+  const neighbours = (lab: Lab): { lab: Lab; shared: number }[] =>
+    active
+      .filter((other) => other.key !== lab.key)
+      .map((other) => ({ lab: other, shared: shared(lab, other) }))
+      .filter((entry) => entry.shared > 0)
+      .sort((a, b) => b.shared - a.shared || b.lab.sections - a.lab.sections);
 
   // ── readout pieces ──
+  const monoChip = (lab: Lab, idle = false): HTMLElement => {
+    const chip = make(doc, 'span', idle ? 'lc-mono is-idle' : 'lc-mono', model.marks[lab.key] ?? '');
+    chip.setAttribute('aria-hidden', 'true');
+    return chip;
+  };
   const chapterChip = (n: number, href?: string): HTMLAnchorElement => {
     const chapter = chapterOf(n);
     const link = anchor(doc, href ?? chapter?.url ?? '#', chapter?.written === true ? 'en-chap' : 'en-chap en-chap--plan', chapter?.number ?? pad(n));
@@ -877,6 +1012,123 @@ function initLabs(ctx: PageContext, root: HTMLElement, model: LabsModel): void {
       what: use.what,
     }));
   const openLink = (href: string, text: string): HTMLAnchorElement => anchor(doc, href, '', text);
+  /** The lab's sections split by part: one stacked bar, each segment labelled under itself. */
+  const partSplit = (lab: Lab): HTMLElement => {
+    const split = axisParts
+      .map((part) => ({ part, sections: part.chapters.reduce((sum, n) => sum + (lab.sectionsByChapter[String(n)] ?? 0), 0) }))
+      .filter((entry) => entry.sections > 0);
+    const block = make(doc, 'div', 'lc-split');
+    const bar = make(doc, 'span', 'lc-split__bar');
+    const labels = make(doc, 'span', 'lc-split__labels');
+    for (const { part, sections } of split) {
+      const colour = `var(--domain-${model.domains[String(part.n)] ?? 'reference'})`;
+      const segment = make(doc, 'i');
+      segment.style.setProperty('--pc', colour);
+      segment.style.flexGrow = String(sections);
+      segment.title = `Part ${part.numeral}: ${plural(sections, 'section')}`;
+      bar.append(segment);
+      const label = make(doc, 'span', '', make(doc, 'b', '', part.numeral), ` ${String(sections)}`);
+      label.style.setProperty('--pc', colour);
+      label.style.flexGrow = String(Math.max(sections, lab.sections * 0.12));
+      labels.append(label);
+    }
+    block.append(make(doc, 'p', 'en-ro__head', 'Sections by part'), bar, labels);
+    return block;
+  };
+  const topChapter = (lab: Lab): { n: number; sections: number } | null => {
+    let best: { n: number; sections: number } | null = null;
+    for (const n of lab.chapters) {
+      const sections = lab.sectionsByChapter[String(n)] ?? 0;
+      if (best === null || sections > best.sections) best = { n, sections };
+    }
+    return best;
+  };
+  const shareRows = (lab: Lab): Node[] => {
+    const list = neighbours(lab).slice(0, 4);
+    if (list.length === 0) return [make(doc, 'p', 'en-ro__legend', 'Shares no chapter with another lab.')];
+    const most = Math.max(1, ...list.map((entry) => entry.shared));
+    return [
+      make(doc, 'p', 'en-ro__head', 'Shares chapters with'),
+      ...list.map(({ lab: other, shared: count }) => {
+        const bar = make(doc, 'span', 'lc-share__bar');
+        bar.style.setProperty('--f', (count / most).toFixed(3));
+        const row = make(doc, 'div', 'lc-share', monoChip(other), labLink(other), bar, make(doc, 'span', 'lc-share__n', `${String(count)} ch`));
+        return row;
+      }),
+    ];
+  };
+
+  const labView = (lab: Lab): ReadoutView => {
+    const top = topChapter(lab);
+    const topCh = top === null ? undefined : chapterOf(top.n);
+    return {
+      kicker: `${lab.rank === null ? 'Lab' : `Position ${String(lab.rank)}`} · ${String(lab.sections)} §`,
+      title: lab.name,
+      sub:
+        topCh === undefined || top === null
+          ? `Drawn on by ${String(lab.chapters.length)} of ${String(written)} written chapters.`
+          : `Drawn on by ${String(lab.chapters.length)} of ${String(written)} written chapters; most in ${topCh.number} ${topCh.short} (${String(top.sections)} §).`,
+      rows: [
+        ['chapters', lab.chapters.map((n) => chapterChip(n, `${lab.url}#ch-${pad(n)}`))],
+        ['surfaces', surfaceLinks(lab)],
+      ],
+      list: { nodes: [partSplit(lab), ...shareRows(lab)] },
+      foot: [openLink(lab.url, `open ${lab.name} →`)],
+    };
+  };
+  const idleView = (lab: Lab): ReadoutView => ({
+    kicker: `${lab.rank === null ? 'Lab' : `Position ${String(lab.rank)}`} · not yet drawn on`,
+    title: lab.name,
+    sub: `No written chapter draws on it yet — ${String(written)} of ${String(chapterList.length)} are written.`,
+    rows: [['surfaces', surfaceLinks(lab)]],
+    list: { nodes: [] },
+    foot: [openLink(lab.url, `open ${lab.name} →`)],
+  });
+
+  // ── the constellation: discs, arcs ──
+  const arc = (a: { x: number; y: number }, b: { x: number; y: number }): string => {
+    const mx = (a.x + b.x) / 2;
+    const my = (a.y + b.y) / 2;
+    const lift = Math.min(70, Math.hypot(b.x - a.x, b.y - a.y) * 0.32);
+    return `M${a.x.toFixed(1)} ${a.y.toFixed(1)} Q${mx.toFixed(1)} ${(my - lift).toFixed(1)} ${b.x.toFixed(1)} ${b.y.toFixed(1)}`;
+  };
+  const drawArcs = (lab: Lab, quiet: boolean): void => {
+    const animate = !reducedMotion();
+    for (const svg of svgs) {
+      const layer = svg.querySelector('[data-lc-links]');
+      layer?.replaceChildren();
+      const from = centreOf(svg, lab.key);
+      if (layer === null || from === null) continue;
+      // Only the drawing on screen animates; the hidden one is drawn in place.
+      const shown = svg.getBoundingClientRect().width > 0;
+      for (const { lab: other, shared: count } of neighbours(lab)) {
+        const to = centreOf(svg, other.key);
+        if (to === null) continue;
+        const path = doc.createElementNS(SVG_NS, 'path');
+        path.setAttribute('class', quiet ? 'lc-arc is-quiet' : 'lc-arc');
+        path.setAttribute('d', arc(from, to));
+        path.style.strokeWidth = (0.7 + count * 0.5).toFixed(2);
+        layer.append(path);
+        if (animate && shown) {
+          const length = path.getTotalLength();
+          path.style.strokeDasharray = String(length);
+          path.style.strokeDashoffset = String(length);
+          void path.getBoundingClientRect();
+          path.style.transition = 'stroke-dashoffset 200ms cubic-bezier(.3,.7,.2,1)';
+          path.style.strokeDashoffset = '0';
+        }
+      }
+    }
+  };
+  /** Discs: `focus` ringed, `lit` kept, the rest dimmed (none dimmed when `lit` is null). */
+  const lightDiscs = (focus: string | null, lit: ReadonlySet<string> | null): void => {
+    for (const svg of svgs) svg.classList.toggle('is-active', lit !== null);
+    for (const disc of allDiscs) {
+      const key = disc.dataset['lcLab'] ?? '';
+      disc.classList.toggle('is-focus', key === focus);
+      disc.classList.toggle('is-lit', lit?.has(key) === true);
+    }
+  };
 
   // ── states ──
   let currentKey: string | null = null;
@@ -887,34 +1139,44 @@ function initLabs(ctx: PageContext, root: HTMLElement, model: LabsModel): void {
     currentCol = null;
     for (const table of tables) {
       table.classList.remove('is-active', 'is-colmode');
-      for (const node of table.querySelectorAll('.is-lit, .is-focus, .is-col, .is-colfocus, .is-peek')) node.classList.remove('is-lit', 'is-focus', 'is-col', 'is-colfocus', 'is-peek');
+      for (const node of table.querySelectorAll('.is-lit, .is-focus, .is-col, .is-colfocus, .is-peek, .is-rest')) node.classList.remove('is-lit', 'is-focus', 'is-col', 'is-colfocus', 'is-peek', 'is-rest');
     }
     for (const link of idleLinks) link.classList.remove('is-focus');
-  };
-  const reset = (): void => {
-    clear();
-    readout.reset();
+    for (const disc of allDiscs) disc.classList.remove('is-rest', 'is-focus', 'is-lit');
+    for (const svg of svgs) {
+      svg.classList.remove('is-active');
+      for (const tick of svg.querySelectorAll('.is-on')) tick.classList.remove('is-on');
+      svg.querySelector('[data-lc-links]')?.replaceChildren();
+    }
   };
   const tint = (selector: string): void => {
     for (const table of tables) for (const node of table.querySelectorAll(selector)) node.classList.add('is-col');
   };
   const rowsFor = (key: string): HTMLTableRowElement[] => tables.flatMap((table) => [...table.querySelectorAll<HTMLTableRowElement>(`tr[data-el-row="${CSS.escape(key)}"]`)]);
+  const lightTicks = (chapters: readonly number[]): void => {
+    for (const svg of svgs) for (const n of chapters) svg.querySelector(`[data-lc-tick="${String(n)}"]`)?.classList.add('is-on');
+  };
 
-  const showLab = (lab: Lab): void => {
-    readout.show({
-      kicker: `Lab${lab.rank === null ? '' : ` · reference-stack position ${String(lab.rank)}`}`,
-      title: lab.name,
-      sub:
-        lab.chapters.length > 0
-          ? `Drawn on by ${String(lab.chapters.length)} of ${String(written)} written chapters, across ${plural(lab.sections, 'section')}.`
-          : `Not yet drawn on by a written chapter — ${String(written)} of ${String(chapterList.length)} chapters are written.`,
-      rows: [
-        ['surfaces', surfaceLinks(lab)],
-        ['chapters', lab.chapters.length === 0 ? ['—'] : lab.chapters.map((n) => chapterChip(n, `${lab.url}#ch-${pad(n)}`))],
-      ],
-      list: { uses: useEntries(lab, lab.uses, 'chapter'), empty: 'No written chapter cites this lab yet. Its surfaces are listed above, exactly as the reference stack gives them.', more: 'on the lab’s page' },
-      foot: [openLink(lab.url, `open ${lab.name} →`), ' · Esc clears'],
-    });
+  /** A lab at rest or on the idle cycle: ringed, its arcs drawn quietly, its row marked; nothing dimmed. */
+  const feature = (lab: Lab, kicker: string): void => {
+    clear();
+    for (const disc of discsOf(lab.key)) disc.classList.add('is-rest');
+    for (const row of rowsFor(lab.key)) row.classList.add('is-rest');
+    lightTicks(lab.chapters);
+    drawArcs(lab, true);
+    readout.show({ ...labView(lab), kicker });
+  };
+  const restLab = labs.get(root.dataset['enRest'] ?? '');
+  const rest = (): void => {
+    if (restLab === undefined) {
+      clear();
+      readout.reset();
+      return;
+    }
+    feature(restLab, `Broadest footprint · ${String(restLab.sections)} §`);
+  };
+  const reset = (): void => {
+    rest();
   };
 
   /** Row focus; `col` adds a crosshair tint without rebuilding the readout. */
@@ -926,7 +1188,11 @@ function initLabs(ctx: PageContext, root: HTMLElement, model: LabsModel): void {
       currentKey = key;
       for (const table of tables) table.classList.add('is-active');
       for (const row of rowsFor(key)) row.classList.add('is-focus');
-      showLab(lab);
+      const near = neighbours(lab).map((entry) => entry.lab.key);
+      lightDiscs(key, new Set([key, ...near]));
+      lightTicks(lab.chapters);
+      drawArcs(lab, false);
+      readout.show(labView(lab));
     } else {
       for (const table of tables) for (const node of table.querySelectorAll('.is-col')) node.classList.remove('is-col');
     }
@@ -943,6 +1209,8 @@ function initLabs(ctx: PageContext, root: HTMLElement, model: LabsModel): void {
     const users = model.labs.filter((lab) => lab.chapters.includes(n));
     for (const lab of users) for (const row of rowsFor(lab.key)) row.classList.add('is-lit');
     for (const table of tables) table.querySelector(`[data-el-part="${String(partOf(n)?.n ?? 0)}"]`)?.classList.add('is-colfocus');
+    lightDiscs(null, new Set(users.map((lab) => lab.key)));
+    lightTicks([n]);
     const part = partOf(n);
     const sections = users.reduce((sum, lab) => sum + (lab.sectionsByChapter[String(n)] ?? 0), 0);
     readout.show({
@@ -955,7 +1223,7 @@ function initLabs(ctx: PageContext, root: HTMLElement, model: LabsModel): void {
         : 'Planned — not yet written, so it draws on no lab yet.',
       rows: [
         ['part', [`${part?.numeral ?? ''} · ${part?.title ?? ''}`]],
-        ['labs', [String(users.length)]],
+        ['labs', users.length === 0 ? ['—'] : users.map((lab) => monoChip(lab))],
       ],
       list: {
         uses: users.flatMap((lab) => useEntries(lab, lab.uses.filter((use) => use.ch === n), 'lab')),
@@ -977,7 +1245,9 @@ function initLabs(ctx: PageContext, root: HTMLElement, model: LabsModel): void {
     for (const table of tables) for (const node of table.querySelectorAll(`th[data-el-part="${String(n)}"]`)) node.classList.add('is-focus');
     const users = model.labs.filter((lab) => lab.chapters.some((c) => part.chapters.includes(c)));
     for (const lab of users) for (const row of rowsFor(lab.key)) row.classList.add('is-lit');
+    lightDiscs(null, new Set(users.map((lab) => lab.key)));
     const writtenHere = part.chapters.filter((c) => chapterOf(c)?.written === true);
+    lightTicks(writtenHere);
     const first = part.chapters[0];
     const last = part.chapters.at(-1);
     readout.show({
@@ -986,7 +1256,7 @@ function initLabs(ctx: PageContext, root: HTMLElement, model: LabsModel): void {
       sub: `${String(writtenHere.length)} of ${String(part.chapters.length)} chapters written; they draw on ${plural(users.length, 'lab')}.`,
       rows: [
         ['written', writtenHere.length === 0 ? ['—'] : writtenHere.map((c) => chapterChip(c))],
-        ['labs', [String(users.length)]],
+        ['labs', users.length === 0 ? ['—'] : users.map((lab) => monoChip(lab))],
       ],
       list: {
         uses: users.map((lab) => {
@@ -1011,14 +1281,17 @@ function initLabs(ctx: PageContext, root: HTMLElement, model: LabsModel): void {
     for (const row of rowsFor(key)) row.classList.add('is-focus');
     tint(`[data-el-col="${String(n)}"]`);
     mark.classList.add('is-focus');
+    const peers = model.labs.filter((other) => other.chapters.includes(n));
+    lightDiscs(key, new Set(peers.map((other) => other.key)));
+    lightTicks([n]);
     const uses = lab.uses.filter((use) => use.ch === n);
     readout.show({
       kicker: `${lab.name} × chapter ${chapter.number}`,
       title: chapter.title,
       sub: uses.map((use) => `§ ${use.sections}${use.label === '' ? '' : ` · ${use.label}`}`).join('; '),
       rows: [
-        ['lab', [lab.name]],
         ['sections', [String(lab.sectionsByChapter[String(n)] ?? 0)]],
+        ['also here', peers.filter((other) => other.key !== key).map((other) => monoChip(other))],
       ],
       list: { uses: useEntries(lab, uses, 'chapter'), empty: '' },
       foot: [openLink(`${lab.url}#ch-${pad(n)}`, `open ${lab.name} at chapter ${chapter.number} →`)],
@@ -1036,15 +1309,13 @@ function initLabs(ctx: PageContext, root: HTMLElement, model: LabsModel): void {
     for (const row of rowsFor(key)) row.classList.add('is-focus');
     tint(`td[data-el-part="${String(n)}"], th.el-pcol[data-el-part="${String(n)}"]`);
     mark.classList.add('is-focus');
+    lightDiscs(key, new Set([key]));
     const uses = lab.uses.filter((use) => part.chapters.includes(use.ch));
     readout.show({
       kicker: `${lab.name} × Part ${part.numeral}`,
       title: part.title,
       sub: `${plural(new Set(uses.map((use) => use.ch)).size, 'written chapter')} of this part draw on ${lab.name}.`,
-      rows: [
-        ['lab', [lab.name]],
-        ['chapters', [...new Set(uses.map((use) => use.ch))].map((c) => chapterChip(c, `${lab.url}#ch-${pad(c)}`))],
-      ],
+      rows: [['chapters', [...new Set(uses.map((use) => use.ch))].map((c) => chapterChip(c, `${lab.url}#ch-${pad(c)}`))]],
       list: { uses: useEntries(lab, uses, 'chapter'), empty: '' },
       foot: [openLink(lab.url, `open ${lab.name} →`)],
     });
@@ -1056,12 +1327,18 @@ function initLabs(ctx: PageContext, root: HTMLElement, model: LabsModel): void {
     clear();
     currentKey = key;
     link.classList.add('is-focus');
-    showLab(lab);
+    lightDiscs(null, new Set());
+    readout.show(idleView(lab));
   };
 
   // ── pointer and focus ──
   const dispatch = (target: EventTarget | null): void => {
     if (!(target instanceof Element)) return;
+    const disc = target.closest<SVGAElement>('[data-lc-lab]');
+    if (disc !== null) {
+      focusLab(disc.dataset['lcLab'] ?? '');
+      return;
+    }
     const row = target.closest<HTMLElement>('tr[data-el-row]');
     const key = row?.dataset['elRow'];
     const mark = target.closest<HTMLElement>('[data-el-cell], [data-el-pcell]');
@@ -1085,12 +1362,14 @@ function initLabs(ctx: PageContext, root: HTMLElement, model: LabsModel): void {
     if (col !== undefined) focusColumn(Number(col));
     else if (part !== undefined) focusPart(Number(part));
   };
-  wrap.addEventListener('pointerover', (event) => {
-    dispatch(event.target);
-  }, { signal });
-  wrap.addEventListener('focusin', (event) => {
-    dispatch(event.target);
-  }, { signal });
+  for (const scope of [wrap, ...svgs]) {
+    scope.addEventListener('pointerover', (event) => {
+      dispatch(event.target);
+    }, { signal });
+    scope.addEventListener('focusin', (event) => {
+      dispatch(event.target);
+    }, { signal });
+  }
   // A click anywhere on a row that is not itself a link opens the lab.
   wrap.addEventListener('click', (event) => {
     if (!(event.target instanceof Element) || event.target.closest('a') !== null) return;
@@ -1116,11 +1395,32 @@ function initLabs(ctx: PageContext, root: HTMLElement, model: LabsModel): void {
   root.querySelector('[data-en-readout]')?.addEventListener('pointerover', (event) => {
     const link = event.target instanceof Element ? event.target.closest<HTMLElement>('[data-peek-row]') : null;
     for (const table of tables) for (const node of table.querySelectorAll('.is-peek')) node.classList.remove('is-peek');
+    for (const disc of allDiscs) disc.classList.remove('is-peek');
     const key = link?.dataset['peekRow'];
-    if (key !== undefined) for (const row of rowsFor(key)) row.classList.add('is-peek');
+    if (key === undefined) return;
+    for (const row of rowsFor(key)) row.classList.add('is-peek');
+    for (const disc of discsOf(key)) disc.classList.add('is-peek');
   }, { signal });
 
-  // ── keyboard: one tab stop per table; arrows move by row and column ──
+  // ── keyboard: each drawing of the constellation and each table are one tab stop ──
+  for (const svg of svgs) {
+    const byX = [...svg.querySelectorAll<SVGAElement>('[data-lc-lab]')].sort((a, b) => Number(a.dataset['lcX']) - Number(b.dataset['lcX']));
+    svg.addEventListener('keydown', (event) => {
+      const disc = event.target instanceof Element ? event.target.closest<SVGAElement>('[data-lc-lab]') : null;
+      if (disc === null) return;
+      if (event.key === 'Escape') {
+        reset();
+        return;
+      }
+      const at = byX.indexOf(disc);
+      const move = event.key === 'ArrowRight' || event.key === 'ArrowDown' ? 1 : event.key === 'ArrowLeft' || event.key === 'ArrowUp' ? -1 : 0;
+      const next = event.key === 'Home' ? byX[0] : event.key === 'End' ? byX.at(-1) : move === 0 ? undefined : byX[Math.max(0, Math.min(byX.length - 1, at + move))];
+      if (next === undefined) return;
+      event.preventDefault();
+      rove(byX, next);
+    }, { signal });
+  }
+
   const navRows = (table: HTMLTableElement): HTMLElement[][] => rowsOf(table).map((row) => [...row.querySelectorAll<HTMLElement>('[data-el-nav]')]);
   const columnOf = (item: HTMLElement): number => Number(item.dataset['elCell'] ?? item.dataset['elPcell'] ?? 0);
   wrap.addEventListener('keydown', (event) => {
@@ -1153,12 +1453,7 @@ function initLabs(ctx: PageContext, root: HTMLElement, model: LabsModel): void {
 
   // ── ordering: reference-stack position (default) or footprint ──
   const sortbar = root.querySelector<HTMLElement>('[data-el-sortbar]');
-  const note = root.querySelector<HTMLElement>('[data-el-sortnote]');
   const buttons = [...root.querySelectorAll<HTMLButtonElement>('[data-el-sort]')];
-  const NOTES: Readonly<Record<Order, string>> = {
-    rank: 'Reference-stack list order — a position, not a ranking.',
-    footprint: 'By footprint: chapters, then sections — a measure of the book so far, not of the lab.',
-  };
   const applyOrder = (order: Order, animate: boolean): void => {
     const shown = visible();
     const before = new Map(shown === undefined ? [] : rowsOf(shown).map((row) => [row, row.getBoundingClientRect().top] as const));
@@ -1172,7 +1467,6 @@ function initLabs(ctx: PageContext, root: HTMLElement, model: LabsModel): void {
       tbody.append(...sorted);
     }
     for (const button of buttons) button.setAttribute('aria-pressed', String(button.dataset['elSort'] === order));
-    if (note !== null) note.textContent = NOTES[order];
     if (!animate || reducedMotion()) return;
     for (const [row, top] of before) {
       const delta = top - row.getBoundingClientRect().top;
@@ -1203,4 +1497,31 @@ function initLabs(ctx: PageContext, root: HTMLElement, model: LabsModel): void {
       }, { signal });
     }
   }
+
+  // ── alive: at rest a slow highlight cycles through the broadest footprints ──
+  // Paused while the pointer or focus is inside the instrument, while it is off-screen or the tab
+  // hidden, and never started under reduced motion.
+  const cycle = [...active].sort((a, b) => b.chapters.length * 1000 + b.sections - (a.chapters.length * 1000 + a.sections)).slice(0, CYCLE_TOP);
+  let onScreen = false;
+  let step = 0;
+  const idleNow = (): boolean => onScreen && !doc.hidden && !root.matches(':hover') && !root.contains(doc.activeElement) && currentKey === null && currentCol === null;
+  if (!reducedMotion() && cycle.length > 1) {
+    const observer = ctl.observe(
+      new IntersectionObserver((entries) => {
+        onScreen = entries.some((entry) => entry.isIntersecting);
+      }),
+    );
+    observer.observe(hero);
+    const timer = setInterval(() => {
+      if (!idleNow()) return;
+      step = (step + 1) % cycle.length;
+      const lab = cycle[step];
+      if (lab !== undefined) feature(lab, `Footprint ${String(step + 1)} of ${String(active.length)} · ${String(lab.sections)} §`);
+    }, CYCLE_MS);
+    ctl.defer(() => {
+      clearInterval(timer);
+    });
+  }
+
+  rest();
 }

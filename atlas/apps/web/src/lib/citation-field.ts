@@ -29,6 +29,21 @@ export interface FieldLane {
   readonly y0: number;
   readonly cy: number;
   readonly y1: number;
+  /** Baseline of the lane's label: beside the centre line, or above the dots in the compact layout. */
+  readonly ly: number;
+}
+
+export interface FieldOptions {
+  /** Drawing width in user units. */
+  readonly width?: number;
+  /** Room reserved left of the first year for lane labels (0 when labels sit above the lanes). */
+  readonly labelW?: number;
+  /** Height reserved above each lane's dots for its label (compact layout); 0 keeps labels beside. */
+  readonly labelTop?: number;
+  /** Width of the undated column. */
+  readonly undatedW?: number;
+  /** Air above and below each lane's dots. */
+  readonly lanePad?: number;
 }
 
 export interface FieldGeometry {
@@ -55,11 +70,11 @@ export function radiusFor(weight: number): number {
 const GAP = 1.3;
 const STEP = 3.5;
 
-export function citationField(works: readonly FieldWork[], typeOrder: readonly string[], width = 780): FieldGeometry {
-  const labelW = 132;
+export function citationField(works: readonly FieldWork[], typeOrder: readonly string[], options: FieldOptions = {}): FieldGeometry {
+  const { width = 780, labelW = 132, labelTop = 0, lanePad = 5 } = options;
   const x0 = labelW;
   const hasUndated = works.some((work) => work.year === null);
-  const undatedW = hasUndated ? 74 : 0;
+  const undatedW = hasUndated ? (options.undatedW ?? 74) : 0;
   const x1 = width - 10 - (hasUndated ? undatedW + 16 : 0);
   const dated = works.flatMap((work) => (work.year === null ? [] : [work.year]));
   const yMin = Math.min(...dated);
@@ -99,7 +114,7 @@ export function citationField(works: readonly FieldWork[], typeOrder: readonly s
             if (Math.abs(i * STEP) > Math.max(0, span)) continue;
             // Dated dots stay left of the undated column; nothing leaves the drawing.
             if (work.year !== null && dx + r > x1 + 8) continue;
-            if (dx - r < x0 - 8 || dx + r > width - 2) continue;
+            if (dx - r < Math.max(2, x0 - 8) || dx + r > width - 2) continue;
             candidates.push({ dx, dy: j * STEP, cost: Math.abs(j) * 1.25 + Math.abs(i) });
           }
         }
@@ -124,9 +139,9 @@ export function citationField(works: readonly FieldWork[], typeOrder: readonly s
     const up = Math.max(8, ...placed.map((item) => -item.dy + item.r));
     const down = Math.max(8, ...placed.map((item) => item.dy + item.r));
     const y0 = y;
-    const cy = y0 + up + 5;
-    const y1 = cy + down + 5;
-    lanes.push({ type, count: placed.length, y0, cy, y1 });
+    const cy = y0 + labelTop + up + lanePad;
+    const y1 = cy + down + lanePad;
+    lanes.push({ type, count: placed.length, y0, cy, y1, ly: labelTop > 0 ? y0 + labelTop - 2 : cy + 4 });
     for (const item of placed) marks.push({ ...item.work, x: round(item.dx), y: round(cy + item.dy), r: item.r });
     y = y1;
   }

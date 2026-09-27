@@ -3,6 +3,8 @@
  * readout, the co-citation list, the lineage entries, and the "Used for"
  * table are one instrument.
  *
+ * - At rest the readout holds the chapter with the most citing pages (its dot
+ *   carries a dashed ring); leaving the instrument returns to it.
  * - Point at (or focus) a lit chapter dot or a table row: the dot is ringed,
  *   the readout names the chapter, what the book uses the work for there, and
  *   lists its citing pages.
@@ -103,8 +105,11 @@ export function initPaperPage(ctx: PageContext): void {
     );
     set(out.foot, pages.length > LIST_ROWS ? `+${String(pages.length - LIST_ROWS)} more — all in “Used for” below` : '');
   };
+  // Rest: the chapter the page opens on (most citing pages), ringed in the grid and marked in the table.
+  const restN = Number(readout.dataset['ppRest'] ?? Number.NaN);
   const restore = (): void => {
     for (const [el, nodes] of initial) el.replaceChildren(...nodes.map((node) => node.cloneNode(true)));
+    dots.get(restN)?.classList.add('is-rest');
   };
 
   // ── lighting ──────────────────────────────────────────────────────────────
@@ -112,7 +117,7 @@ export function initPaperPage(ctx: PageContext): void {
   const clear = (): void => {
     current = null;
     svg.classList.remove('has-focus', 'has-co');
-    for (const dot of dots.values()) dot.classList.remove('is-focus', 'is-shared');
+    for (const dot of dots.values()) dot.classList.remove('is-focus', 'is-shared', 'is-rest');
     for (const row of rows.values()) row.classList.remove('is-on');
     for (const row of coRows) row.classList.remove('is-on');
   };

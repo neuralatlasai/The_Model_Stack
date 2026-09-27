@@ -83,21 +83,11 @@ const litOrder = dots.filter((dot) => byN.has(dot.n)).map((dot) => dot.n);
 const firstLit = litOrder[0];
 
 const maxShared = Math.max(1, ...model.cocited.map((work) => work.shared.length));
-const top = [...citedChapters].sort((a, b) => b.pages.length - a.pages.length || a.n - b.n)[0];
-const accessedDays = [...new Set(record.uses.map((use) => accessedParts(use.accessed)?.day).filter((day): day is string => day !== undefined))];
-const restTitle =
-  model.pages === 0
-    ? model.chapters.length === 0
-      ? 'Not yet cited on any page'
-      : `Used in ${s(model.chapters.length, 'chapter')}; no page cites it directly`
-    : `Cited on ${s(model.pages, 'page')} in ${s(citedChapters.length, 'chapter')}`;
-const restText = [
-  top === undefined ? null : `Most cited in chapter ${top.number}, ${top.short} (${s(top.pages.length, 'page')}).`,
-  `Uses recorded in ${s(record.uses.length, 'chapter')}${accessedDays.length > 0 ? `; source accessed ${accessedDays.join(', ')}` : ''}.`,
-  model.otherPages.length > 0 ? `${s(model.otherPages.length, 'citing page')} outside the chapters.` : null,
-]
-  .filter((part) => part !== null)
-  .join(' ');
+// The readout rests on the chapter with the most citing pages (else the first chapter recording a use);
+// the client returns to it whenever the pointer leaves the instrument.
+const top = [...citedChapters].sort((a, b) => b.pages.length - a.pages.length || a.n - b.n)[0] ?? model.chapters[0];
+const topAccessed = top === undefined ? [] : top.uses.map((use) => accessedParts(use.accessed)?.day ?? null).filter((day): day is string => day !== null);
+const LIST_ROWS = 6;
 
 const clientModel = {
   key: record.key,
@@ -147,10 +137,16 @@ const clientModel = {
         <span class="pp-status" data-evidence-class={statusClass} data-status={record.status === 'UNVERIFIED' ? 'unv' : 'ok'}>
           <i aria-hidden="true"></i>{record.status}
         </span>
-        <span class="pp-facts__n">{s(model.pages, 'citing page')}</span>
-        <span class="pp-facts__n">{s(citedChapters.length, 'chapter')}</span>
-        <span class="pp-facts__n">{s(model.lineage.length, 'lineage entry', 'lineage entries')}</span>
-        <span class="pp-facts__n">{s(model.cocitedTotal, 'work', 'works')} cited alongside</span>
+        <span class="pp-facts__n"><b>{model.pages}</b> citing {model.pages === 1 ? 'page' : 'pages'}</span>
+        <span class="pp-facts__n"><b>{citedChapters.length}</b> {citedChapters.length === 1 ? 'chapter' : 'chapters'}</span>
+        {
+          model.lineage.length > 0 && (
+            <span class="pp-facts__n">
+              <b>{model.lineage.length}</b> lineage {model.lineage.length === 1 ? 'entry' : 'entries'}
+            </span>
+          )
+        }
+        <span class="pp-facts__n"><b>{model.cocitedTotal}</b> co-cited</span>
       </div>
       <ul class="pp-actions">
         {
@@ -188,7 +184,7 @@ const clientModel = {
         <figure class="pp-map">
           <figcaption class="pp-head">
             <span class="pp-head__title" id="pp-where-title">Where it is used</span>
-            <span class="pp-head__note">66 chapters · dot size = citing pages</span>
+            <span class="pp-head__note">dot size = citing pages</span>
           </figcaption>
           <svg
             class="pp-svg"
@@ -226,7 +222,7 @@ const clientModel = {
                 const r = pages === 0 ? 5 : radius(pages);
                 return (
                   <a
-                    class:list={['pp-dot', { 'is-use-only': pages === 0 }]}
+                    class:list={['pp-dot', { 'is-use-only': pages === 0, 'is-rest': dot.n === top?.n }]}
                     href={chapter.url}
                     data-pp-n={dot.n}
                     tabindex={dot.n === firstLit ? 0 : -1}
@@ -249,37 +245,65 @@ const clientModel = {
           </svg>
           <p class="pp-legend" aria-hidden="true">
             <span><i class="pp-key pp-key--lit"></i>cites it</span>
-            <span><i class="pp-key pp-key--use"></i>use recorded, no citing page</span>
+            <span><i class="pp-key pp-key--use"></i>use only</span>
             <span><i class="pp-key pp-key--quiet is-written"></i>written</span>
             <span><i class="pp-key pp-key--quiet"></i>planned</span>
           </p>
         </figure>
 
-        <div class="pp-readout" aria-live="polite" data-pp-readout>
-          <p class="pp-ro__kicker" data-pp-kicker>Where it is used</p>
-          <p class="pp-ro__title" data-pp-title>{restTitle}</p>
-          <p class="pp-ro__text" data-pp-text>{restText}</p>
-          <p class="pp-ro__listhead" data-pp-listhead><span>Chapters</span><span>citing pages</span></p>
-          <ol class="pp-ro__list" data-pp-list>
-            {
-              model.chapters.slice(0, 6).map((chapter) => (
-                <li class="pp-ro__item">
-                  <a href={chapter.url} tabindex="-1">
-                    <span class="pp-ro__num">{chapter.number}</span>
-                    <span class="pp-ro__text2">{chapter.short}</span>
-                    <span class="pp-ro__val">{chapter.pages.length > 0 ? chapter.pages.length : 'use only'}</span>
-                  </a>
-                </li>
-              ))
-            }
-          </ol>
-          <p class="pp-ro__foot" data-pp-foot>{model.chapters.length > 6 ? `+${String(model.chapters.length - 6)} more chapters — see “Used for” below` : ''}</p>
+        <div class="pp-readout" aria-live="polite" data-pp-readout data-pp-rest={top?.n}>
+          {
+            top === undefined ? (
+              <>
+                <p class="pp-ro__kicker" data-pp-kicker>Not yet used</p>
+                <p class="pp-ro__title" data-pp-title>No chapter cites {record.key} yet</p>
+                <p class="pp-ro__text" data-pp-text>{model.otherPages.length > 0 ? `${s(model.otherPages.length, 'page')} outside the chapters cite it.` : ''}</p>
+                <p class="pp-ro__listhead" data-pp-listhead><span>Citing pages</span><span>{model.otherPages.length}</span></p>
+                <ol class="pp-ro__list" data-pp-list>
+                  {model.otherPages.slice(0, LIST_ROWS).map((page) => (
+                    <li class="pp-ro__item">
+                      <a href={page.url} tabindex="-1">
+                        <span class="pp-ro__num">{page.label}</span>
+                        <span class="pp-ro__text2">{page.title}</span>
+                      </a>
+                    </li>
+                  ))}
+                </ol>
+                <p class="pp-ro__foot" data-pp-foot />
+              </>
+            ) : (
+              <>
+                <p class="pp-ro__kicker" data-pp-kicker>
+                  {citedChapters.length > 1 ? 'Most cited · ' : ''}Chapter {top.number} · {top.pages.length === 0 ? 'no citing page' : s(top.pages.length, 'citing page')}
+                </p>
+                <p class="pp-ro__title" data-pp-title>{top.title}</p>
+                <p class="pp-ro__text" data-pp-text>
+                  {top.uses.length === 0 ? `No use is recorded in this chapter's references; ${record.key} is cited on the pages below.` : `Used for: ${top.uses.map((use) => use.usedFor).join(' · ')}`}
+                </p>
+                <p class="pp-ro__listhead" data-pp-listhead>
+                  <span>Citing pages</span>
+                  <span>{top.uses.length === 0 ? 'no use recorded' : topAccessed.length > 0 ? `accessed ${topAccessed.join(', ')}` : 'not accessed — UNVERIFIED'}</span>
+                </p>
+                <ol class="pp-ro__list" data-pp-list>
+                  {top.pages.slice(0, LIST_ROWS).map((page) => (
+                    <li class="pp-ro__item">
+                      <a href={page.url} tabindex="-1">
+                        <span class="pp-ro__num">{page.label}</span>
+                        <span class="pp-ro__text2">{page.title}</span>
+                      </a>
+                    </li>
+                  ))}
+                </ol>
+                <p class="pp-ro__foot" data-pp-foot>{top.pages.length > LIST_ROWS ? `+${String(top.pages.length - LIST_ROWS)} more — all in “Used for” below` : ''}</p>
+              </>
+            )
+          }
         </div>
 
         <div class="pp-co" aria-labelledby="pp-co-title">
           <p class="pp-head">
             <span class="pp-head__title" id="pp-co-title">Cited alongside</span>
-            <span class="pp-head__note">shared citing pages</span>
+            <span class="pp-head__note">shared pages</span>
           </p>
           {
             model.cocited.length === 0 ? (
@@ -288,12 +312,15 @@ const clientModel = {
               <ol class="pp-co__list" data-pp-co-list>
                 {model.cocited.map((work) => (
                   <li>
-                    <a class="pp-co__row" href={work.url} data-pp-co={work.key} aria-label={`${work.key} ${work.work}: ${s(work.shared.length, 'shared page')}`}>
+                    <a
+                      class="pp-co__row"
+                      href={work.url}
+                      data-pp-co={work.key}
+                      style={`--f:${(work.shared.length / maxShared).toFixed(3)}`}
+                      aria-label={`${work.key} ${work.work}: ${s(work.shared.length, 'shared page')}`}
+                    >
                       <span class:list={['pp-co__key', { 'is-spine': work.spine }]}>{work.key}</span>
                       <span class="pp-co__work">{work.work}</span>
-                      <span class="pp-co__bar" aria-hidden="true">
-                        <i style={`inline-size:${String(Math.round((work.shared.length / maxShared) * 100))}%`} />
-                      </span>
                       <span class="pp-co__n">{work.shared.length}</span>
                     </a>
                   </li>
@@ -304,7 +331,7 @@ const clientModel = {
           {
             model.cocitedTotal > model.cocited.length && (
               <p class="pp-co__more">
-                {model.cocitedTotal - model.cocited.length} more works share at least one page · <a href="/papers/">all papers</a>
+                +{model.cocitedTotal - model.cocited.length} more share a page · <a href="/papers/">all papers</a>
               </p>
             )
           }
@@ -316,9 +343,9 @@ const clientModel = {
           <div class="pp-lineage" aria-labelledby="pp-lin-title">
             <p class="pp-head">
               <span class="pp-head__title" id="pp-lin-title">In the lineage</span>
-              <span class="pp-head__note">
-                {s(model.lineage.length, 'timeline entry cites', 'timeline entries cite')} {record.key}
-              </span>
+              <a class="pp-head__note pp-head__link" href="/timeline/">
+                timeline →
+              </a>
             </p>
             <ol class="pp-lin__list">
               {model.lineage.map((entry) => (
@@ -355,7 +382,7 @@ const clientModel = {
       <div class="pp-uses" aria-labelledby="pp-uses-title">
         <p class="pp-head">
           <span class="pp-head__title" id="pp-uses-title">Used for</span>
-          <span class="pp-head__note">what each chapter draws from it · the pages that cite it · when the source was checked</span>
+          <span class="pp-head__note">per chapter · source checks</span>
         </p>
         {
           model.chapters.length === 0 && model.otherPages.length === 0 ? (
