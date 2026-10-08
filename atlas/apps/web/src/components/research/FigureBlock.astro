@@ -30,6 +30,7 @@ const { figure, depth = 'overview' } = Astro.props;
 const rail = figure.placement === 'rail';
 const shown = rail ? figureCopy(figure, 'inline') : figure;
 const calculator = isCalculator(figure);
+const scalable = ['diagram', 'cycle', 'chart', 'matrix'].includes(figure.spec.kind);
 const { nodeHref, tex } = await figureHostProps(figure);
 ---
 
@@ -38,25 +39,29 @@ const { nodeHref, tex } = await figureHostProps(figure);
   id={rail ? figure.anchor : undefined}
   {...depthAttrs(depth)}
 >
-  {
-    rail && (
-      <p class="rb-figmark">
-        <span class="rb-figmark__glyph" aria-hidden="true">▸</span>
-        <span class="rb-figmark__label">{figureLabel(figure)}</span>
-        <span class="rb-figmark__title">{figure.spec.title}</span>
-        <span class="rb-figmark__where">in the context rail</span>
-      </p>
-    )
-  }
+  {scalable && (
+    <label class="rb-figure__scale">
+      <input type="checkbox" aria-label={`Inspect ${figureLabel(figure)} at full size`} />
+      Full size
+    </label>
+  )}
+  {rail && (
+    <p class="rb-figmark">
+      <span class="rb-figmark__glyph" aria-hidden="true">
+        ▸
+      </span>
+      <span class="rb-figmark__label">{figureLabel(figure)}</span>
+      <span class="rb-figmark__title">{figure.spec.title}</span>
+      <span class="rb-figmark__where">in the context rail</span>
+    </p>
+  )}
   <div class="rb-figure__inline">
-    {
-      calculator ? (
-        <Figure figure={shown} nodeHref={nodeHref}>
-          <Calculator client:visible figure={shown} {...tex} />
-        </Figure>
-      ) : (
-        <Figure figure={shown} nodeHref={nodeHref} />
-      )
-    }
+    {calculator ? (
+      <Figure figure={shown} nodeHref={nodeHref}>
+        <Calculator client:visible figure={shown} {...tex} />
+      </Figure>
+    ) : (
+      <Figure figure={shown} nodeHref={nodeHref} />
+    )}
   </div>
 </div>

@@ -38,7 +38,7 @@ evidence_summary:
   labels_used: [MATHEMATICALLY-DERIVED, PAPER-REPORTED, OFFICIAL-DOCUMENTATION, KNOWN, DERIVED, ASSUMED, NOT-DISCLOSED, UNVERIFIED]
   empirically_observed: false
 word_count_target: 1400
-updated_at: 2026-09-20
+updated_at: 2026-10-07
 editorial_status: manuscript_draft
 ---
 
@@ -52,11 +52,11 @@ VOLUME I / PART I — SCIENTIFIC FOUNDATIONS / CHAPTER 04
 
 ## Why this chapter exists
 
-What failed before was a vocabulary collapse: "the pretraining objective" became a synonym for next-token prediction, and every other signal — masked reconstruction, span corruption, prefix conditioning, infilling, contrastive alignment, auxiliary heads, action-conditioned prediction — was filed as an architecture choice or a data trick. The corrections table of `book_plan.md` records this as a category error, and the cost of the error is concrete: papers report "loss 2.1" or "perplexity 12.3" without stating the tokenizer, the loss mask, the normalisation, the context window, or the document-boundary treatment, and readers compare them.
+A learning objective is a specified statistical experiment: it defines visible information, target events, their probability or score, and the reduction applied to examples. A causal likelihood, a selected-position reconstruction loss, an infilling distribution, a multi-offset prediction objective, a contrastive candidate classifier, and continuous action regression therefore require different methodological records. Architecture and implementation determine how those experiments run; they do not replace the objective specification.
 
-The bottleneck that appeared was comparability. As objectives diversified (encoder-only, encoder–decoder, decoder-only with prefix visibility, fill-in-the-middle, multi-token heads, multimodal conditioning), the single scalar "loss" stopped being a shared coordinate. Two models trained with different target masks or different normalisation denominators do not sit on the same axis, and the shared mathematical contract of this book (Eq. N.1/N.2 in [notation](../../../front-matter/notation.md)) exists precisely to prevent the silent aliasing.
+This chapter follows each required family from its formal objects through data construction, target/visibility alignment, gradients, algorithms, resource costs, and the cited sources' experimental protocols. The six sections compare published findings with what their interventions actually identify. Newer multi-token-prediction work is included with its stated settings and theoretical assumptions; publication date supplies no performance ordering.
 
-The constraint that became dominant is that objective choices have physical costs that are rarely stated next to them: span corruption changes the target-length ratio and therefore the decoder FLOPs per input token; encoder–decoder objectives add cross-attention and a second parameter stack; multi-token prediction adds output-head evaluations at vocabulary width; contrastive objectives make the effective batch a part of the objective. What changed in the solution is a bookkeeping discipline rather than a new algorithm: this chapter treats each objective as a row in a ledger with conditioning, targets, masks, normalisation, and cost fields, derives the shared likelihood contract once, and shows by hand-auditable example exactly which tokens carry gradient under each family. Every downstream chapter that reports a loss inherits this ledger.
+The objective ledger connects these explanations. Its counts distinguish clean input tokens, processed positions, and scored targets. Its masks distinguish direct prediction losses from gradient paths through conditioning. Its normalization fields specify global counts, candidate sets, and weighted terms. Its evaluation fields prevent a tokenizer, stride, boundary, or decoder-policy change from being silently treated as a model-quality gain (MATHEMATICALLY-DERIVED: Eq. 4.1-4.18).
 
 ```figure
 id: fig-4.1
@@ -179,14 +179,9 @@ The falsifiable task is to take a 12-token hand-audited sequence, write out inpu
 
 ## Lineage
 
-- 2017 · Attention Is All You Need (P01) · *conceptual ancestor* — teacher-forced encoder–decoder likelihood with a causal decoder mask
-- 2018 · BERT [R4.1] · *alternative branch* — masked-token reconstruction with bidirectional visibility
-- 2019 · T5 (P02) · *current frontier* for span-corruption bookkeeping — sentinel-delimited targets and a controlled objective comparison
-- 2019 · BART [R4.3] · *alternative branch* — full-sequence denoising reconstruction
-- 2022 · UL2 [R4.4] · *engineering optimization* — a mixture of denoisers with mode tokens
-- 2022 · Efficient Training of Language Models to Fill in the Middle [R4.5] · *engineering optimization* — document rearrangement for infilling in causal models
-- 2024 · DeepSeek-V3 (P13) · *current frontier* for a sequential multi-token-prediction head in a released report
-- 2021 · CLIP (P44) · *alternative branch* — contrastive alignment replacing token likelihood
+The Transformer provides shifted causal encoder-decoder likelihood (P01). BERT studies selected-position reconstruction (R4.1); T5 compares architecture and denoising choices (P02); BART reconstructs fully noised documents (R4.3); UniLM changes shared-network visibility (R4.8). These are methodological branches with distinct targets and costs.
+
+CLIP supplies paired discriminative alignment (P44). FIM and InCoder construct infilling conditionals within causal models (R4.5, R4.9), with Code Llama documenting tokenization and format constraints (R4.12). Independent-head MTP and sequential MTP have different prediction-depth graphs (R4.13, P13); register-based prediction, curriculum ordering, and the2026 restricted planning analysis extend this comparison (R4.32-R4.34). Each source's exact inspected surface and claim locator appears in [references.md](references.md).
 
 ```figure
 id: fig-4.2
@@ -207,7 +202,7 @@ alt: >-
   2017, Attention Is All You Need (P01), conceptual ancestor: teacher-forced
   encoder–decoder likelihood with a causal decoder mask. 2018, BERT (R4.1),
   alternative branch: masked-token reconstruction with bidirectional
-  visibility. 2019, T5 (P02), current frontier for span-corruption
+  visibility. 2019, T5 (P02), documented methodological branch for span-corruption
   bookkeeping: sentinel-delimited targets and a controlled objective
   comparison. 2019, BART (R4.3), alternative branch: full-sequence denoising
   reconstruction. 2021, CLIP (P44), alternative branch: contrastive alignment
@@ -215,18 +210,18 @@ alt: >-
   mixture of denoisers with mode tokens. 2022, Efficient Training of Language
   Models to Fill in the Middle (R4.5), engineering optimization: document
   rearrangement for infilling in causal models. 2024, DeepSeek-V3 (P13),
-  current frontier for a sequential multi-token-prediction head in a released
+  documented methodological branch for a sequential multi-token-prediction head in a released
   report.
 spec:
   entries:
     - { year: 2017, work: "Attention Is All You Need", cite: P01, relation: "conceptual ancestor", node: ms.section.4.1, note: "teacher-forced encoder–decoder likelihood with a causal decoder mask" }
     - { year: 2018, work: "BERT", cite: R4.1, relation: "alternative branch", node: ms.section.4.2, note: "masked-token reconstruction with bidirectional visibility" }
-    - { year: 2019, work: "T5", cite: P02, relation: "current frontier", node: ms.section.4.2, note: "for span-corruption bookkeeping: sentinel-delimited targets and a controlled objective comparison" }
+    - { year: 2019, work: "T5", cite: P02, relation: "alternative branch", node: ms.section.4.2, note: "for span-corruption bookkeeping: sentinel-delimited targets and a controlled objective comparison" }
     - { year: 2019, work: "BART", cite: R4.3, relation: "alternative branch", node: ms.section.4.2, note: "full-sequence denoising reconstruction" }
     - { year: 2021, work: "CLIP", cite: P44, relation: "alternative branch", node: ms.section.4.5, note: "contrastive alignment replacing token likelihood" }
     - { year: 2022, work: "UL2", cite: R4.4, relation: "engineering optimization", node: ms.section.4.2, note: "a mixture of denoisers with mode tokens" }
     - { year: 2022, work: "Efficient Training of Language Models to Fill in the Middle", cite: R4.5, relation: "engineering optimization", node: ms.section.4.3, note: "document rearrangement for infilling in causal models" }
-    - { year: 2024, work: "DeepSeek-V3", cite: P13, relation: "current frontier", node: ms.section.4.4, note: "for a sequential multi-token-prediction head in a released report" }
+    - { year: 2024, work: "DeepSeek-V3", cite: P13, relation: "alternative branch", node: ms.section.4.4, note: "for a sequential multi-token-prediction head in a released report" }
 ```
 
 ## Terms owned here
@@ -244,8 +239,8 @@ spec:
 - **Multi-token prediction (training head)** — an auxiliary head predicting tokens beyond t+1 during training (§4.4).
 - **Auxiliary loss** — a loss term added to the primary objective for regularisation or stability, not for the deployed prediction (§4.4).
 - **Target-length ratio** — target tokens divided by input tokens for an objective row (§4.2).
-- **Conditional generative objective** — Eq. N.2 applied to targets with a conditioning input that enters through an interface and carries zero loss mask at every conditioning position (§4.5).
-- **Discriminative objective** — an objective whose softmax or scoring runs over a finite candidate set rather than over sequences, with no sampler over the target modality (§4.5).
+- **Conditional generative objective** — Eq. N.2 applied to targets with a conditioning input that enters through an interface with an explicitly declared response-only or joint scoring mask (§4.5).
+- **Discriminative objective** — an objective whose softmax or scoring runs over a finite candidate set rather than over sequences, with a categorical label distribution rather than an unrestricted sequence sampler (§4.5).
 - **Perplexity comparability conditions** — the five conditions under which two perplexities share an axis (§4.6).
 
 ## Reference-stack coverage
@@ -292,4 +287,6 @@ Following the paper cascade of `AI_REFERENCE_STACK.md` §3.1 (arXiv/OpenReview �
 
 ## Status
 
-Editorial status: `manuscript_draft`. Evidence coverage: every objective family is anchored to a primary paper (PAPER-REPORTED) whose full text or abstract was opened on 2026-09-20 (see the Accessed column of [references.md](references.md)); every mask/normalisation statement is derived (MATHEMATICALLY-DERIVED); reference-trainer and kernel behaviour is KNOWN from source files on `main` without a pinned commit; no experiment was run. NOT-DISCLOSED items: the MTP loss masking at document boundaries and the pipeline placement of the MTP module in P13; whether released FIM-trained models other than R4.5 (which keeps loss on all sections) restrict loss to the middle; production loss-normalisation and conditioning-mask choices for any named lab model; boundary conventions of most published perplexity evaluations. UNVERIFIED items: the exact sentinel layout of the SPM variant beyond the segment order; the P13 acceptance-rate figure for MTP used as a speculative draft (not confirmed in the fetched rendering, so not quoted); the magnitude of exposure-bias effects at foundation-model scale; whether any auxiliary loss improves downstream capability rather than training stability alone; whether MTP improves next-token NLL at matched FLOPs; span-sampling details inside current data collators; cross-rank gradient semantics of contrastive implementations; block-mask support in FlashAttention-class kernels (repository not opened); the venue cells of eight works whose proceedings pages were not opened (listed in the notes of [references.md](references.md)); every source-file behaviour cited from a `main` branch is unpinned and holds for 2026-09-20 only.
+Editorial status: `manuscript_draft`. All six sections were substantively revised on2026-10-07, with source-specific methodology, corrected formulations/algorithms, reported experimental protocols, observations, improvements, and evidence limits. The chapter's42 inspected primary/official surfaces and versions are listed in [references.md](references.md). No model, kernel, distributed training procedure, or evaluation harness was executed; no CODE-VERIFIED or EMPIRICALLY-OBSERVED result is claimed.
+
+Remaining bounds are explicit: named production systems may not disclose masking/normalization; unpinned documentation/repositories are moving surfaces; no universal MTP, corruption, calibration, or capability ordering follows from the cited studies. The coverage matrix and unexecuted verification proposals in [verification.md](verification.md) identify what has been explained and what still requires reproduction or implementation inspection. Successful parsing is a structural check, not scientific review completion.

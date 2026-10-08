@@ -40,7 +40,7 @@ evidence_summary:
   labels_used: [MATHEMATICALLY-DERIVED, PAPER-REPORTED, OFFICIAL-DOCUMENTATION, ASSUMED, DERIVED, NOT-DISCLOSED, UNVERIFIED]
   empirically_observed: false
 word_count_target: 900
-updated_at: 2026-09-20
+updated_at: 2026-10-07
 editorial_status: manuscript_draft
 ---
 
@@ -48,13 +48,17 @@ VOLUME I / PART I — SCIENTIFIC FOUNDATIONS / CHAPTER 02
 
 # 02 — Mathematical and statistical foundations
 
-Every quantity the rest of this book reports — a loss, a gradient, a benchmark difference, a compute-optimal allocation — is an estimator with a shape, a cost, and an uncertainty, and this chapter fixes the notation and estimation rules under which those three things are stated consistently.
+This chapter establishes the mathematical contracts for tensor execution, probability estimation, likelihood reporting, differentiation, experimental uncertainty, and constrained allocation. These contracts distinguish an exact identity from a finite-sample estimator, a documented interface from an inspected implementation, and an optimum of a fitted model from an experimentally validated design. A loss can be a deterministic value on a fixed corpus; a benchmark average can estimate a population quantity. Neither is automatically accompanied by a valid uncertainty model.
 
-6 sections · 5 spine papers · 3 implementations · prerequisites: 01, front-matter/notation · artifact: a consistent notation and statistical-estimation reference · updated 2026-09-20
+6 sections · 5 spine papers · 3 implementations · prerequisites: 01, notation · artifact: notation and statistical-estimation reference · updated 2026-10-07
 
 ## Why this chapter exists
 
-What failed before is not the mathematics, which is textbook material, but its *accounting*. Chapter 01 established that a foundation model is a constrained optimisation problem whose evidence lives at several levels of analysis. Reading the primary literature with that lens exposes three recurring defects. First, losses are reported without their normalisation (per token, per sequence, per byte), so that two "perplexities" from different tokenisers are compared as if they measured the same thing. Second, benchmark differences are reported without a variance model, and where a variance model exists it typically resamples the wrong unit: individual prompts that share a template, a passage, or a seed are treated as independent draws, and confidence intervals come out several times too narrow. Third, derivative quantities — gradients, Hessian approximations, policy-gradient estimators — are named without stating what they cost to compute, so that a method that needs a Hessian-vector product per step is compared to one that needs a gradient as if the two had the same price.
+Normalization, support, and sampling units alter the quantity being computed. Byte-normalized likelihood fixes a shared denominator but retains tokenizer, context, and termination conditions. Importance weights require overlap and integrand-specific moments; weight concentration alone does not certify precision. A reverse-mode derivative computes a pullback through an executed program, while curvature approximations deliberately omit or factor particular terms. Each section makes those choices explicit before connecting them to resource costs [MATHEMATICALLY-DERIVED · DERIVED:eq-2.10; DERIVED:eq-2.17; DERIVED:eq-2.29].
+
+Source-reported protocols then establish the empirical boundary: Pile document likelihoods, SGVB and K-FAC experiments, clustered-evaluation uncertainty, repeated-run bootstrap coverage, and compute-allocation fits. Their reported outcomes are attributed to their original settings; the chapter does not turn a historical CPU/GPU result into a current language-model throughput claim [PAPER-REPORTED · P03, §3.2; R2.4, §5; R2.5, §13; R2.7, Table 4; R2.16, §4.1; P09, §3.3].
+
+The proposed FP64 derivative and paired-bootstrap checks remain in verification.md. Their acceptance criteria are chosen test inputs, not evidence that a manuscript or implementation has passed review.
 
 ```figure
 id: fig-2.1
@@ -102,8 +106,6 @@ spec:
     - { dimension: "worked number", values: { norm: "1 nat = 1/ln 2 ≈ 1.443 bits (Eq. 2.10)", unit: "m = 10, ρ = 0.5: DE = 5.5; interval √5.5 ≈ 2.3× too narrow; a nominal z = 2 is z ≈ 0.85", price: "backward ≈ 2× forward; forward + backward ≈ 6 FLOPs per parameter per token; forming H needs N² entries" } }
     - { dimension: "falsifiable check", values: { norm: "§04.6 verification: one byte corpus scored under two tokenisers", unit: "Experiment 2.2: per-prompt against per-cluster coverage", price: "§02.4 proposal: gradient, HVP and K-FAC statistics timed as multiples of a forward pass" } }
 ```
-
-The bottleneck that appeared as models scaled is that every one of these defects is now expensive. An experiment whose confidence interval is wrong wastes a training run; a scaling fit whose parameter uncertainty is unpropagated allocates a compute budget to the wrong (N, D) point; an estimator whose variance is unmanaged makes an RL run diverge. The constraint that became dominant is therefore *auditability*: each number must be traceable to an estimator whose assumptions, shape, normalisation, cost, and uncertainty are explicit. What changed in the solution is nothing more than discipline: one notation (front-matter/notation.md), one cost line per mechanism, one evidence label per claim, and one rule for which unit is resampled. This chapter supplies the reference against which every later chapter's mathematics is checked.
 
 ## Concept map
 
@@ -157,39 +159,32 @@ Text equivalent:
 
 | § | Title | What changes here | Primary evidence labels |
 |---|---|---|---|
-| [02.1](02-1-tensor-algebra.md) | Tensor algebra | every tensor operation acquires a shape contract, a FLOP count, a byte count, and a conditioning bound | MATHEMATICALLY-DERIVED, OFFICIAL-DOCUMENTATION |
+| [02.1](02-1-tensor-algebra.md) | Tensor algebra | contractions have explicit shapes and resource boundaries; specified solves have perturbation bounds | MATHEMATICALLY-DERIVED, OFFICIAL-DOCUMENTATION |
 | [02.2](02-2-probability.md) | Probability | expectations become Monte Carlo estimators with a stated variance and per-sample cost | MATHEMATICALLY-DERIVED |
-| [02.3](02-3-information-theory.md) | Information theory | likelihood becomes coding length; bits per byte replaces perplexity as the tokenizer-independent unit | MATHEMATICALLY-DERIVED, PAPER-REPORTED |
+| [02.3](02-3-information-theory.md) | Information theory | likelihood becomes coding length; bits per byte supplies a shared raw-byte denominator under explicit scoring conventions | MATHEMATICALLY-DERIVED, PAPER-REPORTED |
 | [02.4](02-4-differential-calculus.md) | Differential calculus | derivatives become VJPs with a memory cost; Hessians become products and factored approximations; stochastic gradients become named estimators with bias/variance | MATHEMATICALLY-DERIVED, PAPER-REPORTED |
-| [02.5](02-5-statistical-inference.md) | Statistical inference | the resampled unit is the independent experimental unit, never the prompt when prompts are clustered | MATHEMATICALLY-DERIVED, PAPER-REPORTED |
+| [02.5](02-5-statistical-inference.md) | Statistical inference | resampling reproduces the declared independent-unit sampling design and preserves pairing/weighting | MATHEMATICALLY-DERIVED, PAPER-REPORTED |
 | [02.6](02-6-optimization-language.md) | Optimisation language | design choices become decision variables under constraints; multipliers become prices; fitted parameters carry propagated uncertainty | MATHEMATICALLY-DERIVED, PAPER-REPORTED |
 
 ## Artifact
 
-A consistent notation and statistical-estimation reference, delivered as:
-
-1. `notation-extension.md` — the local symbols introduced in this chapter (contraction indices, σ_i, κ, J, vᵀJ, H, G, ρ, DE, λ_i as multipliers, Σ) with shape and unit, extending but never redefining [front-matter/notation.md](../../../front-matter/notation.md).
-2. `estimator-table.md` — one row per estimator used in the book: estimand · estimator formula · unbiasedness · variance formula · per-sample cost · resampling unit · owning section.
-3. `ce_gradient_check.py` — reference code (UNVERIFIED for version) that computes softmax + cross-entropy in log-sum-exp form and checks ∂L/∂z = p − y against finite differences.
-4. `paired_cluster_bootstrap.py` — reference code (UNVERIFIED for version) implementing Algorithm 2.5, with unit tests that fail when the resampled unit is not the declared independent unit.
-
-Field lists are given in [verification.md](verification.md).
+This chapter delivers six manuscript sections, the source ledger, and the proposed verification specification. The artifact fields in [verification.md](verification.md#1-artifact-specification) describe the notation-extension, estimator-table, gradient-check, and bootstrap records to be produced by that protocol. Standalone programs or execution-result files have not been created or run in this content revision.
 
 ## Verification
 
-Two falsifiable tasks. (i) Derive the gradient of softmax cross-entropy in its log-sum-exp form and show, by finite-difference comparison in FP64 on ordinary and extreme logits, that ∂L/∂z = p − y to a stated tolerance; a persistent discrepancy larger than the tolerance rejects either the derivation or the numerical form. (ii) Implement a paired bootstrap that resamples independent experimental units (clusters), and demonstrate on a synthetic clustered population with known intra-cluster correlation that per-prompt resampling under-covers the true difference while cluster resampling attains nominal coverage within Monte Carlo error; if cluster resampling also fails coverage, the chapter's variance model is wrong. The full protocol is in [verification.md](verification.md).
+The plan requires a cross-entropy gradient derivation and a paired bootstrap over independent units. Their full unexecuted protocols, chosen tolerances, rejection conditions, and topic-completeness audit are in [verification.md](verification.md). Source-reported experiments are described in the owning manuscript sections and have not been reproduced by the book.
 
 ## Lineage
 
 - 1948 · Shannon, *A Mathematical Theory of Communication* [R2.1] · conceptual ancestor (entropy, coding length)
-- 1979 · Efron, *Bootstrap Methods: Another Look at the Jackknife* [R2.2] · conceptual ancestor (resampling inference)
-- 1992 · Williams, REINFORCE [R2.3] · conceptual ancestor (score-function gradient estimator)
+- 1979 · Efron, *Bootstrap Methods: Another Look at the Jackknife* [R2.2] · historical attribution pending full-text inspection (resampling inference)
+- 1992 · Williams, REINFORCE [R2.3] · historical attribution pending full-text inspection (score-function gradient estimator)
 - 2013 · Kingma and Welling, *Auto-Encoding Variational Bayes* [R2.4] · alternative branch (reparameterisation estimator)
 - 2015 · Martens and Grosse, K-FAC [R2.5] · engineering optimization (factored curvature)
 - 2018 · Baydin et al., autodiff survey [R2.6] · conceptual ancestor (forward vs reverse mode accounting)
 - 2020 · Kaplan et al. [P08] · engineering optimization (power-law fits to loss)
-- 2022 · Hoffmann et al. [P09] · current frontier (constrained allocation of N and D under a fitted loss)
-- 2024 · Miller, *Adding Error Bars to Evals* [R2.7] · current frontier (clustered standard errors for evaluation items)
+- 2022 · Hoffmann et al. [P09] · documented allocation revision (three estimation approaches under specified training protocols)
+- 2024 · Miller, *Adding Error Bars to Evals* [R2.7] · documented uncertainty treatment (clustered and paired standard errors for evaluation items)
 
 ```figure
 id: fig-2.2
@@ -241,7 +236,7 @@ spec:
 | tensor contraction | summation over shared index labels of two or more tensors, generalising matrix multiplication | 02.1 |
 | broadcasting | implicit expansion of size-1 or missing leading axes so that elementwise operations apply across mismatched shapes | 02.1 |
 | batched matrix multiplication | a contraction over one index applied independently across one or more leading batch axes | 02.1 |
-| condition number | κ₂(A) = σ_max/σ_min; the worst-case relative amplification of input perturbations by a linear map | 02.1 |
+| condition number | κ₂(A) = σ_max/σ_min for a nonsingular square solve; bounds relative sensitivity under its perturbation contract | 02.1 |
 | factorisation (of a joint distribution) | rewriting a joint as a product of conditionals under a chosen ordering or conditional-independence structure | 02.2 |
 | Monte Carlo estimator | the sample mean of a function under samples from a distribution, with variance σ²/n | 02.2 |
 | importance sampling / effective sample size | reweighting samples from a proposal by p/q; ESS = (Σw)²/Σw² | 02.2 |
@@ -253,51 +248,43 @@ spec:
 | forward-mode / reverse-mode differentiation | propagation of tangents with the computation / of cotangents against it | 02.4 |
 | Hessian-vector product | Hv computed without forming H, at a small multiple of gradient cost | 02.4 |
 | Gauss–Newton matrix | JᵀH_out J: the curvature of a composed loss with the second derivative of the inner map dropped | 02.4 |
-| score-function estimator | ∇E_{p_θ}[f] = E[f ∇log p_θ]; unbiased, high variance, requires no differentiable f | 02.4 |
-| reparameterisation estimator | ∇E_{p_θ}[f] = E_ε[∇_θ f(g(θ,ε))]; requires differentiable f and continuous x | 02.4 |
+| score-function estimator | ∇E_{p_θ}[f] = E[f ∇log p_θ]; unbiased under support/interchange conditions; uses sampled f values rather than their path derivatives | 02.4 |
+| reparameterisation estimator | ∇E_{p_θ}[f] = E_ε[∇_θ f(g(θ,ε))]; requires an applicable differentiable sampling transformation and integrand | 02.4 |
 | straight-through estimator | a biased surrogate that replaces the Jacobian of a non-differentiable operation by the identity | 02.4 |
-| experimental unit / bootstrap unit | the smallest entity that is independently sampled or assigned; the unit that must be resampled | 02.5 |
+| bootstrap unit | the independently sampled unit reproduced by the declared resampling scheme; experimental design is owned by §06.1 | 02.5 |
 | design effect | DE = 1 + (m−1)ρ, the variance inflation of a clustered mean relative to an iid mean of the same size | 02.5 |
 | paired test | a test on within-unit differences, removing between-unit variance | 02.5 |
 | effect size | the magnitude of a difference in the metric's own units, or standardised by its standard deviation | 02.5 |
 | statistical power | the probability of detecting a stated effect at a stated level | 02.5 |
 | decision variable, Lagrangian, KKT conditions | the quantities a designer controls; the constrained objective with multipliers; its first-order optimality conditions | 02.6 |
-| shadow price | ∂f*/∂b, the optimal multiplier: marginal objective change per unit of constraint relaxation | 02.6 |
+| shadow price | ∂f*/∂b = −η*: marginal objective change per unit of bound relaxation under regularity | 02.6 |
 | Pareto dominance / Pareto frontier | x dominates x′ if no worse in every objective and better in one; the set of non-dominated points | 02.6 |
 | sensitivity analysis | the change of an optimum or a prediction under perturbation of its inputs, local or global | 02.6 |
 | delta-method uncertainty propagation | Var[g(X)] ≈ ∇gᵀ Σ ∇g | 02.6 |
 
 ## Reference-stack coverage
 
-Rows bind this chapter to `Instruction/AI_REFERENCE_STACK.md`. Names, rank numbers, and surface URLs are copied from that file. Lab attribution was checked against each paper's title page before a row was written (R2.7: "Anthropic", evanmiller@anthropic.com; P08: "Johns Hopkins University, OpenAI"; P25: "DeepSeek-AI, Tsinghua University, Peking University"); where the paper was read on arXiv rather than on the lab surface, the row says so.
+The table records source routes from the exact reference-stack vocabulary. Paper claims were checked on their full primary texts; a route URL is not itself evidence for a mechanism. No old access outcome is inherited.
 
 | Stack section | Entry (exact name, rank) | Stack layer | What this chapter takes from it | Surface used | Sections | Evidence label |
 |---|---|---|---|---|---|---|
-| §1 lab | **Anthropic** (#1) | — | Miller, *Adding Error Bars to Evals* [R2.7]: CLT standard error (its Eq. 1), clustered standard error for non-independent questions (Eq. 4), paired-difference standard error (Eq. 7), sample-size formula (Eq. 9). Lab research page for the paper opened; equations read on arXiv. | Research: https://www.anthropic.com/research | 02.5 | PAPER-REPORTED |
-| §1 lab | **OpenAI** (#2) | — | P08: power-law dependence of loss on model size, dataset size, and compute; allocation conclusion contrasted with P09. Lab surface returned HTTP 403 on fetch; read on arXiv. | Papers: https://openai.com/research/index/publication/ | 02.6 | PAPER-REPORTED |
-| §1 lab | **Google DeepMind** (#3) | — | P09: parametric loss E + A/N^α + B/D^β fitted with Huber loss and L-BFGS; "scaled equally" allocation; differing exponents across three approaches — the input to Eq. 2.26 and to the propagation of Eq. 2.27. Read on arXiv; lab surface not opened. | Papers: https://deepmind.google/research/publications/ | 02.6 | PAPER-REPORTED |
-| §1 lab | **DeepSeek** (#8) | — | P25: the per-token sampled KL estimator of GRPO (its Eq. 4), reported as unbiased and guaranteed positive; derived here as k₃ = r − log r − 1. Read on arXiv. | Code: https://github.com/deepseek-ai | 02.2, 02.3 | PAPER-REPORTED |
-| §1 lab | **Stanford CRFM** (#38) | — | P50 (HELM): multi-scenario, multi-metric evaluation design; the scenario as a natural resampling cluster. HELM project page opened; paper read on arXiv. | Research: https://crfm.stanford.edu/research.html | 02.5 | PAPER-REPORTED |
-| §2 conference | **NeurIPS** (#1) | — | Archival proceedings record for R2.16 (Agarwal et al., NeurIPS 2021; page opened); archival route for P09 (NeurIPS 2022) and R2.14 (NIPS 2015), not opened. | papers: https://proceedings.neurips.cc/ | 02.4, 02.5, 02.6 | PAPER-REPORTED |
-| §2 conference | **ICML** (#2) | — | Archival record of K-FAC [R2.5]: Proceedings of the 32nd ICML, PMLR 37, pp. 2408–2417 (page opened). | papers: https://proceedings.mlr.press/ | 02.4 | PAPER-REPORTED |
-| §3 discovery | **arXiv** (#1) | — | Abstract pages and HTML renderings of every cited preprint (P03, P08, P09, P25, P50, R2.4–R2.7, R2.12–R2.17); advanced-search queries 2 and 3 of the source route. | home: https://arxiv.org/ · search/API: https://arxiv.org/search/advanced | 02.2–02.6 | PAPER-REPORTED |
-| §3 discovery | **PMLR** (#3) | — | Stable citation for R2.5 (volume 37). | home: https://proceedings.mlr.press/ | 02.4 | PAPER-REPORTED |
-| §3 discovery | **NeurIPS Proceedings** (#4) | — | Stable citation and author list for R2.16. | home: https://proceedings.neurips.cc/ | 02.5 | PAPER-REPORTED |
-| §3 discovery | **Semantic Scholar** (#7) | — | Bibliographic identity cross-check and source-route query 4. The API returned HTTP 429 on 2026-09-20, so the cross-check was not completed. | search/API: https://api.semanticscholar.org/api-docs/ | 02.5 | UNVERIFIED |
-| §4 system | **NVIDIA cuBLAS / cuBLASLt** (#2) | Kernels / numerics / collectives | Named as the GEMM library to which batched contractions (Eq. 2.1–2.2) are dispatched; no documentation claim is taken, and per-shape algorithm selection is deferred to Chapter 26. | docs/code: https://docs.nvidia.com/cuda/cublas/ | 02.1 | UNVERIFIED |
-| §4 system | **PyTorch** (#17) | Model / autograd framework | Version 2.14 documentation: broadcasting rule; `expand` as a stride-0 view that "does not allocate new memory"; autograd graph recording and tensors saved for backward [R2.8, R2.11]. Target API of `ce_gradient_check.py`. The listed URL redirects to docs.pytorch.org/docs/2.14/. | docs/code: https://pytorch.org/docs/stable/ | 02.1, 02.2, 02.4, verification | OFFICIAL-DOCUMENTATION |
-| §4 system | **JAX** (#18) | Model / autograd framework | *The Autodiff Cookbook* [R2.10]: VJP and JVP each "about three times the cost of evaluating f"; reverse-mode memory "scales with the depth of the computation"; forward-over-reverse Hessian-vector products. | docs/code: https://docs.jax.dev/ | 02.4 | OFFICIAL-DOCUMENTATION |
-| §4 system | **Liger Kernel** (#40) | Kernels / numerics / collectives | README [R2.9]: `LigerFusedLinearCrossEntropyLoss` with "chunk-by-chunk computation to reduce memory", the realisation of not materialising the [B, T, V] logits and p − y tensors. Release-specific chunking policy UNVERIFIED. | docs/code: https://github.com/linkedin/Liger-Kernel | 02.3, 02.4 | OFFICIAL-DOCUMENTATION |
+| §1 lab | Anthropic (#1) | — | R2.7 clustered and paired uncertainty; actual versus fictional tables distinguished | Research: https://www.anthropic.com/research | 02.2, 02.5 | PAPER-REPORTED |
+| §1 lab | OpenAI (#2) | — | P08 historical compute-allocation study; primary v1 read on arXiv | Papers: https://openai.com/research/index/publication/ | 02.6 | PAPER-REPORTED |
+| §1 lab | Google DeepMind (#3) | — | P09 fitted allocation and three approaches; primary v1 read on arXiv | Papers: https://deepmind.google/research/publications/ | 02.6 | PAPER-REPORTED |
+| §1 lab | DeepSeek (#8) | — | P25 sampled KL expression and objective placement; primary v2 read on arXiv | Code: https://github.com/deepseek-ai | 02.2, 02.3 | PAPER-REPORTED |
+| §1 lab | Stanford CRFM (#38) | — | P50 scenario/metric framework; no inferred cluster independence | Research: https://crfm.stanford.edu/research.html | 02.5 | PAPER-REPORTED |
+| §2 conference | NeurIPS (#1) | — | Archival route for P09, R2.14, R2.16; primary versions in references ledger | papers: https://proceedings.neurips.cc/ | 02.4–02.6 | PAPER-REPORTED |
+| §2 conference | ICML (#2) | — | K-FAC archival route; expanded v5 method/experiment text inspected | papers: https://proceedings.mlr.press/ | 02.4 | PAPER-REPORTED |
+| §3 discovery | arXiv (#1) | — | Retrieval of versioned primary full texts; discovery is not the experimental evidence | home: https://arxiv.org/ · search/API: https://arxiv.org/search/advanced | 02.2–02.6 | OFFICIAL-DOCUMENTATION |
+| §4 system | PyTorch (#17) | Model / autograd framework | Inspected 2.14 broadcasting/expand, sampling API, autograd and loss contracts | docs/code: https://pytorch.org/docs/stable/ | 02.1, 02.2, 02.4 | OFFICIAL-DOCUMENTATION |
+| §4 system | JAX (#18) | Model / autograd framework | Unpinned cookbook JVP/VJP/HVP transformation contracts | docs/code: https://docs.jax.dev/ | 02.4 | OFFICIAL-DOCUMENTATION |
+| §4 system | Liger Kernel (#40) | Kernels / numerics / collectives | Unpinned README fused-linear-loss interface; no measured allocation/time claim | docs/code: https://github.com/linkedin/Liger-Kernel | 02.3, 02.4 | OFFICIAL-DOCUMENTATION |
 | *Outside the reference stack (routed via book_plan.md anchors)* | | | | | | |
-| outside | CS336: Language Modeling from Scratch (Spring 2026; Spring 2025 archive) [R2.18, R2.19] | — | The plan's source anchor for Chapter 02 ("CS336 prerequisites and technical syllabus") and an Appendix G curriculum: stated prerequisites in calculus, linear algebra, probability and statistics; assignment list for reproducible references. | https://cs336.stanford.edu/ · https://cs336.stanford.edu/spring2025/ | README, all | OFFICIAL-DOCUMENTATION |
-| outside | `rliable` [official code of R2.16] | — | Reference implementation of stratified-bootstrap intervals and interquartile mean; not a §4 system. Its repository sits under the Code surface of **Google Research** (#18), https://github.com/google-research. Routed via the plan's requirement for "bootstrap units" in row 02.5. | https://github.com/google-research/rliable | 02.5 | OFFICIAL-DOCUMENTATION |
-| outside | Classical references: Shannon 1948 [R2.1], Efron 1979 [R2.2], Williams 1992 [R2.3] | — | Lineage attribution for entropy/coding length, the bootstrap, and the score-function estimator — items the plan's 02.3–02.5 rows require and that CS336's probability-and-statistics prerequisite presupposes. No URL in a permitted root; bibliographic details from memory. | null | README lineage, 02.3–02.5 | UNVERIFIED |
-| outside | JMLR (venue of R2.6; stated on its arXiv abstract page) | — | Archival venue for the autodiff survey; JMLR is not a §2/§3 entry, so the work is reached through **arXiv** (#1). | https://arxiv.org/abs/1502.05767 | 02.4 | PAPER-REPORTED |
-| outside | NumPy | — | Target API of `paired_cluster_bootstrap.py`, as the chapter brief specifies "PyTorch/NumPy-level" reference code; not a §4 entry and no claim is taken from its documentation. | null | verification | UNVERIFIED |
+| outside | Stanford CS336 [R2.18, R2.19] | — | Exact Chapter 02 source anchor: mathematical prerequisites and syllabus | https://cs336.stanford.edu/ · https://cs336.stanford.edu/spring2025/ | all | OFFICIAL-DOCUMENTATION |
+| outside | Original mathematical/statistical works [R2.1–R2.7, R2.12–R2.17] | — | Plan rows 02.3–02.5 require coding, gradient estimation, and statistical inference; original method sources plus explicit derivations; JMLR/MLSys archival PDFs when relevant | Exact primary URLs and inspected revisions in [references.md](references.md) | 02.3–02.5 | PAPER-REPORTED |
+| outside | Efron 1979 [R2.2]; Williams 1992 [R2.3] | — | Historical entries retained with unsuccessful full-text inspection; no detailed method is attributed to them | Exact attempted URLs in [references.md](references.md) | Lineage | UNVERIFIED |
 
-**NVIDIA CUTLASS** (#5), **Triton language** (#6), and **AMD ROCm** (#8) are named in §02.1 only as forward pointers to Chapter 26; no claim is taken from them, so they have no row.
-
-**Inspection dimensions applied.** Of the §4.2 dimensions, this chapter analyses: *Memory* — the [B, H, T, T] score tensor and contiguity copies (§02.1), the [B, T, V] logits and cotangent tensors (§02.3, §02.4), and saved tensors of reverse mode as the M_act term (§02.4, Algorithm 2.4); *Kernels* — batched GEMM cost and arithmetic intensity (§02.1) and fused linear cross-entropy (§02.3, §02.4); *Precision* — unit roundoff against the condition number (§02.1), the shifted log-sum-exp form (§02.4), and the dtype sweep of Experiment 2.1; *Post-training* — importance ratios and ESS (§02.2), forward versus reverse KL and the sampled KL estimator (§02.3), score-function gradients (§02.4); *Metrics* — bits per byte (§02.3), intervals, effect sizes, and power for any reported metric (§02.5), and the ratio uncertainty of cost per accepted task (§02.6), without redefining any fixed metric name; *Reproducibility* — the per-section Reproducibility headings, seeded resampling in Algorithm 2.5, and the reporting fields of [verification.md](verification.md). *Communication* is touched only as byte counts (teacher logits in §02.3; K-FAC factor reduction in §02.4) and deferred to Chapter 29. *Parallelism*, *Checkpointing*, *Inference*, and *Reliability* are not analysed here.
+**Inspection dimensions applied.** *Precision*: solve sensitivity and finite-logit differentiation (§§02.1,02.4). *Memory*: operands, temporary copies, reverse-mode state, curvature factors (§§02.1,02.4). *Kernels*: contraction accounting and documented fused-loss interface (§§02.1,02.3,02.4). *Post-training*: importance ratios, sampled KL, score derivatives (§§02.2–02.4). *Metrics*: BPB, paired differences, confidence intervals and power (§§02.3,02.5). *Reproducibility*: inspected revisions, declared units, resampling labels and unexecuted verification. *Communication* is counted only when explicitly introduced by a placement; distributed mechanisms are owned by Chapter 29. Parallelism, checkpoint/restart, deployment reliability, and production serving behavior are not chapter-owned implementations.
 
 ## Source route
 
@@ -312,12 +299,6 @@ Use the exact protocols of `Instruction/AI_REFERENCE_STACK.md`.
 
 ## Status
 
-Editorial status: manuscript_draft. Evidence coverage: the mathematical content is MATHEMATICALLY-DERIVED under stated assumptions; the applied claims (scaling-fit forms, evaluation-uncertainty practice, K-FAC, reparameterisation) are PAPER-REPORTED from the cited works; framework semantics are OFFICIAL-DOCUMENTATION. No experiment was run; both verification tasks are proposals.
+Editorial status: manuscript_draft. All six planned topic rows have substantive treatments and an anchor/source audit. This is not an independent scientific review or an executed verification result. Actual primary-source inspection occurred on 2026-10-07, as recorded in [references.md](references.md).
 
-NOT-DISCLOSED / UNVERIFIED items carried by this chapter:
-
-- UNVERIFIED — the reference code in `verification.md` targets a PyTorch 2.x-style API and NumPy; no pinned version was executed.
-- UNVERIFIED — the constant factor by which a reverse-mode VJP exceeds forward cost in a specific framework is stated only as a bounded multiple (§02.4).
-- UNVERIFIED — the exact chunking strategy of fused linear-cross-entropy kernels in any named project version (§02.4).
-- NOT-DISCLOSED — the resampling unit and variance model behind most vendor-reported benchmark intervals (§02.5).
-- NOT-DISCLOSED — parameter covariance of published scaling fits, so downstream allocation uncertainty (§02.6) cannot be propagated from the published numbers alone.
+Open review items are original full-text historical attribution for R2.2/R2.3; joint scaling-fit covariance not disclosed by the inspected fitting account; unpinned JAX/Liger surfaces; workload-specific numerical tolerance, allocation, runtime, energy, and cost checks. API documentation supports an interface claim, not executable compatibility. These boundaries constrain the chapter's claims and prevent a reviewed status.

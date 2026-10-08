@@ -27,8 +27,8 @@ benchmarks: []
 datasets: []
 status: {maturity: established, disputed: false}
 evidence_summary: {labels_used: [MATHEMATICALLY-DERIVED, PAPER-REPORTED, OFFICIAL-DOCUMENTATION, DERIVED, NOT-DISCLOSED], empirically_observed: false}
-word_count_target: 1050
-updated_at: 2026-09-20
+word_count_target: 2300
+updated_at: 2026-10-07
 editorial_status: manuscript_draft
 ---
 
@@ -36,43 +36,46 @@ editorial_status: manuscript_draft
 
 ## Scope
 
-Objective: give overflow-safe and cancellation-safe forms of the five primitives every language-model training step executes many times — log-sum-exp, softmax, normalization statistics, long reductions, and differences of nearly equal quantities — each with an explicit accumulation dtype and an error bound derived from [§3.1](03-1-numeric-representations.md). Baseline: the textbook formulas evaluated naively in the storage dtype. Success criterion: every primitive agrees with an FP64 twin within the bound stated here on the extreme fixtures of [verification.md](verification.md). Boundaries: the attention kernel that fuses these primitives is owned by [§27.1](../../../vol-02-execution-and-optimization/part-05-hardware-kernels-and-distributed-execution/ch27-attention-latent-attention-and-expert-kernels/27-1-io-aware-attention.md); operator kernels by [§26.3](../../../vol-02-execution-and-optimization/part-05-hardware-kernels-and-distributed-execution/ch26-kernel-programming-and-numerical-equivalence/26-3-core-operators.md).
+This section reconstructs log-sum-exp, softmax, normalization statistics, reduction order, accumulation dtype, and cancellation as numerical algorithms. Its baseline is direct evaluation in the input storage dtype. Success means that the algorithm's domain, exceptional rows, error metric, and accumulation policy are explicit. A sum bound is established under stated arithmetic conditions; a whole-model tolerance is not inferred from that bound. Attention kernel scheduling belongs to [§27.1](../../../vol-02-execution-and-optimization/part-05-hardware-kernels-and-distributed-execution/ch27-attention-latent-attention-and-expert-kernels/27-1-io-aware-attention.md).
 
 ## Why this exists
 
-What failed: exp(z) overflows FP16 at z > ln 65504 ≈ 11.09 and FP32 at z > ln x_max ≈ 88.7, so a softmax over raw logits fails on inputs that are ordinary for a trained model [MATHEMATICALLY-DERIVED — Table 3.1]. Bottleneck: the residual-stream width d_model and the sequence length T set reduction lengths in the thousands, and the forward error of a naive sum grows linearly with that length [MATHEMATICALLY-DERIVED — Eq. 3.10]. Dominant constraint: the storage dtype of the operands is chosen for bandwidth, so stability has to come from the algorithm and the accumulation dtype, not from wider storage. What changed: primitives are written as a max-shift plus a reduction in FP32, and the reduction is blocked so that its error grows with log of the length.
+Algebraically equivalent formulas can have different floating-point behavior. Blanchard, Higham, and Higham analyze direct, shifted, and division-free softmax and show that removing division does not establish better accuracy. Their experiments isolate numerical evaluation on logits rather than retraining the network [PAPER-REPORTED — R3.26 §§3–5]. The relevant improvement is consequently a changed evaluation algorithm with stated conditions, rather than a blanket rule to cast every tensor wider.
 
 ## Intuition
 
-Physically, a reduction is a sequence of roundings, each losing at most u relative to the running partial sum; the damage is proportional to how large the partial sums are relative to the final answer. Subtracting the maximum before exponentiating bounds every term by 1 and makes the largest term exactly 1, so the sum lies in [1, n] and cannot overflow. A two-pass variance subtracts the mean before squaring, so the squares are small relative to nothing large, and the cancellation that destroys E[x²] − E[x]² never occurs. Blocked summation keeps partial sums comparable in magnitude so that no single rounding is amplified.
+A reduction loses information at intermediate sums; the effect depends on the size of those partial sums relative to the final answer. A max shift bounds exponential arguments above by zero. Centering before squaring avoids subtracting two large second moments. Neither operation recovers differences already erased when the input was quantized. The comparison must distinguish error against exact real inputs from arithmetic error on the same stored inputs [MATHEMATICALLY-DERIVED — the decomposition $\widehat f(\widehat x)-f(x)=[\widehat f(\widehat x)-f(\widehat x)]+[f(\widehat x)-f(x)]$].
 
 ## Formulation
 
-Let z ∈ ℝ^n (FP32 or BF16 storage), m = max_i z_i.
+For a nonempty finite row $z\in\mathbb R^n$, let $m=\max_i z_i$ and $\ell=\sum_i e^{z_i-m}$:
 
 $$
-\mathrm{LSE}(z) = m + \log \sum_{i=1}^{n} \exp(z_i - m)
+\operatorname{LSE}(z)=m+\log\ell,\qquad 1\le\ell\le n.
 $$
-*(Eq. 3.6)* where every argument of exp is ≤ 0 and at least one equals 0, so the sum is in [1, n].
+*(Eq. 3.6)* [MATHEMATICALLY-DERIVED — factoring $e^m$ from the exact exponential sum].
 
 $$
-\mathrm{softmax}(z)_i = \frac{\exp(z_i - m)}{\sum_{j} \exp(z_j - m)} = \exp\big(z_i - \mathrm{LSE}(z)\big)
+p_i=\frac{e^{z_i-m}}{\ell},\qquad \log p_i=(z_i-m)-\log\ell.
 $$
-*(Eq. 3.7)* where the second form is the one to use when log-probabilities are needed (cross-entropy), because it never divides.
+*(Eq. 3.7)* The log expression avoids materializing a tiny probability before taking its logarithm. Computing $e^{z_i-\operatorname{LSE}(z)}$ is an algebraically equivalent probability formula with a different rounding path; it is not the preferred log-probability algorithm [MATHEMATICALLY-DERIVED].
 
-RMSNorm and LayerNorm statistics over the width D for a row x ∈ ℝ^D:
-
-$$
-\mathrm{rms}(x) = \sqrt{\tfrac{1}{D}\textstyle\sum_i x_i^2 + \epsilon}, \qquad \mu = \tfrac{1}{D}\textstyle\sum_i x_i,\quad \sigma^2 = \tfrac{1}{D}\textstyle\sum_i (x_i - \mu)^2
-$$
-*(Eq. 3.8)* where ε is a small stabilizer, and the sums are accumulated in FP32 regardless of the storage dtype of x. The layer definitions belong to [§5.1](../ch05-minimal-transformer-and-execution-trace/05-1-end-to-end-forward-pass.md); this section fixes how their statistics are computed.
-
-Forward error of recursive versus pairwise summation of n terms with unit roundoff u (Higham, R3.7):
+For a row $x\in\mathbb R^d$,
 
 $$
-\Big|\mathrm{fl}\Big(\sum_i x_i\Big) - \sum_i x_i\Big| \le \gamma_{n-1}\sum_i |x_i| \;\;\text{(recursive)},\qquad \le \gamma_{\lceil \log_2 n\rceil}\sum_i |x_i| \;\;\text{(pairwise)}
+\mu=\frac1d\sum_i x_i,\quad v=\frac1d\sum_i(x_i-\mu)^2,\quad
+r=\sqrt{\frac1d\sum_i x_i^2+\epsilon_{\rm norm}}.
 $$
-*(Eq. 3.9)* where γ_k = k u / (1 − k u) and the bound is relative to Σ|x_i|, not to the result.
+*(Eq. 3.8)* $\epsilon_{\rm norm}>0$ is the normalization stabilizer, distinct from machine epsilon. LayerNorm uses centered variance; RMSNorm uses the uncentered second moment. Their architectural effects belong to [§5.1](../ch05-minimal-transformer-and-execution-trace/05-1-end-to-end-forward-pass.md) [PAPER-REPORTED — R3.21 Eq. (3); R3.20 Eq. (4)].
+
+For summation in precision $u$, with no overflow or underflow and correctly rounded additions,
+
+$$
+|\widehat s-s|\le\gamma_{n-1}\sum_i|x_i|\ \text{(recursive)},\qquad
+|\widehat s-s|\le\gamma_{\lceil\log_2n\rceil}\sum_i|x_i|\ \text{(balanced tree)},\quad
+\gamma_k=\frac{ku}{1-ku},\ ku<1.
+$$
+*(Eq. 3.9)* [MATHEMATICALLY-DERIVED — the product-of-rounding-factors derivation below].
 
 ```figure
 id: fig-3.8
@@ -115,37 +118,38 @@ spec:
     - { x: 4096, label: "d_model-length reduction" }
 states:
   - { anchor: formulation, label: "n = 4096", variables: { x: 4096 }, highlight: [rec32, pair32], note: "Eq. 3.9 at n = 4096: recursive FP32 gives (n − 1)·u ≈ 2.4e−4 of Σ|x_i|. Pairwise gives ⌈log₂ n⌉·u = 12·u ≈ 7.2e−7." }
-  - { anchor: mechanism, label: "BF16 accumulator, n = 256", variables: { x: 256 }, highlight: [rec16, one], note: "With u = 2^−8 the recursive bound reaches (n − 1)·u ≈ 1 at n = 256, so no digit is guaranteed. BF16 reductions must accumulate in FP32." }
+  - { anchor: mechanism, label: "BF16 accumulator, n = 256", variables: { x: 256 }, highlight: [rec16, one], note: "With u = 2^−8 the recursive bound reaches (n − 1)·u ≈ 1 at n = 256, so no digit is guaranteed. The reference recipe uses FP32 accumulation." }
   - { anchor: algorithm, label: "blocked, K = 128", variables: { x: 4096 }, highlight: [blk32], note: "Algorithm 3.4: K + ⌈log₂(n/K)⌉ = 133 roundings deep at n = 4096, a bound of ≈ 7.9e−6, 31 times below the recursive sum." }
-  - { anchor: failure-modes, label: "swamped, n = 2^16", variables: { x: 65536 }, highlight: [rec16, rec32], note: "Case E8: at n = 65536 the BF16-accumulated bound is 256, which means nothing. FP32 recursive is ≈ 3.9e−3. This is the 'swamped reduction' failure mode." }
+  - { anchor: failure-modes, label: "swamped, n = 2^16", variables: { x: 65536 }, highlight: [rec16, rec32], note: "Case E8: at n = 65536 the BF16 first-order proxy is 256; the — theorem is inapplicable. FP32 recursive is ≈ 3.9e−3. This is the 'swamped reduction' failure mode." }
   - { anchor: siblings, label: "three orders at n = 2^16", variables: { x: 65536 }, highlight: [rec32, blk32, pair32], note: "Recursive, blocked and pairwise at n = 2^16 give 3.9e−3, 8.2e−6 (137·u) and 9.5e−7 (16·u). Kahan summation (not drawn) is O(u) + O(n·u²)." }
 ```
 
-Cancellation: for ŷ = fl(a − b) with a, b already carrying relative errors ≤ δ,
+If $\widehat a=a(1+\delta_a)$ and $\widehat b=b(1+\delta_b)$ with $|\delta_a|,|\delta_b|\le\eta$, subtraction gives
 
 $$
-\frac{|\hat{y} - (a-b)|}{|a-b|} \le \delta\,\frac{|a|+|b|}{|a-b|} + u
+\frac{|\operatorname{fl}(\widehat a-\widehat b)-(a-b)|}{|a-b|}
+\le\eta(1+u)\frac{|a|+|b|}{|a-b|}+u,\qquad a\ne b.
 $$
-*(Eq. 3.10)* where the factor (|a|+|b|)/|a−b| is the condition number of subtraction and is unbounded as a → b.
-
-> **Definition — Accumulation dtype.** The format in which the partial sums of a reduction are held between roundings; it is a property of the algorithm, distinct from the input dtype and the output dtype.
-
-> **Definition — Catastrophic cancellation.** The loss of relative precision in a − b when a and b are close and carry prior rounding error, quantified by Eq. 3.10.
-
-> **Definition — Max-subtracted log-sum-exp.** Evaluation of log Σ exp(z_i) as in Eq. 3.6, which is overflow-safe and exact up to the rounding of exp and log.
+*(Eq. 3.10)* [MATHEMATICALLY-DERIVED — first bound input perturbation by $\eta(|a|+|b|)$, then include final rounding]. Exact cancellation has no finite relative-error denominator; use absolute error there.
 
 ## Mechanism
 
-> **Claim [MATHEMATICALLY-DERIVED · DERIVED:eq-3.6].** Eq. 3.6 equals log Σ exp(z_i) for all finite z, since m + log Σ exp(z_i − m) = m + log(e^{−m} Σ e^{z_i}). Its rounding error is bounded by (n + 2)u relative to the sum, because each term is in (0, 1] and the sum is in [1, n], so no term is negligible by more than a factor n and no overflow can occur.
+### Methodology
 
-> **Claim [MATHEMATICALLY-DERIVED · DERIVED:eq-3.8].** The one-pass identity σ² = E[x²] − μ² has relative error ≈ u · E[x²]/σ², which is unbounded as σ → 0 with μ ≠ 0 (Eq. 3.10 with a = E[x²], b = μ²); the two-pass form has relative error O(D u) independent of μ.
+For log-sum-exp, compute the row maximum, subtract it in a sufficiently wide format, exponentiate the shifted values, sum in an explicit accumulator format, and combine $m$ with the logarithm. With $\ell=1+\sum_{i\ne i_*}e^{z_i-m}$, `log1p` preserves small corrections when the dominant term is one. For cross-entropy, evaluate the target log-probability by Eq. 3.7 directly. Underflow of very small exponential terms can be harmless for an absolute probability error but is not harmless if a later computation needs their logarithms [MATHEMATICALLY-DERIVED — Eq. 3.6–3.7].
+
+The finite-row precondition matters. If every entry is $-\infty$, the shift attempts $-\infty-(-\infty)$; if an entry is $+\infty$, subtracting the maximum can also yield NaN. A masked attention implementation must identify rows with no allowed keys before subtraction, use a finite placeholder row internally, and return its specified zero output. Multiplying a NaN by a zero loss mask afterward is not a repair. Even finite inputs near opposite representable extremes can overflow in their subtraction, so max shifting alone is not a universal guarantee over the full floating input domain [MATHEMATICALLY-DERIVED].
+
+For reduction, unroll $\widehat s_k=(\widehat s_{k-1}+x_k)(1+\delta_k)$. Each term is multiplied by a product of at most $n-1$ factors, bounded by $\gamma_{n-1}$ when $(n-1)u<1$. In a balanced tree each leaf traverses at most $\lceil\log_2n\rceil$ rounded additions. Blocking $K$ consecutive elements and combining their partial sums with a balanced tree gives rounding depth at most $K-1+\lceil\log_2\lceil n/K\rceil\rceil$. These are bounds relative to $\sum|x_i|$; division by $|\sum x_i|$ introduces the summation condition number [MATHEMATICALLY-DERIVED — Eq. 3.9].
+
+Two-pass variance computes the mean first, then the sum of squared deviations. It removes the explicit subtraction $E[x^2]-\mu^2$, but mean error and input quantization still matter. In exact arithmetic, if $\widehat\mu=\mu+e_\mu$, then $d^{-1}\sum_i(x_i-\widehat\mu)^2=v+e_\mu^2$ because centered deviations sum to zero. Thus mean error is second order in this identity, while an almost constant quantized row may have already lost its true variance. RMS statistics also need range control: FP32 accumulation does not prevent an FP32 square from overflowing. Scaling by the maximum magnitude before squaring supplies a separate range-safe norm construction [MATHEMATICALLY-DERIVED].
 
 ```figure
 id: fig-3.9
 kind: chart
-title: One-pass variance error against the row's mean-to-spread ratio
+title: Cancellation sensitivity and an illustrative two-pass scale
 caption: >-
-  The claim above, drawn. The one-pass error u·E[x²]/σ² = u·(1 + μ²/σ²) grows
+  A first-order sensitivity illustration, not a certified relative-error bound. The one-pass error u·E[x²]/σ² = u·(1 + μ²/σ²) grows
   with the square of |μ|/σ. In FP32 it passes the two-pass line near
   |μ|/σ ≈ √D = 64 and reaches 1 at |μ|/σ = 2^12. Beyond that the sign of σ²
   is not guaranteed and sqrt returns NaN. Case E5 (|μ| ≈ 10³, σ² ≈ 10⁻⁶)
@@ -159,7 +163,7 @@ alt: >-
   Log–log chart of the first-order relative error of the variance σ² against
   |μ|/σ from 0.1 to 10^7. One-pass E[x²] − μ² in FP32, 2^−24·(1 + (|μ|/σ)²):
   about 6e−8 at small ratios and 2.4e−4 at 64. It equals 1 at 4096 and is
-  about 6e4 at 10^6 (case E5). The two-pass or Welford form in FP32,
+  about 6e4 at 10^6 (case E5). An illustrative two-pass reference scale,
   D·u with D = 4096, is flat at 2.4e−4. A dashed line at 1 marks where the
   computed variance can come out negative.
 spec:
@@ -177,24 +181,18 @@ spec:
     - { x: 1000000, label: "E5: |μ| ≈ 10³, σ² ≈ 10⁻⁶" }
 ```
 
-<details><summary>Derivation of Eq. 3.9 (recursive case)</summary>
-Let s_1 = x_1 and s_k = fl(s_{k−1} + x_k) = (s_{k−1} + x_k)(1 + δ_k), |δ_k| ≤ u. Unrolling, each x_i is multiplied by a product of (n − i) or (n − 1) factors (1 + δ), and |Π(1+δ) − 1| ≤ γ_{n−1}. Bounding each term separately gives the stated inequality. The pairwise case replaces the chain length n − 1 by the tree depth ⌈log₂ n⌉ (R3.7, ch. 4).
-</details>
-
-Consequence for tolerances: with u_32 = 2^−24 and n = 4096, γ_n ≈ 2.4e−4 for a recursive FP32 sum, but ≈ 7.2e−7 for a pairwise sum; with u_bf16 = 2^−8 the recursive bound already exceeds 1 at n = 256, which is why BF16 reductions must accumulate in FP32 [MATHEMATICALLY-DERIVED].
-
-For a dot product Σ x_i y_i with x, y stored in BF16 and products and partial sums in FP32, the relative error against Σ|x_i y_i| is bounded by 2u_bf16 (from the two operand roundings, if the operands were rounded from wider values) plus γ_n(u_32) for the accumulation; the first term dominates for n < 2^15 [MATHEMATICALLY-DERIVED]. This is the tolerance basis used in [verification.md](verification.md).
+For a dot product, first fix the reference boundary. Against the exact sum of stored operands, the arithmetic bound uses accumulator roundoff and product rounding. Against wider unrounded operands, add representation error. With normal nearest-rounded operands and a serial correctly rounded FMA accumulator, one sufficient bound is $[(1+u_{\rm op})^2(1+\gamma_n(u_{\rm acc}))-1]\sum|x_i y_i|$, before any output rounding. The popular $2u_{\rm op}+nu_{\rm acc}$ is its first-order expansion, not a universal hard threshold [MATHEMATICALLY-DERIVED — composing operand and accumulation perturbations].
 
 ```figure
 id: fig-3.10
 kind: calculator
-title: Dot-product tolerance, operand rounding plus accumulation
+title: Dot-product first-order error terms, not a hard tolerance
 caption: >-
   The paragraph's tolerance basis. With BF16 operands and an FP32
   accumulator, the operand term 2·u_bf16 = 2^−7 is 32 times the recursive
   accumulation term at n = 4096. The two meet only at n ≈ 2^17, so at every
   n < 2^15 the operand term is at least four times larger. Switch the
-  accumulator to BF16 and the accumulation term is 256 at n = 2^16 (case
+  accumulator to BF16 and the first-order proxy is 256; — bound inapplicable at n = 2^16 (case
   E8). Algorithm 3.4's blocking shrinks only the accumulation term, never the
   operand term.
 placement: rail
@@ -212,7 +210,7 @@ alt: >-
   1.19e−7, total 2.44e−4.
 spec:
   tex: >-
-    \frac{|\mathrm{fl}(x^{\top}y)-x^{\top}y|}{\sum_i|x_i y_i|}\;\le\;2u_{\text{op}}+\gamma_{n}(u_{\text{acc}})
+    \frac{|\mathrm{fl}(x^{\top}y)-x^{\top}y|}{\sum_i|x_i y_i|}\;\approx\;2u_{\text{op}}+\gamma_{n}(u_{\text{acc}})
   equation: "3.9"
   inputs:
     - { symbol: n, label: "reduction length n", default: 4096, min: 64, max: 131072, scale: log2, format: integer }
@@ -224,7 +222,7 @@ spec:
     - { symbol: rec, label: "accumulation, recursive, (n−1)·u_acc", formula: "(n - 1)*ua", format: raw }
     - { symbol: blk, label: "accumulation, blocked, (K + ⌈log₂(n/K)⌉)·u_acc", formula: "(min(n, K) + ceil(log2(max(n/K, 1)) - 0.000001))*ua", format: raw }
     - { symbol: op, label: "operand roundings, 2·u_op", formula: "2*2^-(po+1)", format: raw }
-    - { symbol: tot, label: "bound with recursive accumulation", formula: "op + rec", format: raw, emphasis: true }
+    - { symbol: tot, label: "first-order proxy with recursive accumulation", formula: "op + rec", format: raw, emphasis: true }
     - { symbol: nx, label: "n where (n−1)·u_acc equals 2·u_op", formula: "op/ua + 1", format: raw }
   presets:
     - { label: "E8: BF16 accumulator, n = 2^16", values: { pa: 7, n: 65536 } }
@@ -232,25 +230,27 @@ spec:
     - { label: "n = 2^16, FP32 accumulator", values: { n: 65536 } }
 ```
 
-Cost line: max subtraction adds one reduction and one elementwise pass over n values (2n reads at HBM bandwidth if unfused; register-resident if fused); FP32 accumulation of BF16 inputs doubles accumulator register width but not HBM traffic; two-pass variance reads the row twice unless the row fits in on-chip memory, which for D ≤ 16384 in BF16 (32 KiB) it does [DERIVED].
+**Resource boundary.** Max-shifted evaluation requires $O(n)$ arithmetic and one maximum and one sum reduction. Two-pass variance is $O(d)$ work and two logical traversals; Welford is one traversal with a dependency chain. A balanced tree performs $n-1$ additions and exposes logarithmic parallel depth; a blocked implementation stores $O(\lceil n/K\rceil)$ partials. Wider accumulators consume registers without necessarily doubling HBM payload. Communication is absent on one device. Latency and bandwidth depend on fusion and residency; energy and money are NOT-DISCLOSED, not proportional by theorem to addition count [MATHEMATICALLY-DERIVED].
 
 ## Algorithm
 
 ```text
-Algorithm 3.2 — Online (streaming) log-sum-exp and softmax denominator
-INPUT   z_1..z_n arriving in blocks; accumulation dtype FP32
-OUTPUT  m = max z, l = Σ exp(z_i − m)   (so LSE = m + log l)
-STATE   m ← −∞, l ← 0  (FP32)
-INVARIANT after processing block k: l = Σ_{i ≤ k} exp(z_i − m), m = max_{i ≤ k} z_i
-1  for each block b:
-2      m_b ← max(z_i in b); m_new ← max(m, m_b)
-3      l ← l · exp(m − m_new) + Σ_{i in b} exp(z_i − m_new)    # rescale old sum
-4      m ← m_new
-5  return m, l
-6  TERMINATION: one pass over n values
+Algorithm 3.2 — Online shifted exponential sum with empty-block handling
+OUTPUT  running maximum and rescaled exponential denominator
+INPUT bounded blocks of finite allowed logits, or a block with no allowed entries
+STATE m = -infinity, ell = 0, seen = false
+INVARIANT in exact arithmetic ell sums all processed allowed exp(z_i-m).
+1. For each block, skip it if it has no allowed entries.
+2. Compute m_block from allowed entries only.
+3. If not seen: m = m_block; ell = sum exp(z_i-m); seen = true.
+4. Otherwise set m_new = max(m,m_block).
+5. Set ell = ell*exp(m-m_new) + sum exp(z_i-m_new); m = m_new.
+6. If not seen return EmptyRow; otherwise return (m,ell).
+TERMINATION: finite input graph, tensor or declared loop sets exhausted.
+COMPLEXITY: O(n) work, O(1) running state; output probabilities need storage or rereading
 ```
 
-Complexity: O(n) exp evaluations plus one extra exp per block; the rescaling in line 3 is the identity used by FlashAttention to avoid materializing the T × T score matrix (P19, PAPER-REPORTED). Fully masked rows (all z_i = −∞) leave m = −∞ and l = 0; the caller must define the output (zeros or NaN) explicitly.
+A streaming denominator does not itself output every probability in one pass: probabilities need stored logits, a second read, or fusion with the weighted numerator. FlashAttention uses the last option [PAPER-REPORTED — P19 Algorithm 1].
 
 ```figure
 id: fig-3.11
@@ -311,80 +311,63 @@ spec:
 ```
 
 ```text
-Algorithm 3.3 — Two-pass / Welford variance in FP32 for a row of width D
-INPUT   x_1..x_D in storage dtype (BF16 or FP32)
-OUTPUT  μ, σ² in FP32
-STATE   n ← 0, μ ← 0, M2 ← 0  (FP32)
-INVARIANT M2 = Σ_{i ≤ n} (x_i − μ_n)²
-1  for i = 1..D:
-2      n ← n + 1; x ← FP32(x_i)
-3      δ ← x − μ; μ ← μ + δ / n; M2 ← M2 + δ · (x − μ)
-4  return μ, M2 / D        # (or M2/(D−1) for an unbiased estimate; normalization layers use 1/D)
-5  TERMINATION: D steps
+Algorithm 3.3 — Welford centered sum of squares (one pass)
+OUTPUT  mean and centered sum of squares
+INPUT finite x[1:d], d >= 1; explicit accumulation dtype
+STATE count = 0, mean = 0, M2 = 0
+INVARIANT in exact arithmetic M2 = sum_{i<=count}(x_i-mean)^2.
+1. For each x_i: count += 1; delta = x_i - mean.
+2. Set mean += delta/count; M2 += delta*(x_i-mean).
+3. Return mean and M2/d.
+TERMINATION: finite input graph, tensor or declared loop sets exhausted.
+COMPLEXITY: O(n) work and O(1) running state
 ```
 
-Complexity: one pass, O(D); the chunked variant merges (n_a, μ_a, M2_a) and (n_b, μ_b, M2_b) with δ = μ_b − μ_a, M2 = M2_a + M2_b + δ² n_a n_b / (n_a + n_b), which is how a parallel kernel combines per-thread partials (R3.10).
+The parallel merge of two nonempty states uses $\delta=\mu_b-\mu_a$, $\mu=\mu_a+\delta n_b/(n_a+n_b)$, and $M_2=M_{2,a}+M_{2,b}+\delta^2n_an_b/(n_a+n_b)$. Expanding each group's squared deviations around the combined mean proves the identity. Empty states need a separate identity branch [MATHEMATICALLY-DERIVED].
 
 ```text
-Algorithm 3.4 — Blocked (pairwise-style) summation with FP32 accumulation
-INPUT   x_1..x_n in storage dtype; block size K (e.g. 128); accumulation dtype FP32
-OUTPUT  s ≈ Σ x_i
-STATE   partials p_1..p_{⌈n/K⌉} in FP32
-INVARIANT each p_j = fl32(Σ of its K elements); s = fl32(Σ_j p_j) by pairwise tree
-1  for j = 1..⌈n/K⌉: p_j ← 0; for i in block j: p_j ← p_j + FP32(x_i)
-2  while more than one partial: pair adjacent partials and add
-3  return s
-4  TERMINATION: ⌈log₂ ⌈n/K⌉⌉ + K rounding depth
+Algorithm 3.4 — Bounded blocked reduction
+OUTPUT  scalar blocked/tree sum
+STATE  block partials and balanced-tree buffers
+INPUT x[1:n], n >= 1, integer block size K >= 1
+INVARIANT each tree node owns a disjoint input interval.
+1. Cast each operand to the declared accumulator dtype.
+2. Reduce each consecutive block of at most K values recursively.
+3. Combine block partials with a fixed balanced tree; carry an unpaired partial.
+4. Return the last partial, checking exceptional values separately.
+TERMINATION: finite input graph, tensor or declared loop sets exhausted.
+COMPLEXITY: O(n) work; O(ceil(n/K)) auxiliary partials
 ```
-
-Complexity: O(n); error bound γ_{K + ⌈log₂(n/K)⌉} Σ|x_i| by Eq. 3.9, i.e. O(u(K + log n)) rather than O(u n). Kahan compensated summation (R3.9) achieves O(u) + O(n u²) at 4× the additions and is appropriate for the optimizer update in BF16 storage ([§3.4](03-4-mixed-precision-execution.md)).
 
 ## Implementation
 
-Tensors and operators: at the Model / autograd framework layer, PyTorch's autocast policy lists `softmax`, `log_softmax`, `layer_norm`, `cross_entropy`, `exp`, `log`, and `sum` among CUDA ops that autocast to float32 while `matmul`, `linear`, and convolutions autocast to float16/bfloat16, which is precisely the storage-versus-accumulation split of this section [OFFICIAL-DOCUMENTATION — PyTorch 2.14 AMP docs, R3.11, accessed 2026-09-20]. Kernels: at the Kernels / numerics / collectives layer, NVIDIA cuBLAS / cuBLASLt select the accumulation precision by a compute-type argument distinct from the operand types, and PyTorch's `torch.backends.cuda.matmul.allow_bf16_reduced_precision_reduction` — documented as `True` by default for BF16 — permits intermediate reductions in reduced precision, so a program that relies on FP32 accumulation MUST set it to `False` and record that in its manifest [OFFICIAL-DOCUMENTATION — cuBLAS docs R3.13; PyTorch CUDA-semantics page R3.11]. FlashAttention implements Algorithm 3.2 inside the attention tile loop with FP32 running statistics (P19). Memory: an unfused softmax over [B, H, T, T] scores materializes B·H·T² values; the fused form keeps only [B, H, T] statistics. Communication: none on a single device; the same reduction-order argument reappears for all-reduce in [§29.5](../../../vol-02-execution-and-optimization/part-05-hardware-kernels-and-distributed-execution/ch29-parallelism-collectives-and-distributed-optimization/29-5-collective-communication.md).
-
-```text
-Tensor trace
-[B, T, V] logits (BF16) → max over V (FP32) → [B, T, 1]
-[B, T, V] − [B, T, 1] → exp (FP32) → sum over V (FP32, blocked) → [B, T, 1]
-log-probs = (z − m) − log l  → gather target → [B, T] token losses (FP32) → masked mean (FP32) → scalar
-```
+PyTorch (**Model / autograd framework**) documents operator-specific autocast policies; in-place and `out=` operations can bypass autocast eligibility. Therefore `autocast` is not a command to execute an entire program in one dtype [OFFICIAL-DOCUMENTATION — R3.34, "Op Eligibility"]. NVIDIA cuBLAS / cuBLASLt (**Kernels / numerics / collectives**) expose compute modes separately from storage types [OFFICIAL-DOCUMENTATION — R3.13]. PyTorch 2.14 documents that disabling reduced-precision reduction with a Boolean still permits split-K; the tuple form also controls split-K [OFFICIAL-DOCUMENTATION — R3.33]. Neither switch reveals an undocumented reduction tree.
 
 ## Experimental design
 
-Proposed: Experiment 3.2 in [verification.md](verification.md) evaluates each primitive on (a) ordinary rows drawn from N(0, 1), (b) rows with logits of magnitude 10^4, (c) rows with all entries equal, (d) rows with one finite entry and the rest −∞, (e) normalization rows with σ² ≈ 0 and |μ| ≈ 10^3, and (f) reductions of length 2^16 in BF16 storage; compares against FP64 twins; and asserts the bounds of Eq. 3.9–3.10 with the per-format u of Table 3.1. Independent variable: primitive implementation; controlled: inputs, seeds, device; metric: max relative error against Σ|terms|.
+### Reported experiments
+
+Blanchard et al. extract 2,500 ten-dimensional pre-softmax vectors from a trained MNIST network, convert the inputs to FP16 or BF16, simulate their arithmetic using `chop`, and compare direct, shifted, and division-free algorithms against an FP32 reference. They measure both function error and deviation of probability sums from one [PAPER-REPORTED — R3.26 §5, Figures 5.1–5.4].
+
+RMSNorm's translation study compares RNNSearch with LayerNorm, RMSNorm, partial RMSNorm, and an L2 normalization variant on WMT14 English–German, with newstest2014/2017 evaluation. Timings use one TITAN X Pascal, averaged over three runs with standard deviation, and count seconds per 1,000 training steps [PAPER-REPORTED — R3.20 §6.1, Table 2, Appendix A.1]. These architectural experiments do not isolate accumulation dtype.
 
 ## Observations
 
-**What the paper claims.** P19 reports that computing attention with tiled online softmax in on-chip memory is exact (no approximation) and reduces HBM accesses relative to the standard implementation, with wall-clock speedups on the models it tested [PAPER-REPORTED]. R3.7 states the error bounds of Eq. 3.9 as theorems [MATHEMATICALLY-DERIVED].
+**What the paper claims.** Direct FP16 log-sum-exp overflows on 475 of the 2,500 extracted vectors; shifted evaluation does not. Division-free softmax can lose accuracy [PAPER-REPORTED — R3.26 §5].
 
-**What the evidence shows.** The stability of Eq. 3.6–3.8 is a theorem, not an empirical finding, and holds on any IEEE-compliant device. The speedups of P19 are workload- and hardware-specific and are not re-asserted here.
+**What the evidence shows.** The RMSNorm comparison reports 501±11.8 seconds versus LayerNorm's 665±32.5 seconds per 1,000 RNNSearch training steps; these values concern the specified implementation and model [PAPER-REPORTED — R3.20 Table 2].
 
-**What we infer.** Because the recursive BF16 bound exceeds unity at n = 256 while the FP32 pairwise bound stays below 10^−6 at n = 4096, any reduction over d_model, d_ff, T, or V MUST accumulate in FP32 or wider; we treat this as a hard rule of the skeleton rather than a tunable [DERIVED].
+**What we infer.** A sum bound only certifies the counted additions under its premises. It cannot certify `exp`, `log`, normalization, or a composed network without their own error and conditioning terms [MATHEMATICALLY-DERIVED].
 
-**What remains unknown.** The internal blocking and reduction tree of any given cuBLAS / cuBLASLt or cuDNN kernel is NOT-DISCLOSED; the bounds here are therefore upper bounds for the reference implementation, and a vendor kernel may be better or, with reduced-precision reductions enabled, worse.
+**What remains unknown.** Internal vendor reduction trees, independent replication here, and per-device speed transfers are UNVERIFIED. Missing seed-level accuracy uncertainty is NOT-DISCLOSED for the cited RMSNorm table.
 
 ## Failure modes
 
-> **Failure mode — Softmax overflow.** *Symptom:* inf in probabilities, NaN after normalization. *Cause:* exp evaluated on unshifted logits. *Detection:* max logit exceeds ln x_max of the compute dtype. *Mitigation:* Eq. 3.7.
-
-> **Failure mode — Fully masked row.** *Symptom:* NaN in attention outputs for padded queries. *Cause:* l = 0 in Algorithm 3.2 and 0/0. *Detection:* rows whose mask is all-false. *Mitigation:* define the output for such rows (zero) and exclude them from the loss ([§3.5](03-5-reference-implementation.md)).
-
-> **Failure mode — Negative variance.** *Symptom:* NaN from sqrt in normalization. *Cause:* one-pass E[x²] − μ² under cancellation. *Detection:* σ² < 0 assertion. *Mitigation:* Algorithm 3.3.
-
-> **Failure mode — Swamped reduction.** *Symptom:* the token-mean loss drifts from its FP64 twin by more than γ_n. *Cause:* BF16 accumulation of a long sum, or the reduced-precision-reduction flag left at its default. *Detection:* Experiment 3.2 case (f). *Mitigation:* FP32 accumulation, blocked summation.
+Naive exponentiation overflows; all-masked subtraction creates NaN; subtracting large moments can yield negative variance; low-precision accumulation can swamp small terms; squaring can overflow before accumulation. Each symptom belongs to a different operation boundary. Wider summation repairs only the accumulation failure. The reference must preserve the same stored inputs when localizing the boundary [MATHEMATICALLY-DERIVED].
 
 ## Siblings
 
-**Naive softmax (unshifted)** — this section, baseline. Why it exists: it is the definition. What assumption changed: none. What problem it solved: none. What new failure mode it introduced: overflow at z > ln x_max. Changed primitive: none.
-
-**Max-subtracted softmax** — this section. Why it exists: overflow. What assumption changed: the max is available before the exponentials. What problem it solved: overflow for any finite z. What new failure mode it introduced: an extra reduction pass when unfused. Changed primitive: exp(z) → exp(z − m).
-
-**Online (streaming) softmax** — this section; kernel owned by [§27.1](../../../vol-02-execution-and-optimization/part-05-hardware-kernels-and-distributed-execution/ch27-attention-latent-attention-and-expert-kernels/27-1-io-aware-attention.md). Why it exists: the row does not fit in on-chip memory. What assumption changed: the max may be revised mid-stream. What problem it solved: materialization of the T × T matrix. What new failure mode it introduced: one extra exp per block and a rescaling rounding. Changed primitive: global max → running max with rescaling.
-
-**One-pass variance vs two-pass/Welford** — this section. Why it exists: one-pass reads the row once. What assumption changed: E[x²] ≫ μ² is not guaranteed. What problem it solved: bandwidth. What new failure mode it introduced: cancellation (Eq. 3.10). Changed primitive: Σx² − (Σx)²/D → Σ(x − μ)².
-
-**Recursive vs pairwise vs compensated summation** — this section. Why they exist: error growth O(n u) vs O(u log n) vs O(u). What assumption changed: reduction order is free to choose. What new failure mode it introduced: run-to-run nondeterminism when the order is chosen dynamically ([§3.6](03-6-reproducibility-limits.md)). Changed primitive: sequential add → tree add → compensated add.
+[Direct, shifted, and online softmax](03-2-stable-primitives.md#mechanism) differ in range safety, traversal, and state. [Two-pass and Welford variance](03-2-stable-primitives.md#algorithm) differ in reads and serial dependency; they are not names for the same procedure. [Recursive, pairwise, and blocked sums](03-2-stable-primitives.md#formulation) exchange dependency depth and storage. Compensated summation carries an error residual and needs extra arithmetic; no universal optimizer convergence gain is inferred from its sum-error advantage.
 
 ```figure
 id: fig-3.12
@@ -430,16 +413,18 @@ spec:
 
 ## Extensions
 
-Long context makes the attention reduction length T dominate the bound in Eq. 3.9, and the online form becomes mandatory rather than an optimization. For MoE routing, the softmax over experts is short but its argmax is discontinuous; a numerical tie broken differently across devices changes the routing decision, developed in [§20.4](../../part-04-training-science-and-adaptation/ch20-optimization-schedules-and-training-stability/20-4-stability-instrumentation.md). Multimodal encoders with large-magnitude patch embeddings need the same FP32 statistics (proposal).
+### Improvements
+
+FlashAttention combines the online maximum/denominator with a rescaled weighted numerator, so attention can consume tiles without materializing every score and probability. This is an I/O improvement of exact real-arithmetic attention; finite-precision outputs may differ. The tiled algorithm and backward recomputation are supported by P19 §§3.1–3.2 and Algorithms 1–2 [PAPER-REPORTED]. Its kernel schedule and benchmark comparisons are owned by §27.1, preventing a speed result from substituting for this section's numerical proof.
 
 ## Limitations
 
-Bounds assume IEEE round-to-nearest and no fast-math flushing; with `-ftz=true` subnormal partial products vanish and the bounds no longer hold below x_min^norm [OFFICIAL-DOCUMENTATION — NVIDIA CUDA floating-point docs, R3.25]. Falsification: an observed error above the stated bound on an in-range fixture with reduced-precision reductions disabled. Decision consequence: any fused or vendor kernel replacing these primitives must be checked against the FP64 twin before it enters the skeleton.
+Normal-range nearest-rounding sum bounds require $ku<1$. When that fails, the stated $\gamma_k$ bound is unavailable; a negative denominator is not an error estimate. Two-pass variance and max shifting improve specific mechanisms but do not establish exact arithmetic, unlimited range, or whole-training stability [MATHEMATICALLY-DERIVED].
 
 ## Reproducibility
 
-The primitives are defined by equations and are version-independent; their framework twins depend on autocast policy and reduction flags, which the manifest of [§3.6](03-6-reproducibility-limits.md) records. Unresolved: vendor kernel reduction trees (NOT-DISCLOSED).
+Use identical rounded operands for arithmetic-only comparisons and unrounded operands for a separate representation comparison. Record operation order, accumulation format, math-library approximation settings, TF32, split-K, subnormal mode, masking policy, and the reference precision. Source-reported experiments and the unexecuted book protocol remain separate in [verification.md](verification.md).
 
 ## References
 
-P19; R3.7, R3.9, R3.10, R3.11, R3.13, R3.20, R3.21, R3.25.
+P19; R3.7, R3.9, R3.10 (historical candidates only); R3.33–R3.34; R3.13; R3.20–R3.21; R3.25–R3.26. Exact inspected locators are in [references.md](references.md).

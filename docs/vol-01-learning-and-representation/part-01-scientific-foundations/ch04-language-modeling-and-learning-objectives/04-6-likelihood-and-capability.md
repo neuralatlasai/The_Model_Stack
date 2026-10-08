@@ -26,9 +26,9 @@ implementations: [impl.hugging-face-transformers]
 benchmarks: []
 datasets: []
 status: {maturity: established, disputed: false}
-evidence_summary: {labels_used: [MATHEMATICALLY-DERIVED, PAPER-REPORTED, OFFICIAL-DOCUMENTATION, DERIVED, ASSUMED, NOT-DISCLOSED, UNVERIFIED], empirically_observed: false}
+evidence_summary: {labels_used: [MATHEMATICALLY-DERIVED, PAPER-REPORTED, OFFICIAL-DOCUMENTATION, DERIVED, NOT-DISCLOSED, UNVERIFIED], empirically_observed: false}
 word_count_target: 1050
-updated_at: 2026-09-20
+updated_at: 2026-10-08
 editorial_status: manuscript_draft
 ---
 
@@ -36,11 +36,15 @@ editorial_status: manuscript_draft
 
 ## Scope
 
-Objective: define perplexity and bits-per-byte from Eq. N.2, prove their dependence on tokenizer, normalisation, context window, document boundaries, and evaluation set, define calibration for token predictions, and state precisely why held-out likelihood is a necessary but incomplete deployment objective. Baseline: the causal row and its token-mean NLL. Success: given two perplexity reports the reader can decide whether they share an axis, and can convert a per-token loss to a tokenizer-independent unit when the byte count is known. Boundaries: evaluation units and splits are owned by [§6.1](../ch06-experimental-design-and-evaluation-before-optimization/06-1-evaluation-units.md)–[§6.2](../ch06-experimental-design-and-evaluation-before-optimization/06-2-data-partitioning.md); capability prediction from loss by [§21.6](../../part-04-training-science-and-adaptation/ch21-scaling-laws-and-compute-allocation/21-6-capability-prediction.md); validity threats by [§61.4](../../../vol-03-grounded-and-interactive-intelligence/part-11-evaluation-interpretability-and-deployment-assurance/ch61-capability-portfolios-and-benchmark-validity/61-4-validity-threats.md).
+Held-out negative log-likelihood measures a model under a particular tokenizer, target set, conditioning window, and aggregation rule. Perplexity exponentiates a token mean; bits per byte changes the reporting unit when the same byte event is represented and its likelihood is defined. Neither unit makes incompatible evaluation protocols equivalent. This section specifies exact target coverage for fixed-context evaluation, derives the difference between token-weighted and document-weighted means, and distinguishes token calibration and execution-based capability from language-model likelihood. (MATHEMATICALLY-DERIVED; Eq4.15-4.18; R4.22 evaluation construction; R4.10 section3.)
+
+Boundaries: evaluation units and splits are owned by [§6.1](../ch06-experimental-design-and-evaluation-before-optimization/06-1-evaluation-units.md)–[§6.2](../ch06-experimental-design-and-evaluation-before-optimization/06-2-data-partitioning.md); capability prediction from loss by [§21.6](../../part-04-training-science-and-adaptation/ch21-scaling-laws-and-compute-allocation/21-6-capability-prediction.md); validity threats by [§61.4](../../../vol-03-grounded-and-interactive-intelligence/part-11-evaluation-interpretability-and-deployment-assurance/ch61-capability-portfolios-and-benchmark-validity/61-4-validity-threats.md).
 
 ## Why this exists
 
-What failed before was the use of perplexity as a universal scalar: a number computed with one tokenizer, one context length, and one boundary convention was placed beside another computed differently, and the smaller was called better. The bottleneck was that each of those conventions changes the number by amounts comparable to the differences between models — the Hugging Face documentation's own worked example shows the same model and dataset moving from a reported 19.44 to 16.44 by changing only the evaluation stride (OFFICIAL-DOCUMENTATION · R4.22). The constraint that became dominant was that deployment metrics are thresholded (a test passes or fails, a user accepts or rejects), while likelihood is continuous, so a monotone relation between them is an empirical hypothesis, not a theorem. What changed is that the comparability conditions can be enumerated and a report can be checked against them.
+Likelihood evaluates probabilities of reference targets under a declared conditioning distribution. Deployment may instead require correct answers, executable programs, calibrated uncertainty, safe tool actions, or a latency budget. The distinction is measurable: the Transformer study reports a label-smoothing trade-off between perplexity and translation metrics, while HumanEval evaluates generated code with tests (P01 section 5.4; R4.10 section 3, PAPER-REPORTED).
+
+Even a likelihood comparison can be underspecified. Tokenization changes its unit, document weighting changes its estimator, and context/stride changes its conditioning. The Hugging Face fixed-context example demonstrates different reported perplexities for one model and text under different windowing procedures ([R4.22](references.md#r422), OFFICIAL-DOCUMENTATION). The purpose here is to make each comparison's probability space and counted events explicit.
 
 ```figure
 id: fig-4.30
@@ -68,10 +72,10 @@ context:
 alt: >-
   Instrument panel for the Hugging Face perplexity documentation example:
   GPT-2-large on the WikiText-2 raw test split, context k = 1,024. At stride
-  1,024 (disjoint windows) the guaranteed context is 0 tokens, the forward
+  1,024 (disjoint windows) the steady-state context lower bound is 0 tokens, the forward
   cost is 1 times disjoint scoring, the reported perplexity is 19.44, which is
   ℓ = 2.967 nats per token or 4.281 bits per token. At stride 512 the
-  guaranteed context is 512 tokens, the forward cost is 2 times, the reported
+  steady-state context lower bound is 512 tokens, the forward cost is 2 times, the reported
   perplexity is 16.44, ℓ = 2.800 nats or 4.039 bits per token. The difference
   of 0.168 nats per token comes from the stride alone. The Transformers
   version is not pinned on the page.
@@ -81,7 +85,7 @@ spec:
   rows:
     - { key: "context window k", formula: "k", format: integer }
     - { key: "stride s", formula: "s", format: integer }
-    - { key: "guaranteed context, k − s", formula: "k - s", format: integer }
+    - { key: "steady-state context lower bound, k − s", formula: "k - s", format: integer }
     - { key: "forward passes vs disjoint, k/s", formula: "k/s", format: ratio }
     - { key: "reported PPL (R4.22)", formula: "PPL", format: fixed2 }
     - { key: "ℓ = ln PPL, nats/token", formula: "ln(PPL)", format: fixed3 }
@@ -89,13 +93,15 @@ spec:
     - { key: "Transformers version", value: "not pinned on the page" }
 states:
   - { anchor: why-this-exists, label: "stride 1024, disjoint", variables: { s: 1024, PPL: 19.44 }, highlight: ["reported PPL (R4.22)", "ℓ = ln PPL, nats/token"], note: "Disjoint 1024-token windows: the documentation reports PPL 19.44, ℓ = 2.967 nats/token. Nothing about the model changes in the next state." }
-  - { anchor: mechanism, label: "stride 512", variables: { s: 512, PPL: 16.44 }, highlight: ["stride s", "guaranteed context, k − s", "reported PPL (R4.22)"], note: "Stride 512: every scored token keeps at least 512 tokens of context and PPL reads 16.44 (ℓ = 2.800): 0.168 nats/token from the convention alone." }
-  - { anchor: algorithm, label: "cost of stride 512", variables: { s: 512, PPL: 16.44 }, highlight: ["forward passes vs disjoint, k/s"], note: "Algorithm 4.6 runs ⌈N/s⌉ passes of length at most k: stride 512 costs 2× the forward passes of disjoint scoring for the same text." }
+  - { anchor: mechanism, label: "stride 512", variables: { s: 512, PPL: 16.44 }, highlight: ["stride s", "steady-state context lower bound, k − s", "reported PPL (R4.22)"], note: "Stride 512: after warm-up the overlap supplies at least 512 context tokens in the declared window convention and PPL reads 16.44 (ℓ = 2.800): 0.168 nats/token from the convention alone." }
+  - { anchor: algorithm, label: "cost of stride 512", variables: { s: 512, PPL: 16.44 }, highlight: ["forward passes vs disjoint, k/s"], note: "Algorithm 4.6 runs ⌈N/s⌉ passes of length at most k: stride 512 has approximately twice the steady-state window work; exact counts and target policies differ." }
 ```
 
 ## Intuition
 
-Physically, perplexity is the exponential of a coding length per symbol: it says how many equally likely choices the model is effectively facing per token, given everything it was allowed to see. Change the symbol (tokenizer), the amount it was allowed to see (context, boundaries), or the set of symbols averaged over (mask, evaluation set), and the quantity changes without the model changing. Heuristically, lower perplexity "understands better"; the resource fact is that lower coding length on the evaluation distribution is all that is measured, and deployment samples come from the model, not the evaluation set.
+The total NLL is a sum of conditional code lengths. Dividing by scored tokens gives nats per token; dividing by ln 2 and by corresponding source bytes gives bits per byte. A coarser tokenizer can assign more uncertainty to each token while using fewer tokens for the same bytes. Consequently token perplexity cannot isolate model quality across tokenizers (MATHEMATICALLY-DERIVED).
+
+A decoder's output policy is another distribution. Temperature, top-k/top-p truncation, grammar constraints, rejection, or reranking can alter generated outputs without changing the stored model's reference-token likelihood. State whether a metric scores the underlying model distribution or a transformed policy; neither can stand in for the other without a specified relationship.
 
 ## Formulation
 
@@ -111,7 +117,7 @@ $$
 $$
 *(Eq. 4.16)* where L_T = number of scored tokens, L_B = number of UTF-8 bytes of the same text; this is the P03 definition "bpb = (L_T/L_B) log₂(e^ℓ) = (L_T/L_B) ℓ/ln(2)" (PAPER-REPORTED · P03).
 
-Bits per byte is owned by [§2.3 Information theory](../ch02-mathematical-and-statistical-foundations/02-3-information-theory.md): cross-entropy expressed in bits per UTF-8 byte of the original text. Eq. 4.16 applies that definition to a tokenised evaluation set, which removes the tokenizer's token count from the unit.
+Bits per byte is owned by [§2.3 Information theory](../ch02-mathematical-and-statistical-foundations/02-3-information-theory.md): cross-entropy expressed in bits per UTF-8 byte of the original text. Eq. 4.16 applies that definition to a tokenised evaluation set, which changes the reporting unit; it does not make the learned likelihood invariant to tokenization.
 
 ```figure
 id: fig-4.31
@@ -152,7 +158,7 @@ spec:
     - { symbol: PPL13, label: "PPL with 1.30× tokens, same BPB", formula: "exp(ell/1.3)", format: fixed2 }
 states:
   - { anchor: formulation, label: "a bare “loss 2.1”", variables: { ell: 2.1, tpb: 0.25 }, highlight: [PPL, bpt, BPB], note: "“Loss 2.1” is PPL 8.17 and 3.03 bits per token; it becomes 0.757 bits per byte only once L_T/L_B is stated (0.25 here, illustrative)." }
-  - { anchor: mechanism, label: "1.30× tokens per byte", variables: { ell: 1.6154, tpb: 0.325 }, highlight: [PPL, BPB], note: "The same bytes cut into 1.30× more tokens (0.325 per byte): ℓ falls to 1.615 nats and PPL to 5.03 while BPB stays 0.757. The tokenizer moved PPL; the model did not." }
+  - { anchor: mechanism, label: "1.30× tokens per byte", variables: { ell: 1.6154, tpb: 0.325 }, highlight: [PPL, BPB], note: "The same bytes cut into 1.30× more tokens (0.325 per byte): ℓ falls to 1.615 nats and PPL to 5.03 while BPB stays 0.757. This illustrates units across compatible model/tokenizer pairs, not swapping one checkpoint's tokenizer." }
   - { anchor: failure-modes, label: "detect with BPB", variables: { ell: 2.1, tpb: 0.25 }, highlight: [BPB, PPL13], note: "Cross-tokenizer comparison: PPL 8.17 against 5.03 is one and the same 0.757 bits per byte. Report BPB with L_B, or do not compare." }
 ```
 
@@ -163,10 +169,11 @@ id: fig-4.32
 kind: diagram
 title: Five conventions every perplexity silently depends on
 caption: >-
-  Every dashed input changes ℓ without touching the checkpoint. The heavy
-  path ends at BPB because BPB is the only unit that removes one of them, the
-  tokenizer, through L_T/L_B; conditions (ii) to (v) pass through to BPB
-  unchanged. A report must name all five before its number has an axis.
+  The inputs define the evaluated probability events and their weighting.
+  Byte normalization replaces the token denominator with a declared byte
+  count. Compatible tokenization, target recovery, conditioning, and boundary
+  policies still determine the numerator; a tokenizer cannot be swapped
+  arbitrarily on a fixed checkpoint.
 placement: inline
 evidence: MATHEMATICALLY-DERIVED
 source: ["DERIVED:eq-4.15", "DERIVED:eq-4.16", P03, R4.22]
@@ -179,7 +186,8 @@ alt: >-
   context window k and stride s, and (iv) document boundaries (packed or
   reset, EOS scored or not). The sum gives ℓ in nats per token (Eq. 4.15),
   which gives PPL = exp(ℓ), inheriting all five conditions, and BPB =
-  (L_T/L_B)·ℓ/ln 2 (Eq. 4.16), which removes the tokenizer condition only.
+  (L_T/L_B)·ℓ/ln 2 (Eq. 4.16), which changes the denominator while
+  retaining model-tokenizer and probability-event conditions.
 spec:
   direction: LR
   nodes:
@@ -193,7 +201,7 @@ spec:
     - { id: nll, kind: process, label: "Σ m_t · (−log p_θ(x_t | x_{<t}))", sub: "Algorithm 4.6" }
     - { id: ell, kind: metric, label: "ℓ, nats per token", sub: "Eq. 4.15" }
     - { id: ppl, kind: metric, label: "PPL = exp(ℓ)", sub: "inherits all five conditions" }
-    - { id: bpb, kind: metric, label: "BPB = (L_T/L_B)·ℓ/ln 2", sub: "Eq. 4.16; removes (i) only", emphasis: true }
+    - { id: bpb, kind: metric, label: "BPB = (L_T/L_B)·ℓ/ln 2", sub: "Eq. 4.16; aligns byte units, retains probability differences", emphasis: true }
   edges:
     - { from: set, to: text, kind: dependency }
     - { from: text, to: tok }
@@ -215,22 +223,30 @@ $$
 $$
 *(Eq. 4.17)* where B_m = predictions whose confidence falls in bin m, n = predictions, acc/conf = mean correctness and mean confidence in the bin (PAPER-REPORTED · R4.17 for the definition; perfect calibration is ℙ(Ŷ = Y | P̂ = p) = p).
 
-For an evaluation set that is a mixture of D documents with token counts n_d and per-document mean NLL ℓ_d:
+For an evaluation set that is a mixture of D_doc documents with token counts n_d and per-document mean NLL ℓ_d:
 
 $$
-\ell_{\text{tok}} = \frac{\sum_d n_d \ell_d}{\sum_d n_d}\ \neq\ \ell_{\text{doc}} = \frac{1}{D}\sum_d \ell_d \quad\text{unless all } n_d \text{ are equal or all } \ell_d \text{ are equal}
+\ell_{\text{tok}} = \frac{\sum_d n_d \ell_d}{\sum_d n_d},\qquad \ell_{\text{doc}} = \frac{1}{D_{\text{doc}}}\sum_d \ell_d,\qquad \ell_{\text{tok}}-\ell_{\text{doc}}=\frac{\operatorname{Cov}_d(n_d,\ell_d)}{\operatorname{mean}_d(n_d)}
 $$
 *(Eq. 4.18)* (MATHEMATICALLY-DERIVED; the same fact as Eq. 4.2 applied to evaluation).
 
 ## Mechanism
 
-**Tokenizer dependence.** ℓ is a mean per token; a tokenizer that produces more tokens per byte spreads the same total coding length over more units, so its per-token ℓ is lower and its PPL is lower for the same model of the bytes (MATHEMATICALLY-DERIVED: total nats are invariant to a bijective re-segmentation only if the model is the same; per-token means are not). The Hugging Face documentation states this directly: "the tokenization procedure has a direct impact on a model's perplexity which should always be taken into consideration when comparing different models" (OFFICIAL-DOCUMENTATION · R4.22). P03 chooses BPB "due to its invariance to different tokenization schemes and the ambiguity of measuring characters in Unicode" (PAPER-REPORTED · P03). The chapter's rule: perplexities across tokenizers are reported as BPB or not compared; the vocabulary-economics consequences are developed in [§10.3](../../part-02-data-and-representation-engineering/ch10-tokenization-serialization-and-interface-correctness/10-3-vocabulary-economics.md).
+### Methodology
 
-**Normalisation and mask.** Eq. 4.18 shows token-mean and document-mean differ whenever long and short documents have different losses. Whether BOS, EOS, or special tokens are scored changes both numerator and denominator. Reports that do not state m_t and the mean are underspecified (DERIVED from Eq. 4.15).
+Declare the evaluation text and preprocessing, compatible tokenizer/checkpoint, conditioning source, document boundaries, BOS/EOS handling, target set, and reduction. Sum unsmoothed target NLLs and valid counts before forming token-mean loss. A mean of document means weights documents equally; a token mean weights them by length. Their difference is Cov_d(n_d,ell_d)/mean_d(n_d), with covariance over uniformly weighted documents. They coincide exactly when that covariance is zero; equal lengths or equal losses are sufficient but not necessary (MATHEMATICALLY-DERIVED).
 
-**Context window and stride.** With a fixed context k, a token at position t > k is scored with at most k−1 tokens of context; scoring disjoint chunks gives most tokens little context and "will typically yield a higher (worse) PPL"; a sliding window with stride s gives each token at least k − s tokens of context at the cost of a forward pass per stride (OFFICIAL-DOCUMENTATION · R4.22). The worked example on GPT-2-large and WikiText-2 reports 19.44 at stride 1024 (no overlap) and 16.44 at stride 512 (OFFICIAL-DOCUMENTATION · R4.22; workload: GPT-2-large, WikiText-2 raw test split joined with double newlines, context 1024, measured inside the process with the documentation's script; version of Transformers not pinned on the page, so the numbers are the documentation's and not the book's). Cost line: sliding-window evaluation with stride s multiplies forward FLOPs by k/s relative to disjoint chunks (DERIVED).
+Byte normalization removes the token-count unit, not the effects of tokenization on learned probabilities. BPB comparisons require the same original byte stream and a declared, recoverable encoding. Lossy normalization, omitted targets, extra special-token likelihoods, and different boundary policies can invalidate a claim to score the same byte-level event. A fixed checkpoint generally cannot be evaluated by replacing its tokenizer with an unrelated one; IDs and embeddings are coupled. Compare compatible model-tokenizer pairs, not two arbitrary encodings fed to one unchanged vocabulary (DERIVED; [P03](references.md#p03), BPB evaluation).
 
-**Document boundaries.** Packing documents into a context without an attention reset lets tokens of document j condition on document j−1; with a reset (block-diagonal mask) they cannot. The two conventions score different conditionals and yield different ℓ; the same holds for whether EOS between documents is scored (DERIVED). Which convention a report used is frequently NOT-DISCLOSED.
+For a finite context, specify which left context each target receives. A strided evaluator reuses overlapping windows but scores only newly eligible targets. The first token of a window has no preceding input position for a conventional internally shifted decoder loss. At stride equal to full window width, this can leave one token unscored at each boundary unless a separate initial-context/BOS convention is used. An exactly-once algorithm therefore requires enough overlap or explicit context handling, and its counted-target set must be reported (MATHEMATICALLY-DERIVED).
+
+More available context does not mathematically guarantee lower NLL for a fixed learned model: its estimated conditionals may assign a lower probability to the actual target after receiving additional context. The documentation's improvement is an observed example, not a monotonicity theorem ([R4.22](references.md#r422), OFFICIAL-DOCUMENTATION). Prefix positions near the beginning of the corpus also lack the full steady-state context bound; state the warm-up exception.
+
+Document reset changes the conditional distribution. Packing without reset scores later documents conditioned on earlier documents; resetting scores each document from its declared start context. Neither is universally preferable: the correct convention matches the evaluation question. Training/evaluation contamination and distribution mismatch are additional concerns, not repaired by a lower loss number (section 61).
+
+For calibration, distinguish token top-label confidence from factual-answer or sequence-level correctness. Equation 4.17 compares confidence and top-label accuracy within bins. Its estimate depends on binning, sample size, and correlated observations. Temperature scaling fits a positive scalar on a separate calibration set, normally by held-out NLL; it preserves logit argmax but changes probabilities. It is not guaranteed to improve ECE on every test distribution or binning scheme ([R4.17](references.md#r417), sections 3-4, PAPER-REPORTED for the classification method; application conditions DERIVED). That paper studies classifiers and is not evidence that an LLM's answer correctness is calibrated by the same scalar.
+
+Cost boundary: loss evaluation requires model forward work, vocabulary reduction, and token/byte accounting. Overlap increases processed positions relative to scored positions. A fixed-shape implementation has an approximate steady-state work multiplier governed by window/stride, but exact cost depends on the first/last window, attention implementation, packing, and reuse. ECE accumulation is O(n+M) for n predictions and M bins; retaining full vocabulary probabilities is unnecessary for top-label ECE. Energy, latency, and money require measured execution settings (DERIVED).
 
 ```figure
 id: fig-4.33
@@ -285,14 +301,6 @@ spec:
   legend: "full: admitted packed or reset (42); light: packed without reset only (36)"
 ```
 
-**Evaluation set.** Different corpora, different preprocessing (whitespace normalisation, deduplication, the choice of raw versus tokenised WikiText variants), and contamination (§61.4) all move ℓ. The evaluation set is part of the metric's identity, not a parameter (DERIVED; contamination treatment is owned by §8 and §61).
-
-**Distribution mismatch.** ℓ is an expectation under the evaluation distribution; deployment inputs come from users and deployment outputs from the model's own samples (§4.1 exposure bias). A model can have lower ℓ on a held-out corpus and worse behaviour on a deployment distribution that the corpus does not represent (MATHEMATICALLY-DERIVED: the two expectations are over different measures). Test-time interventions — sampling temperature, truncation, constrained decoding (§37) — change the deployed distribution without changing ℓ at all.
-
-**Calibration.** R4.17 reports that modern classifiers "are poorly calibrated" and that "temperature scaling — a single-parameter variant of Platt Scaling — is surprisingly effective", and notes that "because the parameter T does not change the maximum of the softmax function, the class prediction remains unchanged" (PAPER-REPORTED · R4.17). For a language model the same statement holds per token: temperature changes ECE and the sampled distribution but not greedy decoding (MATHEMATICALLY-DERIVED). Label smoothing (R4.23, P01) is the training-time analogue: it raises ℓ and can improve a thresholded metric (PAPER-REPORTED · P01 §5.4), which is the cleanest demonstration that ℓ and capability are not monotone in each other.
-
-**Why likelihood is incomplete as a deployment objective.** (1) It scores the evaluation distribution, not the deployment distribution (mismatch). (2) It is continuous, while deployment success is typically thresholded (pass/fail, accept/reject), and the map from continuous loss to thresholded metrics is empirical and can be sharply non-linear, developed in [§21.6](../../part-04-training-science-and-adaptation/ch21-scaling-laws-and-compute-allocation/21-6-capability-prediction.md). (3) It is unit-dependent (Eq. 4.16) and convention-dependent (comparability conditions). (4) Interventions that improve deployment metrics can raise it (label smoothing; post-training objectives of Part VI, whose SFT and preference objectives are defined in [§31.1](../../../vol-02-execution-and-optimization/part-06-post-training-and-reinforcement-learning/ch31-supervised-fine-tuning-and-behavior-acquisition/31-1-sft-objectives.md) and later chapters, and Eq. N.6 of the RL contract, which optimises a reward, not ℓ). (5) It does not measure execution-grounded correctness (§4.3) or human preference ([§61](../../../vol-03-grounded-and-interactive-intelligence/part-11-evaluation-interpretability-and-deployment-assurance/ch61-capability-portfolios-and-benchmark-validity/README.md)). None of this makes ℓ useless: it is the cheapest, most stable, least contaminable signal available during pretraining and the quantity scaling fits (Eq. N.3) are made on (PAPER-REPORTED · P08 for the fit family); it is incomplete, not wrong.
-
 ```figure
 id: fig-4.34
 kind: compare
@@ -300,10 +308,11 @@ title: What moves ℓ and what moves the deployed output
 caption: >-
   Read the first two rows against each other: in no column does the change
   in ℓ fix the change in the task metric. Label smoothing and post-training
-  can move them in opposite directions; stride and tokenizer move ℓ with the
-  model untouched; temperature and decoding interventions move what is
-  deployed while ℓ is unchanged or beside the point. Directions are the ones
-  §4.6 states; magnitudes appear only where a source reports them.
+  can move them in opposite directions; stride changes evaluation context without changing weights. Compatible
+  model-tokenizer pairs can have different event units. Temperature changes
+  probabilities while preserving argmax, and decoding can change deployed
+  samples without changing the underlying reference score. Directions below
+  are source-specific or explicitly conditional.
 placement: wide
 evidence: PAPER-REPORTED
 source: [P01, R4.23, R4.17, R4.22, "DERIVED:eq-4.16"]
@@ -314,9 +323,9 @@ alt: >-
   perplexity) while BLEU improves; the trained model differs. Temperature
   scaling: ℓ and ECE change, the argmax and so greedy output do not (R4.17);
   sampled outputs change. Smaller evaluation stride: ℓ falls, 19.44 to 16.44
-  PPL in R4.22, with no model change and no output change. More tokens per
-  byte: per-token ℓ falls with BPB unchanged (Eq. 4.16); no capability change
-  is implied. Post-training: ℓ can rise while task metrics improve, because
+  PPL in R4.22, with no model change and no output change. If the total NLL and bytes are held fixed while the token count grows,
+  per-token ℓ falls and BPB is unchanged. General tokenizer/model changes
+  need not satisfy that premise. Post-training: ℓ can rise while task metrics improve, because
   the objective is not ℓ (Eq. N.6). Truncation or constrained decoding: ℓ is
   unchanged while the deployed distribution changes.
 spec:
@@ -331,109 +340,103 @@ spec:
     - { id: post, label: "Post-training (Eq. N.6)", node: ms.section.31.1 }
     - { id: dec, label: "Truncation, constrained decoding" }
   rows:
-    - { dimension: "held-out ℓ", values: { ls: "rises: “hurts perplexity” (P01 §5.4)", temp: "changes with T", stride: "falls: PPL 19.44 → 16.44 (R4.22)", tok: "falls per token; BPB unchanged (Eq. 4.16)", post: "can rise (likelihood–capability inversion)", dec: "unchanged: ℓ is scored before decoding" } }
+    - { dimension: "held-out ℓ", values: { ls: "rises: “hurts perplexity” (P01 §5.4)", temp: "changes with the positive calibration temperature", stride: "falls: PPL 19.44 → 16.44 (R4.22)", tok: "at fixed total NLL/bytes: falls per token; BPB unchanged; otherwise undetermined", post: "can rise (likelihood–capability inversion)", dec: "unchanged: ℓ is scored before decoding" } }
     - { dimension: "thresholded or task metric", values: { ls: "BLEU improves (P01 §5.4)", temp: "unchanged under greedy decoding", stride: "unchanged: same model", tok: "no change implied", post: "the target: optimises reward, not ℓ", dec: "can change; ℓ cannot see it" } }
     - { dimension: "greedy output", values: { ls: "a different trained model", temp: "unchanged: argmax preserved (R4.17)", stride: "unchanged: evaluation only", tok: "a different tokenizer and model", post: "changes", dec: "changes under constraints" } }
-    - { dimension: "what else changes", values: { ls: "entropy of the predictions rises", temp: "ECE (Eq. 4.17) and sampled outputs", stride: "k/s times the forward passes", tok: "L_T, so the PPL unit", post: "the deployed distribution", dec: "the deployed distribution" } }
+    - { dimension: "what else changes", values: { ls: "smoothing changes targets; higher test entropy is not guaranteed", temp: "ECE (Eq. 4.17) and sampled outputs", stride: "approximately k/s steady-state work; endpoint and target policy matter", tok: "L_T, so the PPL unit", post: "the deployed distribution", dec: "the deployed distribution" } }
     - { dimension: "source", values: { ls: "P01 §5.4; R4.23", temp: "R4.17", stride: "R4.22", tok: "Eq. 4.16; R4.22", post: "Eq. N.6; §31.1", dec: "§4.6 distribution mismatch" } }
 ```
 
 ## Algorithm
 
 ```text
-Algorithm 4.6 — Strided-window token-mean NLL and BPB
-INPUT   token ids x ∈ ℕ^N over the evaluation text, byte count L_B, context k, stride s ≤ k, model f_θ
-OUTPUT  ℓ (nats/token), PPL, BPB, L_T
-STATE   nll_sum, n_scored, prev_end
-INVARIANT  each token is scored exactly once; each scored token at position t ≥ k has ≥ k − s tokens of context
-1  nll_sum ← 0; n_scored ← 0; prev_end ← 0
-2  for begin in 0, s, 2s, …:
-3     end ← min(begin + k, N);  trg ← end − prev_end
-4     inp ← x[begin:end];  tgt ← inp.clone();  tgt[: −trg] ← IGNORE      # context-only tokens unscored
-5     nll ← Σ over scored positions of −log p_θ(tgt_t | inp_{<t})          # one forward pass
-6     nll_sum += nll;  n_scored += (number of scored targets)
-7     prev_end ← end;  if end = N: break
-8  ℓ ← nll_sum / n_scored;  PPL ← exp(ℓ);  BPB ← (n_scored / L_B) · ℓ / ln 2;  return ℓ, PPL, BPB, n_scored
+Algorithm 4.6 — Exactly-once conditional NLL for a finite-context decoder
+INPUT stream z[0:T_eval+1], where z[0] is the declared initial context token;
+      maximum input length k>=2; stride 1<=s<=k-1; model/tokenizer; scored byte count L_B
+STATE next_target=1; nll_sum=0; n_scored=0
+OUTPUT ell, PPL, BPB, scored count, and context/target manifest
+1 while next_target<=T_eval:
+2   last <- min(next_target+s-1,T_eval)              # inclusive endpoint
+3   first <- max(0,last-k+1)                        # k or fewer tokens
+4   require first<next_target                     # each target has a predecessor
+5   run model on z[first:last+1] under declared positions/visibility
+6   for j=next_target...last:
+7     add -log p(z[j] | z[first:j]) from logits at slot j-1-first
+8   n_scored += last-next_target+1; next_target <- last+1
+9 require n_scored=T_eval and L_B>0
+10 ell <- nll_sum/n_scored; PPL <- exp(ell); BPB <- nll_sum/(L_B*ln 2)
+INVARIANT targets 1...next_target-1 have each been scored exactly once
 ```
-Complexity: ⌈N/s⌉ forward passes of length ≤ k, i.e. about k/s times the cost of disjoint scoring. Implementation link: the loop is the documentation's procedure (OFFICIAL-DOCUMENTATION · R4.22), restated with the book's variable names; line 8's BPB is Eq. 4.16.
+
+The first new target in a full window has at least k-s preceding tokens; early windows have less because the stream has not supplied them. Inputs include the final target token only to permit one common full-window forward call; the gathered prediction is from its predecessor under causal visibility. If a model has no BOS/initial-context distribution, leave the first corpus token unscored and disclose that change instead of inventing its probability. Likewise, exclude or account for synthetic BOS/EOS likelihoods consistently with L_B.
+
+The algorithm is a mathematical reconstruction, not a verbatim transcription of the documentation loop. It uses ceil(T_eval/s) windows, each of at most k positions. A disjoint-window protocol with s=k has a different target/context policy unless it supplies additional predecessor context; it must not silently claim the same exactly-once invariant.
 
 ## Implementation
 
-```text
-Systems trace (perplexity evaluation)
-tokenise text → latency: CPU / memory: N ids / failure: tokenizer version drift changes N
-strided forward passes → latency: ⌈N/s⌉ × prefill(k) / memory: one [1, k, V] logits per pass / compute: k/s × disjoint / failure: OOM at large V without chunked loss
-reduce → failure: mixing per-pass means instead of summing nll and counts (a normalisation error)
-report → must state tokenizer, k, s, boundary rule, set, mask, units
-```
+Accumulate summed NLL in a declared dtype and keep the exact valid-target count. Model arithmetic precision and loss-reduction precision are separate choices. Use a suitable higher-precision reference for numerical auditing when needed, but neither FP32 nor BF16 alone proves the absence or presence of a material evaluation error (section 3). Avoid exponentiating large losses until the final report; NLL or log perplexity remains representable when perplexity overflows (DERIVED).
 
-Numerics: nll must be accumulated in FP32 from a log-sum-exp (§3.2); BF16 logits with a large V lose precision in the normaliser (DERIVED). Kernels: the fused losses of §4.1 apply unchanged.
+For each chunk, log original target indices and the visibility interval so duplicate/missing scores are detectable independently of loss values. Save corpus byte counts before tokenizer normalization if the stated metric concerns original UTF-8 bytes, and verify that the encoding actually preserves that stream. A byte-normalized number with an incompatible byte/target denominator is not a corrected cross-tokenizer comparison.
+
+For calibration, use separate fitting and evaluation data, retain bin counts and confidence/correctness sums, and report binning. Sequence/factual confidence requires its own event definition and verifier; token top-label ECE does not answer it. Distributed evaluation must sum numerators and counts rather than average rank means with unequal counts (DERIVED).
 
 ## Experimental design
 
-### Experiment 4.6 — Same model, five conventions
+### Reported experiments
 
-- **Hypothesis:** for one fixed checkpoint and one fixed text, changing each comparability condition in turn moves PPL by an amount comparable to typical between-model differences.
-- **Setup:** one open checkpoint with two candidate tokenizers (its own; a re-tokenisation for BPB only), context k, strides {k, k/2, k/8}, boundary rule ∈ {packed, reset}, two evaluation sets.
-- **Independent variables:** tokenizer unit (PPL vs BPB), normalisation (token vs document mean), stride, boundary rule, evaluation set.
-- **Controlled variables:** checkpoint, precision, hardware, script.
-- **Dataset/workload:** two public held-out corpora with byte counts recorded.
-- **Hardware:** one accelerator; latency recorded per stride.
-- **Metrics:** ℓ, PPL, BPB, cost in forward passes.
-- **Baselines:** stride = k, packed, token-mean, native tokenizer.
-- **Expected result:** monotone PPL decrease with smaller stride; token-mean ≠ document-mean whenever lengths vary; boundary rule shifts ℓ; sets differ.
-- **Ablation:** score/unscore EOS.
-- **Interpretation:** quantifies each convention's effect; supports the rule that unstated conventions make reports incomparable.
-- **Threats to validity:** effects are checkpoint- and corpus-specific; the magnitudes do not transfer, only the existence of the effects.
+The Hugging Face fixed-context page evaluates GPT-2 Large on the WikiText-2 raw test data using its tokenizer and context limit and compares windowing conventions. It reports perplexities 19.44 for a disjoint treatment and 16.44 for its smaller-stride example ([R4.22](references.md#r422), OFFICIAL-DOCUMENTATION). Those values are source-reported examples, not measurements reproduced by the book. Exact checkpoint, dataset/configuration, code, special-token and counted-target conventions accompany the example; the figure does not claim a universal context improvement or hardware speedup.
 
-Proposal only; no run was executed.
+The Pile uses byte-normalized evaluation to compare predictions across models/tokenizers (P03 evaluation, PAPER-REPORTED). This aligns the reporting unit; it does not remove differences in model probabilities or corpus conditioning. The Transformer smoothing observation and HumanEval execution evaluation provide separate evidence that task metrics and reference-token likelihood need not order systems identically (P01 section 5.4; R4.10 section 3).
+
+Guo et al. evaluate calibration and temperature scaling on the paper's classification datasets/networks, fitting calibration on held-out data (R4.17 sections 3-4, PAPER-REPORTED). Its ECE definition can be mathematically applied to other categorical events, but its measured improvement cannot be transferred to LLM factuality without an LLM-specific study.
 
 ## Observations
 
-**What the paper claims.** P03 claims BPB is tokenizer-invariant and adopts it (PAPER-REPORTED · P03). The Transformers documentation claims a stride-dependent PPL on its example and states tokenizer dependence (OFFICIAL-DOCUMENTATION · R4.22). R4.17 claims modern networks are miscalibrated and temperature scaling fixes it without changing predictions (PAPER-REPORTED · R4.17). P01 claims label smoothing worsens perplexity while improving BLEU (PAPER-REPORTED · P01).
+**What the paper claims.** The sources report a fixed-context perplexity example, byte-normalized language-model evaluation, a smoothing/task-metric trade-off, and classifier calibration results under their stated protocols (R4.22 OFFICIAL-DOCUMENTATION; P03, P01, R4.17 PAPER-REPORTED).
 
-**What the evidence shows.** The stride, tokenizer, and normalisation effects follow from definitions and need no independent reproduction; the documentation example illustrates a magnitude for one model. The calibration and label-smoothing results are within-paper measurements whose *mechanism* (temperature does not change argmax; smoothing raises entropy) is exact even where the magnitudes are setting-specific.
+**What the evidence shows.** Metric values depend on evaluation conditions. A lower token loss is not a complete deployment result, and classifier calibration evidence does not establish sequence-level answer confidence for a generative model.
 
-**What we infer.** A perplexity without its five conventions is a number without a unit (DERIVED). We infer, marked ASSUMED, that most cross-paper perplexity comparisons in the literature violate at least one condition; the book has not audited a sample and states this as a risk, not a finding.
+**What we infer.** Every likelihood report needs a numerator, denominator, probability model, and conditioning contract. Byte units and exactly-once target accounting make the measurement auditable but do not remove distribution mismatch or prove capability (MATHEMATICALLY-DERIVED).
 
-**What remains unknown.** How tightly ℓ predicts thresholded capability at a given scale is UNVERIFIED here and is the subject of §21.6. Boundary conventions of most published evaluations are NOT-DISCLOSED.
+**What remains unknown.** An unreported model's boundary/stride convention is NOT-DISCLOSED. The cited evidence does not settle the best decoding policy, factual calibration method, or loss/capability relationship for an arbitrary checkpoint and deployment distribution.
 
 ## Failure modes
 
-> **Failure mode — Mean of means.** *Symptom:* reported PPL changes with batch composition. *Cause:* averaging per-pass or per-document means instead of summing nll and counts. *Detection:* recompute from raw sums. *Mitigation:* Algorithm 4.6 lines 6–8.
+> **Failure mode — Mean of means.** *Symptom:* reported loss depends on rank/batch partition. *Cause:* averaging unequal-count means. *Detection:* recompute from summed NLL and valid counts. *Mitigation:* preserve the intended token or document estimator (DERIVED).
 
-> **Failure mode — Cross-tokenizer comparison.** *Symptom:* a model with a larger vocabulary "wins" on PPL against every baseline. *Cause:* fewer tokens per byte. *Detection:* compute BPB. *Mitigation:* report BPB with L_B.
+> **Failure mode — Unit or byte-event mismatch.** *Symptom:* a cross-tokenizer PPL comparison is treated as capability evidence. *Cause:* different token units, normalization, or recovered byte streams. *Detection:* inspect total NLL, tokens, bytes, and compatibility. *Mitigation:* report valid byte-normalized likelihood with its probability-event conditions; BPB does not make models invariant to tokenization (DERIVED).
 
-> **Failure mode — Boundary leakage.** *Symptom:* PPL improves after changing packing. *Cause:* conditioning across document boundaries. *Detection:* compare packed vs reset. *Mitigation:* state the rule; prefer reset for reporting.
+> **Failure mode — Lost/duplicated window targets.** *Symptom:* counts disagree with the declared evaluation set. *Cause:* internally shifted labels or overlapping masks handled incorrectly. *Detection:* enumerate original target indices. *Mitigation:* use exactly-once accounting or disclose excluded boundary tokens (DERIVED).
 
-> **Failure mode — Likelihood–capability inversion.** *Symptom:* a post-trained checkpoint has higher ℓ and better task metrics. *Cause:* the post-training objective is not ℓ (Eq. N.6; label smoothing). *Detection:* expected; not a bug. *Mitigation:* stop using ℓ as the gate after pretraining; use §6 evaluation units.
-
-> **Failure mode — Miscalibrated confidence in deployment.** *Symptom:* high-confidence wrong tokens. *Cause:* overconfident softmax. *Detection:* ECE (Eq. 4.17) on a held-out slice. *Mitigation:* temperature scaling; it changes samples but not greedy outputs (R4.17).
+> **Failure mode — Conditioning or calibration overclaim.** *Symptom:* a lower PPL or ECE is presented as universal answer correctness. *Cause:* a changed context distribution or a different correctness event. *Detection:* compare the actual conditioning, labels, calibration fit, and deployment task. *Mitigation:* report separate likelihood, task, and calibrated-event metrics with their evaluation protocols (DERIVED).
 
 ## Siblings
 
-This section has no objective-family siblings; it is the measurement counterpart of §4.1–§4.5. Its measurement siblings are owned elsewhere and are linked, not re-explained:
+An evaluation unit includes the compatible checkpoint/tokenizer, conditioning protocol, target population, and any decoding or engine configuration relevant to the measured result [§6.1](../ch06-experimental-design-and-evaluation-before-optimization/06-1-evaluation-units.md). Reference-token likelihood and execution/answer success then measure different functions of that unit. A capability predictor fitted to loss requires a task-specific empirical relationship and uncertainty model; monotonicity of perplexity in NLL supplies no such relationship [§21.6](../../part-04-training-science-and-adaptation/ch21-scaling-laws-and-compute-allocation/21-6-capability-prediction.md).
 
-**Evaluation units** — [§6.1](../ch06-experimental-design-and-evaluation-before-optimization/06-1-evaluation-units.md)
-Why it exists: what is being measured (checkpoint, tokenizer, prompt, engine). What assumption changed: the unit is not "the model". What objective changed: none. What problem it solved: attributable comparisons. What new failure mode it introduced: combinatorial unit space. Changed primitive: scalar metric → typed evaluation unit.
+Contamination, selection, saturation, and distribution mismatch can alter the evidential meaning of a benchmark without changing its arithmetic reduction [§61.4](../../../vol-03-grounded-and-interactive-intelligence/part-11-evaluation-interpretability-and-deployment-assurance/ch61-capability-portfolios-and-benchmark-validity/61-4-validity-threats.md). Byte normalization addresses a reporting denominator; dependency-aware intervals address precision; neither independently establishes benchmark validity or deployment utility.
 
-**Capability prediction from loss** — [§21.6](../../part-04-training-science-and-adaptation/ch21-scaling-laws-and-compute-allocation/21-6-capability-prediction.md)
-Why it exists: continuous loss vs thresholded metrics. What assumption changed: the map is empirical and possibly non-linear. What objective changed: none. What problem it solved: extrapolation risk. What new failure mode it introduced: apparent emergence. Changed primitive: ℓ → metric-specific link function.
 
-**Validity threats** — [§61.4](../../../vol-03-grounded-and-interactive-intelligence/part-11-evaluation-interpretability-and-deployment-assurance/ch61-capability-portfolios-and-benchmark-validity/61-4-validity-threats.md)
-Why it exists: contamination, saturation, selection. What assumption changed: the evaluation set may be in the training set. What objective changed: none. What problem it solved: audit. What new failure mode it introduced: none. Changed primitive: trusted set → audited set.
 
 ## Extensions
 
-For long context, the stride and boundary conditions dominate: a 128k-context evaluation with disjoint chunks and one with a 1k stride measure different conditionals, and per-position loss curves (loss vs t) are more informative than a scalar (DERIVED). For multimodality, BPB has no analogue for images or audio; per-modality units must be stated and are never comparable across modalities (DERIVED). For agents, likelihood of a trajectory under the policy is defined (Eq. N.1 over the model's turns) but is not the deployment objective; episodic success is (Part IX, XI).
+### Improvements
+
+Overlapping evaluation windows supply more left context to most newly scored targets than a disjoint-reset procedure; the source documentation demonstrates a favorable result in one setting (R4.22). Exactly-once index accounting improves the validity of that comparison by exposing missing/duplicated targets; it is a correctness condition rather than a new empirical gain.
+
+Byte-normalized reporting supports comparisons across tokenization units when the underlying text event is preserved (P03). Temperature scaling supplies a simple held-out probability recalibration procedure for the classifier setting studied by R4.17. Neither changes the model's knowledge or proves improved execution correctness.
+
+Deployment assessment adds task verifiers, distribution slices, abstention/calibration events, latency, and resource budgets. These are additional measurement axes with their own protocols; an aggregate likelihood should not erase them.
 
 ## Limitations
 
-Perplexity is valid as a within-convention, within-tokenizer, within-set progress signal during pretraining and as the fitted quantity of scaling analyses; it is falsified as a *capability* claim whenever a thresholded metric moves against it. Decision consequence: every reported ℓ or PPL in this book carries its five conventions; every cross-model comparison uses BPB or is refused.
+Likelihood remains useful for a declared predictive distribution and data set; a disagreement with one capability metric limits that proxy claim, not the mathematical validity of likelihood. Same-tokenizer comparisons can be valid in token units when their remaining conventions align. Cross-tokenizer byte normalization is useful only with compatible byte events and explicit special-token/boundary accounting.
+
+The cited calibration study concerns classifiers; no factual or sequence-level LLM calibration result is claimed. The book performed no evaluation or timing measurement.
 
 ## Reproducibility
 
-Versions: P03 arXiv 2101.00027 (ar5iv, accessed 2026-09-20); R4.22 Hugging Face Transformers perplexity documentation page (accessed 2026-09-20; library version not pinned on the page); R4.17 arXiv 1706.04599 (ar5iv, accessed 2026-09-20); R4.23; P01 §5.4; P08. Artifacts: the incomparability demonstration in [verification.md](verification.md) §2.2. Configuration: tokenizer id, k, s, boundary rule, set id and preprocessing, mask, units. Metrics: ℓ in nats/token; BPB per Eq. 4.16; ECE with M bins stated. Unresolved: boundary conventions of published evaluations (NOT-DISCLOSED); loss-to-capability link (UNVERIFIED, §21.6).
+Record corpus identity/checksum and preprocessing, compatible checkpoint/tokenizer, original bytes, scored tokens, BOS/EOS policy, segmentation, context/stride, position IDs, visible intervals, precision, sum/count reductions, and total NLL before exponentiation. Calibration additionally requires its event definition, calibration split, fit objective, temperature, bins, and evaluation uncertainty procedure. The chapter reports no executed evaluation; its fixture and counterexamples remain in [verification.md](verification.md).
 
 ## References
 

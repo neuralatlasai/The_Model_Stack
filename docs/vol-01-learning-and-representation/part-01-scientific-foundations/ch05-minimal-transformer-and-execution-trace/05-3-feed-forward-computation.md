@@ -35,7 +35,7 @@ evidence_summary:
   labels_used: [MATHEMATICALLY-DERIVED, PAPER-REPORTED, OFFICIAL-DOCUMENTATION, ASSUMED, NOT-DISCLOSED]
   empirically_observed: false
 word_count_target: 1000
-updated_at: 2026-09-20
+updated_at: 2026-10-08
 editorial_status: manuscript_draft
 ---
 
@@ -43,33 +43,43 @@ editorial_status: manuscript_draft
 
 ## Scope
 
-Objective: specify the position-wise feed-forward block — expansion, nonlinearity, contraction — and its gated alternative, and derive its parameter count and per-token FLOPs so that the 8/3 width convention is seen as parameter matching rather than as a received number. Baseline: the ReLU two-matrix FFN of P01. Success criterion: the reader can compute, for any (D, F), the parameters and FLOPs of the two-matrix and three-matrix forms and choose F to equalise them. Boundaries: which activation trains better is a Chapter 13 question ([§13.3](../../part-03-model-architectures-and-state/ch13-dense-transformer-design-and-parameter-allocation/13-3-feed-forward-alternatives.md)); mixture-of-experts replaces this block and is owned by [§16.1](../../part-03-model-architectures-and-state/ch16-mixture-of-experts-architectures/16-1-conditional-computation.md).
+A position-wise feed-forward branch applies the same learned transformation independently to each token representation. Its expansion width, activation, multiplicative gates, biases, and contraction determine both the function and its dense parameter and compute costs. The two-matrix ReLU/GELU family and three-matrix GLU family differ in more than an activation name: gating introduces another projection and another backward dependence. This section derives the forward and backward calculations, the matched-parameter width relation, and the limits of using that relation to infer memory or speed. (PAPER-REPORTED: P01 section 3.3; R5.5 sections 1-3; MATHEMATICALLY-DERIVED: Eq. 5.9-5.12.)
 
 ## Why this exists
 
-Attention (§5.2) mixes information across positions but, per position, applies only linear maps; without a nonlinearity between blocks the stack would collapse to one linear map of the mixed inputs. What failed before was not a Transformer-era problem but the general one: depth without nonlinearity buys nothing. The bottleneck the feed-forward block introduces is its share of parameters and FLOPs — at the conventional F = 4D it holds two thirds of each block's weights — so its width is the single largest lever on the 2N-per-token cost of §5.6. The dominant constraint that changed the design was that gated variants were reported to reach lower loss at equal compute, which forced the width to be renegotiated rather than the matrix count simply raised. PAPER-REPORTED (R5.5, abstract and §3): gated variants were compared at matched parameter and computation counts by reducing the hidden dimension.
+Attention supplies input-dependent interaction between positions; the feed-forward branch supplies an additional learned channel transformation at each position. Attention itself is nonlinear through its score construction and softmax, so removing the feed-forward activation does not turn an entire Transformer into a linear map. For a two-matrix feed-forward branch alone, removing its activation collapses the composition to one matrix product W_1 W_2. For a gated branch, retaining the product of two linear projections still gives a bilinear input dependence. These distinctions identify what an activation or gating ablation actually changes. (MATHEMATICALLY-DERIVED.)
+
+The FFN also accounts for a substantial part of a dense block's weight arithmetic. With residual width d, attention projections contain4d^2 parameters; a bias-free two-matrix FFN with F=4d contains8d^2. Its two-thirds share applies to this block specification, excluding embeddings, output head, and other architecture components. It is not a statement that FFN parameters always dominate a complete model or that its runtime share equals its parameter share. (MATHEMATICALLY-DERIVED.)
 
 ## Intuition
 
-Physically, the block is two GEMMs with an element-wise map between them; the GEMMs are compute-dense (intensity `~D·F/(D+F)` FLOPs per byte of weights at large B·T) and the element-wise map is memory-bound, which is why fusing the activation into the first GEMM's epilogue is a recurring kernel optimisation ([§26.4](../../../vol-02-execution-and-optimization/part-05-hardware-kernels-and-distributed-execution/ch26-kernel-programming-and-numerical-equivalence/26-4-fusion-and-dataflow.md)). The `[B, T, F]` hidden tensor is the largest non-attention activation in the trace: at F = 4D it is four times the residual stream. MATHEMATICALLY-DERIVED from shapes.
+Flatten the batch/token axes into M=B*T independent rows. Expansion maps each d-dimensional row to F learned features; the activation transforms those features elementwise; contraction combines them back into d channels. Parameter sharing across M rows makes a batched matrix multiplication possible, but no cross-position dependence is introduced by this branch. A gated alternative computes two features at the same position and multiplies them coordinatewise before contraction. The multiplicative branch changes derivatives to both projections, so treating it as an interchangeable elementwise epilogue would omit a parameterized path. (MATHEMATICALLY-DERIVED.)
 
-Heuristically, the block is sometimes described as a per-token key–value memory; that is an interpretive hypothesis for Chapter 64, not a mechanism used here.
+Equal leading FLOPs do not imply equal kernels. Two wider products and three narrower products can have different tiling, launch, fusion, reuse, and saved-activation behavior. At small M, reading dense weights can dominate the useful work; at larger M, more rows reuse those weights. An arithmetic-intensity calculation must count the actual reads/writes for a declared execution boundary, rather than divide weight FLOPs by the size of an arbitrary intermediate.
 
 ## Formulation
 
-Input `n ∈ ℝ^{B×T×D}`. Two-matrix form: `W_1 ∈ ℝ^{D×F}`, `W_2 ∈ ℝ^{F×D}`, activation `act: ℝ → ℝ` applied element-wise. Gated form: `W_1, W_3 ∈ ℝ^{D×F_g}`, `W_2 ∈ ℝ^{F_g×D}`. No biases (ASSUMED, following R5.9 and R5.11; sensitivity as in §5.1).
-
-> **Definition — position-wise feed-forward block.** The per-token map `FFN(n_t) = act(n_t W_1) W_2`, or its gated form `(act(n_t W_1) ⊙ n_t W_3) W_2`, applied with the same parameters at every position t.
+Let n have shape `[B, T, d]`. The bias-free two-matrix form has W_1[d, F] and W_2[F, d]; the gated form has W_1[d, F_g], W_3[d, F_g], and W_2[F_g, d]. Biases are excluded by the analytical reference and by R5.5's compared FFN variants; they are present in P01's original FFN. Adding them changes the two-matrix parameter total by F+d and the gated total by 2F_g+d.
 
 $$
-u = n\,W_1 \in \mathbb{R}^{B\times T\times F},\qquad v = \mathrm{act}(u),\qquad f = v\,W_2 \in \mathbb{R}^{B\times T\times D}
+u=nW_1,\quad v=\phi(u),\quad f=vW_2.
 $$
-*(Eq. 5.9)* where act is ReLU in P01 and GELU in the reference model; GELU(x) = x·Φ(x) with Φ the standard normal CDF (PAPER-REPORTED, R5.1).
+*(Eq. 5.9)* ReLU uses max(0, u). Exact GELU uses `u*Phi(u)`, where Phi is the standard normal CDF. A tanh approximation is a different numerical function and must be identified when comparing checkpoints or implementations. (PAPER-REPORTED: R5.1; R5.5 section 1.)
 
 $$
-f_{\text{gated}} = \big(\mathrm{act}(n\,W_1) \odot n\,W_3\big)\,W_2,\qquad \text{SwiGLU: } \mathrm{act}(x) = x\,\sigma(x)
+u=nW_1,\quad g=nW_3,\quad r=\phi(u)\odot g,\quad f_{\mathrm{gated}}=rW_2.
 $$
-*(Eq. 5.10)* where ⊙ is element-wise product and σ the logistic function; PAPER-REPORTED (R5.5, §2): FFN_SwiGLU replaces the ReLU FFN by Swish-gated GLU, with the bias terms omitted in the paper's FFN variants.
+*(Eq. 5.10)* GLU uses the sigmoid for phi, GEGLU uses GELU, and SwiGLU uses `SiLU(u)=u*sigmoid(u)` with unit Swish parameter. The unactivated bilinear variant sets phi(u)=u. The unactivated branch g is not constrained to[0,1]. (PAPER-REPORTED: R5.5 section 2.)
+
+$$
+N_{\mathrm{FFN}}=2dF,\quad N_{\mathrm{gated}}=3dF_g,\quad N_{\mathrm{gated}}=N_{\mathrm{FFN}}\iff F_g=2F/3.
+$$
+*(Eq. 5.11)* With F=4d this yields F_g=8d/3 before integer or hardware-alignment rounding.
+
+$$
+C_{\mathrm{FFN}}=4dF,\qquad C_{\mathrm{gated}}=6dF_g\quad\text{GEMM FLOPs per token}.
+$$
+*(Eq. 5.12)* Counts use2 FLOPs per multiply-add and exclude elementwise work. Exact matched width preserves these leading GEMM counts; a rounded width changes them by its actual matrix dimensions. (MATHEMATICALLY-DERIVED.)
 
 ```figure
 id: fig-5.13
@@ -129,30 +139,19 @@ spec:
     - { id: gated, label: "gated, SwiGLU, F_g = 2F/3 = 2048, 3·D·F_g params" }
 ```
 
-$$
-N_{\text{FFN}} = 2\,D\,F,\qquad N_{\text{FFN,gated}} = 3\,D\,F_g,\qquad N_{\text{FFN,gated}} = N_{\text{FFN}} \iff F_g = \tfrac{2}{3}F
-$$
-*(Eq. 5.11)* where with F = 4D this gives `F_g = 8D/3`.
-
-$$
-\text{FLOPs}_{\text{FFN}} = 4\,D\,F \text{ per token},\qquad \text{FLOPs}_{\text{FFN,gated}} = 6\,D\,F_g \text{ per token}
-$$
-*(Eq. 5.12)* where each `[·, D] × [D, F]` GEMM costs 2·D·F per token; activations and the gate product add O(F) per token and are omitted.
-
 ```figure
 id: fig-5.14
 kind: calculator
 title: Feed-forward width matching
 caption: >-
-  At D = 768 and F = 4D the matched gated width is exactly 2048, a multiple of
-  64, and the two forms agree to the parameter. Try the P01 base width,
-  D = 512: F_g = 1365.3 is not an integer, rounding to a multiple of 64 gives
-  1344, and the gated block then holds fewer parameters than the two-matrix
-  one. That is the width-rounding ambiguity in the Failure modes.
+  Exact projection-parameter matching gives F_g=2F/3. At d=768, F=3072
+  this is 2048; at d=512, F=2048 it is 1365.333... . This calculator chooses
+  the nearest multiple of 64, namely1344, which has fewer parameters. That
+  rounding policy is analytical, not a claim about every source or kernel.
 placement: rail
 anchor: formulation
 evidence: MATHEMATICALLY-DERIVED
-source: ["DERIVED:eq-5.11", "DERIVED:eq-5.12", P01, R5.11]
+source: ["DERIVED:eq-5.11", "DERIVED:eq-5.12", P01]
 alt: >-
   Calculator for Eq. 5.11 and 5.12 over model width D and the ratio F/D. At
   D = 768 and F/D = 4 (the reference model): F = 3072, matched gated width
@@ -179,34 +178,45 @@ spec:
     - { label: "P01 base width, D = 512", values: { D: 512 } }
 ```
 
-> **Assumption.** F = 4D for the GELU reference and F_g = 8D/3 for the SwiGLU variant · *sensitivity:* both are conventions, not optima; PAPER-REPORTED (R5.11, §3.5): the CS336 handout states d_ff = 8/3·d_model canonically and permits rounding to a nearby multiple of 64 for hardware efficiency.
-
 ## Mechanism
 
-Eq. 5.9 is a `[B·T, D] × [D, F]` GEMM, an element-wise map, and a `[B·T, F] × [F, D]` GEMM. Its parameters are `2DF` and its FLOPs per token `4DF`; for the reference configuration (D = 768, F = 3072) that is 4,718,592 parameters and 9,437,184 FLOPs per token per block. Eq. 5.10 adds a third matrix `W_3` of the same shape as `W_1`, so at equal width it costs 1.5× the parameters and FLOPs; the matched-parameter condition `3DF_g = 2DF` gives `F_g = 2F/3`, and with the 4D convention `F_g = 8D/3`. MATHEMATICALLY-DERIVED (Eq. 5.11). For D = 768, `F_g = 2048` exactly, and `3·768·2048 = 4,718,592 = 2·768·3072`: the gated block has the same parameters and, by Eq. 5.12, the same GEMM FLOPs (`6·768·2048 = 4·768·3072 = 9,437,184`). PAPER-REPORTED (R5.5, §3): the paper reduces the hidden dimension of the gated variants to 2/3 of the original d_ff to keep parameter count and computation constant, using T5-base with d_model = 768 and d_ff = 3072, i.e. a gated hidden size of 2048. PAPER-REPORTED (R5.8, §2.2): LLaMA uses a SwiGLU hidden dimension of 2/3·4d instead of 4d; PAPER-REPORTED (R5.9, §2): PaLM notes that SwiGLU requires three matrix multiplications rather than two and cites the compute-equivalent comparison of R5.5.
+### Methodology
 
-The costs that do not match at equal parameters are the activation bytes. The two-matrix form stores one `[B, T, F]` pre-activation (needed for the backward pass through act) and one `[B, T, F]` activation output (the input of the second GEMM): `2·B·T·F·b`. The gated form stores `n W_1`, `n W_3`, and their product: `3·B·T·F_g·b = 2·B·T·F·b` when `F_g = 2F/3` — equal again — but it issues three GEMMs of narrower width, which changes achievable utilisation on hardware, a Chapter 26 concern. MATHEMATICALLY-DERIVED.
+For the two-matrix branch, compute an `[M, d]` by `[d, F]` product, apply the activation to M*F scalars, and multiply the result by `[F, d]`. This gives 2dF parameters and 4dF GEMM FLOPs per token. With d=768 and F=3072 the totals are 4,718,592 parameters and 9,437,184 FLOPs per token. A gated branch of the same width adds dF parameters and 2dF FLOPs per token; choosing F_g=2048 restores both leading totals exactly. These are arithmetic identities, rather than evidence of matched elapsed time or identical training dynamics.
+
+The derivative of exact GELU is `Phi(u)+u*varphi(u)`, where varphi is the standard normal density. For SiLU it is `sigmoid(u)+u*sigmoid(u)*(1-sigmoid(u))`. These formulas specify how negative and near-zero inputs contribute to the gradient; replacing either activation with a hard threshold changes the derivative. ReLU is nondifferentiable at zero and an implementation must adopt its stated subgradient convention. (MATHEMATICALLY-DERIVED from the activation definitions.)
+
+For the gated branch let barf be the upstream cotangent and flatten tokens into rows. The contraction gives `barr=barf W_2^T` and `barW_2=r^T barf`. The product gives `baru=barr*g*phi'(u)` and `barg=barr*phi(u)`. Consequently,
+
+$$
+\bar W_1=n^{\top}\bar u,\qquad \bar W_3=n^{\top}\bar g,\qquad
+\bar n=\bar uW_1^{\top}+\bar gW_3^{\top}.
+$$
+The two cotangent paths into n must be added. Returning only one path would preserve forward outputs while producing an incorrect training algorithm. The two-matrix derivative is the same construction with one activation path and no multiplicative branch. For each dense product, its input and weight gradients each have the leading cost of the forward product when both are required; freezing a parameter does not necessarily remove the gradient needed by earlier trainable layers. (MATHEMATICALLY-DERIVED.)
+
+Activation retention is a property of a backward implementation. A simple two-matrix execution can save u for the activation derivative and v for the contraction's weight gradient, in addition to its shared input n. A primitive gated execution may save u, g, phi(u), and r. A fused/custom backward can recompute phi(u) from u and save fewer arrays, or checkpoint the branch and recompute projections. Thus `3F_g=2F` is not a universal equality of retained or peak activation bytes. The saved set, element dtypes, aliasing, and release times must be specified before converting counts to bytes.
+
+The arithmetic share can be derived under fixed widths. At F=4d, FFN projections contribute16d^2 forward FLOPs per token, against8d^2 for attention projections. Adding attention's context-dependent products and the output vocabulary head changes the complete-model share. Likewise, the FFN expansion is larger than one residual array when F>d, but a logit array or attention array can be larger still. The resource account therefore names individual tensors and their lifetimes rather than declaring one tensor universally largest.
 
 ```figure
 id: fig-5.15
 kind: memory-stack
 title: Retained FFN hidden bytes at matched parameters
 caption: >-
-  Two tensors of width 3072 against three of width 2048: both bars stop at
-  96 MiB per block, so matching parameters also matches retained activation
-  bytes. What the bars do not show is GEMM shape, the one cost that differs.
-  B = 8, T = 1024, BF16, from the illustrative §5.6 configuration, not a named
-  model.
+  Equal bars require a saving policy: two width3072 tensors for GELU, and
+  three width2048 tensors u, g, r for SwiGLU with SiLU(u) recomputed in backward.
+  A primitive graph can also save SiLU(u), adding another32 MiB. Equal
+  projection parameters do not imply equal actual saved activations or peak
+  memory. Shared input and branch output are omitted.
 placement: rail
 anchor: mechanism
 evidence: MATHEMATICALLY-DERIVED
 source: ["DERIVED:eq-5.9", "DERIVED:eq-5.10", "DERIVED:eq-5.11"]
 alt: >-
-  Two stacked bars of retained FFN hidden bytes per block at B = 8, T = 1024,
-  2 bytes per value. GELU two-matrix form, F = 3072: pre-activation u 48 MiB
-  plus activation v 48 MiB, total 96 MiB (2·B·T·F·b). SwiGLU gated form,
-  F_g = 2048: n·W_1 32 MiB, n·W_3 32 MiB and their product 32 MiB, total
-  96 MiB (3·B·T·F_g·b). The totals are equal.
+  Conditional FFN inventory at B=8, T=1024, two-byte storage. GELU saves
+  u and v,48 MiB each, total 96 MiB. The selected SwiGLU policy saves u, g, r,
+  32 MiB each, total 96 MiB, and recomputes SiLU(u). Saving SiLU(u) too gives
+  128 MiB. These are inventory choices, not measured autograd peaks.
 spec:
   format: bytes
   variables: { B: 8, T: 1024, F: 3072, Fg: 2048, b: 2 }
@@ -215,84 +225,77 @@ spec:
       segments:
         - { label: "u = n·W_1, [B, T, F]", kind: tensor, formula: "B*T*F*b" }
         - { label: "v = GELU(u), [B, T, F]", kind: tensor, formula: "B*T*F*b" }
-    - label: "SwiGLU, three matrices, F_g = 2048"
+    - label: "SwiGLU: save u,g,r; recompute SiLU(u)"
       segments:
         - { label: "n·W_1, [B, T, F_g]", kind: tensor, formula: "B*T*Fg*b" }
         - { label: "n·W_3, [B, T, F_g]", kind: tensor, formula: "B*T*Fg*b" }
         - { label: "SiLU(n·W_1) ⊙ n·W_3, [B, T, F_g]", kind: tensor, formula: "B*T*Fg*b" }
 ```
 
-Per-token compute share: with attention's `8D²` projection FLOPs and the FFN's `4DF = 16D²` at F = 4D, the block's weight FLOPs are `24D²`, of which the FFN is two thirds — the same fraction as its parameter share `2DF/(4D² + 2DF) = 8/12`. MATHEMATICALLY-DERIVED; this identity (FLOP share = parameter share for weight GEMMs) is what makes the 2N rule of §5.6 work.
-
 ## Algorithm
 
 ```text
-Algorithm 5.3 — Feed-forward block (two-matrix and gated forms)
-INPUT   n : [B, T, D]; W_1 : [D, F]; W_2 : [F, D]; optional W_3 : [D, F]; act
-OUTPUT  f : [B, T, D]
-STATE   u, v : [B, T, F]
-INVARIANT f.shape == n.shape; no cross-position data flow
-1.  u ← n · W_1                         # [B, T, F]
-2.  if W_3 is None:
-3.      v ← act(u)                      # GELU in the reference model
-4.  else:
-5.      v ← act(u) ⊙ (n · W_3)          # SwiGLU when act = SiLU
-6.  f ← v · W_2                         # [B, T, D]
-7.  return f
-TERMINATION: straight-line code.
+Algorithm 5.3 - Two-matrix or gated position-wise branch
+INPUT: n[B,T,d]; W_1[d,F]; W_2[F,d]; activation phi; variant in {plain,gated}; gated W_3[d,F]
+OUTPUT: f[B,T,d]
+STATE: u[B,T,F]; activated[B,T,F]; gated g,r[B,T,F]
+INVARIANT: the same parameters act on every position, with no cross-position reads
+1. Compute u = n W_1 and activated = phi(u).
+2. If variant is gated, compute g = n W_3 and r = activated * g.
+3. Otherwise set r = activated.
+4. Compute and return f = r W_2.
+TERMINATION: a finite sequence of dense and elementwise operations.
 ```
 
-Complexity: `4DF` (or `6DF_g`) FLOPs per token; `2DF` (or `3DF_g`) parameters; peak activation `2·B·T·F·b` (or `3·B·T·F_g·b`). Implementation: `reference_transformer.py` in [verification.md](verification.md).
+Here F means the actual chosen width of the selected variant; Eq. 5.11 determines a matched alternative width when requested. Validate dimensions before dispatch. The implementation must preserve both projection-gradient paths for the gated variant. Its dense complexity is O(B*T*d*F), and its materialized intermediate storage is O(B*T*F) with an implementation-dependent constant. (MATHEMATICALLY-DERIVED.)
 
 ## Implementation
 
-Tensors → operators: `torch.nn.Linear(D, F, bias=False)`, `torch.nn.functional.gelu` or `silu`, `torch.nn.Linear(F, D, bias=False)`. Framework: PyTorch, *Model / autograd framework* layer. Kernels: two cuBLAS / cuBLASLt GEMMs with an element-wise kernel between them; fused GEMM-epilogue activations and fused SwiGLU kernels exist in the *Kernels / numerics / collectives* layer (for example in Liger Kernel and NVIDIA Transformer Engine) and are release-specific — which fusions apply to a given dtype and shape is NOT-DISCLOSED here rather than inferred. Memory: in training the pre-activation is retained; recomputation trades it for a repeated first GEMM ([§30.2](../../../vol-02-execution-and-optimization/part-05-hardware-kernels-and-distributed-execution/ch30-large-training-runs-reliability-monitoring-and-recovery/30-2-memory-management.md)). Communication: tensor parallelism splits F across devices, column-parallel for W_1/W_3 and row-parallel for W_2 (§29.2). Deployment: the block is unchanged at inference; MoE replaces it by a routed set of narrower blocks (§16).
+A plain implementation uses two bias-free linear operators and the declared GELU/ReLU activation. A gated implementation uses two independent input projections, an elementwise activation/product, and a contraction. The input projections may be packed into one weight tensor with output width2F_g, but checkpoint ordering and gradient accumulation must preserve the two logical branches. A compilation or kernel library can fuse an activation or gate without changing its mathematical definition; which fusion is selected is a versioned execution fact, not implied by the operator names.
 
-> **Implementation note [impl.pytorch · 2.14.0 documentation, execution UNVERIFIED].** GELU has an exact (erf) and a tanh-approximate form; the two differ at the level of 10⁻³ in the activation for moderate inputs and must be pinned in the artifact because they change logits beyond the equivalence tolerance of [verification.md](verification.md). The reference model uses the exact form (ASSUMED).
+For tensor-parallel FFNs, partitioning the expansion channels lets each rank compute its local up/gate features and partial contraction. The partial residual-width outputs then need the appropriate reduction. The all-to-all associated with routed experts is a different mechanism and must not be attributed to an ordinary dense channel partition. Exact collective placement and overlap belong to29.2.
+
+Width rounding changes parameter count by 3d times the gated-width increment and leading forward FLOPs by 6d times that increment. Saving the width explicitly in checkpoint configuration avoids a loader silently deriving a different rounded value. An aligned width can improve a particular kernel's tiling; an odd width is mathematically legal and is not evidence of a universal slowdown magnitude. A measured comparison needs device, backend, precision, M, width, and measurement boundary.
+
+Materialized activation traffic can motivate fusion or recomputation, but retained backward tensors need not equal the temporary tensors observed during forward. Report both allocations and the saved-state policy. No FFN timing, energy, memory peak, or fused-kernel equivalence has been measured for the analytical reference.
 
 ## Experimental design
 
-Proposal (for Chapter 13's ablation protocol, not executed here). Hold N and training tokens fixed; compare GELU at F = 4D against SwiGLU at F_g = 8D/3 rounded to a multiple of 64; report loss at matched steps with seed variance from ≥ 3 seeds; ablate the gate (`W_3` fixed to ones) to separate the activation from the gating. Threat: at matched parameters the two forms differ in GEMM shapes, so wall-clock is not matched — report both.
+### Reported experiments
+
+R5.5 compares bias-free FFN alternatives inside T5 on C4 span reconstruction. It fixes d=768, uses F=3072 for two-matrix variants and F_g=2048 for gated variants, and trains the long runs for 524,288 steps with 128 examples per batch,512 input tokens and 114 output tokens per example. Four shorter65,536-step runs estimate variability. The reported metric is held-out log-perplexity on that reconstruction objective, not general decoder-only perplexity or wall-clock-normalized quality. GEGLU and SwiGLU improve that metric in the reported comparisons. Fine-tuning uses a task mixture and source-specific checkpoint selection; its scores require a separate reading of that protocol. (PAPER-REPORTED: R5.5 sections 3.1-3.3/Table 1.)
 
 ## Observations
 
-**What the paper claims.** PAPER-REPORTED (P01, §3.3): the FFN is `max(0, xW_1 + b_1)W_2 + b_2` with d_model = 512 and d_ff = 2048, i.e. the 4× convention. PAPER-REPORTED (R5.5): GLU-variant FFNs reached lower perplexity than the ReLU FFN in the paper's T5 pretraining setup at matched parameters and compute, with SwiGLU and GEGLU among the reported variants. PAPER-REPORTED (R5.9, §2): PaLM adopted SwiGLU citing that comparison.
+**What the paper claims.** R5.5 reports benefits for several GLU variants at matched leading parameter and operation counts in its T5 setup. R5.8 and R5.9 document adoption of SwiGLU in their architectures. Adoption is distinct from a new controlled activation ablation. (PAPER-REPORTED.)
 
-**What the evidence shows.** The parameter-matching identity is arithmetic and holds for every D; the quality claims rest on R5.5's single pretraining setup plus subsequent adoption in reports (R5.8, R5.9) that did not publish matched-compute ablations of the choice; no independent controlled reproduction is cited by this chapter.
+**What the evidence shows.** Eq. 5.11 establishes exact parameter matching before rounding. The reported quality evidence concerns the source's objective, training regime, and evaluation. It does not establish identical activation memory, elapsed time, or an optimum expansion width for another model. (MATHEMATICALLY-DERIVED; PAPER-REPORTED.)
 
-**What we infer.** DERIVED: the 8/3 convention is a consequence of choosing to match parameters, not a property of SwiGLU; a team matching activation bytes or GEMM shapes instead would choose a different F_g. The reference model's GELU-at-4D default is chosen so that the accounting of §5.6 has two rather than three FFN matrices; the switch to SwiGLU in the artifact is a one-line change with identical N.
+**What we infer.** A width convention is the result of an accounting constraint. Matching dense parameters, matching peak activation bytes, and matching elapsed training cost are different constraints and may select different widths. (MATHEMATICALLY-DERIVED.)
 
-**What remains unknown.** NOT-DISCLOSED: the exact rounding of F_g and the presence of biases in most production models; UNVERIFIED: whether the fused SwiGLU kernels available in a given release preserve the exact-GELU/SiLU numerics of the reference.
+**What remains unknown.** This revision has not executed the reference FFN or compared fused backends. Numerical error, saved-state behavior, and measured utilization for a selected release remain unverified. (UNVERIFIED.)
 
 ## Failure modes
 
-> **Failure mode — width mismatch between checkpoint and code.** *Symptom:* shape error on load, or silent quality loss if a permissive loader truncates. *Cause:* F_g rounded to a multiple of 64 in one implementation and not another. *Detection:* compare `W_1.shape` against the configuration record. *Mitigation:* store F explicitly in the configuration; never derive it from D at load time.
+An activation-name match can hide a formula mismatch, such as exact versus approximate GELU or a different Swish parameter. Compare activation outputs and gradients over a declared input range before attributing downstream differences to a checkpoint. A packed gate/up projection can also have reversed halves, preserving shape while changing the function.
 
-> **Failure mode — activation-form mismatch.** *Symptom:* logits differ from a reference by ~10⁻³ relative in FP32. *Cause:* exact versus tanh-approximate GELU, or Swish with a non-unit β. *Detection:* the equivalence protocol of [verification.md](verification.md) on a fixed input. *Mitigation:* pin the activation form in the artifact record.
+A backward implementation that omits one gated input path gives correct forward values and incorrect gradients. A vector-Jacobian comparison against the explicit composition detects that error. Width rounding or bias differences can instead cause checkpoint shape mismatches or different parameter totals; configuration and tensor metadata identify these before training.
 
-> **Failure mode — hidden tensor dominates memory.** *Symptom:* out-of-memory in the FFN rather than in attention at short T. *Cause:* `2·B·T·F·b` retained per block. *Detection:* per-block activation trace. *Mitigation:* activation recomputation for the FFN; smaller microbatch.
+An FFN can exhaust memory through saved inputs or expanded intermediates even when attention is fused. Recomputation changes both saved bytes and arithmetic; it cannot be represented by deleting an activation row without adding the repeated work. These are analytical failure mechanisms, with proposed checks recorded in verification.md.
 
 ## Siblings
 
-**GELU two-matrix FFN (this section's reference)** — this file
-Baseline against which the others are differentials.
-
-**SwiGLU / GLU-family gated FFN** — [§13.3](../../part-03-model-architectures-and-state/ch13-dense-transformer-design-and-parameter-allocation/13-3-feed-forward-alternatives.md)
-Why it exists: reported lower loss at matched compute (R5.5). What assumption changed: the nonlinearity multiplies a linear branch instead of gating by sign or magnitude alone. What objective changed: none. What problem it solved: quality at fixed N. What new failure mode it introduced: three narrower GEMMs and width-rounding ambiguity. Changed primitive: `act(nW_1)W_2` → `(act(nW_1) ⊙ nW_3)W_2`.
-
-**Mixture-of-experts FFN** — [§16.1](../../part-03-model-architectures-and-state/ch16-mixture-of-experts-architectures/16-1-conditional-computation.md)
-Why it exists: parameters without proportional per-token FLOPs. What assumption changed: each token uses a routed subset of E blocks. What objective changed: an auxiliary load-balancing term is usually added. What problem it solved: N grows while activated FLOPs stay near the dense block's. What new failure mode it introduced: routing imbalance and all-to-all communication. Changed primitive: one `[D, F]` pair → E pairs plus a router.
+Two-matrix ReLU, GELU, and SiLU branches share the same leading matrix shapes but use different scalar functions and derivatives. GLU variants add a second parameterized branch; the purely bilinear variant remains nonlinear despite omitting an activation. Routed experts replace the single shared FFN with a selection over expert parameter sets and introduce routing/state/communication questions treated in Chapter 16. Matching activated dense work does not match total resident expert parameters. (PAPER-REPORTED: R5.5 sections 1-2; MATHEMATICALLY-DERIVED.)
 
 ```figure
 id: fig-5.16
 kind: compare
 title: Feed-forward siblings at matched parameters
 caption: >-
-  Read the parameter and FLOP rows first: the gated form equals the
-  two-matrix form to the unit at D = 768 because its width was chosen to
-  make it so. The rows that differ are GEMM count, width and failure mode.
-  The mixture-of-experts column breaks the link between parameters and
-  per-token FLOPs, which is the whole point of that sibling.
+  Matched width preserves projection parameters and leading GEMM arithmetic.
+  Nonlinear operations, saving policy, and execution still differ. MoE needs
+  separate resident expert and routed execution counts, plus routing and
+  communication; it does not guarantee the dense FFN arithmetic or latency.
 placement: wide
 evidence: MATHEMATICALLY-DERIVED
 source: ["DERIVED:eq-5.11", "DERIVED:eq-5.12", R5.5]
@@ -302,9 +305,9 @@ alt: >-
   parameters, 4·D·F = 9,437,184 GEMM FLOPs per token, retained hidden bytes
   2·B·T·F·b. SwiGLU gated: (SiLU(n·W_1) ⊙ n·W_3)·W_2, three narrower GEMMs,
   F_g = 2048, 3·D·F_g = 4,718,592 parameters, 6·D·F_g = 9,437,184 FLOPs,
-  3·B·T·F_g·b = 2·B·T·F·b bytes; new failure mode width-rounding ambiguity.
+  conditional saved bytes:3*B*T*F_g*b when SiLU(u) is recomputed; new failure mode width-rounding ambiguity.
   Mixture of experts: E pairs of matrices plus a router, parameters grow with
-  E while activated FLOPs stay near the dense block's, an auxiliary
+  E while activated FLOPs depend on routed experts and their widths, an auxiliary
   load-balancing term is usually added, and routing imbalance and all-to-all
   communication are the new failure modes.
 spec:
@@ -320,23 +323,27 @@ spec:
     - { dimension: "GEMMs per token", values: { gelu: "2", swiglu: "3, each narrower", moe: "2 per activated expert, plus the router" } }
     - { dimension: "hidden width", values: { gelu: "F = 4D = 3072", swiglu: "F_g = 2F/3 = 8D/3 = 2048", moe: "a design input (§16.1)" } }
     - { dimension: "parameters", values: { gelu: "2·D·F = 4,718,592", swiglu: "3·D·F_g = 4,718,592", moe: "grow with E" } }
-    - { dimension: "GEMM FLOPs per token", values: { gelu: "4·D·F = 9,437,184", swiglu: "6·D·F_g = 9,437,184", moe: "near the dense block's; set by the activated subset" } }
-    - { dimension: "retained hidden bytes", values: { gelu: "2·B·T·F·b", swiglu: "3·B·T·F_g·b = 2·B·T·F·b", moe: "not derived here (§16)" } }
+    - { dimension: "GEMM FLOPs per token", values: { gelu: "4·D·F = 9,437,184", swiglu: "6·D·F_g = 9,437,184", moe: "sum routed expert work plus routing overhead" } }
+    - { dimension: "retained hidden bytes", values: { gelu: "2·B·T·F·b", swiglu: "policy-dependent:3*B*T*F_g*b with specified recomputation", moe: "not derived here (§16)" } }
     - { dimension: "objective change", values: { gelu: "none", swiglu: "none", moe: "auxiliary load-balancing term usually added" } }
     - { dimension: "new failure mode", values: { gelu: "none beyond activation-form pinning", swiglu: "three narrower GEMMs; width-rounding ambiguity", moe: "routing imbalance; all-to-all communication" } }
 ```
 
 ## Extensions
 
-Domain adaptation leaves the block unchanged. Long context does not touch it — its cost is linear in T. Multimodal encoders often use the same block with their own D; agents do not change it. MoE (§16) is the extension that changes the trace line. Proposals only.
+### Improvements
+
+The documented transition from a two-matrix FFN to a GLU-family FFN changes the feature interaction and compensates its extra projection through width selection. Later architecture reports establish that this design was used at larger scale, while the isolated quality result remains bounded by the controlled source experiment. Fusion and activation checkpointing are execution changes that can be applied to either family when the numerical and saved-state contracts are preserved. (PAPER-REPORTED: R5.5; R5.8; R5.9.)
+
+Longer sequences increase the number of FFN rows linearly for fixed batch and width. A multimodal token stream can change that row count without changing the local branch equation. A changed modality encoder or expert router introduces its own parameter and interface specification and cannot be accounted for by silently reusing a dense FFN total.
 
 ## Limitations
 
-The accounting assumes dense GEMMs and ignores the O(F) element-wise costs, which are negligible in FLOPs but not in memory traffic. The block is valid as written for D and F that the hardware can tile efficiently; odd widths are legal and slow. Falsification: a measured FFN FLOP count on a profiler that disagrees with Eq. 5.12 by more than the element-wise term indicates hidden padding or recomputation.
+The leading counts exclude activation, multiplication, bias, and reduction instructions. These exclusions are appropriate for a stated GEMM account but do not establish negligible runtime. Parameter matching assumes dense unstructured matrices, a specified tying policy, and exact widths. The source quality evidence is conditional on its training and selection protocol; no universal ordering of activations is established. Retained and peak memory remain implementation-specific.
 
 ## Reproducibility
 
-Configuration: D = 768, F = 3072 (GELU, exact) or F_g = 2048 (SwiGLU); no biases; PyTorch 2.14.0 documented API (R5.13/R5.14), execution UNVERIFIED. Unresolved: fused-kernel numerics per release.
+Record the actual expansion width, biases, activation formula, gate/up ordering, parameter sharing, precision, and saved-state/recomputation policy. The analytical example uses d=768 with F=3072 or F_g=2048; its integer totals can be checked independently of any model training. Numerical forward/backward and performance checks remain unexecuted proposals in [verification.md](verification.md). Source versions and inspected experiment locators are listed in [references.md](references.md).
 
 ## References
 

@@ -35,7 +35,7 @@ evidence_summary:
   labels_used: [MATHEMATICALLY-DERIVED, PAPER-REPORTED, ASSUMED, OFFICIAL-DOCUMENTATION, NOT-DISCLOSED]
   empirically_observed: false
 word_count_target: 1000
-updated_at: 2026-09-20
+updated_at: 2026-10-08
 editorial_status: manuscript_draft
 ---
 
@@ -43,17 +43,19 @@ editorial_status: manuscript_draft
 
 ## Scope
 
-Objective: write the decoder-only forward pass as a tensor trace — every intermediate tensor named, shaped, typed and costed — from integer token ids to a `[B, T, V]` logit tensor. Baseline: the block diagram of P01 restricted to its decoder without cross-attention. Success criterion: a reader can reconstruct the reference implementation in §5.5 from the trace alone and can point to the line responsible for any parameter, FLOP or byte reported in §5.6. Boundaries: attention internals (§5.2), feed-forward internals (§5.3), normalisation placement (§5.4) and the backward pass (§5.5) are deferred; RoPE is a forward link to [§15.1](../../part-03-model-architectures-and-state/ch15-position-long-context-and-effective-information-access/15-1-position-representations.md).
+A decoder-only Transformer maps an ordered token sequence to a conditional distribution at every input position. Its forward computation couples a token embedding and position representation to repeated attention and position-wise transformations, residual additions, normalization, and a vocabulary projection. The trace below specifies the mathematical function and distinguishes it from the execution plan: tensor layouts, masks, parameter sharing, numerical precision, and saved intermediates determine whether an implementation preserves that function and what resources it consumes. The original Transformer used an encoder-decoder architecture, post-LayerNorm, ReLU, and scaled embeddings; the pre-RMSNorm, GELU, learned-position decoder specified here is an explicitly declared analytical reference, rather than an attributed configuration of P01 or a claimed production default. (PAPER-REPORTED: P01 sections 3.1-3.5; analytical construction: Eq. 5.1-5.3.)
 
 ## Why this exists
 
-Chapter 04 fixed the objective: the model must output a conditional distribution `p_θ(x_t | x_<t)` at every position in one pass, with teacher forcing supplying the prefix ([§4.1](../ch04-language-modeling-and-learning-objectives/04-1-autoregressive-modeling.md)). What failed when that objective was first met with recurrent models was that computing position t required the state of position t−1, so the T positions of a sequence could not be processed as one batched matrix multiplication. The Transformer of P01 removes that dependency: every position's representation is computed from all earlier positions through attention, and the only sequential structure is the depth of the stack. PAPER-REPORTED (P01, §1 and §4): the authors state that self-attention connects all positions with a constant number of sequentially executed operations, in contrast to the O(n) sequential operations of a recurrent layer.
+The autoregressive factorization fixes which token is predicted from which prefix; it does not prescribe how the conditional distribution is computed. During teacher-forced Transformer training, every observed input token is available and the attention mask enforces prefix visibility. All positions within a layer can therefore be processed together, although layer dependencies remain sequential. During ordinary autoregressive generation, the next input depends on the sampled output, so this within-layer training parallelism does not remove the sequential generation loop. P01 Table 1 analyzes sequential operations of a layer; it is not a proof that an entire generated sequence requires constant time. (PAPER-REPORTED: P01 sections 3-4; MATHEMATICALLY-DERIVED: dependence graph.)
 
-The bottleneck that this creates, and that the trace exposes, is that the parallel form materialises tensors whose size depends on T² (scores) and on T·d_ff (feed-forward hidden), so that memory rather than sequential latency becomes the dominant constraint at long T. The trace is the instrument for seeing that before it is measured.
+A trace also exposes distinct growth rates. Residual and feed-forward tensors grow linearly with sequence length; explicitly materialized attention scores grow quadratically; a full vocabulary logit tensor grows with the vocabulary dimension. Which allocation reaches a device limit first depends on batch, width, vocabulary, saved tensors, precision, and kernel implementation. A quadratic logical operator need not allocate a quadratic tensor in device memory, as P19 demonstrates. This distinction prevents an architecture diagram from being mistaken for an allocation trace. (MATHEMATICALLY-DERIVED: tensor shapes below; PAPER-REPORTED: P19 section 3.)
 
 ## Intuition
 
-Physically, the forward pass is a sequence of dense matrix multiplications interrupted by three non-matmul operations: a gather (embedding), a row-wise normalisation, and a row-wise softmax. The matmuls are where the FLOPs are; the gather and the softmax are where the memory traffic and the numerical hazards are. A `[B, T, D]` tensor with B·T = 8192 tokens and D = 768 is 12 MiB in BF16; the model touches on the order of a dozen such tensors per block, so the working set is tens of MiB per block before any O(T²) object appears. MATHEMATICALLY-DERIVED from the shapes below.
+The residual width is conserved across a block because its branch outputs are added to its input. Attention permits cross-position dependence subject to a mask; the feed-forward block transforms each position using shared parameters. Normalization changes the values presented to a branch, while a residual addition preserves a direct dependence on the preceding state. These statements concern algebraic operations, without assigning a semantic meaning to a learned coordinate or head. An interpretation of a representation requires separate evidence.
+
+For a row-vector convention, each token's hidden state is a row of a matrix and a dense projection acts by multiplication on the right. Flattening the batch and token axes converts `[B, T, d]` to `[B*T, d]` for a projection without changing which positions can interact. Reshaping projected channels into heads also introduces no interaction by itself. The cross-position operation occurs in the query-key product and probability-value product. This separation is essential when a packed projection, a strided view, or a fused kernel replaces several visible operations. (MATHEMATICALLY-DERIVED.)
 
 ```figure
 id: fig-5.3
@@ -96,30 +98,29 @@ spec:
     - { label: "T = 8192", values: { T: 8192 } }
 ```
 
-Heuristically, one may think of the residual stream as a per-token "bus" that sub-blocks read from and write to; this analogy is a reading aid and carries no mechanistic claim. Mechanistic claims about what the stream encodes are the subject of [§64.2](../../../vol-03-grounded-and-interactive-intelligence/part-11-evaluation-interpretability-and-deployment-assurance/ch64-mechanistic-interpretability-and-causal-model-analysis/64-2-representation-analysis.md).
-
 ## Formulation
 
-Symbols follow [notation.md](../../../front-matter/notation.md): B sequences, T positions, D = d_model, L blocks, H = H_q = H_kv heads in the reference form, Dh = d_h, F = d_ff (local alias, this chapter only), V vocabulary size. Token ids are `x ∈ {0,…,V−1}^{B×T}`. Parameters: embedding `E ∈ ℝ^{V×D}`, position table `P ∈ ℝ^{T_max×D}`, per block `θ_ℓ`, final norm gain `g_L ∈ ℝ^D`, output head `W_out ∈ ℝ^{D×V}` (equal to `Eᵀ` when tied).
-
-> **Definition — residual stream.** The `[B, T, D]` tensor `h_ℓ` that block ℓ reads from and adds to; its shape is invariant from the embedding output `h_0` to the input of the final normalisation `h_L`.
-
-> **Definition — tensor trace.** The ordered list of lines `shape → op → shape`, each annotated with dtype, parameter count, FLOPs and bytes, that fully specifies a forward pass; two implementations with the same trace compute the same function up to floating-point reordering.
+Write `d = d_model`, `d_h = d/H`, `F = d_ff`, and let B, T, L, H, and V denote batch size, token positions, blocks, query heads, and vocabulary size. The local lower-case d avoids conflating model width with the global notation D for training tokens. Inputs are integer IDs `x[b, t]` in `[0, V)`. The reference uses `H_kv=H`, no projection biases, an embedding `E[V, d]`, learned positions `P[T_max, d]`, and two independent RMSNorm gain vectors per block. The output weight is `W_out[d, V]`, either independent or the transpose of E. These are analytical specification choices, not inferred properties of an undisclosed checkpoint.
 
 $$
-h_0 = E[x] + P[0{:}T]
+h_0[b,t,:]=E[x[b,t],:]+P[t,:],\qquad h_0\in\mathbb R^{B\times T\times d}.
 $$
-*(Eq. 5.1)* where `E[x]` is a gather of shape `[B, T, D]` and `P[0:T]` broadcasts over B.
+*(Eq. 5.1)*
 
 $$
-h_{\ell} = h_{\ell-1} + \mathrm{Attn}_\ell\big(\mathrm{Norm}(h_{\ell-1})\big) + \mathrm{FFN}_\ell\Big(\mathrm{Norm}\big(h_{\ell-1} + \mathrm{Attn}_\ell(\mathrm{Norm}(h_{\ell-1}))\big)\Big), \quad \ell = 1,\dots,L
+\begin{aligned}
+u_\ell&=h_{\ell-1}+A_\ell(N_{\ell,a}(h_{\ell-1})),\\
+h_\ell&=u_\ell+F_\ell(N_{\ell,f}(u_\ell)),\qquad \ell=1,\ldots,L.
+\end{aligned}
 $$
-*(Eq. 5.2)* where Norm is RMSNorm with its own gain per call, Attn is §5.2, FFN is §5.3; this is the pre-norm ordering of §5.4.
+*(Eq. 5.2)* Each A is causal multi-head attention and each F is the two-matrix GELU block specified in 5.3. The two N operators have distinct gain parameters; the attention result is computed once and reused in u.
 
 $$
-z = \mathrm{Norm}(h_L)\, W_{\text{out}} \in \mathbb{R}^{B\times T\times V}
+z=N_{\mathrm{final}}(h_L)W_{\mathrm{out}}\in\mathbb R^{B\times T\times V}.
 $$
-*(Eq. 5.3)* where z are logits; the softmax over V is applied only inside the loss or the sampler.
+*(Eq. 5.3)* Logits are unnormalized real scores. Stable log-softmax and target selection belong to the loss; a generation sampler consumes the selected logit rows. Tying the head reuses E's storage but does not eliminate the vocabulary projection's arithmetic. A learned-position table requires every used position ID to lie below T_max. (MATHEMATICALLY-DERIVED.)
+
+The reference differs from P01 in normalization placement, activation, removal of cross-attention, and embedding scaling. GPT-2 documents pre-LayerNorm and a final norm; LLaMA documents pre-RMSNorm, SwiGLU, and rotary positions. These reports establish specific alternatives, without making this chapter's combination an empirical optimum. (PAPER-REPORTED: R5.2 section 2.3; R5.8 section 2.2.)
 
 ```figure
 id: fig-5.4
@@ -183,13 +184,11 @@ spec:
     - { id: blk, label: "block ℓ, repeated L times" }
 ```
 
-> **Assumption.** No bias vectors in any projection · *sensitivity:* adding biases adds `D` parameters per projection and is a negligible FLOP change; it changes the pre-norm variance analysis in §5.4 only at second order.
-
-> **Assumption.** Learned absolute positions `P` with `T ≤ T_max` · *sensitivity:* replacing P by RoPE removes `T_max·D` parameters and moves position information into the Q and K projections of §5.2; see §15.1.
-
 ## Mechanism
 
-The forward pass is the composition of Eq. 5.1, L applications of Eq. 5.2, and Eq. 5.3. The full trace for one block, with F = d_ff and the head split `D = H·Dh`, is the canonical example that every later Tensor trace block in the book follows.
+### Methodology
+
+The computation applies Eq. 5.1, then L blocks of Eq. 5.2, then Eq. 5.3. Each layer has independent parameters. The trace uses the local alias D=d only inside its shape notation; it counts both attention projections and the output vocabulary projection. A materialized attention path is shown to expose its logical intermediates; an exact fused path need not allocate the score and probability tensors in HBM.
 
 ```text
 Tensor trace — reference decoder-only forward pass (pre-norm, learned positions)
@@ -207,7 +206,7 @@ Tensor trace — reference decoder-only forward pass (pre-norm, learned position
 [B, T, D] + [B, T, D]        → residual add           → [B, T, D]        h_mid
 [B, T, D]                    → RMSNorm(g_ffn)         → [B, T, D]        n_ffn
 [B, T, D] × [D, F]           → W_1                    → [B, T, F]        u       (§5.3)
-[B, T, F]                    → GELU (or gated act)    → [B, T, F]        v
+[B, T, F]                    → GELU    → [B, T, F]        v
 [B, T, F] × [F, D]           → W_2                    → [B, T, D]        f
 [B, T, D] + [B, T, D]        → residual add           → [B, T, D]        h_ℓ
 --- end block ---
@@ -216,17 +215,17 @@ Tensor trace — reference decoder-only forward pass (pre-norm, learned position
 [B, T, V], [B, T] int64      → log-softmax + gather   → scalar           loss (§5.5)
 ```
 
-Every line has a cost. Parameters: E has V·D, P has T_max·D, each block has `4D² + 2DF + 2D` (four D×D attention matrices, two FFN matrices, two norm gains), the final norm has D, and W_out has D·V unless tied. FLOPs per token: a matmul `[B, T, m] × [m, n]` costs `2·m·n` FLOPs per token, so the block's weight matmuls cost `2·(4D² + 2DF)` per token and the head costs `2·D·V`; the two batched attention matmuls cost `4·T·D` per token (the O(T²) term counted per token), and gathers, norms, softmax and activations are O(D) or O(T) per token and are omitted from FLOP totals but not from byte totals. Activation bytes: each `[B, T, D]` tensor is `B·T·D·b` bytes, each `[B, T, F]` is `B·T·F·b`, and each `[B, H, T, T]` is `B·H·T²·b`. All MATHEMATICALLY-DERIVED from the shapes; the numbers for a concrete configuration are in §5.6.
+Every line has a cost. Parameters: E has V·D, P has T_max·D, each block has `4D² + 2DF + 2D` (four D×D attention matrices, two FFN matrices, two norm gains), the final norm has D, and W_out has D·V unless tied. FLOPs per token: a matmul `[B, T, m] × [m, n]` costs `2·m·n` FLOPs per token, so the block's weight matmuls cost `2·(4D² + 2DF)` per token and the head costs `2·D·V`; the two batched attention matmuls cost `4·T·D` per token (the O(T²) term counted per token), and gathers and norms are O(D), FFN activation is O(F), and softmax is O(H*T) per token and are omitted from FLOP totals but not from byte totals. Activation bytes: each `[B, T, D]` tensor is `B·T·D·b` bytes, each `[B, T, F]` is `B·T·F·b`, and each `[B, H, T, T]` is `B·H·T²·b`. All MATHEMATICALLY-DERIVED from the shapes; the numbers for a concrete configuration are in §5.6.
 
 ```figure
 id: fig-5.5
 kind: stat-panel
 title: One block of the reference trace, costed
 caption: >-
-  Each row evaluates one cost rule of this paragraph at the §5.6
-  configuration (illustrative, not a named model). The glyph shows why the FFN
-  dominates: 2·D·F is two thirds of the block's weights at F = 4D, and the
-  weight-GEMM FLOPs per token are exactly twice the weight count.
+  The FFN holds two thirds of block projection parameters at F=4d.
+  Leading projection FLOPs per token are twice projection parameters;
+  RMSNorm gains are counted separately. These identities do not establish
+  a latency bottleneck. The configuration is analytical, not a named model.
 placement: rail
 anchor: mechanism
 evidence: MATHEMATICALLY-DERIVED
@@ -284,36 +283,47 @@ INVARIANT after every line that writes h: h.shape == [B, T, D] and h.dtype == co
 TERMINATION: the loop is bounded by L; no data-dependent control flow.
 ```
 
-Complexity per token: `2·L·(4D² + 2DF) + 2·D·V + 4·L·T·D` FLOPs (§5.6, Eq. 5.23); peak activation memory is dominated by the largest of `B·H·T²·b` (scores) and `B·T·F·b` (FFN hidden). Implementation: `reference_transformer.py` in [verification.md](verification.md).
+Complexity per token: `2·L·(4D² + 2DF) + 2·D·V + 4·L·T·D` FLOPs (§5.6, Eq. 5.23); peak memory requires the sum of unique live allocations, including retained blocks, logits, and workspaces. The two listed shape classes alone do not determine it. A reference implementation remains an unexecuted proposal in [verification.md](verification.md).
 
 ## Implementation
 
-Tensors → operators: the gather is `torch.nn.Embedding`; the projections are `torch.nn.Linear(bias=False)`; the two batched matmuls are `torch.matmul` on `[B, H, T, Dh]` layouts, or a single fused call to `torch.nn.functional.scaled_dot_product_attention`, which the PyTorch 2.14.0 documentation describes as dispatching to one of three fused implementations or to a PyTorch fallback (OFFICIAL-DOCUMENTATION, R5.13, accessed 2026-09-20; the version in which it first appeared is not asserted here). Framework: PyTorch at the *Model / autograd framework* layer of the stack. Kernels: each `Linear` lowers to a GEMM in NVIDIA cuBLAS / cuBLASLt on NVIDIA hardware; the fused attention path may dispatch to a FlashAttention-family kernel when dtype, head dimension and mask are supported, and otherwise to a materialised-score path — the dispatch conditions are release-specific and are NOT-DISCLOSED here rather than inferred. Memory: in training every line's output that the backward pass needs is retained (§5.5); in inference only the residual stream and the K, V tensors persist. Communication: none on a single device; the trace is what tensor and sequence parallelism partition in [Chapter 29](../../../vol-02-execution-and-optimization/part-05-hardware-kernels-and-distributed-execution/ch29-parallelism-collectives-and-distributed-optimization/README.md). Deployment: the same trace executes under an inference engine with the attention line replaced by a paged variant ([§42.3](../../../vol-02-execution-and-optimization/part-07-inference-algorithms-distillation-and-compression/ch42-prefill-decode-kv-state-and-inference-resource-models/42-3-cache-organization.md)).
+The embedding gather, dense projections, head views, attention operator, normalization, activation, residual additions, and output projection are separate logical operators. An actual framework may fuse, compile, or dispatch them through several libraries. `Linear` therefore does not imply a particular cuBLAS kernel, number of launches, accumulator dtype, or memory-traffic count. Those are properties of a concrete execution path and require an inspected implementation or a trace. The SDPA interface in R5.13 is an operator contract; backend selection remains shape-, device-, and dtype-dependent. (OFFICIAL-DOCUMENTATION: R5.13.)
 
-> **Implementation note [impl.pytorch · 2.14.0 documentation, execution UNVERIFIED].** The packed `[D, 3D]` QKV projection and the separate `W_Q, W_K, W_V` form have identical parameter and FLOP counts; the packed form issues one GEMM instead of three and changes the memory layout of the result, which is why the trace shows `[B, T, 3, H, Dh]` before the split.
+A `[B, T,3d]` packed QKV result and three `[B, T, d]` results can implement identical projections when their weight blocks and output ordering agree. A transpose may produce a noncontiguous view; merging heads after attention must respect its strides or materialize a compatible layout. Comparing shapes and operation names alone is insufficient: equality also requires the same parameters, mask semantics, positions, scale, normalization epsilon, activation formula, and stochastic policy. Floating-point equivalence then requires a declared comparison tolerance rather than exact bitwise equality.
+
+Parameter costs follow the declared tensors. The embedding contributes Vd, the position table T_max*d, attention4d^2 per block, the two-matrix FFN2dF, and RMSNorm2d per block plus d at the output. Adding biases contributes each projection's output width: d for each attention projection, F then d for the FFN, and V for a biased head. It does not add d uniformly to every layer. Tied parameters count once in storage and receive gradients from every use.
+
+An explicit score/probability path has `[B, H, T, T]` allocations; an IO-aware attention path can omit those HBM tensors while retaining the same real-arithmetic attention function. Training may retain inputs to backward operators across all L blocks; inference without autograd can release most intermediates as their last use completes. The output logits and temporary workspaces must be included when computing a peak. None of these shape identities determines latency, throughput, energy, or monetary cost without an actual workload and measurement boundary. Communication is absent for the single-device reference; distributed execution adds separate collective and buffer terms. (MATHEMATICALLY-DERIVED; PAPER-REPORTED: P19 section 3.)
 
 ## Experimental design
 
-Proposal only. The chapter's experiment is the equivalence test of [verification.md](verification.md); for this section the relevant sub-check is shape and dtype conformance of every trace line against Algorithm 5.1 on a deterministic fixture (fixed seed, B = 2, T = 16, D = 64, H = 4, F = 256, V = 128), with the trace dictionary compared line by line to the expected shapes. No dataset is required; the check is structural.
+### Reported experiments
+
+P01 section 6.2 varies architectural components within its translation setup, including attention head count, key/value dimensions, feed-forward width, dropout, and learned versus sinusoidal positions. Its positional comparison is a controlled alternative inside that source's encoder-decoder model; it does not compare this chapter's complete decoder against a current model. The relevant outcomes are translation quality and source-defined perplexity, under the training and decoding protocol in sections 5-6. Source comparisons must keep the changed component separate from unchanged training conditions. (PAPER-REPORTED: P01 section 6.2/Table 3.)
+
+LLaMA section 2.2 identifies its normalization, activation, and positional choices, and section 2.4 describes efficient training execution. Adoption records do not identify the isolated causal contribution of each choice. No source inspected here trains exactly the analytical reference in Eq. 5.1-5.3. Full-sequence versus cached equivalence is an unexecuted chapter verification proposal, documented separately in [verification.md](verification.md). (PAPER-REPORTED: R5.8 sections 2.2/2.4; UNVERIFIED: reference execution.)
 
 ## Observations
 
-**What the paper claims.** PAPER-REPORTED (P01): the base model uses d_model = 512, h = 8, d_k = d_v = 64, d_ff = 2048, six encoder and six decoder layers, shared input/output embedding weights, sinusoidal positions, and dropout 0.1 on residual connections and embedding sums; the authors report 65 million parameters for the base configuration.
+**What the paper claims.** P01 presents a Transformer encoder-decoder and component variations; R5.2 and R5.8 document different decoder configurations. P19 gives an exact-attention execution with reduced HBM traffic. Each claim applies to its specified architecture and implementation. (PAPER-REPORTED.)
 
-**What the evidence shows.** The parameter figure follows from the stated shapes and is independently recomputable from Eq. 5.22 in §5.6 once encoder cross-attention is included; the architectural choices themselves (post-norm, ReLU, sinusoidal positions) have since been replaced in most decoder-only reports (R5.2, R5.8), which is evidence that the trace grammar survives while individual lines are swapped.
+**What the evidence shows.** The inspected method descriptions specify equations and configuration choices. A component result in one source does not measure a mixed configuration assembled from several reports. The reference trace is an analytical composition, and its resource identities follow from its declared tensors. (MATHEMATICALLY-DERIVED.)
 
-**What we infer.** DERIVED: for a decoder-only model the trace has exactly three growth regimes — O(1) in T for weights, O(T) for the residual stream and cache, O(T²) for scores — and every later efficiency intervention in this book targets one regime; naming the regime is the first step of any cost argument.
+**What we infer.** Preserving residual shape allows a branch implementation to be replaced without changing the surrounding tensor interface. It does not guarantee preservation of numerical behavior, trained quality, or performance; those require separate equivalence and task evidence. (MATHEMATICALLY-DERIVED.)
+
+**What remains unknown.** No training quality, measured peak allocation, dispatched kernel, or device latency has been established for the reference in this chapter. Undisclosed production configurations cannot be reconstructed from these sources. (UNVERIFIED; NOT-DISCLOSED.)
 
 ```figure
 id: fig-5.6
 kind: chart
 title: Bytes per block against sequence length
 caption: >-
-  The three growth regimes on one log–log plot, per block of the reference
-  configuration (illustrative, not a named model). Weights are a flat line;
-  the residual stream and the K, V pair rise with slope 1; the score tensor
-  rises with slope 2. At B = 8 the score line crosses the block's weights near
-  T ≈ 270, and at T = 1024 it is already 16 times a [B, T, D] tensor.
+  Projection weights are constant in sequence length, while residual/KV
+  tensors grow linearly and one materialized score tensor quadratically.
+  At these dimensions scores cross projection weights near T=272 and are
+  sixteen residual-sized tensors at T=1024. Values above T_max=1024 are
+  allocation sensitivity calculations for a changed positional specification,
+  not runs of this model.
 placement: inline
 evidence: MATHEMATICALLY-DERIVED
 source: ["DERIVED:eq-5.8", "DERIVED:eq-5.22"]
@@ -324,7 +334,7 @@ alt: >-
   tensor [B, T, D] grows linearly from 1.5 MiB at T = 128 to 12 MiB at
   T = 1024 and 96 MiB at T = 8192; K and V together are twice that. The score
   tensor [B, H, T, T] grows quadratically from 3 MiB at T = 128 to 192 MiB at
-  T = 1024 and 12 GiB at T = 8192, crossing the weights near T ≈ 270.
+  T = 1024 and 12 GiB at T = 8192, crossing the weights near T approximately 272.
 spec:
   type: line
   x: { label: "sequence length T", scale: log2, format: tokens, domain: [128, 65536] }
@@ -340,35 +350,35 @@ spec:
     - { x: 8192, label: "scores 12 GiB = 128 × [B, T, D]" }
 ```
 
-**What remains unknown.** NOT-DISCLOSED: for most production models the exact projection layouts (packed or split QKV, biases or not, embedding scaling) are absent from public reports; UNVERIFIED: whether the fused attention entry point in a given PyTorch release preserves the materialised-path numerics is a release-specific property that [§26.6](../../../vol-02-execution-and-optimization/part-05-hardware-kernels-and-distributed-execution/ch26-kernel-programming-and-numerical-equivalence/26-6-correctness-under-optimization.md) treats.
-
 ## Failure modes
 
-> **Failure mode — position-table overflow.** *Symptom:* index error or silently wrong logits when T > T_max. *Cause:* learned absolute positions have a fixed table. *Detection:* assert `T ≤ P.shape[0]` at line 1 of Algorithm 5.1. *Mitigation:* enforce the assertion; RoPE (§15.1) removes the table but not the trained-length limit.
+A wrong mask can expose a target's future context while preserving every tensor shape. Perturbing a future input and checking earlier logits under deterministic evaluation detects a violation of causal visibility; the correct test also declares packing and document-reset semantics. A wrong target shift can make a correct forward trace optimize a different objective, so masks and labels must be audited together.
 
-> **Failure mode — dtype drift in the residual stream.** *Symptom:* loss diverges or plateaus after a few hundred steps in BF16. *Cause:* residual adds accumulate in the storage dtype, so small updates are rounded away. *Detection:* compare `h_L` against an FP32 run on the same fixture ([§3.4](../ch03-numerical-computation-and-trustworthy-training/03-4-mixed-precision-execution.md)). *Mitigation:* keep the residual stream in FP32 or use an autocast policy that up-casts the add.
+Head reshaping can silently permute channels when a checkpoint's packed QKV ordering differs from the loader's convention. Comparing intermediate Q, K, V and the merged context localizes this error more directly than a final accuracy score. Weight tying can also be accidentally broken by copying a tensor instead of sharing its parameter; storage identity and accumulated gradients distinguish the cases.
 
-> **Failure mode — logits materialised for all positions at decode.** *Symptom:* decode memory scales with prompt length in the head, not only in the cache. *Cause:* Eq. 5.3 applied to all T rows when only the last is needed. *Detection:* trace shows `[B, T, V]` at the decode step. *Mitigation:* slice `n_L[:, -1]` before the head (§5.5).
+Learned positions can exceed their table bounds, or cached execution can restart position IDs at zero. Either violates Eq. 5.1's specified indexing. Finally, a trace that omits logits, saved tensors, or workspaces understates peak memory. These are implementation failure mechanisms and proposed diagnostic checks, rather than benchmark findings from an executed reference.
 
 ## Siblings
 
-**Encoder–decoder forward pass (P01 full model)** — [§13.1 Architectural families](../../part-03-model-architectures-and-state/ch13-dense-transformer-design-and-parameter-allocation/13-1-architectural-families.md)
-Why it exists: sequence-to-sequence tasks with a distinct source. What assumption changed: the decoder reads an encoder output through cross-attention. What objective changed: conditional likelihood of target given source. What problem it solved: bidirectional source encoding. What new failure mode it introduced: a second cache (encoder K, V) with a different lifetime ([§14.4](../../part-03-model-architectures-and-state/ch14-attention-architectures-and-cache-representations/14-4-cross-attention.md)). Changed primitive: one attention line → two attention lines per decoder block.
+The original encoder-decoder adds source representations and a cross-attention branch to the decoder; a decoder-only trace must remove that branch explicitly. A rotary-position decoder rotates Q and K at their absolute positions rather than adding a learned P table to the residual input. Its projection trace therefore changes even when residual shapes do not. The architecture-specific treatment is in Chapters 13-18. (PAPER-REPORTED: P01 section 3; R5.8 section 2.2.)
 
-**Encoder-only forward pass** — [§13.1](../../part-03-model-architectures-and-state/ch13-dense-transformer-design-and-parameter-allocation/13-1-architectural-families.md)
-Why it exists: representation tasks without generation. What assumption changed: no causal mask. What objective changed: masked or contrastive objectives ([§4.2](../ch04-language-modeling-and-learning-objectives/04-2-alternative-objectives.md)). What problem it solved: bidirectional context per position. What new failure mode it introduced: no autoregressive generation path; no cache. Changed primitive: causal mask → full mask.
+A parallel residual block makes attention and FFN read the same incoming normalized state, whereas Eq. 5.2 makes the FFN read the attention-updated state. This is a changed function, not a scheduling optimization that can be applied to arbitrary sequential-block weights without further justification. Normalization and residual variants are developed in 5.4.
 
 ## Extensions
 
-Domain adaptation leaves the trace unchanged and changes θ. Long context changes only the two O(T) and O(T²) regimes; the weight lines are untouched, which is why long-context work concentrates on §5.2's score line and §5.5's cache. Multimodality inserts additional gathers or encoders before line 1 that produce `[B, T', D]` tensors concatenated into the residual stream ([§18](../../part-03-model-architectures-and-state/README.md)); agents change the token stream, not the trace. Each is a proposal for the reader's own configuration, not a result.
+### Improvements
+
+Packed projections reduce the number of separately expressed dense operators when the three inputs and their layout permit concatenation. Fusing operations can reduce intermediate writes, but the mathematical specification must still distinguish attention projections, normalization, masking, probability normalization, and output projection. P19 changes how exact attention is evaluated; it does not replace the causal objective or remove the quadratic arithmetic of full attention. (PAPER-REPORTED: P19 section 3; MATHEMATICALLY-DERIVED: operator composition.)
+
+Changing GELU to SwiGLU introduces a third projection and a multiplicative branch, so it requires a new width and parameter account even when a matched-width convention preserves total dense parameters. Changing MHA to shared-key attention alters cache and projection dimensions. These changes belong in the trace before any efficiency claim is evaluated.
 
 ## Limitations
 
-The trace is valid for a dense, single-device, pre-norm decoder with H_q = H_kv. It does not describe mixture-of-experts feed-forward blocks (the `[B, T, F]` line becomes a routed, per-expert set), grouped or latent attention (§14), or recurrent layers (§17). The falsification condition is direct: a model whose intermediate shapes differ from the trace at any line is not the reference model, and its costs must be re-derived. The decision consequence is that no cost figure in this book is quoted without naming the trace line it comes from.
+The reference is a complete forward specification for the stated architecture, not a complete training recipe or an assertion about frontier model internals. Its learned position table bounds context, and its dense FFN and equal query/KV head counts exclude several deployed variants. Shape-based FLOPs omit operator-specific reductions and implementation padding unless listed. A functionally equivalent optimized execution can have different tensor lifetimes, recomputation, communication, and measured peak memory. These distinctions are retained in subsequent accounting rather than folded into an unspecified constant.
 
 ## Reproducibility
 
-Reference implementation in [verification.md](verification.md); API pinned to the PyTorch 2.14.0 documentation (R5.13, R5.14), execution UNVERIFIED; fixture shapes above; the trace dictionary keys are the names in the right-hand column of the Tensor trace block. Unresolved: the fused-attention dispatch conditions per release.
+The reproducible analytical inputs are B, T, L, d, H, F, V, T_max, parameter sharing, position IDs, causal/document masks, RMSNorm epsilon, activation formula, and numerical dtypes. Source versions and access dates are recorded in [references.md](references.md). An executed implementation must additionally record repository revision, framework, backend, device, stochastic controls, and position-resolved equivalence results. The chapter's code and numerical proposals remain unexecuted; there is no model-quality or timing measurement to reproduce.
 
 ## References
 

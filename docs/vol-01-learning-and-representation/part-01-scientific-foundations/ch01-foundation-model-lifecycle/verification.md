@@ -34,7 +34,7 @@ evidence_summary:
   labels_used: [MATHEMATICALLY-DERIVED, ASSUMED, DERIVED, UNVERIFIED, PAPER-REPORTED]
   empirically_observed: false
 word_count_target: 900
-updated_at: 2026-09-20
+updated_at: 2026-10-08
 editorial_status: manuscript_draft
 ---
 
@@ -42,47 +42,29 @@ editorial_status: manuscript_draft
 
 ## 1. Artifact specification
 
-The chapter artifact is a **system specification** for one application, delivered as two files.
-
-`spec.yaml` (machine-readable; one record):
-
-| Field | Type | Content | Evidence label carried |
-|---|---|---|---|
-| `application_id` | string | stable identifier and version | KNOWN |
-| `task_distribution` | record | population definition; sampling procedure; input/output schema; held-out split id; contamination policy; pilot sample id (T_0) and size | KNOWN once T_0 exists |
-| `users_and_operating_conditions` | record | user segments with request mix; arrival-rate envelope (mean, peak λ_max in requests/s); concurrency; input-length quantiles (p50, p95, p99 in tokens); output-length quantiles; hardware class; precision; regional and permission constraints | KNOWN (logs) or ASSUMED |
-| `capabilities` | list | capability claims, each with a benchmark-record id ([§6.1](../ch06-experimental-design-and-evaluation-before-optimization/06-1-evaluation-units.md)) | KNOWN per record |
-| `acceptable_errors` | table | error class k → severity s_k; tolerated rate ε_k; estimator; confidence procedure | ASSUMED with sensitivity |
-| `success_criteria` | table | metric (fixed vocabulary); estimator; threshold; confidence procedure; evaluator-independence statement | ASSUMED threshold |
-| `resource_constraints` | table | the ten ledger entries of [§1.5](01-5-resource-accounting.md): value or bound; unit; measurement boundary; label; source | per entry |
-| `decision_variables` | table | design space Ψ: model placement on the four axes of [§1.3](01-3-model-categories.md); N_act, N_total; b; S_max; retrieval policy (k passages, chunk size); replicas n_rep; batch cap B_max; route through the graph of [§1.4](01-4-lifecycle-and-intervention.md) | ASSUMED (candidates) |
-| `rejection_criteria` | list | the measurements of §3 below that reject a design, with thresholds | DERIVED from the constraints |
-| `provenance` | map | field → (label, source, accessed date) | — |
-
-`spec-rationale.md` (human-readable): one paragraph per field stating why the value was chosen, its sensitivity, and the relaxation order by severity used in Algorithm 1.1 line 9.
+The proposed artifact is a versioned `spec.yaml` and a human-readable `spec-rationale.md`. They are specified here; no measured instance was created. Fields include the target population and sampling frame, task/reference/user schema, independent or clustered sampling units, split and contamination policy, user segments and permissions, capability claims with evaluation records, error classes and tolerated rates, success criteria and estimators, admitted operating envelope, finite candidate designs, ten resource entries with units/boundaries/provenance, and evidence-based rejection rules. The rationale records sensitivity and unresolved measurements. Policy thresholds are declared inputs; observing a pilot does not make the population or capability claims known.
 
 ## 2. Verification task
 
-The plan's task: *express one application as a constrained optimization problem; show which measurements would reject the proposed design.* The application chosen is a **document-grounded question-answering assistant** for an internal corpus (parametric model plus non-parametric retrieval in the sense of P40), used by staff through a chat interface. It is chosen because every constraint of [Eq. 1.2](01-1-problem-formulation.md) binds visibly: quality depends on retrieval and context, latency on decode traffic, memory on context length, and cost on replicas.
+The application is a proposed document-grounded question-answering system. The corpus, permission policy, retrieval index, generator, prompt construction, serving policy, and evaluator are separately versioned. P40 supplies a published parametric/non-parametric modeling example; the application's generic retrieval workflow is not represented as a reproduction of P40's latent-document training objective.
 
-### Problem statement
-
-Decision variables ψ = (family and N_act, N_total; precision b; maximum context S_max; retrieval depth k; replicas n_rep; batch cap B_max; route ρ). Objective and constraints:
+For design ψ, let q = 1 when an answer is correct, its factual statements are supported by accessible evidence, and it satisfies the declared acceptance policy; abstentions and failures receive the policy's specified outcome. Let λ_max denote the locally defined peak arrival rate in requests/s, τ₁ and τ₂ client-boundary latency targets, and κ the cost ceiling. The book formulation is
 
 $$
-\max_{\psi}\; Q(\psi) = \mathbb{E}_{\mathcal{D}_{\text{task}}}\big[q(f_\psi(c), y^*, u)\big]
-\quad\text{s.t.}\quad
+\max_{\psi\in\Psi} Q(\psi)\quad\text{s.t.}\quad
 \begin{aligned}
-&\text{err}_{\text{unsupported}}(\psi) \le \varepsilon_1,\quad \text{err}_{\text{permission}}(\psi) \le \varepsilon_2 \\
-&\text{TTFT}_{p95} \le \tau_1,\quad \text{TPOT}_{p95} \le \tau_2 \quad (\text{client boundary, at } \lambda_{\max}) \\
-&N_{\text{total}}\, b + M_{KV}(B_{\max}, S_{\max}) + M_{\text{runtime}} \le M_{\text{cap}} \\
-&\text{goodput}(\psi;\,\Omega) \ge \lambda_{\max} \\
-&\text{cost per accepted task}(\psi) \le \kappa
+&\operatorname{err}_{\rm unsupported}(\psi)\le\varepsilon_1,
+\qquad\operatorname{err}_{\rm permission}(\psi)\le\varepsilon_2,\\
+&\operatorname{TTFT}_{p95}(\psi;\Omega)\le\tau_1,
+\qquad\operatorname{TPOT}_{p95}(\psi;\Omega)\le\tau_2,\\
+&M_{\rm weights}+M_{KV}+M_{\rm runtime}\le M_{\rm cap},\\
+&\operatorname{goodput}(\psi;\Omega)\ge\lambda_{\max},
+\qquad\operatorname{cost/accepted\ task}(\psi)\le\kappa .
 \end{aligned}
 $$
-*(Eq. 1.8)* where q = 1 when the answer is judged correct *and* every factual statement is supported by a retrieved passage the user is permitted to see; err_unsupported = rate of answers containing an unsupported statement; err_permission = rate of answers citing a passage outside the user's permissions (severity: highest; ε_2 is set to the smallest rate the estimator can bound); τ_1, τ_2 = latency bounds; M_KV per [Eq. N.8](../../../front-matter/notation.md); M_cap = per-replica accelerator memory; κ = budget per accepted task under [notation §2.10](../../../front-matter/notation.md).
+*(Eq. 1.8)* where Q is Eq. 1.1, Ω is the declared admitted workload, and Ψ is the finite candidate set. Memory is evaluated per device/shard with maximum admitted lengths or a documented admission rule; conventional KV uses Eq. N.8 only where that representation applies. Tolerated permission error is a policy choice, not the smallest rate a convenient sample happens to resolve.
 
-> **Assumption.** Illustrative planning inputs for one instance: τ_1 = 1.0 s, τ_2 = 0.05 s, ε_1 = 0.05, S_max = 16,384 tokens, B_max = 16 · *sensitivity:* these are ASSUMED product inputs for the worked protocol, not measured or recommended values; halving τ_2 moves the design into the traffic-bound regime of [Eq. 1.6](01-5-resource-accounting.md) and typically forces smaller b or smaller N_act; doubling S_max doubles M_KV and may make the memory constraint bind first.
+> **Assumption.** Illustrative planning inputs are τ₁ = 1 s, τ₂ = 0.05 s, ε₁ = 0.05, S_max = 16,384, and B_max = 16. They are neither measurements nor recommended settings. Doubling conventional context doubles the KV term at fixed batch and representation; halving a latency target tightens the execution requirement but does not itself identify a bottleneck.
 
 ```figure
 id: fig-1.34
@@ -135,13 +117,10 @@ id: fig-1.35
 kind: calculator
 title: Bandwidth the TPOT bound demands of one replica
 caption: >-
-  Composes Eq. 1.8's TPOT row with Eq. 1.6's traffic term: every decode
-  step must finish within τ_2, so a replica needs at least the step's bytes
-  divided by τ_2 of achieved, not vendor-peak, bandwidth. At the assumed
-  τ_2 = 0.05 s, B_max = 16 and S_max = 16K, an illustrative dense N = 8·10⁹
-  at b = 2 needs 1.01 TB/s; halving τ_2 doubles it, the Assumption block's
-  traffic-bound regime, and b = 1 lowers it only to 0.85 TB/s because the
-  cache dominates.
+  Conditional dense streaming model from Eq. 1.6: weights and conventional
+  KV are assumed read once per step at the stated boundary. This is a
+  planning calculation, not measured bandwidth or a general TPOT guarantee.
+  A p95 service target is distinct from a worst-case per-step deadline.
 placement: rail
 anchor: 2-verification-task
 evidence: ASSUMED
@@ -152,7 +131,7 @@ alt: >-
   bytes per value, an illustrative configuration and not a named model.
   Inputs: τ_2, B_max, S_max, b and N. At τ_2 = 0.05 s, B_max = 16,
   S_max = 16,384, b = 2 and N = 8·10⁹: M_KV = 32 GiB, 46.9 GiB per decode
-  step, at least 1.01 TB/s of achieved bandwidth, and 320 tokens per second
+  step, 1.01 TB/s in the conditional streaming model, and 320 tokens per second
   per replica when every step takes exactly τ_2. Presets: τ_2 halved to
   0.025 s needs 2.01 TB/s; b = 1 needs 0.85 TB/s.
 spec:
@@ -168,7 +147,7 @@ spec:
   outputs:
     - { symbol: KV, label: "M_KV(B_max, S_max)", formula: "2*32*Bm*Sm*8*128*2", format: bytes }
     - { symbol: Tr, label: "bytes per decode step", formula: "N*b + KV", format: bytes }
-    - { symbol: BW, label: "achieved bandwidth needed", formula: "Tr/tau2", format: "bytes/s", emphasis: true }
+    - { symbol: BW, label: "streaming bandwidth requirement", formula: "Tr/tau2", format: "bytes/s", emphasis: true }
     - { symbol: TPS, label: "tokens per second per replica at τ_2", formula: "Bm/tau2", format: integer }
   presets:
     - { label: "τ_2 halved", values: { tau2: 0.025 } }
@@ -177,116 +156,233 @@ spec:
 
 ### Experiment 1.1 — Rejection test of a proposed design
 
-- **Hypothesis.** A proposed design ψ_0 (dense open-weights model at stated N, b = 2, S_max = 16,384, k = 8, n_rep = 2, B_max = 16, route: base → SFT on domain conversations → gate → deployment with retrieval) satisfies every constraint of Eq. 1.8 on 𝒟_task at Ω. The null to be rejected is feasibility; rejection of any single constraint rejects ψ_0.
-- **Setup.** Build T_0 by the sampling procedure S over real staff questions with permission-tagged references; freeze the held-out split; build the retrieval index over the versioned corpus; deploy ψ_0 on the declared hardware class with a pinned inference engine version; instrument client-boundary timestamps t_0, t_1, …, t_n per [notation §2.8](../../../front-matter/notation.md).
-- **Independent variables.** None in the primary test (ψ_0 is fixed); in the secondary sweep, b ∈ {2, 1, 0.5} (weight-only quantization, re-gated as its own artifact) and k ∈ {4, 8, 16}.
-- **Controlled variables.** Corpus version, index version, tokenizer and template checksums, engine version, hardware class, decoding parameters, evaluator version and prompts, arrival trace.
-- **Dataset / workload.** Held-out split of T_0 for quality (independent units = distinct questions from distinct source documents); a replayed arrival trace at λ_max with the declared input-length quantiles for latency and goodput.
-- **Hardware.** One accelerator class, stated by name, memory capacity, and count per replica; P_peak and B_mem recorded as vendor bounds (ASSUMED, not achieved values).
-- **Metrics.** Q̂(ψ_0) with paired bootstrap 95% interval over independent units; err̂_unsupported and err̂_permission with the same units; TTFT and TPOT p50/p95/p99 at the client boundary over the replay window; goodput (requests meeting both τ_1 and τ_2) in requests/s; peak allocator memory per replica; cost per accepted task = (device-hours × price + retrieval and storage cost over the window) / accepted tasks, with the attribution window stated and prices ASSUMED.
-- **Baselines.** (i) Retrieval-only: return the top-k passages without generation (bounds the value of the model); (ii) a smaller general model at the same b and k (bounds the value of N); (iii) ψ_0 without retrieval (bounds the value of the non-parametric memory, P40).
-- **Expected result (as a proposal).** Either ψ_0 is feasible with all intervals on the satisfying side, or at least one measurement below rejects it. No outcome is asserted for this edition.
-- **Ablation.** The secondary sweep over b and k identifies which constraint binds first: a b-sweep that moves TPOT_p95 across τ_2 while Q̂ stays within its interval indicates the traffic-bound regime; a k-sweep that moves Q̂ and TTFT together shows the quality–latency coupling through prompt tokens.
-- **Interpretation.** Each rejection is attributed to a level of [§1.2](01-2-levels-of-analysis.md): quality rejections to the model, route, or retrieval policy; latency rejections to runtime or infrastructure; memory rejections to the ledger; cost rejections to replicas and prices. A rejected design returns to Algorithm 1.1 line 9 with the least-severe constraint relaxed and the relaxation recorded.
-- **Threats to validity.** Dependent evaluation units (several questions from one document) narrow intervals falsely; evaluator not independent of SFT data leaks the gate; replayed traces omit burstiness; vendor peaks used as achieved values; corpus drift between index build and evaluation; contamination of T_0 by SFT conversations.
+- **Hypothesis.** A frozen candidate ψ₀ satisfies Eq. 1.8 on the specified population and workload. The analysis distinguishes supported, rejected, and unresolved constraints; failure to reject is insufficient evidence of feasibility.
+- **Setup.** Construct a permission-tagged evaluation sample and independent final split; pin corpus, index, model/tokenizer/template, decoding, engine, hardware, and evaluator. Define question/document/user grouping before sampling. A preliminary necessary-memory calculation rejects impossible configurations without treating a passing prediction as an execution measurement.
+- **Independent variables.** The primary test fixes ψ₀. Secondary candidate comparisons vary retrieval depth and weight format separately; every changed artifact receives its own quality evaluation.
+- **Controlled variables.** Corpus/index version, checkpoint, serialized prompt, decoding, evaluator and judging instructions, device placement, runtime, arrival trace, and timing boundary.
+- **Dataset/workload.** Held-out questions sampled from the declared staff population, stratified where relevant; group related questions by source document/user. Replay an independently specified trace containing the declared length tails and bursts, not only mean rate.
+- **Hardware.** Record accelerator class, count and memory per shard/replica, interconnect, precision, and runtime version. Vendor limits are bounds, not achieved throughput.
+- **Metrics.** Acceptance and error rates with a confidence procedure matched to independent or clustered units; a fixed-sample binomial upper bound for zero permission violations only under independent constant-probability Bernoulli sampling. Report TTFT/TPOT p50/p95/p99 with uncertainty under the replay's dependence structure, goodput, allocator peaks, and cost per accepted task over a declared window. A naive bootstrap of all-zero events cannot establish a useful rare-event upper bound.
+- **Baselines.** Retrieval-only evidence presentation, ψ₀ without retrieval, and a smaller model under the same evaluation policy. These are system contrasts, not isolated parameter-count effects unless other causes are controlled.
+- **Expected result.** No outcome is asserted. A violating confidence bound can reject; a supporting bound can support within scope; an interval crossing the threshold remains unresolved. Multiplicity and adaptive candidate selection are included in the declared error-control procedure.
+- **Ablation.** Compare retrieval-depth and precision candidates on paired evaluation units. Estimate the paired difference and its interval directly; overlap or non-overlap of two separate intervals is not the decision rule. Measure traffic/kernel effects before attributing a latency difference to b alone.
+- **Interpretation.** Report which constraint fails and which intervention contrast was measured. An accounting model below observed capacity or latency does not by itself identify the failing component. Requirement revisions are explicit decisions, never automatic relaxations of permission constraints.
+- **Threats to validity.** Cluster dependence, contamination, evaluator leakage, adaptive reuse of final data, omitted burstiness, index drift, quantization overhead, admission-policy changes, incomplete power/cost boundaries, and insufficient rare-event precision.
 
-### Measurements that reject ψ_0
-
-| Measurement | Rejects ψ_0 when | Constraint | Level attributed |
-|---|---|---|---|
-| Q̂ 95% interval | upper bound < the success-criterion threshold | objective floor | model / route / retrieval |
-| err̂_unsupported interval | lower bound > ε_1 | error class 1 | model / retrieval policy |
-| err̂_permission | any observed violation above the estimator's resolvable rate | error class 2 (highest severity, no relaxation) | product behavior (permission filter) |
-| TTFT_p95, TPOT_p95 at λ_max | either exceeds τ_1, τ_2 over the replay window | latency | runtime / infrastructure |
-| Peak allocator memory | exceeds M_cap on any replica, or Eq. N.8 prediction plus runtime term exceeds M_cap before the test | memory capacity | ledger |
-| Goodput | below λ_max at the declared concurrency | throughput | runtime / replicas |
-| Cost per accepted task | above κ with the stated window and prices | money | replicas / prices / route |
-| Consistency check | TPOT_p50 below the [Eq. 1.6](01-5-resource-accounting.md) bound | accounting error, not a pass | ledger inputs wrong |
+| Measurement | Rejecting condition | Supporting condition / remaining boundary |
+|---|---|---|
+| Acceptance Q | valid upper confidence limit below declared floor | lower limit above floor; applies to sampled population |
+| Unsupported-answer rate | valid lower limit above ε₁ | upper limit below ε₁; denominator includes declared abstention policy |
+| Permission violations | prespecified zero-tolerance event rule, or lower limit above ε₂ | zero observations alone is insufficient; use a valid upper limit and separate deterministic permission checks |
+| Client latency quantiles | valid evidence exceeds target under Ω | supporting quantile uncertainty bound; finite trace does not certify all future traffic |
+| Device memory | actual peak exceeds capacity or a valid necessary-footprint bound does | measured/admission-accounted headroom for tested configurations; account for workspace and fragmentation |
+| Goodput | valid upper limit below declared arrival requirement | lower limit above requirement at declared trace and acceptance policy |
+| Cost/accepted task | cost boundary and denominator exceed κ | all included prices/quantities and uncertainty stated; zero accepted tasks makes ratio undefined |
+| Resource-model consistency | measured work/traffic/timing contradicts the substituted streaming assumptions | revise accounting/boundary; this check alone neither accepts nor rejects application quality |
 
 ```figure
 id: fig-1.36
 kind: diagram
-title: Rejection protocol for the proposed design ψ0, Experiment 1.1
+title: Evidence outcomes for the proposed application
 caption: >-
-  Nothing here has been measured; the protocol is a proposal. The memory
-  row is checked twice, once as a prediction before the replay and once at
-  the allocator; the consistency row sits outside the branch because it
-  marks an accounting error, not a pass. Every rejection is attributed to a
-  level of §1.2 and returns to Algorithm 1.1 line 9, except a permission
-  violation, whose constraint has no relaxation.
+  No measurement has been performed. Rejection, scoped support, and
+  unresolved evidence are distinct outcomes; necessary bounds cannot
+  certify achieved service behavior.
 placement: wide
 evidence: ASSUMED
-source: ["DERIVED:eq-1.8", "DERIVED:alg-1.1", P40]
+source: ["DERIVED:eq-1.8", "DERIVED:alg-1.1"]
 alt: >-
-  Left-to-right diagram of Experiment 1.1. Inputs: the held-out split of T_0
-  (distinct questions from distinct documents); the versioned corpus feeding
-  the retrieval index; a replayed arrival trace at λ_max with declared
-  input-length quantiles; a declared hardware class with a pinned engine and
-  vendor peaks as ASSUMED bounds; three baselines (retrieval-only, a smaller
-  general model, ψ0 without retrieval). The design ψ0 (dense, b = 2,
-  S_max = 16,384, k = 8, n_rep = 2, B_max = 16; base → SFT → gate →
-  deployment with retrieval) feeds four measurement groups: Q̂ and the two
-  error rates with paired bootstrap 95% intervals; TTFT and TPOT p50, p95
-  and p99 at the client boundary; goodput and peak allocator memory; cost
-  per accepted task with ASSUMED prices. A pre-test compares the Eq. N.8
-  prediction plus a runtime term with M_cap. All feed the branch "any
-  rejection row fires": none means feasible; any means rejected, attributed
-  to a level, and returned through Algorithm 1.1 line 9 to a revised
-  design. TPOT p50 below the Eq. 1.6 bound marks an accounting error.
+  A frozen specification and candidate feed independent quality, execution,
+  memory, and cost measurements. Valid threshold comparisons lead to rejected,
+  supported within scope, or unresolved outcomes, with assumptions recorded.
 spec:
   direction: LR
   nodes:
-    - { id: t0, kind: dataset, label: "T_0 held-out split", sub: "distinct questions, distinct documents" }
-    - { id: corpus, kind: dataset, label: "versioned corpus → index" }
-    - { id: trace, kind: dataset, label: "replayed arrival trace at λ_max", sub: "declared input-length quantiles" }
-    - { id: hw, kind: hardware, label: "declared hardware class, pinned engine", sub: "P_peak, B_mem as ASSUMED vendor bounds" }
-    - { id: base, kind: dependency, label: "baselines: retrieval-only · smaller model · no retrieval" }
-    - { id: psi, kind: model, label: "ψ0: dense, b = 2, S_max = 16,384, k = 8, n_rep = 2, B_max = 16", sub: "base → SFT → gate → deploy with retrieval" }
-    - { id: pred, kind: memory, label: "pre-test: Eq. N.8 + runtime ≤ M_cap?" }
-    - { id: mq, kind: metric, label: "Q̂, err_unsupported, err_permission", sub: "paired bootstrap 95% over units" }
-    - { id: ml, kind: metric, label: "TTFT, TPOT p50 / p95 / p99", sub: "client boundary, replay window" }
-    - { id: mg, kind: metric, label: "goodput, peak allocator memory" }
-    - { id: mc, kind: metric, label: "cost per accepted task", sub: "window stated, prices ASSUMED" }
-    - { id: br, kind: branch, label: "any rejection row fires?" }
-    - { id: ok, kind: state, label: "ψ0 feasible: every interval on the satisfying side" }
-    - { id: rej, kind: state, label: "ψ0 rejected, attributed to a level (§1.2)" }
-    - { id: relax, kind: feedback, label: "Algorithm 1.1 line 9: relax least-severe, record" }
-    - { id: cons, kind: metric, label: "consistency: TPOT_p50 below the Eq. 1.6 bound?" }
-    - { id: acct, kind: state, label: "accounting error, not a pass" }
+    - { id: spec, kind: objective, label: "frozen specification and candidate" }
+    - { id: sample, kind: dataset, label: "population sample and held-out arrival trace" }
+    - { id: measure, kind: process, label: "quality, latency, goodput, memory, cost" }
+    - { id: interval, kind: branch, label: "valid bounds relative to thresholds" }
+    - { id: rejected, kind: state, label: "rejected by evidence" }
+    - { id: supported, kind: state, label: "supported within tested scope" }
+    - { id: unresolved, kind: state, label: "unresolved; more evidence needed" }
   edges:
-    - { from: corpus, to: psi, kind: dependency, label: "index" }
-    - { from: hw, to: psi, kind: dependency }
-    - { from: t0, to: mq }
-    - { from: psi, to: mq }
-    - { from: base, to: mq, kind: dependency, label: "same units and intervals" }
-    - { from: trace, to: ml }
-    - { from: psi, to: ml }
-    - { from: trace, to: mg }
-    - { from: psi, to: mg }
-    - { from: mg, to: mc }
-    - { from: psi, to: pred }
-    - { from: pred, to: br }
-    - { from: mq, to: br }
-    - { from: ml, to: br }
-    - { from: mg, to: br }
-    - { from: mc, to: br }
-    - { from: br, to: ok, label: "none" }
-    - { from: br, to: rej, kind: emphasis, label: "any row" }
-    - { from: rej, to: relax }
-    - { from: relax, to: psi, kind: feedback, label: "revised design" }
-    - { from: ml, to: cons }
-    - { from: cons, to: acct, label: "fires" }
+    - { from: spec, to: measure }
+    - { from: sample, to: measure }
+    - { from: measure, to: interval }
+    - { from: interval, to: rejected }
+    - { from: interval, to: supported, kind: emphasis }
+    - { from: interval, to: unresolved }
 ```
 
 ## 3. Acceptance criteria
 
-1. Every field of `spec.yaml` is present with a label and a source; `rejection_criteria` is non-empty. (Categorical.)
-2. Algorithm 1.1 returns `feasible = true` on the ledger bounds *before* any measurement, with the relaxation log empty or documented. (Categorical.)
-3. All eight rows of the rejection table are measured; none rejects, with intervals reported at 95% over independent units of stated count. (Numeric per row; tolerances are the interval widths.)
-4. The three baselines are reported alongside ψ_0 with the same units and intervals; ψ_0's Q̂ interval excludes the retrieval-only baseline's interval, or the design is returned for revision because generation adds no measured value. (Numeric.)
-5. Every latency and throughput figure sits in a table stating hardware, model, precision, sequence length, input/output distribution, concurrency, runtime version, and measurement boundary. (Categorical.)
-6. The consistency row does not fire. (Categorical.)
+The proposed artifact is complete when its fields, units, sources, boundary assumptions, and independent measurement plan are specified. A candidate's release decision additionally requires supporting evidence for every release criterion, documented handling of multiplicity and candidate selection, measured workload conditions, and unresolved-gap review. Paired baseline contrasts use direct difference estimators. No numerical value here authorizes a release, and an empty rejection set does not establish feasibility.
 
-## 4. What this edition did not do
+## 4. Additional unexecuted protocols
 
-This protocol is a proposal. No specification instance was populated with measured values, no index was built, no model was deployed, no arrival trace was replayed, no interval was computed, and no design was accepted or rejected. The numeric inputs in the Assumption block are illustrative planning values and are not recommendations. Every result-bearing label in this file is MATHEMATICALLY-DERIVED (for the form of Eq. 1.8 and the bounds), ASSUMED (for thresholds), or UNVERIFIED (for anything that would require a measurement). No label asserting a performed experiment appears in this chapter.
+These proposals preserve the chapter's research questions without replacing published methods or results.
+
+### Experiment 1.2 — Attribution under changed normalization
+
+- **Hypothesis.** response-length and group-standard-deviation normalization have distinct effects in the chosen GRPO setting.
+
+- **Setup.** a four-arm binary factorial with the two terms independently enabled/disabled.
+
+- **Independent variables.** the two normalizations.
+
+- **Controlled variables.** base checkpoint, prompts, reward verifier, sampler, optimizer budget and evaluation budget.
+
+- **Dataset/workload.** versioned MATH training and independent held-out problem groups, with contamination policy.
+
+- **Hardware.** one pinned accelerator/parallelism configuration.
+
+- **Metrics.** reward, output length by correctness, held-out accuracy, interaction estimate and repeated-seed uncertainty.
+
+- **Baselines.** original GRPO.
+
+- **Expected result.** no directional outcome asserted.
+
+- **Ablation.** all four combinations.
+
+- **Interpretation.** estimates term and interaction effects for this training regime, rather than importing P28's combined-change result as two isolated causes.
+
+- **Threats to validity.** correlated seeds/prompts, unstable ratios, verifier errors, unequal consumed tokens and early stopping.
+
+### Experiment 1.3 — Artifact availability and rerun closure
+
+- **Hypothesis.** a selected documented open-training release supports a tolerance-defined rerun.
+
+- **Setup.** inventory exact checkpoints, corpus shards/order, tokenizer, training/evaluation code, configuration and environment; attempt only a separately authorized bounded pilot.
+
+- **Independent variables.** reference run versus rerun.
+
+- **Controlled variables.** artifact identities and stated hardware/precision constraints.
+
+- **Dataset/workload.** pinned training prefix and held-out evaluation sample.
+
+- **Hardware.** declared before execution.
+
+- **Metrics.** loss trajectory, evaluated outputs, consumed tokens, resource use, and divergence tolerance.
+
+- **Baselines.** source reference trajectory.
+
+- **Expected result.** either documented agreement or a missing-artifact/divergence record.
+
+- **Ablation.** change one configuration only after the replication target is assessed.
+
+- **Interpretation.** distinguishes disclosure from reproduced execution.
+
+- **Threats to validity.** inaccessible data, nondeterminism, environment drift, undefined tolerances.
+
+### Experiment 1.4 — Matched adaptation routes
+
+- **Hypothesis.** two candidate adaptation routes have distinguishable acceptance/retention trade-offs at a declared budget.
+
+- **Setup.** compare SFT-only and SFT-plus-preference routes from the same checkpoint; reserve final evaluation.
+
+- **Independent variables.** route; optional deliberate interface change is a separate diagnostic arm.
+
+- **Controlled variables.** prompt population, base, supervision quality, total budget boundary, decoding and evaluator.
+
+- **Dataset/workload.** versioned domain and retention sets.
+
+- **Hardware.** pinned training and serving configurations.
+
+- **Metrics.** acceptance, retention, generation/training resources, latency, paired uncertainty.
+
+- **Baselines.** starting checkpoint and SFT-only.
+
+- **Expected result.** no winner assumed.
+
+- **Ablation.** report additional data, objective and compute separately where separable.
+
+- **Interpretation.** a route-package result until controls identify components.
+
+- **Threats to validity.** unmatched data, unequal teacher costs, adaptive selection, interface drift.
+
+### Experiment 1.5 — Resource model check
+
+- **Hypothesis.** the conditional streaming approximation predicts traffic trends in a selected dense decoder regime.
+
+- **Setup.** batch sweep B ∈ {1,4,16,64} at fixed admitted context, then a separately quality-checked weight-format change.
+
+- **Independent variables.** batch and format.
+
+- **Controlled variables.** model, device, kernels/runtime, length distribution, placement, warm-up and boundary.
+
+- **Dataset/workload.** pinned synthetic length workload plus an independent representative trace.
+
+- **Hardware.** stated accelerator and profiler configuration.
+
+- **Metrics.** actual HBM bytes, operations, TPOT distribution, workspace, power and device energy.
+
+- **Baselines.** unmodified format and direct measured resource bound.
+
+- **Expected result.** model agreement or an identified accounting discrepancy; no speedup asserted.
+
+- **Ablation.** cache reuse and dequantization contribution where measurable.
+
+- **Interpretation.** tests the traffic substitution, not physical law.
+
+- **Threats to validity.** profiler overhead, clock drift, on-chip caching, hidden synchronization and different admitted batches.
+
+### Experiment 1.6 — Mechanistic claim validation
+
+- **Hypothesis.** a candidate internal feature mediates a specified behavior contrast on held-out inputs.
+
+- **Setup.** define component, perturbation, background state, output statistic, controls and transfer population before intervention.
+
+- **Independent variables.** intervention and control intervention.
+
+- **Controlled variables.** model, inputs, decoding, feature selection and intervention magnitude.
+
+- **Dataset/workload.** held-out prompt groups distinct from feature discovery.
+
+- **Hardware.** pinned framework/model execution.
+
+- **Metrics.** activation/logit effects, generated behavior with sampling uncertainty, reconstruction and off-distribution diagnostics.
+
+- **Baselines.** original model, sham intervention, and suitable alternative features.
+
+- **Expected result.** scoped effect, rejection, or unresolved mediation.
+
+- **Ablation.** remove, replace, and restore under defined backgrounds where meaningful.
+
+- **Interpretation.** a perturbation effect alone does not establish unique necessity, sufficiency, or training origin.
+
+- **Threats to validity.** feature selection bias, redundant circuits, intervention artifacts, incomplete replacement model, prompt-specific transfer.
+
+## Coverage audit
+
+This is an editorial map, not a claim of independent experimental verification. Every section is manuscript_draft. Canonical architecture/optimization chapters own full derivations of their algorithms; Chapter 1 owns their system-level distinctions and dependencies.
+
+| Required topic | Manuscript anchor | Inspected source and locator | Boundary / gap |
+|---|---|---|---|
+| Task distribution, users, capabilities | [1.1 Formulation](01-1-problem-formulation.md#formulation), [Methodology](01-1-problem-formulation.md#methodology) | P50 §§2–4; R1.17 §§4.3–4.4; P21 §3.2 | book acceptance function is explicit; no application population sampled |
+| Acceptable errors, operating conditions, success criteria | [1.1 Formulation](01-1-problem-formulation.md#formulation), [Reported experiments](01-1-problem-formulation.md#reported-experiments) | P50 §7 Table 7 and §8.1; R1.3 §4 | policy thresholds are declared; Bernoulli/normal planning conditions and multiplicity limits stated |
+| Objective, representation, algorithm, implementation | [1.2 Formulation](01-2-levels-of-analysis.md#formulation), [Methodology](01-2-levels-of-analysis.md#methodology) | P19 §3; P14 §4; P28 §3 | book seven-level taxonomy; held-fixed fields do not alone identify causality |
+| Runtime, infrastructure, product behavior, evidence | [1.2 Mechanism](01-2-levels-of-analysis.md#mechanism), [Reported experiments](01-2-levels-of-analysis.md#reported-experiments) | P19 §4.3/App. E; P36 §§4–6; P21 §§3–4 | operator, engine and jointly changed system contrasts distinguished; no current engine benchmark |
+| General/specialized, dense/sparse | [1.3 Formulation](01-3-model-categories.md#formulation), [Methodology](01-3-model-categories.md#methodology) | P10 §§2–4; P13 §2; P25 §2 | scope is relative; active ratio is not measured traffic; unequal experts require summed counts |
+| AR, denoising, masked, diffusion, contrastive, predictive, recurrent | [1.3 Mechanism](01-3-model-categories.md#mechanism) | P02 §§2.1/3.3; R1.9 §3.1; R1.10 §3; P44 §2.3; P47 §§2–3; P11 §3 | objectives and inference separated; T5 remains AR; canonical mathematical treatments linked |
+| Open weights versus reproducible training | [1.3 Methodology](01-3-model-categories.md#methodology), [Algorithm](01-3-model-categories.md#algorithm) | R1.7 §§1/3/6; P05 §§2–4; R1.14 §2 | release documentation inspected; exact artifact closure and independent rerun unverified |
+| Pretraining, continued training, adaptation | [1.4 Formulation](01-4-lifecycle-and-intervention.md#formulation), [Mechanism](01-4-lifecycle-and-intervention.md#mechanism) | P14 §4; P21 §3; P25 §2 | stage dependencies and training-state costs; no universal mandatory route |
+| Preferences, RL, distillation | [1.4 Methodology](01-4-lifecycle-and-intervention.md#methodology), [Reported experiments](01-4-lifecycle-and-intervention.md#reported-experiments) | P21 Eqs. 1–2/§4.2; P26 §§2–4; P32 §2; R1.15/R1.16 | response-only versus logits distinguished; one student is already instruction-tuned; full route-cost match absent |
+| Retrieval, compression, deployment, feedback | [1.4 Mechanism](01-4-lifecycle-and-intervention.md#mechanism), [Algorithm](01-4-lifecycle-and-intervention.md#algorithm) | P40 §2; P36 §§4–5; R1.5 §4 | generic graph is book synthesis; compression variants and curation have separate checks; no deployment executed |
+| Parameters, tokens, FLOPs | [1.5 Formulation](01-5-resource-accounting.md#formulation), [Methodology](01-5-resource-accounting.md#methodology) | P08 §§1–4; P09 §3/Eqs. 2–4/App. F; P13 Table 1 | operation approximations and fitting conditions explicit; no universal allocation exponent |
+| Capacity, traffic, communication | [1.5 Formulation](01-5-resource-accounting.md#formulation), [Algorithm](01-5-resource-accounting.md#algorithm) | P19 §3; P36 §§4–6; notation N.4/N.8 | streaming substitution conditional; admitted maxima/shard placement matter; measured HBM traffic unavailable |
+| Latency, throughput, energy, money | [1.5 Reported experiments](01-5-resource-accounting.md#reported-experiments), [Observations](01-5-resource-accounting.md#observations) | P36 §6.1; R1.11 §2; R1.12; P13 Table 1 | assumed-price training estimate disclosed; full program invoice/facility energy absent; no service measurement |
+| Mechanistic and physical explanations; cognitive vocabulary | [1.6 Formulation](01-6-scientific-interpretation.md#formulation), [Methodology](01-6-scientific-interpretation.md#methodology) | P52 methodology/limitations; P28 §§2–3 | evidence types are editorial, not universal cost/confidence ladder; cognitive labels supply no mechanism |
+| Causal evidence, competing hypotheses, falsification | [1.6 Algorithm](01-6-scientific-interpretation.md#algorithm), [Reported experiments](01-6-scientific-interpretation.md#reported-experiments) | P52 validation appendices; P28 §2.3/§3/App. A; P09 App. D.4 | perturbation semantics and identification limits explicit; no unique necessity or mediation established here |
+
+| Cross-topic obligation | Treatment | Remaining closure |
+|---|---|---|
+| Research question, formal contract and mathematics | Scope/Formulation revised throughout; Eqs. 1.1–1.10 identified as book formulations or approximations; source equations have locators | exhaustive formal proof/audit of every downstream owner is outside this chapter |
+| Full methodology and executable procedure | all six Methodology subsections; bounded Algorithms 1.1–1.6 distinguish evidence gaps and artifact promotion | pseudocode is an explanatory procedure, not executed software |
+| Implementation and resources | stack-layer placement, conditional FLOPs/traffic/energy equations, factorial-run accounting and route gates | current code paths, hardware measurements, commits, complete energy/cost boundaries unverified |
+| Published protocols and observations | all six Reported experiments subsections; four-part Observations tied to actual study settings | independent reproduction and some source-disclosed configuration/seed details absent |
+| Alternatives and improvements | Siblings and Improvements compare source mechanisms and name non-isolated package changes | no exhaustive current-literature or universal-SOTA claim |
+| Failures, validity and reproducibility | source-conditioned failure analysis and limitations; 34 inspected primary records in references | unversioned PDFs/live pages not immutably pinned; software and artifact closure pending |
+
+## What this edition did not do
+
+No specification was populated with measured application values, no training or circuit intervention was run, no service was deployed, and no proposed design was accepted. Published experimental findings remain PAPER-REPORTED; mathematical identities and explicitly conditional calculations remain derived; planning inputs remain ASSUMED. These distinctions and the listed evidence gaps prevent promotion to reviewed status.

@@ -12,33 +12,83 @@
 import type { Inline } from '@atlas/core';
 import CiteLink from './inline/CiteLink.astro';
 import EvidenceMark from './inline/EvidenceMark.astro';
+import { getRegistry } from '../../lib/atlas.ts';
 import { xrefAttrs } from './lib/dom.ts';
+import { equationTargets } from './lib/inline-equations.ts';
 import { inlineViews } from './lib/inline.ts';
 
 interface Props {
   nodes: readonly Inline[];
+  /** Existing link children cannot acquire a nested derived-equation link. */
+  inLink?: boolean;
+  /** Interactive hosts such as details summaries render references as text. */
+  interactive?: boolean;
 }
 
-const { nodes } = Astro.props;
-const views = inlineViews(nodes, import.meta.env.BASE_URL);
+const { nodes, inLink = false, interactive = true } = Astro.props;
+const needsEquationTargets =
+  !inLink && nodes.some((node) => node.kind === 'text' && node.value.includes('DERIVED:eq-'));
+const equations = needsEquationTargets ? equationTargets(await getRegistry()) : undefined;
+const views = inlineViews(nodes, import.meta.env.BASE_URL, equations);
 ---
 
-{
-  views.map((view) => (
-    <Fragment>
-      {view.kind === 'text' && view.value}
-      {view.kind === 'emphasis' && <em><Astro.self nodes={view.children} /></em>}
-      {view.kind === 'strong' && <strong><Astro.self nodes={view.children} /></strong>}
-      {view.kind === 'delete' && <del><Astro.self nodes={view.children} /></del>}
-      {view.kind === 'plain' && <Astro.self nodes={view.children} />}
-      {view.kind === 'code' && <code class:list={['rb-icode', { 'rb-icode--long': view.value.length > 28 }]}>{view.value}</code>}
-      {view.kind === 'math' && <span class="rb-math" set:html={view.html} />}
-      {view.kind === 'link' && <a class={view.className} href={view.href} title={view.title} rel={view.rel} data-node={view.node}><Astro.self nodes={view.children} /></a>}
-      {view.kind === 'cite' && <CiteLink citeKey={view.key} resolved={view.resolved} />}
-      {view.kind === 'label' && <EvidenceMark label={view.label} />}
-      {view.kind === 'xref' && <a class="rb-xref" href={view.href} {...xrefAttrs(view.xref)}>{view.text}</a>}
-      {view.kind === 'xref-missing' && <span class="rb-xref rb-xref--missing">{view.text}</span>}
-      {view.kind === 'break' && <br />}
-    </Fragment>
-  ))
-}
+{views.map((view) => (
+  <Fragment>
+    {view.kind === 'text' && view.value}
+    {view.kind === 'emphasis' && (
+      <em>
+        <Astro.self nodes={view.children} inLink={inLink} interactive={interactive} />
+      </em>
+    )}
+    {view.kind === 'strong' && (
+      <strong>
+        <Astro.self nodes={view.children} inLink={inLink} interactive={interactive} />
+      </strong>
+    )}
+    {view.kind === 'delete' && (
+      <del>
+        <Astro.self nodes={view.children} inLink={inLink} interactive={interactive} />
+      </del>
+    )}
+    {view.kind === 'plain' && <Astro.self nodes={view.children} inLink={inLink} interactive={interactive} />}
+    {view.kind === 'code' && (
+      <code class:list={['rb-icode', { 'rb-icode--long': view.value.length > 28 }]}>{view.value}</code>
+    )}
+    {view.kind === 'math' && <span class="rb-math" set:html={view.html} />}
+    {view.kind === 'link' && interactive && (
+      <a class={view.className} href={view.href} title={view.title} rel={view.rel} data-node={view.node}>
+        <Astro.self nodes={view.children} inLink interactive={interactive} />
+      </a>
+    )}
+    {view.kind === 'link' && !interactive && (
+      <span class={view.className} title={view.title}>
+        <Astro.self nodes={view.children} inLink={inLink} interactive={false} />
+      </span>
+    )}
+    {view.kind === 'cite' &&
+      (interactive ? (
+        <CiteLink citeKey={view.key} resolved={view.resolved} />
+      ) : (
+        <span class="rb-cite">{view.key}</span>
+      ))}
+    {view.kind === 'label' && <EvidenceMark label={view.label} />}
+    {view.kind === 'xref' && interactive && (
+      <a class="rb-xref" href={view.href} {...xrefAttrs(view.xref)}>
+        {view.text}
+      </a>
+    )}
+    {view.kind === 'xref' && !interactive && <span class="rb-xref rb-xref--static">{view.text}</span>}
+    {view.kind === 'xref-missing' && <span class="rb-xref rb-xref--missing">{view.text}</span>}
+    {view.kind === 'derived-equation' && interactive && (
+      <a class="rb-xref rb-xref--derived" href={view.href} title={view.source}>
+        {view.text}
+      </a>
+    )}
+    {view.kind === 'derived-equation' && !interactive && (
+      <span class="rb-xref rb-xref--derived rb-xref--static" title={view.source}>
+        {view.text}
+      </span>
+    )}
+    {view.kind === 'break' && <br />}
+  </Fragment>
+))}

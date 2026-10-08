@@ -25,16 +25,21 @@
  */
 import type { JSX } from 'preact';
 import { formatValue, type ChartSpec, type FigurePlacement } from '@atlas/core';
-import { chartIncludesZero, formatTick, makeScale, resolveChart, type Point2, type ResolvedSeries, type Scale } from '../chart.ts';
+import {
+  chartIncludesZero,
+  formatTick,
+  makeScale,
+  resolveChart,
+  type Point2,
+  type ResolvedSeries,
+  type Scale,
+} from '../chart.ts';
 import { chartCursorValues, CURSOR_VARIABLE } from '../state.ts';
 import { textWidth, wrapText } from '../text-metrics.ts';
 import { cls, fracStyle, hashId, litClass, NO_STATE, r1, widthClass, type StateView } from './util.ts';
+import { resolveChartSize, type ChartDimensions } from './chart-size.ts';
 
-const SIZES: Readonly<Record<FigurePlacement, { readonly w: number; readonly h: number }>> = {
-  rail: { w: 320, h: 236 },
-  inline: { w: 640, h: 360 },
-  wide: { w: 900, h: 420 },
-};
+export type { ChartDimensions } from './chart-size.ts';
 const TICK_FONT = 10.5;
 const LABEL_FONT = 11.5;
 const ANNOT_FONT = 10.5;
@@ -53,7 +58,11 @@ function thin<T>(items: readonly T[], max: number): T[] {
 }
 
 function styleClass(series: ResolvedSeries, index: number): string {
-  return cls('vg-series', series.emphasis ? 'vg-series--emph' : `vg-series--${index % 4}`, series.dashed && 'vg-series--dashed');
+  return cls(
+    'vg-series',
+    series.emphasis ? 'vg-series--emph' : `vg-series--${index % 4}`,
+    series.dashed && 'vg-series--dashed',
+  );
 }
 
 function scaleAttrs(scale: Scale): { domain: string; range: string } {
@@ -66,33 +75,64 @@ export interface ChartViewProps {
   readonly desc: string;
   readonly idPrefix?: string;
   readonly placement?: FigurePlacement;
+  /** Optional bounded SVG geometry; omitted or invalid values preserve placement defaults. */
+  readonly dimensions?: ChartDimensions | undefined;
   /** Live-instrument state: lit series, variable overrides, and the cursor variable `x`. */
   readonly state?: StateView;
 }
 
-export function ChartView({ spec, title, desc, idPrefix, placement = 'inline', state = NO_STATE }: ChartViewProps): JSX.Element {
+export function ChartView({
+  spec,
+  title,
+  desc,
+  idPrefix,
+  placement = 'inline',
+  dimensions,
+  state = NO_STATE,
+}: ChartViewProps): JSX.Element {
   const prefix = idPrefix ?? `vg-ch-${hashId(`${title}|${spec.series.map((series) => series.id).join(',')}`)}`;
   const resolved = resolveChart(spec, state.overrides);
-  const { w, h } = SIZES[placement];
+  const { w, h } = resolveChartSize(placement, dimensions);
   const isBar = spec.type === 'bar';
   const includeZero = chartIncludesZero(spec);
   const rail = placement === 'rail';
 
   // ── margins ────────────────────────────────────────────────────────────────
-  const yProbe = makeScale(spec.y.scale, resolved.yExtent, [0, 1], { domain: spec.y.domain, ticks: spec.y.ticks, includeZero });
+  const yProbe = makeScale(spec.y.scale, resolved.yExtent, [0, 1], {
+    domain: spec.y.domain,
+    ticks: spec.y.ticks,
+    includeZero,
+  });
   const yLabels = yProbe.ticks.map((tick) => formatTick(tick, spec.y.format, spec.y.scale));
   const left = Math.ceil(Math.max(20, ...yLabels.map((label) => textWidth(label, TICK_FONT, 'mono'))) + 10);
   const lineSeries = resolved.series.filter((series) => series.points.length > 0);
   const directLabels = !rail && !isBar && spec.type !== 'scatter';
-  const labelRoom = directLabels ? Math.min(168, Math.ceil(Math.max(0, ...lineSeries.map((series) => textWidth(series.label, LABEL_FONT, 'sans')))) + 18) : 0;
+  const labelRoom = directLabels
+    ? Math.min(
+        168,
+        Math.ceil(Math.max(0, ...lineSeries.map((series) => textWidth(series.label, LABEL_FONT, 'sans')))) + 18,
+      )
+    : 0;
   const right = Math.max(rail ? 12 : 18, labelRoom);
 
   // Annotation flags: rows assigned left to right so no two labels overlap.
-  const xProbe = makeScale(spec.x.scale, resolved.xExtent, [left, w - right], { domain: spec.x.domain, ticks: spec.x.ticks });
-  const flags: { index: number; x: number; row: number; anchor: 'start' | 'middle' | 'end'; from: number; to: number }[] = [];
+  const xProbe = makeScale(spec.x.scale, resolved.xExtent, [left, w - right], {
+    domain: spec.x.domain,
+    ticks: spec.x.ticks,
+  });
+  const flags: {
+    index: number;
+    x: number;
+    row: number;
+    anchor: 'start' | 'middle' | 'end';
+    from: number;
+    to: number;
+  }[] = [];
   if (!isBar) {
     const rowsEnd: number[] = [];
-    const sorted = spec.annotations.map((annotation, index) => ({ index, x: xProbe.map(annotation.x) })).sort((a, b) => a.x - b.x);
+    const sorted = spec.annotations
+      .map((annotation, index) => ({ index, x: xProbe.map(annotation.x) }))
+      .sort((a, b) => a.x - b.x);
     for (const { index, x } of sorted) {
       if (!(x >= left - 0.5 && x <= w - right + 0.5)) continue;
       const width = textWidth(spec.annotations[index]?.label ?? '', ANNOT_FONT, 'mono');
@@ -117,7 +157,11 @@ export function ChartView({ spec, title, desc, idPrefix, placement = 'inline', s
   const y0 = top;
   const y1 = h - bottom;
 
-  const yScale = makeScale(spec.y.scale, resolved.yExtent, [y1, y0], { domain: spec.y.domain, ticks: spec.y.ticks, includeZero });
+  const yScale = makeScale(spec.y.scale, resolved.yExtent, [y1, y0], {
+    domain: spec.y.domain,
+    ticks: spec.y.ticks,
+    includeZero,
+  });
   const categories = spec.categories ?? [];
   const band = isBar ? (x1 - x0) / Math.max(1, categories.length) : 0;
   const xScale = makeScale(spec.x.scale, resolved.xExtent, [x0, x1], { domain: spec.x.domain, ticks: spec.x.ticks });
@@ -127,7 +171,10 @@ export function ChartView({ spec, title, desc, idPrefix, placement = 'inline', s
 
   // X tick labels, thinned so they never collide.
   const xTicks: { x: number; label: string }[] = isBar
-    ? categories.map((category, index) => ({ x: px(index), label: wrapText(category, band - 4, TICK_FONT, 'sans', 1)[0] ?? category }))
+    ? categories.map((category, index) => ({
+        x: px(index),
+        label: wrapText(category, band - 4, TICK_FONT, 'sans', 1)[0] ?? category,
+      }))
     : xScale.ticks.map((tick) => ({ x: px(tick), label: formatTick(tick, spec.x.format, spec.x.scale) }));
   const widest = Math.max(1, ...xTicks.map((tick) => textWidth(tick.label, TICK_FONT, isBar ? 'sans' : 'mono')));
   const stride = Math.max(1, Math.ceil((widest + 10) / Math.max(1, (x1 - x0) / Math.max(1, xTicks.length))));
@@ -219,11 +266,29 @@ export function ChartView({ spec, title, desc, idPrefix, placement = 'inline', s
             <line class="vg-gridline" x1={x0} y1={r1(py(tick))} x2={x1} y2={r1(py(tick))} key={`g${tick}`} />
           ))}
           {!isBar &&
-            shownX.map((tick) => (tick.x > x0 + 0.5 && tick.x < x1 - 0.5 ? <line class="vg-gridline vg-gridline--x" x1={r1(tick.x)} y1={y0} x2={r1(tick.x)} y2={y1} key={`gx${tick.x}`} /> : null))}
+            shownX.map((tick) =>
+              tick.x > x0 + 0.5 && tick.x < x1 - 0.5 ? (
+                <line
+                  class="vg-gridline vg-gridline--x"
+                  x1={r1(tick.x)}
+                  y1={y0}
+                  x2={r1(tick.x)}
+                  y2={y1}
+                  key={`gx${tick.x}`}
+                />
+              ) : null,
+            )}
         </g>
         <line class="vg-axis" x1={x0} y1={r1(baseline)} x2={x1} y2={r1(baseline)} />
         {yScale.ticks.map((tick) => (
-          <text class="vg-tick" x={x0 - 7} y={r1(py(tick))} text-anchor="end" dominant-baseline="central" key={`y${tick}`}>
+          <text
+            class="vg-tick"
+            x={x0 - 7}
+            y={r1(py(tick))}
+            text-anchor="end"
+            dominant-baseline="central"
+            key={`y${tick}`}
+          >
             {formatTick(tick, spec.y.format, spec.y.scale)}
           </text>
         ))}
@@ -248,15 +313,27 @@ export function ChartView({ spec, title, desc, idPrefix, placement = 'inline', s
           return (
             <g class="vg-annot" key={`a${flag.index}`}>
               <line class="vg-annot__rule" x1={r1(flag.x)} y1={r1(ty + 3)} x2={r1(flag.x)} y2={y1} />
-              {annotation.y !== undefined && <circle class="vg-annot__dot" cx={r1(flag.x)} cy={r1(py(annotation.y))} r="3" />}
-              <text class="vg-annot__label" x={r1(flag.anchor === 'start' ? flag.x - 3 : flag.anchor === 'end' ? flag.x + 3 : flag.x)} y={r1(ty)} text-anchor={flag.anchor}>
+              {annotation.y !== undefined && (
+                <circle class="vg-annot__dot" cx={r1(flag.x)} cy={r1(py(annotation.y))} r="3" />
+              )}
+              <text
+                class="vg-annot__label"
+                x={r1(flag.anchor === 'start' ? flag.x - 3 : flag.anchor === 'end' ? flag.x + 3 : flag.x)}
+                y={r1(ty)}
+                text-anchor={flag.anchor}
+              >
                 {annotation.label}
               </text>
             </g>
           );
         })}
 
-        <g class={cls('vg-plotarea', cursorOn && 'is-cursor')} data-vg-key={CURSOR_VARIABLE} data-vg-frac={CURSOR_VARIABLE} style={fracStyle(cursorValues[CURSOR_VARIABLE]?.frac ?? 0)}>
+        <g
+          class={cls('vg-plotarea', cursorOn && 'is-cursor')}
+          data-vg-key={CURSOR_VARIABLE}
+          data-vg-frac={CURSOR_VARIABLE}
+          style={fracStyle(cursorValues[CURSOR_VARIABLE]?.frac ?? 0)}
+        >
           <g class={cls('vg-cursor', cursorOn && 'is-on')} data-vg-cursor>
             <svg class="vg-cursor__frame" x={plot.x} y={plot.y} width={plot.w} height={plot.h} overflow="visible">
               <g class="vg-cursor__x">
@@ -285,19 +362,50 @@ export function ChartView({ spec, title, desc, idPrefix, placement = 'inline', s
                       const bx = x0 + band * category + (band - groupWidth) / 2 + barWidth * index;
                       const barTop = Math.min(py(v), baseline);
                       const height = Math.abs(baseline - py(v));
-                      return <rect class="vg-bar" x={r1(bx + 0.5)} y={r1(barTop)} width={r1(Math.max(1, barWidth - 1.5))} height={r1(height)} key={category} />;
+                      return (
+                        <rect
+                          class="vg-bar"
+                          x={r1(bx + 0.5)}
+                          y={r1(barTop)}
+                          width={r1(Math.max(1, barWidth - 1.5))}
+                          height={r1(height)}
+                          key={category}
+                        />
+                      );
                     })}
                   </g>
                 ) : (
                   <g clip-path={`url(#${prefix}-clip)`}>
-                    <path class="vg-series__line" data-series={series.id} data-series-label={series.label} d={pathFor(series.points)} />
-                    {last !== undefined && spec.type !== 'scatter' && <circle class="vg-series__end" cx={r1(px(last[0]))} cy={r1(py(last[1]))} r={series.emphasis ? 2.75 : 2.25} />}
+                    <path
+                      class="vg-series__line"
+                      data-series={series.id}
+                      data-series-label={series.label}
+                      d={pathFor(series.points)}
+                    />
+                    {last !== undefined && spec.type !== 'scatter' && (
+                      <circle
+                        class="vg-series__end"
+                        cx={r1(px(last[0]))}
+                        cy={r1(py(last[1]))}
+                        r={series.emphasis ? 2.75 : 2.25}
+                      />
+                    )}
                   </g>
                 )}
                 {end !== undefined && (
                   <>
-                    {Math.abs(end.y - end.anchorY) > 3 && <path class="vg-series__leader" d={`M${r1(end.x + 3)} ${r1(end.anchorY)} L${r1(x1 + 5)} ${r1(end.y)}`} />}
-                    <text class={cls('vg-series-label', series.emphasis && 'vg-series-label--emph')} x={r1(x1 + 8)} y={r1(end.y)} dominant-baseline="central">
+                    {Math.abs(end.y - end.anchorY) > 3 && (
+                      <path
+                        class="vg-series__leader"
+                        d={`M${r1(end.x + 3)} ${r1(end.anchorY)} L${r1(x1 + 5)} ${r1(end.y)}`}
+                      />
+                    )}
+                    <text
+                      class={cls('vg-series-label', series.emphasis && 'vg-series-label--emph')}
+                      x={r1(x1 + 8)}
+                      y={r1(end.y)}
+                      dominant-baseline="central"
+                    >
                       {wrapText(series.label, labelRoom - 12, LABEL_FONT, 'sans', 1)[0] ?? series.label}
                     </text>
                   </>
@@ -322,7 +430,11 @@ export function ChartView({ spec, title, desc, idPrefix, placement = 'inline', s
             thin(series.points, MAX_POINTS).map(([x, y]) => (
               <circle
                 class={cls('vg-pt', spec.type === 'scatter' && 'vg-pt--visible', series.emphasis && 'vg-pt--emph')}
-                cx={r1(isBar ? x0 + band * x + (band - groupWidth) / 2 + barWidth * (indexOf.get(series.id) ?? 0) + barWidth / 2 : px(x))}
+                cx={r1(
+                  isBar
+                    ? x0 + band * x + (band - groupWidth) / 2 + barWidth * (indexOf.get(series.id) ?? 0) + barWidth / 2
+                    : px(x),
+                )}
                 cy={r1(py(y))}
                 r={spec.type === 'scatter' ? 3 : 3.5}
                 data-series={series.id}
@@ -339,7 +451,14 @@ export function ChartView({ spec, title, desc, idPrefix, placement = 'inline', s
       <div class="vg-legend" role="group" aria-label="Series">
         {resolved.series.map((series, index) => (
           <button type="button" class="vg-legend__item" data-series={series.id} aria-pressed="true" key={series.id}>
-            <svg class="vg-legend__swatch" viewBox="0 0 24 8" width="24" height="8" aria-hidden="true" focusable="false">
+            <svg
+              class="vg-legend__swatch"
+              viewBox="0 0 24 8"
+              width="24"
+              height="8"
+              aria-hidden="true"
+              focusable="false"
+            >
               {isBar ? (
                 <rect class={cls(styleClass(series, index), 'vg-bar')} x="6" y="0" width="12" height="8" />
               ) : (

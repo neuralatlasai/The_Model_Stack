@@ -1,7 +1,8 @@
 # Content Contract for *The Model Stack* manuscripts
 
 **Status:** normative for every file under `docs/`. Edition 1.0, 20 September 2026.
-**Authority:** this contract implements `book_plan.md` (chapter matrices, shared mathematical contract, Appendix H) and the content-object model in `Instruction/UI_UX.md`. It never overrides either. Where the plan and this file appear to disagree, the plan wins and this file must be corrected.
+**Editorial revision:** 7 October 2026 — complete topic treatment, primary-source evidence, and the user's selected editorial references.
+**Authority:** this contract implements `book_plan.md` (chapter ownership, matrices, shared mathematical contract, Appendix H) and the content-object model in `Instruction/UI_UX.md`. Explicit user instructions control the current scope, audience, evidence standard, completeness, and editorial style. Preserve the plan's hierarchy and identifiers and the application's content grammar; do not modify read-only inputs to reconcile a writing preference.
 
 Requirements use **MUST**, **MUST NOT**, **SHOULD**, and **MAY** as normative terms.
 
@@ -135,7 +136,7 @@ The chapter page is compact and research-oriented. No marketing hero. It MUST co
 10. **Verification.** One paragraph summarising the falsifiable verification task; the full protocol lives in `verification.md`.
 11. **Lineage.** A dated list (year · work · relation) using exactly one of the relation words: *conceptual ancestor*, *engineering optimization*, *alternative branch*, *superseded approach*, *current frontier*. Years and works MUST be ones the author can attribute to a specific paper or release in `references.md`.
 12. **Terms owned here.** The glossary terms whose canonical definition lives in this chapter, each with a one-line definition and the owning section. A term MUST be defined in exactly one chapter across the book; other chapters link to it.
-13. **Reference-stack coverage.** A table that binds the chapter to `Instruction/AI_REFERENCE_STACK.md`, the only permitted source index for this book. One row per reference-stack entry the chapter actually uses, with these columns: *Stack section* (§1 lab · §2 conference · §3 discovery source · §4 system) · *Entry* (exact name as written in the reference stack, with its rank number) · *Stack layer* (for §4 entries, the layer name from §4.1) · *What this chapter takes from it* (the specific mechanism, report, documentation page, or proceedings route, stated concretely) · *Surface used* (Home / Research / Papers / Blog / Code / Models / docs-code URL exactly as listed in the reference stack) · *Sections* (which of the six sections use it) · *Evidence label*. Beneath the table, one paragraph titled **Inspection dimensions applied** lists which of the §4.2 dimensions (Parallelism, Precision, Memory, Communication, Kernels, Checkpointing, Post-training, Inference, Metrics, Reliability, Reproducibility) the chapter analyses and where. A chapter that uses a source absent from the reference stack MUST say so in a final row group titled *Outside the reference stack (routed via book_plan.md anchors)* and justify it by the plan's source anchor. Minimum: 8 rows, covering at least one lab, one venue or discovery source, and (for any chapter with an Implementation heading) three §4 systems.
+13. **Reference-stack coverage.** A table that binds the chapter to `Instruction/AI_REFERENCE_STACK.md`, the permitted source index for this book. One row per reference-stack entry the chapter actually uses, with these columns: *Stack section* (§1 lab · §2 conference · §3 discovery source · §4 system) · *Entry* (exact name as written in the reference stack, with its index number) · *Stack layer* (for §4 entries, the layer name from §4.1) · *What this chapter takes from it* (the specific mechanism, report, documentation page, or proceedings route, stated concretely) · *Surface used* (Home / Research / Papers / Blog / Code / Models / docs-code URL exactly as listed in the reference stack) · *Sections* (which of the six sections use it) · *Evidence label*. Beneath the table, one paragraph titled **Inspection dimensions applied** lists which of the §4.2 dimensions (Parallelism, Precision, Memory, Communication, Kernels, Checkpointing, Post-training, Inference, Metrics, Reliability, Reproducibility) the chapter analyses and where. A chapter that uses a source absent from the reference stack MUST say so in a final row group titled *Outside the reference stack (routed via book_plan.md anchors)* and justify it by the plan's source anchor. Cover every source and relevant implementation actually used; there is no minimum number of labs, papers, or systems. Discovery entries record retrieval routes, not evidence for a method or result. Do not add irrelevant sources or system names to satisfy a quota.
 14. **Source route.** How to find primary evidence for this chapter using the *exact* search protocols in `Instruction/AI_REFERENCE_STACK.md` (lab search protocol §1.1, conference workflow §2.1, paper cascade §3.1, training-stack search protocol §4.3). Give 3–6 concrete filled-in queries.
 15. **Status.** Editorial status, evidence coverage, and the list of NOT-DISCLOSED / UNVERIFIED items the chapter carries.
 
@@ -145,31 +146,57 @@ Target length for the chapter page: 900–1,600 words excluding tables and the d
 
 ## 4. Section file anatomy
 
-Each section file develops one row of the chapter matrix in `book_plan.md`. It MUST cover every item named in that row's "Required coverage" cell. Target length: 1,500–2,600 words of prose per section. The plan's 5,000–7,000-word figure is an indicative planning budget; this edition deliberately writes to full mechanism depth (derivations, algorithms, costs, failure modes, experiments), so a chapter lands at roughly 11,000–16,000 words. Depth MUST come from mechanism and evidence, never from repetition.
+Each section file develops one row of the chapter matrix in `book_plan.md`. It MUST cover every item named in that row's "Required coverage" cell and satisfy §4.1 for each concept it owns. Target length: 1,500–2,600 words of prose per section, roughly 11,000–16,000 per chapter. These and the plan's 5,000–7,000-word figure are planning estimates, not completion criteria or ceilings. Depth MUST come from complete methodology and evidence, never from repetition; do not truncate a derivation or reported protocol to fit a target.
 
-Every section's **Implementation** heading MUST name the reference-stack systems that realise the mechanism, each with its §4.1 stack layer, and MUST NOT name a system loosely or outside the reference stack without saying so.
+Where an implementation is applicable, the section's **Implementation** heading MUST name the reference-stack systems that realise the mechanism, each with its §4.1 stack layer, and MUST NOT name a system loosely or outside the reference stack without saying so. A conceptual topic with no relevant implementation records that reason instead of inserting unrelated frameworks.
 
 The twelve depth elements of Appendix H are distributed across a section as follows. Use these exact H2 headings so the UI can map them to renderers. Omit a heading only when it is genuinely inapplicable, and say so in one line under "Scope".
 
 ```text
 ## Scope                 objective, baseline, success criteria, boundaries (≤ 120 words)
 ## Why this exists       what failed / bottleneck / dominant constraint / what changed
-## Intuition             physical-resource reasoning first; cognitive analogies explicitly marked as heuristic
-## Formulation           symbols, shapes, units, objective, constraints, estimators, assumptions — before any derivation
-## Mechanism             derivation or mechanism; preserve the source's conditions; mark adaptations
+## Intuition             concise mathematical or physical explanation of the actual mechanism, supported by the source
+## Formulation           symbols, shapes, units, objective, constraints, estimators, source-stated conditions — before derivation
+## Mechanism             full methodology and derivation; preserve the source's conditions; identify explanatory reconstructions
 ## Algorithm             executable pseudocode with numbered lines, IO contract, invariants, termination, state transitions
 ## Implementation        tensors/operators → framework → kernels → memory → communication → deployment, naming reference-stack systems
-## Experimental design   datasets, splits, baselines, ablations, budgets, seeds, evaluator independence, uncertainty (a PROPOSAL)
-## Observations          the four-part observation layer (see §6)
+## Experimental design   source-reported datasets, splits, baselines, ablations, budgets, seeds, evaluators, and uncertainty
+## Observations          the four-part observation layer (see §6), with the source-reported findings and their interpretation
 ## Failure modes         numerical, statistical, systems, distributional failures with observable symptoms
 ## Siblings              differential explanations of alternatives (see §7)
-## Extensions            what changes for domain adaptation, long context, multimodality, agents, embodiment; proposals marked
+## Extensions            documented improvements and successors; source-supported domain/context/modality changes
 ## Limitations           valid operating regime, falsification conditions, decision consequences
 ## Reproducibility       versions, artifacts, configurations, exact metric definitions, unresolved unknowns
 ## References            spine ids and `references.md` keys used in this section
 ```
 
 Not every section needs a long "Algorithm" or "Implementation"; a conceptual section (e.g. 01.2 Levels of analysis) keeps those headings short. The rule is consistency of reasoning, not forced template conformity.
+
+### 4.1 Topic-completeness matrix
+
+**Every topic must be completed at its canonical teaching location.** Intuition, a formal definition, a citation, or an attractive figure alone is insufficient. For each required concept and substantive variant, the author MUST map the following obligations to manuscript anchors and primary-source locators. Keep this coverage map in the chapter's `verification.md`; it is an editorial audit, distinct from the proposed experiment. A survey covering several methods cannot satisfy the obligations for one method by describing another.
+
+| Obligation | Required treatment | Owning heading |
+|---|---|---|
+| Problem and prior limitation | Exact research question, baseline, targeted limitation, and evaluation axis; attribute historical and empirical premises | Scope; Why this exists |
+| Formal contract | Inputs, outputs, representations, shapes, units, objective, constraints, initialization, and source-stated mathematical/statistical conditions | Formulation |
+| Full methodology | Reconstruct data construction and preprocessing where applicable, model/components, training or estimation procedure, inference, and evaluation; explain each consequential choice and its documented rationale | Mechanism |
+| Mathematical account | Source equations with locators, variable definitions, intermediate derivation steps, normalization, approximation regime, and boundary cases; distinguish paper equations from book derivations | Formulation; Mechanism |
+| Executable procedure | Bounded pseudocode with state, update order, stopping conditions, invariants, and failure handling where a procedure exists; identify any explanatory adaptation | Algorithm |
+| Implementation and execution | Connect the mechanism to source-documented operators, layout, precision, kernels, memory, communication, and execution; distinguish an interface promise from a verified code path | Implementation |
+| Resource accounting | Worst-case time and auxiliary-space complexity, parameter/state size, compute and memory traffic, and relevant communication/latency/throughput/energy/money costs; state the counted boundary and unknown quantities | Mechanism; Algorithm; Implementation |
+| Reported experimental protocol | Source datasets and splits, baseline versions, controlled variables, budgets, hardware, precision, seeds, metrics, evaluator setup, and ablations as disclosed; mark omitted details NOT-DISCLOSED | Experimental design |
+| Observations and interpretation | Explain the reported findings, negative results, uncertainty, and what each experiment can establish; identify absent independent replication and separate mathematical deductions | Observations |
+| Alternatives | Compare same-level methods on declared dimensions under compatible protocols; link canonical definitions instead of repeating them | Siblings |
+| Improvements and lineage | Identify predecessor, changed mechanism, claimed benefit, supporting comparison/ablation, resource cost, and remaining limitation for each relevant documented successor | Extensions; chapter Lineage |
+| Validity and failures | Operating regime, counterexamples, numerical/statistical/systems/distributional failures, observable symptoms, and source-supported mitigations; do not invent failure rates | Failure modes; Limitations |
+| Reproducibility and closure | Exact source revisions, configurations and available artifacts; what can be reconstructed, what remains unavailable, and which evidence gaps prevent a claim | Reproducibility; References |
+
+An obligation MAY be marked **not applicable** only with a topic-specific reason, for example that a pure identity has no training dataset. **NOT-DISCLOSED** means an inspected source omits a needed detail; it is not a waiver of the remaining explanation. **UNVERIFIED** means the relevant support has not been checked. Neither status permits invented completion. An unsupported material assertion blocks `editorial_status: reviewed`; explicit source-disclosure limitations may remain when the manuscript's claims are restricted to inspected evidence. State the inspected boundary rather than claiming exhaustive coverage of all literature.
+
+Use `### Methodology` inside **Mechanism** for the complete method reconstruction, `### Reported experiments` inside **Experimental design** for the original protocol, and `### Improvements` inside **Extensions** for documented successors when applicable. Explain the reported findings in **Observations**, linked to that protocol. These H3s add depth without changing the fixed H2 content grammar. Do not repeat the same explanation across headings.
+
+Reported improvements MUST be attributed and dated. Explain what changed and which experiment isolates that change. If a paper reports an overall gain without an isolating ablation, state that the contribution of the component is not isolated. If no relevant successor or improvement evidence is available in the inspected sources, say so; do not invent an improvement agenda to fill the heading. Book-authored verification proposals belong in `verification.md`, separate from the source-grounded manuscript. They MUST NOT replace source methodology or observations or be represented as improvements already established.
 
 ---
 
@@ -181,7 +208,7 @@ The UI needs first-class renderers for definitions, claims, equations, algorithm
 |---|---|
 | Definition | `> **Definition — <term>.** <one or two sentences>` (only in the owning chapter) |
 | Claim | `> **Claim [<LABEL> · <source id>].** <statement>` — LABEL from §6; source id is `P13`, `R14.2`, `OD:vllm-docs`, or `DERIVED:eq-14.3` |
-| Assumption | `> **Assumption.** <statement> · *sensitivity:* <what changes if false>` |
+| Assumption | `> **Assumption.** <source condition with citation, or explicitly proposed analysis input> · *sensitivity:* <what changes if false>`; never fills a factual evidence gap |
 | Observation | `> **Observation [<LABEL>].** <statement>` |
 | Proposition / Theorem | `> **Proposition 14.1.** <statement>` followed by `*Proof sketch.*` or `*Derivation.*` |
 | Equation | Display math in `$$ … $$` with a trailing tag line `*(Eq. 14.3)*` and a one-line variable table beneath: `where L = layers, S = sequence length, …` |
@@ -190,7 +217,7 @@ The UI needs first-class renderers for definitions, claims, equations, algorithm
 | Code | Fenced block with language tag; must be reference-level (PyTorch/JAX/Triton) and must state the pinned version it targets or be marked `UNVERIFIED` |
 | Tensor trace | Fenced `text` block titled `Tensor trace` with lines `[B, T, D] → op → [B, T, 3, H, Dh]` |
 | Systems trace | Fenced `text` block titled `Systems trace` with `stage → latency / memory / compute / communication / failure` rows |
-| Experiment | `### Experiment <ch>.<n> — <name>` with the fixed field list: Hypothesis · Setup · Independent variables · Controlled variables · Dataset/workload · Hardware · Metrics · Baselines · Expected result · Ablation · Interpretation · Threats to validity |
+| Experiment | In `verification.md`, a book-authored proposal uses `### Experiment <ch>.<n> — <name>` with: Hypothesis · Setup · Independent variables · Controlled variables · Dataset/workload · Hardware · Metrics · Baselines · Expected result · Ablation · Interpretation · Threats to validity. In the manuscript, a source-reported study uses `### Reported experiments` under Experimental design with its source locator and disclosed setup, followed by actual reported outcomes, uncertainty, and limitations under Observations; do not describe a published result as an expected result |
 | Benchmark record | Table with the fields of `UI_UX.md` §24: capability measured · task construction · metric · dataset · contamination risks · protocol · known limitations · comparability |
 | Dataset record | Table with the mandatory fields of Appendix C |
 | Model record | Table with the "Required model record" fields of Appendix A; unknown values are `NOT-DISCLOSED` |
@@ -215,7 +242,7 @@ Every non-trivial technical statement MUST carry exactly one label from Appendix
 |---|---|
 | KNOWN | Directly supported by the supplied material or identified evidence; specify that evidence |
 | DERIVED | Follows from stated assumptions/calculations; show the auditable derivation |
-| ASSUMED | A design or planning input chosen for the analysis; include sensitivity when material |
+| ASSUMED | An explicitly chosen input to a proposed verification protocol or declared analytical example; include sensitivity when material; never substitutes for factual source evidence |
 | NOT-DISCLOSED | The required detail is absent from the inspected public disclosure |
 | UNVERIFIED | A candidate statement remains unchecked or could not be validated |
 | PAPER-REPORTED | The cited authors report the method or result; it has not thereby been independently reproduced |
@@ -226,21 +253,24 @@ Every non-trivial technical statement MUST carry exactly one label from Appendix
 
 Edition-1.0 hard rules:
 
-- **EMPIRICALLY-OBSERVED MUST NOT appear.** No experiments were run for this edition. Every experiment is a proposal.
+- **EMPIRICALLY-OBSERVED MUST NOT appear in manuscript claims or `labels_used`.** This edition reports no book-authored empirical study. Book-designed verification experiments are unexecuted proposals in `verification.md`. Source experiments are PAPER-REPORTED when attributed to a paper or technical report, or OFFICIAL-DOCUMENTATION when attributed to another first-party technical disclosure; include their disclosed protocol, outcomes, and limitations.
 - **CODE-VERIFIED MUST NOT appear** unless the file states the repository, commit, and the check performed.
 - A number reported by a paper or vendor MUST be labelled PAPER-REPORTED or OFFICIAL-DOCUMENTATION and MUST include the workload context (§5, performance-figure row). Advertised peak FLOPs are not application throughput.
-- If an author cannot attribute a figure to a specific paper, release, or documentation page, the figure MUST be replaced by the qualitative relation and labelled UNVERIFIED, or omitted. Invented numbers, invented version strings, and invented benchmark scores are defects.
+- A reported quantitative or qualitative relationship MUST have direct primary support. A book-derived relationship MUST show its source-grounded premises and calculation. Otherwise omit it from factual exposition and record the candidate claim as UNVERIFIED in the evidence-gap record. Replacing an unsupported number with an unsupported qualitative claim does not repair it. Invented numbers, version strings, and benchmark scores are defects.
 - Publicly undocumented model internals are NOT-DISCLOSED. Never infer architecture or training details from a brand or model name.
-- Model releases after the author's knowledge boundary that appear in `book_plan.md` (for example the Qwen3.8 repository, the GLM-5 family repository, FlashAttention-4 as arXiv 2603.05451, the MCP specification dated 2026-07-28) MAY be cited exactly as the plan cites them, labelled OFFICIAL-DOCUMENTATION with `accessed 2026-09-20` as the plan states. Nothing beyond what the plan says about them may be asserted.
+- `book_plan.md` anchors are retrieval leads, not verification records. Any release, API, specification, or research claim found there MUST be checked against the actual primary surface at authoring time. Record the actual inspection date and revision; never inherit `accessed 2026-09-20` or any other nominal date from the plan. Unavailable support remains UNVERIFIED, and publicly missing details are NOT-DISCLOSED.
+- Source-stated mathematical and statistical assumptions MUST remain explicit because they define the validity of a theorem, estimator, or experiment. Cite their source and explain their consequence. This preserves formal conditions; it does not authorize guessed facts about data, systems, models, or outcomes.
 
 The **Observations** heading in every section MUST use the four-part observation layer of `UI_UX.md` §41, as four short labelled paragraphs:
 
 ```text
 **What the paper claims.** …        (PAPER-REPORTED / OFFICIAL-DOCUMENTATION)
 **What the evidence shows.** …      (which claims have independent support; which have none)
-**What we infer.** …                (DERIVED / ASSUMED, clearly marked as the book's inference)
+**What we infer.** …                (DERIVED / MATHEMATICALLY-DERIVED, with premises and derivation)
 **What remains unknown.** …         (NOT-DISCLOSED / UNVERIFIED / open questions)
 ```
+
+Develop the topic-specific findings and connect them to the **Reported experiments** protocol in Experimental design (§4.1). A source's conclusion, a model card's score, or a proposed test is not a substitute for explaining the supporting experimental design. Do not claim independent replication merely because several pages repeat the same original result.
 
 ---
 
@@ -270,7 +300,7 @@ Every diagram MUST be followed by an equivalent nested text list.
 
 For hardware and systems topics, diagrams show execution topology (`Model → Operations → Kernel → SM → Tensor Core → SRAM → HBM → NVLink/Fabric`), not concept clouds.
 
-Beyond the concept map, every section carries **authored figures and rail instruments** written as fenced `figure` blocks. Their grammar — the twelve figure kinds (diagram, tensor-flow, systems-trace, memory-stack, calculator, stat-panel, lineage, cycle, matrix, chart, hierarchy, compare), the envelope fields, the formula language, the evidence rules for numbers inside figures, the rail binding rules, and the per-section minimums — is normative in [`docs/VISUAL_GRAMMAR.md`](VISUAL_GRAMMAR.md). The atlas compiler (`cd atlas && npm run compile:check`) rejects figures that violate it.
+Beyond the concept map, every section carries **authored figures and rail instruments** written as fenced `figure` blocks. Their grammar — the twelve figure kinds (diagram, tensor-flow, systems-trace, memory-stack, calculator, stat-panel, lineage, cycle, matrix, chart, hierarchy, compare), the envelope fields, the formula language, the evidence rules for numbers inside figures, the rail binding rules, and the per-section minimums — is normative in [`docs/VISUAL_GRAMMAR.md`](VISUAL_GRAMMAR.md). Validate figures with the existing figure validator and the compiler's in-memory API (§18); `compile:check` also writes application artifacts and is not a read-only validation command.
 
 ---
 
@@ -281,7 +311,7 @@ Beyond the concept map, every section carries **authored figures and rail instru
 - Use the inspection dimensions of §4.2 as the checklist vocabulary for any systems section: *Parallelism, Precision, Memory, Communication, Kernels, Checkpointing, Post-training, Inference, Metrics, Reliability, Reproducibility*.
 - Metric names are fixed: **MFU, HFU, FLOP/s, HBM bandwidth, network bandwidth, tokens/s/GPU, TTFT, TPOT, ITL, E2E latency, p50/p95/p99, goodput, requests/s, cost/token, cost per accepted task**. Definitions live in `front-matter/notation.md` (from the plan's shared mathematical contract) and MUST NOT be redefined.
 - Distinguish, always: objective vs algorithm vs feedback source vs architecture vs implementation; artifact format (GGUF, safetensors) vs tensor library (GGML) vs inference implementation (llama.cpp) vs model-management product (Ollama); RLVR (a reward setting) vs GRPO (an optimisation construction) vs reasoning (a behaviour); LoRA (adaptation) vs quantisation/pruning (compression); RoCE (RDMA carried over Ethernet) vs InfiniBand; CXL (interconnect protocol) vs memory media.
-- TGI is a historical architecture and migration case (repository archived, maintenance mode). TensorRT-LLM's current runtime is PyTorch-native; legacy TensorRT-engine workflows are separate. FlashAttention-4 is a versioned hardware/algorithm case study; do not extrapolate its reported speedups.
+- Verify lifecycle and architecture claims against the inspected release: TGI's maintenance/archive status, TensorRT-LLM's runtime/workflow distinctions, and each FlashAttention version's hardware/algorithm support must not be inherited as timeless facts from an authoring instruction. Date and source the applicable claim; do not extrapolate reported speedups.
 
 ---
 
@@ -302,12 +332,34 @@ All symbols follow `front-matter/notation.md`. In particular: `N` parameters, `D
 ## 12. Prose standard
 
 - Audience: principal scientists, research engineers, AI systems architects, advanced graduate researchers. Do not explain graduate-level ML basics; do explain every mechanism to its physical cost.
-- Every mechanism is followed by its cost: parameters, tokens, FLOPs, memory capacity, memory traffic, communication, latency, throughput, energy, money. If a cost is not known, say NOT-DISCLOSED or UNVERIFIED; do not omit the cost line.
+- Every mechanism is followed by its applicable costs: parameters, tokens, FLOPs, memory capacity, memory traffic, communication, latency, throughput, energy, money. State the accounting boundary. If an applicable cost is not known, say NOT-DISCLOSED or UNVERIFIED; if a dimension does not apply, give a topic-specific technical reason. Do not omit the cost analysis.
 - Brutal truth over comfort: state where the evidence is thin, where a method's reported gains have not been independently reproduced, where a widely repeated claim is a category error, and where a vendor figure does not transfer to the reader's workload.
 - No marketing language, no "state-of-the-art" without a dated benchmark record, no rankings of labs or models, no "best".
-- Physical analysis concerns measured resource constraints. Cognitive analogies are heuristic unless supported by intervention evidence, and MUST be introduced as "heuristically".
+- Physical analysis concerns sourced resource constraints and explicit calculations. Intuition MUST explain the actual mathematical, representational, or systems mechanism. Omit lay explanations, anthropomorphic stories, and unsupported cognitive analogies.
 - The opening of a chapter is 200–300 words. Section prose is dense; prefer a table to a paragraph when the content is parallel.
 - British or American spelling MAY be used but MUST be consistent within a chapter.
+
+### 12.1 Editorial references and original exposition
+
+The user selected these five references for content presentation. They guide exposition, not factual authority for unrelated textbook topics:
+
+| Reference | Editorial practice to adapt |
+|---|---|
+| [AI Futures Model](https://www.aifuturesmodel.com/) | Connect the conceptual account to its formal model, parameter meaning, and limitations |
+| [AI 2027 research index](https://ai-2027.com/research) | State the exact scope and connect the main treatment to deeper supporting analysis |
+| [Compute Forecast](https://ai-2027.com/research/compute-forecast) | Define units first; decompose a question into explicit components; place calculations, figures, and evidence beside the reasoning |
+| [AI Goals Forecast](https://ai-2027.com/research/ai-goals-forecast) | Define alternatives carefully and examine evidence, counterarguments, and unresolved cases |
+| [AI 2027](https://ai-2027.com/) | Maintain a connected causal exposition with nearby references and deeper technical support |
+
+The reference set was reviewed on 7 October 2026; the AI Futures Model root is client-rendered and its textual style review used search-indexed site text. These sites contain forecasts and scenarios. Their fictional organizations, imagined models, subjective probabilities, timelines, estimates, and secondary reporting MUST NOT be imported as established scientific content. Their own substantive claims require the same primary-source checks as any other claim when relevant to a chapter.
+
+- **Connected research prose.** Open with the exact technical question and result boundary, then develop the mechanism through coherent paragraphs. Avoid generic introductory text, motivational framing, invented dialogue, and fragmented slogan-like sentences.
+- **Depth in the main manuscript.** Put the full method, reported protocol, observations, improvements, and limitations in their owning sections. Inline derivation expansions and cross-references may assist navigation; the reader must not have to leave an incomplete treatment to discover its central methodology.
+- **Local attribution.** Place the source key/link and section, equation, table, or figure locator beside the claim it supports. A bibliography at the end does not support an otherwise unattributed paragraph. One evidence label may govern a coherent paragraph only when its scope is unambiguous and every substantive claim has the indicated support; split mixed evidence.
+- **Quantitative precision.** Introduce symbols and units before calculation. Keep reported values with their baseline and workload. Explain what the result changes and what it does not establish, including absent uncertainty or ablations.
+- **Useful figures and tables.** A figure has a technical purpose, number, caption, evidence, and text equivalent. Tables compare parallel quantities or protocols. Neither a visual nor a ledger of disconnected claims replaces the written method.
+- **Technical completeness without repetition.** Explain every concept owned here through §4.1. Link elsewhere for canonical prerequisites and sibling definitions. Do not pad with generic advice, repetitive summaries, source-name lists, or irrelevant systems.
+- **Original writing.** Synthesize inspected primary sources in original technical language. Preserve source equations and conditions with attribution, identify adaptations, and quote sparingly. Matching the references' editorial discipline does not permit copying their prose or claiming their predictions as facts.
 
 ---
 
@@ -319,6 +371,7 @@ Frontmatter with `entity_type: verification`. Body:
 2. **Verification task.** The falsifiable task from the plan, expanded into a protocol using the Experiment block (§5), including what result would *reject* the chapter's central claim.
 3. **Acceptance criteria.** Numeric or categorical, with tolerances where relevant.
 4. **What this edition did not do.** A plain statement that the protocol is a proposal and has not been executed.
+5. **Topic-completeness audit.** For each matrix coverage item and substantive variant: manuscript anchor · applicable §4.1 obligations · primary key and exact locator · unresolved gap · review consequence. Identify not-applicable obligations with reasons. This audit records editorial coverage; it does not claim that the experiment was run.
 
 ## 14. `references.md`
 
@@ -327,7 +380,9 @@ Frontmatter with `entity_type: references`. A table of every work cited in the c
 | Key | Type | Work | Authors / organisation | Venue / year | Primary URL | Official code | Status | Accessed | Used for |
 |---|---|---|---|---|---|---|---|---|---|
 
-- **Grounding is mandatory.** Authors MUST open each primary source with web fetch/search while writing, confirm the claims attributed to it, and record the actual date the page was opened in the *Accessed* column (never a nominal edition date). A source that could not be opened has Status = UNVERIFIED and Accessed = null, and every claim resting on it is labelled UNVERIFIED in the text.
+- **Grounding is mandatory.** Authors MUST open the relevant primary text with web fetch/search while writing, confirm the claims attributed to it, and record the actual inspection date in the *Accessed* column (never a nominal edition date). A source that could not be inspected has Status = UNVERIFIED and Accessed = null; unsupported candidate claims belong in the evidence-gap record, not factual exposition.
+- **Use evidence at the required depth.** Inspect the full-text method, experiment, appendix, documentation section, or implementation needed to support the claim. An abstract or metadata page verifies only the information it states. Record the inspected revision/version and exact section, equation, table, figure, or code locator in the *Used for* cell or a keyed note immediately below the table. Mutable documentation MUST be identified as unpinned when no revision is available; do not claim executable compatibility from reading it.
+- **Primary-source eligibility.** Research mechanisms and results require originating papers or technical reports. Official documentation, model/dataset cards, and repositories support their disclosed implementation/artifact claims. Course materials may provide a routed prerequisite reference but MUST NOT replace the originating research evidence. Discovery indexes and measurement aggregators are retrieval routes, not proof of unrelated mechanisms; an originating measurement study may support only its own disclosed protocol and results. Lab/project blogs qualify only for first-party technical disclosures and cannot establish an externally attributed finding without its primary source. Source prestige and citation count are not verification.
 - Spine papers use their `Pnn` id as Key and MUST match Appendix D exactly.
 - Other works use `R<ch>.<n>`.
 - Type ∈ paper · technical report · documentation · repository · dataset card · model card · course · measurement source.
@@ -350,6 +405,7 @@ Frontmatter with `entity_type: references`. A table of every work cited in the c
 | Operational behaviour | Timeouts, retries, backpressure, state consistency, observability, rollout and rollback |
 | Security/authorisation | Threat assumptions, permissions, data boundaries, side-effect controls |
 | Editorial quality | Precise terminology, concise introduction, source-supported mechanisms, bounded claims, clear limitations |
+| Topic completeness | Every required concept/variant mapped to §4.1; full methodology, reported protocol and observations, documented improvements or an explicit absence of evidence; justified not-applicable items; no unsupported material assertions; claims bounded by disclosed limitations |
 
 ---
 
@@ -423,7 +479,7 @@ $$
 
 ## 17. Things a chapter MUST NOT do
 
-- Be a reference list, an outline, or a placeholder. Every file carries the full research manuscript for its node; the content-writing duty belongs to the authors of this book and to no one else.
+- Be a reference list, an outline, or a placeholder when the file is a chapter or section manuscript. Reference ledgers, verification protocols, indexes, and authoring specifications retain their supporting functions; they do not substitute for the manuscript.
 - Change, paraphrase, or "improve" any file in `Instruction/`. Those files are read-only inputs.
 - Present a proposed experiment as a result.
 - Present a lab's or vendor's reported number as the book's measurement.
@@ -433,14 +489,17 @@ $$
 - Reuse a symbol from `notation.md` with a different meaning.
 - Ship a Mermaid diagram without its text equivalent.
 - Leave a matrix "Required coverage" item unaddressed without an explicit one-line note saying why.
+- Stop at intuition, definitions, diagrams, or implementation suggestions while leaving the methodology, source-reported experiments, observations, or documented improvements unexplained.
+- Fill missing scientific details with guessed factual assumptions, or treat a forecast, a proposed experiment, or a suggested improvement as an established result.
 
 ---
 
 ## 18. Author workflow (applies to every chapter author, human or agent)
 
-1. **Read, in order:** this contract in full; the chapter's matrix in `book_plan.md` (six rows of *Required coverage*, the Verification line, the Source anchors), plus the plan's corrections table, shared mathematical contract, Appendix A–D entries relevant to the chapter, and Appendix H; `docs/front-matter/notation.md`; `Instruction/AI_REFERENCE_STACK.md` in full; `docs/atlas-manifest.json` for ids, slugs, and paths; the part `README.md`; and one finished exemplar chapter (Chapter 04 or 05) to match depth and block grammar.
+1. **Read, in order:** this contract in full; the chapter's matrix in `book_plan.md` (six rows of *Required coverage*, the Verification line, the Source anchors), plus the plan's corrections table, shared mathematical contract, Appendix A–D entries relevant to the chapter, and Appendix H; `docs/front-matter/notation.md`; `Instruction/AI_REFERENCE_STACK.md` in full; `docs/atlas-manifest.json` for ids, slugs, and paths; the part `README.md`; and an existing exemplar chapter (Chapter 04 or 05) for block grammar. An exemplar's existence is not evidence that its sources or completeness have been reviewed. Apply the current §4.1 and §12 standards even when older drafts do not.
 2. **Build the reference-stack map first.** Before writing prose, list which reference-stack entries (§1 labs, §2 conferences, §3 discovery sources, §4 systems with their §4.1 layer, §4.2 inspection dimensions) the chapter draws on. This list becomes the *Reference-stack coverage* table (§3 item 13) and drives what is fetched.
-3. **Fetch primary sources while writing.** Follow the reference stack's own protocols: lab-level search protocol §1.1, conference workflow §2.1, paper-search cascade §3.1, training-stack search protocol §4.3. Open the arXiv abs/HTML page, the official documentation root, the official repository, or the model card; confirm each attributed claim; quote sparingly and exactly; record the URL and access date in `references.md`. Rank and discovery sites prioritise what to read; they never substitute for the paper, model card, repository, or official documentation.
+3. **Build the completeness map and inspect primary sources.** Map every required concept and substantive variant to §4.1. Follow the reference stack's protocols: lab-level search §1.1, conference workflow §2.1, paper-search cascade §3.1, training-stack search §4.3. Inspect the relevant full-text method, experimental section, appendix, official documentation section, repository, or model card; confirm each attributed claim; quote sparingly and exactly; record URL, actual inspection date, revision, and exact locator in `references.md`. Discovery sites prioritise retrieval and never replace originating evidence.
 4. **Write the nine files** (chapter page, six sections, `verification.md`, `references.md`) into the chapter folder only. Never touch `Instruction/`, `book_plan.md`, or another chapter's files.
-5. **Self-check before reporting:** every matrix item covered; fixed H2 headings present; one evidence label per non-trivial claim; no EMPIRICALLY-OBSERVED or CODE-VERIFIED; every mechanism followed by its cost line; every Mermaid diagram followed by a text list; frontmatter ids and sibling chain correct (section K.6 → `ms.verification.K` → `ms.references.K`); every relative link resolves to a path in the manifest; no term defined that another chapter owns.
-6. **Report:** files and word counts; URLs fetched; NOT-DISCLOSED/UNVERIFIED items; uncovered matrix items with reasons; sections of other chapters linked; the *Terms owned here* list.
+5. **Self-check before reporting:** every matrix item and applicable §4.1 obligation substantively covered; fixed H2 headings present; full method reconstruction and source-reported protocol/observations explained; improvement claims supported by their actual comparisons; one evidence label per non-trivial claim; no EMPIRICALLY-OBSERVED or unsupported CODE-VERIFIED; no invented factual assumptions; every mechanism followed by its cost line; every Mermaid diagram followed by a text list; frontmatter ids and sibling chain correct (section K.6 → `ms.verification.K` → `ms.references.K`); every relative link resolves to a path in the manifest; no term defined that another chapter owns.
+6. **Validate within the content-only boundary.** Run the existing figure validator (`npm run figures:check` from `atlas/`) when figures change. For manuscript compilation use the exported `compileAtlas` API without `writeBundle`, with explicit docs/reference-stack paths and a compilation timestamp; review error and warning diagnostics in memory. Both existing CLI scripts, `compile` and `compile:check`, write `.atlas` and therefore MUST NOT be used as read-only checks. Do not modify application code, dependencies, build outputs, `Instruction/`, or `book_plan.md`. Instruction-only edits require local link, consistency, and diff review; they do not require application builds.
+7. **Report accurately:** files and word counts; primary texts inspected; NOT-DISCLOSED/UNVERIFIED items and their review consequence; uncovered matrix items with reasons; canonical chapter links; the *Terms owned here* list. Distinguish writing instructions updated, drafts revised, topics scientifically reviewed, and chapters not yet authored. Never report all 66 chapters complete because a shared standard changed or the compiler passed.

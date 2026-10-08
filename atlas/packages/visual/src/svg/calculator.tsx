@@ -36,7 +36,14 @@ export interface CalculatorViewProps {
   readonly state?: StateView;
 }
 
-export function CalculatorView({ spec, values, onInput, idPrefix, texHtml, state = NO_STATE }: CalculatorViewProps): JSX.Element {
+export function CalculatorView({
+  spec,
+  values,
+  onInput,
+  idPrefix,
+  texHtml,
+  state = NO_STATE,
+}: CalculatorViewProps): JSX.Element {
   const interactive = onInput !== undefined;
   const prefix = safeId(idPrefix);
   const current: Record<string, number> = {};
@@ -51,7 +58,13 @@ export function CalculatorView({ spec, values, onInput, idPrefix, texHtml, state
     <div class={cls('vg-calc', !interactive && 'vg-calc--static')}>
       <div class="vg-calc__eq">
         {texHtml !== undefined ? (
-          <div class="vg-calc__tex" dangerouslySetInnerHTML={{ __html: texHtml }} />
+          <div
+            class="vg-calc__tex"
+            role="region"
+            aria-label="Calculator equation"
+            tabIndex={0}
+            dangerouslySetInnerHTML={{ __html: texHtml }}
+          />
         ) : (
           <code class="vg-tex">{spec.tex}</code>
         )}
@@ -71,7 +84,12 @@ export function CalculatorView({ spec, values, onInput, idPrefix, texHtml, state
           );
           if (input.options !== undefined) {
             return (
-              <fieldset class={cls('vg-calc__field', 'vg-calc__field--options', litClass(state, input.symbol))} data-vg-key={input.symbol} key={input.symbol} disabled={!interactive}>
+              <fieldset
+                class={cls('vg-calc__field', 'vg-calc__field--options', litClass(state, input.symbol))}
+                data-vg-key={input.symbol}
+                key={input.symbol}
+                disabled={!interactive}
+              >
                 <legend class="vg-calc__legend">
                   <span class="vg-calc__fieldhead">
                     <span class="vg-calc__name">{head}</span>
@@ -107,7 +125,13 @@ export function CalculatorView({ spec, values, onInput, idPrefix, texHtml, state
           const span = model.max - model.min;
           const frac = span > 0 ? (model.toPosition(value) - model.min) / span : 0;
           return (
-            <div class={cls('vg-calc__field', litClass(state, input.symbol))} data-vg-key={input.symbol} data-vg-frac={input.symbol} style={fracStyle(frac)} key={input.symbol}>
+            <div
+              class={cls('vg-calc__field', litClass(state, input.symbol))}
+              data-vg-key={input.symbol}
+              data-vg-frac={input.symbol}
+              style={fracStyle(frac)}
+              key={input.symbol}
+            >
               <div class="vg-calc__fieldhead">
                 <label class="vg-calc__name" for={id}>
                   {head}
@@ -148,7 +172,12 @@ export function CalculatorView({ spec, values, onInput, idPrefix, texHtml, state
 
       <output class="vg-calc__outputs" aria-live="polite" for={controlIds.join(' ')}>
         {outputs.map((output) => (
-          <span class={cls('vg-calc__out', output.emphasis && 'vg-calc__out--emph', litClass(state, output.symbol))} key={output.symbol} data-symbol={output.symbol} data-vg-key={output.symbol}>
+          <span
+            class={cls('vg-calc__out', output.emphasis && 'vg-calc__out--emph', litClass(state, output.symbol))}
+            key={output.symbol}
+            data-symbol={output.symbol}
+            data-vg-key={output.symbol}
+          >
             <span class="vg-calc__outlabel">
               <span class="vg-calc__sym">{output.symbol}</span>
               <span class="vg-calc__outtext">{output.label}</span>

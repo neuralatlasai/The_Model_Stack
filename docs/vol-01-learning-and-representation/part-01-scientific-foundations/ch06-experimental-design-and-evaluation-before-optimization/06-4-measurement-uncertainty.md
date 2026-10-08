@@ -28,7 +28,7 @@ datasets: []
 status: {maturity: established, disputed: false}
 evidence_summary: {labels_used: [MATHEMATICALLY-DERIVED, DERIVED, ASSUMED, PAPER-REPORTED, OFFICIAL-DOCUMENTATION, NOT-DISCLOSED, UNVERIFIED], empirically_observed: false}
 word_count_target: 2300
-updated_at: 2026-09-20
+updated_at: 2026-10-08
 editorial_status: manuscript_draft
 ---
 
@@ -36,7 +36,9 @@ editorial_status: manuscript_draft
 
 ## Scope
 
-Objective: allocate uncertainty across training runs, tasks, dependent items, and repeated generations before choosing an experiment budget. Baseline: one score with an item-level binomial interval. Success: every reported interval names its random population, preserves pairing, and distinguishes an unresolved effect from practical equivalence. Statistical definitions belong to [§2.5](../ch02-mathematical-and-statistical-foundations/02-5-statistical-inference.md); this section applies them to the evaluation unit of [§6.1](06-1-evaluation-units.md). Hardware repeatability belongs to [§3.6](../ch03-numerical-computation-and-trustworthy-training/03-6-reproducibility-limits.md), and judge-specific uncertainty is developed in [Chapter 62](../../../vol-03-grounded-and-interactive-intelligence/part-11-evaluation-interpretability-and-deployment-assurance/ch62-human-preference-model-judges-and-uncertainty/README.md).
+Uncertainty in evaluation can arise from the sampled tasks, source clusters, training runs, generation draws, human judgments, and service windows. An interval becomes interpretable only after specifying which of these populations is random and which is conditioned upon. A comparison of two fixed checkpoints and a comparison of the procedures that train them therefore require different evidence.
+
+This section develops paired and clustered estimators, a crossed variance decomposition under declared assumptions, practical decision margins, and replication planning. Miller's statistical treatment of language-model evaluations and Bouthillier et al.'s analysis of learning-pipeline variability supply complementary boundaries ([R6.1, R6.25](references.md), PAPER-REPORTED). The derivations below do not borrow variance values from those papers for an unrun model.
 
 ## Why this exists
 
@@ -421,11 +423,9 @@ INVARIANT  every expected item has exactly one scored pair or a registered failu
 
 ## Siblings
 
-**Item-level inference — [§2.5](../ch02-mathematical-and-statistical-foundations/02-5-statistical-inference.md).** DERIVED: appropriate when observations are independent and the checkpoint is fixed; the changed primitive is a row rather than a cluster. It reduces implementation cost, while unmodelled grouping produces optimistic intervals.
+Item-level inference conditions on the selected checkpoint and treats independent sampled items as its replication. Clustered inference changes that independent unit to passages, source problems, users, or another justified group. Seed-block inference instead varies the training procedure while retaining the complete suite-level response for each run. These estimators can all be appropriate, but they quantify different uncertainty.
 
-**Seed-block inference — [§6.3](06-3-controlled-comparisons.md).** DERIVED: introduced when the training procedure is the intervention; replaces fixed-checkpoint uncertainty with independent run contrasts. It estimates a different population and costs additional training runs; shared test items still limit task generalisation.
-
-**Judge uncertainty — [Chapter 62](../../../vol-03-grounded-and-interactive-intelligence/part-11-evaluation-interpretability-and-deployment-assurance/ch62-human-preference-model-judges-and-uncertainty/README.md).** ASSUMED forward route: adds evaluator identity and disagreement to the experimental factors. The objective becomes agreement with a declared evaluation criterion; a stable judge can still be systematically wrong.
+Human or model judges add another measurement process. Replicating a judge can estimate conditional disagreement without showing that the judge's criterion matches the target construct. A stable evaluator can have systematic error. Judge identity, rubric, presentation order, and adjudication rules consequently belong to the evaluation unit and, when varied, to the experimental design.
 
 ## Extensions
 

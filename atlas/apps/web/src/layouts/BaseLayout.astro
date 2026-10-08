@@ -27,6 +27,8 @@ import '../styles/research.css';
 // entry, so it is imported by path (export requested from the visual owner).
 import '../../../../packages/visual/src/svg/visual-grammar.css';
 import '../styles/print.css';
+import '../styles/article.css';
+import '../styles/workspace.css';
 
 interface Props {
   /** Page title without the site suffix. */
@@ -39,6 +41,9 @@ interface Props {
   readonly hasTree?: boolean;
   readonly hasRail?: boolean;
   readonly depthControl?: boolean;
+  /** Manuscript pages expose every research layer, including legacy depth links. */
+  readonly readingMode?: 'atlas' | 'complete';
+  readonly articleTitle?: string | null;
   readonly jsonLd?: Readonly<Record<string, unknown>> | null;
   /** e.g. `noindex` for the 404 page. */
   readonly robots?: string;
@@ -53,6 +58,8 @@ const {
   hasTree = false,
   hasRail = false,
   depthControl = false,
+  readingMode = 'atlas',
+  articleTitle = null,
   jsonLd = null,
   robots,
 } = Astro.props;
@@ -63,7 +70,13 @@ const canonical = absoluteUrl(canonicalPath, Astro.site);
 ---
 
 <!doctype html>
-<html lang="en" data-depth={DEFAULT_DEPTH} transition:animate="none">
+<html
+  lang="en"
+  data-depth={DEFAULT_DEPTH}
+  data-reading-mode={readingMode}
+  data-article-layout={articleTitle === null ? undefined : 'workspace'}
+  transition:animate="none"
+>
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
@@ -79,15 +92,42 @@ const canonical = absoluteUrl(canonicalPath, Astro.site);
     <meta property="og:description" content={metaDescription} />
     <meta property="og:type" content="article" />
     <link rel="icon" href="/favicon.svg" type="image/svg+xml" />
-    <link rel="preload" href={garamondLatin} as="font" type="font/woff2" crossorigin="anonymous" />
-    <script is:inline set:html={bootstrapScript()} />
+    <link
+      rel="preload"
+      href={
+        readingMode === 'complete'
+          ? `${import.meta.env.BASE_URL}fonts/et-book/${articleTitle === null ? 'regular' : 'bold'}.woff`
+          : garamondLatin
+      }
+      as="font"
+      type={readingMode === 'complete' ? 'font/woff' : 'font/woff2'}
+      crossorigin="anonymous"
+    />
+    {articleTitle !== null && (
+      <link
+        rel="preload"
+        href={`${import.meta.env.BASE_URL}fonts/geist/latin.woff2`}
+        as="font"
+        type="font/woff2"
+        crossorigin="anonymous"
+      />
+    )}
+    <script is:inline set:html={bootstrapScript()}></script>
     <ClientRouter fallback="swap" />
-    {jsonLd !== null && <script is:inline type="application/ld+json" set:html={jsonForHtml(jsonLd)} />}
+    {jsonLd !== null && <script is:inline type="application/ld+json" set:html={jsonForHtml(jsonLd)}></script>}
     <slot name="head" />
   </head>
   <body data-domain={domain}>
-    <a class="sh-skip" href="#main">Skip to content</a>
-    <TopNav navKey={navKey} hasTree={hasTree} depthControl={depthControl} />
+    <a class="sh-skip" href="#main">
+      Skip to content
+    </a>
+    <TopNav
+      navKey={navKey}
+      hasTree={hasTree}
+      depthControl={depthControl}
+      article={readingMode === 'complete'}
+      articleTitle={articleTitle}
+    />
     <slot />
     <ReadingDock hasTree={hasTree} hasRail={hasRail} />
     <Footer />

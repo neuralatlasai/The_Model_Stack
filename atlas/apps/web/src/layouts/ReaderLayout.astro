@@ -15,6 +15,8 @@
 import type { DomainKey, NodeId, TopNavKey } from '@atlas/core';
 import { fade } from 'astro:transitions';
 import KnowledgeTree from '../components/shell/KnowledgeTree.astro';
+import SearchTrigger from '../components/shell/SearchTrigger.astro';
+import ThemeToggle from '../components/shell/ThemeToggle.astro';
 import BaseLayout from './BaseLayout.astro';
 
 interface Props {
@@ -26,6 +28,8 @@ interface Props {
   readonly navKey?: TopNavKey | null;
   readonly rail?: boolean;
   readonly depthControl?: boolean;
+  readonly readingMode?: 'atlas' | 'complete';
+  readonly articleTitle?: string | null;
   readonly jsonLd?: Readonly<Record<string, unknown>> | null;
 }
 
@@ -38,6 +42,8 @@ const {
   navKey = null,
   rail = false,
   depthControl = false,
+  readingMode = 'atlas',
+  articleTitle = null,
   jsonLd = null,
 } = Astro.props;
 ---
@@ -51,6 +57,8 @@ const {
   hasTree={true}
   hasRail={rail}
   depthControl={depthControl}
+  readingMode={readingMode}
+  articleTitle={articleTitle}
   jsonLd={jsonLd}
 >
   <slot name="head" slot="head" />
@@ -61,21 +69,26 @@ const {
         <slot />
       </div>
     </main>
-    {
-      rail && (
-        <aside id="context-rail" class="sh-rail" aria-label="Context" popover data-rail>
-          <div class="sh-rail-head">
-            <span class="sh-rail-title">Context</span>
-            <span class="sh-rail-current" data-rail-current></span>
-            <button type="button" class="sh-panel-close" popovertarget="context-rail" popovertargetaction="hide">
-              Close
-            </button>
-          </div>
-          <div class="sh-rail-body" transition:name="atlas-rail" transition:animate={fade({ duration: '160ms' })}>
-            <slot name="rail" />
-          </div>
-        </aside>
-      )
-    }
+    {rail && (
+      <aside id="context-rail" class="sh-rail" aria-label="Context" popover data-rail>
+        <div class="sh-rail-head">
+          <span class="sh-rail-title">Context</span>
+          <span class="sh-rail-current" data-rail-current></span>
+          <button type="button" class="sh-panel-close" popovertarget="context-rail" popovertargetaction="hide">
+            Close
+          </button>
+        </div>
+        <div class="sh-rail-body" transition:name="atlas-rail" transition:animate={fade({ duration: '160ms' })}>
+          {articleTitle !== null && (
+            <div class="aw-context-tools">
+              <a href="/systems/">Systems</a>
+              <SearchTrigger />
+              <ThemeToggle />
+            </div>
+          )}
+          <slot name="rail" />
+        </div>
+      </aside>
+    )}
   </div>
 </BaseLayout>

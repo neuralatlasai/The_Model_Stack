@@ -26,9 +26,9 @@ implementations: []
 benchmarks: []
 datasets: []
 status: {maturity: established, disputed: false}
-evidence_summary: {labels_used: [PAPER-REPORTED, MATHEMATICALLY-DERIVED, DERIVED, ASSUMED, NOT-DISCLOSED, UNVERIFIED], empirically_observed: false}
+evidence_summary: {labels_used: [PAPER-REPORTED, MATHEMATICALLY-DERIVED, DERIVED, NOT-DISCLOSED, UNVERIFIED], empirically_observed: false}
 word_count_target: 1000
-updated_at: 2026-09-20
+updated_at: 2026-10-08
 editorial_status: manuscript_draft
 ---
 
@@ -36,35 +36,41 @@ editorial_status: manuscript_draft
 
 ## Scope
 
-Objective: generalise the conditioning variable c of Eq. N.1 from a text prefix to documents, images, audio, actions, and environment observations; state what stays fixed in the ledger (targets, mask, normalisation) and what changes (the conditioning interface and its cost); and separate generative objectives, which normalise over the target space, from discriminative and contrastive objectives, which normalise over a candidate set. Baseline: the causal row with text c. Success: the reader can write the ledger row for a captioning model, a speech model, an action-conditioned model, and a contrastive encoder, and can say which of them defines a sampler. Boundaries: encoders, adapters, and fusion are owned by Chapter 18; modality-specific systems by Part X.
+Conditional generation extends the model's context from a text prefix to documents, images, audio, actions, or environment observations while retaining an explicitly defined target distribution. The conditioning representation can consume compute and receive gradients even when it bears no direct prediction loss. Contrastive encoders instead compare examples within a declared candidate set; the candidate count and the return of remote candidate gradients are part of a distributed implementation's mathematical specification. Discrete action classification and continuous action regression also require different loss units. (PAPER-REPORTED; P44 section2.3; R4.18 method; R4.19 sections3-4; R4.21 section3.)
+
+Boundaries: encoders, adapters, and fusion are owned by Chapter 18; modality-specific systems by Part X.
 
 ## Why this exists
 
-What failed before was the assumption that conditioning is a prefix of the same kind as the target. Once c became an image, an audio clip, or a robot state, the objective did not change but the *interface* did, and reports began to describe fusion architectures as if they were objectives. The bottleneck was two-fold: the cost of the conditioning encoder is paid on every training example whether or not it receives gradient, and the loss mask must exclude conditioning placeholders or the model is trained to reproduce them. The constraint that became dominant for alignment objectives is batch size: a contrastive loss over N pairs normalises over N candidates, so N is part of the objective and not merely an optimisation setting. What changed is the recognition that "generative versus discriminative" is a statement about what the softmax runs over.
+Conditioning can be a document, image, audio recording, return/state/action history, or environment observation. Naming the modality does not specify the learning problem. A system may generate a target sequence, choose one label, align two encoders, or predict a continuous action. The interface, target space, visibility, and loss units determine what is learned and which computations are required (DERIVED).
+
+CLIP, Whisper, LLaVA, and Decision Transformer supply distinct published constructions. Their methods cannot be collapsed into a token-loss row merely by calling every input context: CLIP discriminates paired embeddings, Whisper generates task-conditioned token sequences, LLaVA conditions a language decoder on projected image features, and Decision Transformer uses an action-space-dependent prediction loss (PAPER-REPORTED: P44 section 2.3; R4.18 section 2; R4.19 section 3; R4.20 section 3).
 
 ## Intuition
 
-Physically, a conditional generative objective pays the encoder's FLOPs on c plus the decoder's FLOPs on x, and stores the encoder output as a prefix in attention (cross-attention K/V or prefix tokens); a contrastive objective pays two encoders and an N×N similarity matrix per batch, and stores no decoder at all. Heuristically one may describe a vision–language model as "seeing"; the resource fact is that image features occupy prefix positions and are attended like tokens. Distributionally, a generative objective must assign probability to every possible target; a discriminative objective only ranks a finite candidate set, which is why it can be cheaper and why it cannot sample.
+An answer-only mask removes the direct loss on conditioning positions. It does not detach their representations: the answer loss can differentiate through attention to the conditioning encoder, projection, and prompt representations. Freezing parameters or detaching a tensor is an independent implementation choice (MATHEMATICALLY-DERIVED).
+
+A contrastive row instead normalizes a match score over a declared candidate set. Changing the candidate set changes the objective, including its chance-level loss. A finite-label classifier can sample labels from its categorical distribution; it simply does not define an autoregressive sampler over an unrestricted target sequence. Continuous action regression has different units again and cannot be relabeled token cross-entropy.
 
 ## Formulation
 
-> **Definition — Conditional generative objective.** The application of Eq. N.2 to targets x with a conditioning c that enters the model through an interface (prefix tokens, cross-attention memory, or state) and carries m_t = 0 at every conditioning position.
+> **Definition — Conditional generative objective.** The application of Eq. N.2 to targets x with conditioning c entering through prefix tokens, cross-attention memory, or state. The response-only row here excludes direct conditioning-token losses; a joint model may also score conditioning tokens.
 
 $$
 \mathcal{L}_{\text{gen}}(\theta) = -\frac{\sum_{t} m_t \log p_\theta(x_t \mid x_{<t}, \phi(c))}{\sum_t m_t},\qquad \phi = \text{conditioning encoder / adapter}
 $$
 *(Eq. 4.12)* where φ(c) is the encoded conditioning in the decoder's representation space; the softmax at each t runs over the target vocabulary V.
 
-> **Definition — Discriminative objective.** An objective whose softmax (or scoring) runs over a finite candidate set 𝒴 rather than over sequences, p_θ(y | c) for y ∈ 𝒴, with no defined sampler over the target modality.
+> **Definition — Discriminative objective.** An objective whose softmax (or scoring) runs over a finite candidate set 𝒴 rather than over sequences, p_θ(y | c) for y ∈ 𝒴, with a categorical distribution over labels; this does not define an unrestricted sequence sampler.
 
-The contrastive alignment objective is owned by [§18.4 Learning objectives](../../part-03-model-architectures-and-state/ch18-multimodal-architectural-primitives/18-4-learning-objectives.md); recalled here in one sentence: a discriminative objective in which the candidate set is the other elements of the batch: for N paired samples (a_i, b_i), maximise the score of the N matched pairs against the N² − N unmatched pairs.
+The contrastive alignment objective is owned by [§18.4 Learning objectives](../../part-03-model-architectures-and-state/ch18-multimodal-architectural-primitives/18-4-learning-objectives.md); recalled here in one sentence: a discriminative objective in which the candidate set is the other elements of the batch: for B_c paired samples (a_i, b_i), maximise the scores of the B_c matched pairs against the B_c² − B_c unmatched pairs.
 
 For encoders f_a, f_b with ℓ₂-normalised outputs and learned temperature τ_c > 0:
 
 $$
-\mathcal{L}_{\text{con}} = \frac{1}{2N}\sum_{i=1}^{N}\left[-\log\frac{e^{s_{ii}/\tau_c}}{\sum_{j} e^{s_{ij}/\tau_c}} - \log\frac{e^{s_{ii}/\tau_c}}{\sum_{j} e^{s_{ji}/\tau_c}}\right],\qquad s_{ij} = f_a(a_i)^\top f_b(b_j)
+\mathcal{L}_{\text{con}} = \frac{1}{2B_c}\sum_{i=1}^{B_c}\left[-\log\frac{e^{s_{ii}/\tau_c}}{\sum_{j} e^{s_{ij}/\tau_c}} - \log\frac{e^{s_{ii}/\tau_c}}{\sum_{j} e^{s_{ji}/\tau_c}}\right],\qquad s_{ij} = f_a(a_i)^\top f_b(b_j)
 $$
-*(Eq. 4.13)* where N = pairs in the batch, s_ij = cosine similarity, τ_c = temperature (local symbol; distinct from the distillation τ of notation). This is the symmetric cross-entropy of P44 written out (PAPER-REPORTED · P44 §2.3 for the form; the equation transcription is DERIVED).
+*(Eq. 4.13)* where B_c = pairs in the global batch, s_ij = cosine similarity, τ_c = temperature (local symbol; distinct from the distillation τ of notation). This is the symmetric cross-entropy of P44 written out (PAPER-REPORTED · P44 §2.3 for the form; the equation transcription is DERIVED).
 
 ```figure
 id: fig-4.26
@@ -72,8 +78,8 @@ kind: calculator
 title: The contrastive candidate set and its chance-level loss
 caption: >-
   Eq. 4.13 with every s_ij equal (as at a symmetric start) reduces to ln N_g
-  per row, where N_g = W·N is the candidate set after cross-rank gathering.
-  The per-device batch N is held fixed in the states below; only the number of
+  per row, where N_g = W·B_local is the candidate set after cross-rank gathering.
+  The per-device batch B_local is held fixed in the states below; only the number of
   gathered ranks W changes, and with it the loss value that means chance.
   Batch sizes are illustrative, not P44's.
 placement: rail
@@ -82,44 +88,58 @@ evidence: MATHEMATICALLY-DERIVED
 source: ["DERIVED:eq-4.13", P44]
 alt: >-
   Calculator for Eq. 4.13 over the gathered candidate set. Inputs: local
-  pairs per rank N and data-parallel ranks W. Outputs: candidates per row
-  N_g = W·N; negatives per row N_g − 1; similarities scored per rank and
-  direction N·N_g; negatives in the global matrix N_g² − N_g; and the loss at
-  uniform similarity, ln N_g nats. At N = 256 and W = 1 (illustrative): 256
+  pairs per rank B_local and data-parallel ranks W. Outputs: candidates per row
+  N_g = W·B_local; negatives per row N_g − 1; similarities scored per rank and
+  direction B_local·N_g; negatives in the global matrix N_g² − N_g; and the loss at
+  uniform similarity, ln N_g nats. At B_local = 256 and W = 1 (illustrative): 256
   candidates, 255 negatives per row, 65,536 similarities, 65,280 negatives,
   ln 256 = 5.545 nats. At W = 8: 2,048 candidates, a [256, 2,048] block per
   rank, 7.625 nats. At W = 32: 8,192 candidates, 9.011 nats.
 spec:
   tex: >-
     \mathcal{L}_{\text{con}}\big|_{s_{ij}\ \text{equal}} = \ln N_g,\qquad
-    N_g = W N,\qquad \text{negatives per row} = N_g - 1
+    N_g = W B_local,\qquad \text{negatives per row} = N_g - 1
   equation: "4.13"
   inputs:
-    - { symbol: N, label: "local pairs per rank, N", default: 256, min: 8, max: 4096, scale: log2, format: integer }
+    - { symbol: B_local, label: "local pairs per rank, B_local", default: 256, min: 8, max: 4096, scale: log2, format: integer }
     - { symbol: W, label: "data-parallel ranks gathered, W", default: 1, min: 1, max: 64, scale: log2, format: integer }
   outputs:
-    - { symbol: Ng, label: "candidates per row, N_g = W·N", formula: "W*N", format: integer }
+    - { symbol: Ng, label: "candidates per row, N_g = W·B_local", formula: "W*B_local", format: integer }
     - { symbol: neg, label: "negatives per row, N_g − 1", formula: "Ng - 1", format: integer }
-    - { symbol: blk, label: "similarities per rank and direction, N·N_g", formula: "N*Ng", format: integer }
+    - { symbol: blk, label: "similarities per rank and direction, B_local·N_g", formula: "B_local*Ng", format: integer }
     - { symbol: allneg, label: "negatives in the global matrix, N_g² − N_g", formula: "Ng^2 - Ng", format: integer }
     - { symbol: L0, label: "loss at uniform similarity, ln N_g (nats)", formula: "ln(Ng)", format: fixed3, emphasis: true }
 states:
-  - { anchor: formulation, label: "one device, N = 256", variables: { N: 256, W: 1 }, highlight: [Ng, L0], note: "Each row's softmax runs over the 256 candidates of the batch; at uniform similarity the loss is ln 256 = 5.545 nats. The batch size sits inside the objective." }
-  - { anchor: mechanism, label: "sharded over W = 4", variables: { N: 256, W: 4 }, highlight: [Ng, neg], note: "The negatives are the batch: with the batch sharded over 4 ranks, only an all-gather keeps each row's candidate set at W·N = 1024 (1023 negatives) rather than the 256 on one rank." }
-  - { anchor: algorithm, label: "W = 8 ranks, gathered", variables: { N: 256, W: 8 }, highlight: [Ng, blk, L0], note: "After all_gather the candidate set is W·N = 2048: each rank scores a [256, 2048] block per direction and the chance-level loss rises to 7.625 nats." }
-  - { anchor: failure-modes, label: "W = 32, same local N", variables: { N: 256, W: 32 }, highlight: [L0], note: "Batch-size aliasing: identical per-device batches, but the chance level is ln 8192 = 9.011 nats; loss values from different cluster sizes do not share an axis." }
+  - { anchor: formulation, label: "one device, B_local = 256", variables: { B_local: 256, W: 1 }, highlight: [Ng, L0], note: "Each row's softmax runs over the 256 candidates of the batch; at uniform similarity the loss is ln 256 = 5.545 nats. The batch size sits inside the objective." }
+  - { anchor: mechanism, label: "sharded over W = 4", variables: { B_local: 256, W: 4 }, highlight: [Ng, neg], note: "The negatives are the batch: with the batch sharded over 4 ranks, cross-rank candidate exchange keeps each row's candidate set at W·B_local = 1024 (1023 negatives) rather than the 256 on one rank." }
+  - { anchor: algorithm, label: "W = 8 ranks, gathered", variables: { B_local: 256, W: 8 }, highlight: [Ng, blk, L0], note: "After all_gather the candidate set is W·B_local = 2048: each rank scores a [256, 2048] block per direction and the chance-level loss rises to 7.625 nats." }
+  - { anchor: failure-modes, label: "W = 32, same local B_local", variables: { B_local: 256, W: 32 }, highlight: [L0], note: "Batch-size aliasing: identical per-device batches, but the chance level is ln 8192 = 9.011 nats; loss values from different cluster sizes do not share an axis." }
 ```
 
 $$
 \mathcal{L}_{\text{action}} = -\frac{\sum_{t} m_t \log p_\theta(a_t \mid \hat{R}_{\le t}, s_{\le t}, a_{<t})}{\sum_t m_t}
 $$
-*(Eq. 4.14)* where a_t = discretised action, s_t = state/observation, R̂_t = return-to-go; the return-conditioned sequence-modeling form of R4.20 with loss on action tokens only (PAPER-REPORTED · R4.20 for the conditioning set; the mask statement is the book's ledger transcription, DERIVED).
+*(Eq. 4.14)* where a_t = discretised action, s_t = state/observation, R̂_t = return-to-go; the discrete-action case of the return-conditioned sequence model; R4.20 uses MSE for continuous actions (PAPER-REPORTED · R4.20 for the conditioning set; the mask statement is the book's ledger transcription, DERIVED).
 
 ## Mechanism
 
-**Documents as conditioning.** With c a document, the row is the causal row with m_t = 0 over the document span; this is the response-only loss of [§31.1](../../../vol-02-execution-and-optimization/part-06-post-training-and-reinforcement-learning/ch31-supervised-fine-tuning-and-behavior-acquisition/31-1-sft-objectives.md) and the retrieval-conditioned generation of Part IX. Cost: the document's tokens are processed by the full backbone and stored in the KV cache without contributing gradient; the gradient-bearing fraction is ρ = |x| / (|c| + |x|) (DERIVED).
+### Methodology
 
-**Images as conditioning.** Two interfaces appear in the spine. Prefix-token: LLaVA maps CLIP visual features through "a trainable projection matrix W to convert visual features into language embedding tokens" and trains auto-regressively where "only assistant answers … are used to compute the loss", in two stages (projection only on image–text pairs; then projection and LLM on instruction data) (PAPER-REPORTED · R4.19). Cross-attention memory: the encoder–decoder attention of P01, "queries come from the previous decoder layer, and the memory keys and values come from the output of the encoder" (PAPER-REPORTED · P01 §3.2.3), generalises to any encoder output; the cost is that of §4.2's cross-attention line with T_enc = number of visual tokens. In both, the ledger row is Eq. 4.12 with m_t = 0 on image positions; what differs is where φ(c) enters and whether φ receives gradient (stage-dependent in R4.19).
+Specify c and the target first. For a retrieved document, c can be tokenized into a known prefix with a response-only scoring mask. For an image, an encoder can produce features mapped into the decoder's embedding space. For audio, an encoder can supply cross-attention memory and task/language tokens can select the requested output. In each case, record which modules are trained, which visibility is permitted, and which conditioning or output symbols are actually scored (DERIVED).
+
+LLaVA's original two-stage procedure aligns visual features with a language model through a projection, then instruction-tunes the projection and language model while using the stated frozen visual encoder ([R4.19](references.md#r419), section 3, PAPER-REPORTED). This is a specific architecture and trainable-parameter schedule, not evidence that every image-conditioned model uses the same interface. The target is the assistant response under its conversation construction.
+
+Whisper uses a multitask sequence format with task, language, timestamp, and transcript conventions ([R4.18](references.md#r418), section 2, PAPER-REPORTED). Reproduction requires the exact task sequence, because some task-related symbols are predicted outputs rather than only unscored prompts. Cross-attention to an audio encoder and causal output decoding have separate compute and cache costs. Neither this format nor its reported robustness establishes streaming behavior without a chunking/visibility protocol.
+
+Decision Transformer constructs return-to-go, state, and action sequences from offline trajectories and predicts actions from their causal history. The paper uses cross-entropy for discrete actions and mean-squared error for continuous actions ([R4.20](references.md#r420), section 3, PAPER-REPORTED). Equation 4.14 describes the categorical case; for continuous actions the corresponding mean squared distance is a different loss, not a categorical probability assigned to a token. Gato's heterogeneous serialization includes modality-specific representation and loss-mask decisions (R4.21 method); action and environment observations must retain their temporal order, units, and episode boundaries.
+
+For CLIP, normalize image and text embeddings, form the scaled pairwise similarity matrix, and apply cross-entropy in both directions with matched indices as labels. Use B_c for the global paired-example count, preserving N for model parameters. At identical similarities the loss is ln B_c; a larger candidate set changes this baseline. Duplicate or semantically equivalent pairs can violate the one-positive assumption by becoming false negatives (MATHEMATICALLY-DERIVED; objective form attributed to [P44](references.md#p44), section 2.3).
+
+Distributed contrastive gradients require both the local query paths and the candidate-embedding paths contributed by queries on other ranks. Gathering detached candidate tensors and differentiating only local rows generally omits those remote candidate contributions. A differentiable gather must return and sum candidate gradients to the owning rank, or an explicitly equivalent distributed formulation must be used. Parameter-gradient averaging and loss scaling must together reproduce the global mean; candidate gathering alone is insufficient (MATHEMATICALLY-DERIVED).
+
+The original CLIP report describes learned logit scaling and clipping for training stability (P44 section 2.5, PAPER-REPORTED). The temperature is therefore an optimized part of the training objective, with a disclosed bound in that recipe; it is not an author-invented stability assumption. The separate calibration temperature discussed in section 4.6 has a different fitting protocol and purpose.
+
+Cost boundary: a prefix adds backbone positions and, when cached, approximately 2L*n_prefix*H_kv*d_h*b KV bytes. A cross-attention interface adds encoder execution, projections, memory, and decoder-to-source attention. Exact all-pairs contrastive scoring is quadratic in the explicitly bounded batch count: O(B_c^2 d_embed) arithmetic and O(B_c^2) full similarity storage; row sharding uses O(b_local B_c) local similarity storage but does not remove total pairwise work. Tiling bounds workspace without changing the all-pairs objective. It is not justified to call this work universally negligible (DERIVED).
 
 ```figure
 id: fig-4.27
@@ -179,24 +199,16 @@ spec:
     - { id: xa, label: "cross-attention interface (P01; R4.18)" }
 ```
 
-**Audio as conditioning.** Whisper is "an encoder-decoder Transformer" trained on 680,000 hours of weakly supervised audio; its decoder is "an audio-conditional language model" in which "special tokens serve as task specifiers or classification targets" — language, transcribe/translate, timestamps — and the decoder conditions "on the history of text of the transcript" (PAPER-REPORTED · R4.18). The ledger row is Eq. 4.12 with c = (audio, task tokens), targets = transcript tokens; the task tokens are conditioning, not targets, unless the report says otherwise (which for language identification it does, as a "classification target"). Cost: encoder FLOPs on the audio frames per example, plus cross-attention (DERIVED). Developed in [§56.2](../../../vol-03-grounded-and-interactive-intelligence/part-10-multimodal-world-and-embodied-models/ch56-audio-speech-and-real-time-interaction/56-2-task-families.md).
-
-**Actions and environments as conditioning.** Decision Transformer "casts the problem of RL as conditional sequence modeling" and, "By conditioning an autoregressive model on the desired return (reward), past states, and actions", generates future actions "by leveraging a causally masked Transformer" (PAPER-REPORTED · R4.20). Gato serialises text, images, proprioception, and actions into one token stream so that "the same network with the same weights" decides "whether to output text, joint torques, button presses, or other tokens" (PAPER-REPORTED · R4.21). The row is Eq. 4.14: the conditioning set is the interleaved history, the targets are action tokens, and the mask is the design decision — loss on actions only, or on observations too (a world-model objective). That choice is exactly the boundary between a policy objective ([§60.2](../../../vol-03-grounded-and-interactive-intelligence/part-10-multimodal-world-and-embodied-models/ch60-vision-language-action-policies-and-embodied-learning/60-2-action-generation.md)) and a predictive objective ([§59.2](../../../vol-03-grounded-and-interactive-intelligence/part-10-multimodal-world-and-embodied-models/ch59-predictive-representations-jepa-and-world-models/59-2-predictive-learning.md)) (DERIVED from the mask field).
-
-**Contrastive alignment.** P44 trains on 400 million image–text pairs by predicting, for a batch of N pairs, "which of the N × N possible (image, text) pairings across a batch actually occurred", maximising cosine similarity of the N real pairs and minimising it for the N² − N incorrect pairs with "a symmetric cross entropy loss over these similarity scores", with the temperature "directly optimized during training as a log-parameterized multiplicative scalar" (PAPER-REPORTED · P44 §2.3). Cost: two encoder passes per pair, an N×N similarity matrix (N² · d FLOPs, negligible next to the encoders), and — the important line — the negatives are the batch, so the effective objective changes with N and with how N is sharded across devices (gathering embeddings across data-parallel ranks is required to keep the global N as the candidate set) (DERIVED). The mechanism and its use in fusion is developed in [§18.4](../../part-03-model-architectures-and-state/ch18-multimodal-architectural-primitives/18-4-learning-objectives.md) and [§55.2](../../../vol-03-grounded-and-interactive-intelligence/part-10-multimodal-world-and-embodied-models/ch55-vision-language-models-and-document-intelligence/55-2-alignment-and-fusion.md); this section owns only its ledger row.
-
-**Generative versus discriminative.** A generative row defines p_θ(x | c) over all x and hence a sampler and a likelihood; a discriminative or contrastive row defines scores over a candidate set and hence a classifier or retriever but no sampler and no likelihood of x (MATHEMATICALLY-DERIVED). Consequently a contrastive encoder has no perplexity, and a captioning decoder has no retrieval accuracy without an external candidate set; comparing them on "loss" is a category error.
-
 ```figure
 id: fig-4.28
 kind: compare
 title: Six conditional ledger rows, by what the softmax runs over
 caption: >-
-  The first four columns share a softmax over a vocabulary at every scored
-  position, and so each defines a sampler and a likelihood; they differ only
-  in the interface and the mask over c. The last two normalise over a finite
-  candidate set, which is why they are cheap to score, cannot sample, and
-  have no perplexity to compare with the others.
+  Text, image, and audio generation score target-token conditionals. Action
+  learning can instead use categorical or continuous-regression targets.
+  Contrastive and finite-label objectives normalize over declared candidate
+  sets and can sample within them, but do not alone define unrestricted
+  sequence generation. Their cost depends on the encoders and set size.
 placement: wide
 evidence: PAPER-REPORTED
 source: [R4.19, R4.18, R4.20, R4.21, P44, R4.1]
@@ -205,7 +217,7 @@ alt: >-
   Comparison of six ledger rows from verification §1.1. Document c: text
   prefix in the same stack; m_t = 0 on c; softmax over the vocabulary V;
   defines a sampler and likelihood; ρ = |x|/(|c| + |x|); c costs backbone
-  FLOPs and KV cache without gradient. Image prefix (R4.19): projected image
+  FLOPs and KV cache without direct prediction losses. Image prefix (R4.19): projected image
   features as prefix tokens; loss on answer tokens only; softmax over V;
   sampler of the answer; encoder FLOPs and n_img KV positions. Audio
   encoder–decoder (R4.18): cross-attention to the audio encoder with task
@@ -214,9 +226,9 @@ alt: >-
   (R4.20, R4.21): interleaved returns, states and actions; loss on actions, or
   on actions and observations for a world model; sampler of actions. Contrastive
   pair (P44): two encoders; one target per pair; softmax over the gathered
-  batch; no sampler and no perplexity; two encoders, an N by N similarity
+  batch; no unrestricted sequence sampler or autoregressive perplexity; two encoders, a B_c by B_c similarity
   matrix and an all-gather. Discriminative head: encoder plus a head over the
-  label set; softmax over the labels; no sampler.
+  label set; categorical softmax permits label sampling.
 spec:
   axis: >-
     What the softmax normalises over, where the conditioning c enters and what
@@ -231,34 +243,35 @@ spec:
   rows:
     - { dimension: "interface for c", values: { doc: "text prefix in the same stack", img: "W·φ(image) as prefix tokens", aud: "cross-attention to the audio encoder; task tokens as conditioning", act: "interleaved (R̂_t, s_t, a_t) history in one stream", con: "none: separate encoders f_a and f_b", disc: "encoder output into a head [d, |𝒴|]" } }
     - { dimension: "loss mask over c", values: { doc: "m_t = 0 on c, 1 on x", img: "0 on image and prompt, 1 on the answer", aud: "1 on the transcript; some task tokens are targets (R4.18)", act: "1 on actions (policy) or actions + observations (world model)", con: "one term per pair", disc: "one term per example" } }
-    - { dimension: "softmax runs over", values: { doc: "vocabulary V at each position", img: "V at each answer position", aud: "V at each transcript position", act: "action-token vocabulary at each position", con: "the W·N gathered candidates", disc: "the finite label set 𝒴" } }
-    - { dimension: "defines a sampler and a likelihood of x", values: { doc: "yes", img: "yes, of the answer", aud: "yes, of the transcript", act: "yes, of actions", con: "no: scores only, no perplexity", disc: "no: a classifier" } }
-    - { dimension: "gradient-bearing fraction ρ", values: { doc: "|x|/(|c| + |x|)", img: "|ans|/(n_img + |prompt| + |ans|)", aud: "|transcript|/|frames|", act: "design-dependent", con: "not defined", disc: "not defined" } }
-    - { dimension: "cost beyond the causal row", values: { doc: "c through the full backbone and KV cache, no gradient", img: "encoder FLOPs; n_img KV positions", aud: "encoder FLOPs + cross-attention", act: "a tokeniser per modality", con: "two encoders, N×N similarities, all-gather", disc: "head [d, |𝒴|]; no sampler" } }
+    - { dimension: "softmax runs over", values: { doc: "vocabulary V at each position", img: "V at each answer position", aud: "V at each transcript position", act: "discrete: action vocabulary; continuous MSE: no softmax", con: "the global B_c gathered candidates", disc: "the finite label set 𝒴" } }
+    - { dimension: "defines a sampler and a likelihood of x", values: { doc: "yes", img: "yes, of the answer", aud: "yes, of the transcript", act: "categorical action sampler; MSE alone is not a normalized action law", con: "candidate-set probabilities; no unrestricted sequence sampler", disc: "categorical label sampling; no sequence sampler" } }
+    - { dimension: "directly scored target fraction ρ", values: { doc: "|x|/(|c| + |x|)", img: "|ans|/(n_img + |prompt| + |ans|)", aud: "declared target tokens / encoded source positions; units differ", act: "design-dependent", con: "not defined", disc: "not defined" } }
+    - { dimension: "cost beyond the causal row", values: { doc: "c through the full backbone and KV cache, no direct loss; conditioning gradients may flow", img: "encoder FLOPs; n_img KV positions", aud: "encoder FLOPs + cross-attention", act: "a tokeniser per modality", con: "two encoders, B_c×B_c similarities, all-gather", disc: "head [d, |𝒴|]; categorical label sampler" } }
 ```
 
 ## Algorithm
 
 ```text
-Algorithm 4.5 — Contrastive alignment step (P44 form) with cross-rank gathering
-INPUT   batch of N local pairs (a_i, b_i), encoders f_a, f_b, log-temperature ℓτ, DP world size W
-OUTPUT  L_con, gradients
-STATE   local embeddings E_a, E_b ∈ ℝ^{N×d}; gathered Ê_a, Ê_b ∈ ℝ^{WN×d}
-INVARIANT  rows of E_a, E_b are ℓ2-normalised; the candidate set is the global batch of WN
-1  E_a ← normalise(f_a(a_{1:N}));  E_b ← normalise(f_b(b_{1:N}))
-2  Ê_a ← all_gather(E_a);  Ê_b ← all_gather(E_b)             # candidate set = global batch
-3  S ← (E_a Ê_b^T) · exp(ℓτ)                                  # local rows vs global columns, [N, WN]
-4  S' ← (E_b Ê_a^T) · exp(ℓτ)
-5  targets ← global indices of the local diagonal
-6  L_con ← ½ [ CE(S, targets) + CE(S', targets) ]              # Eq. 4.13, mean over local rows
-7  backprop; gradients w.r.t. the gathered tensors flow back through all_gather if differentiable, else only through local rows
+Algorithm 4.5 — Distributed symmetric contrastive objective
+INPUT b_local paired examples per rank, W ranks, two encoders, logit scale alpha
+PRECONDITIONS B_c=W*b_local>0; paired global indices are unique and aligned;
+              gather backward returns summed candidate gradients to owners
+OUTPUT global-mean objective estimate and corresponding encoder/scale gradients
+1 Encode and L2-normalize local image/text embeddings E_a,E_b[b_local,d_embed]
+2 Differentiably gather embeddings to E_a_all,E_b_all[B_c,d_embed]
+3 S_ab <- exp(alpha)*E_a*E_b_all^T; S_ba <- exp(alpha)*E_b*E_a_all^T
+4 labels <- global matched indices for the local rows
+5 L_local <- (CE_mean(S_ab,labels)+CE_mean(S_ba,labels))/2
+6 Differentiate; combine candidate and query gradients; average parameter gradients
+INVARIANT the resulting parameter gradient equals the global objective in Eq. 4.13
 ```
-Complexity: O(N·WN·d) for the similarity products; memory O(WN·d) for the gathered embeddings. Implementation link: no reference-stack implementation was inspected (UNVERIFIED); line 7's gradient-through-gather choice is a known source of silent objective differences between codebases (ASSUMED as a risk; not measured here).
+
+The gradient equivalence assumes the stated gather backward and averaging semantics; a reducer with different scaling needs an adjusted scalar. Per-rank similarity work is O(b_local B_c d_embed); stored embeddings require O(B_c d_embed), and untiled local logits add O(b_local B_c). The book reconstructed this algorithm mathematically and did not inspect or execute a distributed CLIP training implementation.
 
 ```figure
 id: fig-4.29
 kind: matrix
-title: Rank 0's similarity block after all_gather, N = 4, W = 2
+title: Rank 0's similarity block after all_gather, B_local = 4, W = 2
 caption: >-
   Line 3 of Algorithm 4.5 as a grid: 4 local image rows against 8 gathered
   text columns. Each row's positive sits at its global index (full shade) and
@@ -270,7 +283,7 @@ anchor: algorithm
 evidence: MATHEMATICALLY-DERIVED
 source: ["DERIVED:eq-4.13", "DERIVED:alg-4.5", P44]
 alt: >-
-  Four by eight grid for rank 0 of W = 2 ranks with N = 4 local pairs. Rows
+  Four by eight grid for rank 0 of W = 2 ranks with B_local = 4 local pairs. Rows
   are local image embeddings a_0 to a_3; columns are gathered text embeddings
   b_0 to b_7, of which b_4 to b_7 come from rank 1. The diagonal cells (0,0),
   (1,1), (2,2) and (3,3) are full shade and highlighted: the positive pair of
@@ -287,7 +300,7 @@ spec:
     - [0.3, 0.3, 1, 0.3, 0.3, 0.3, 0.3, 0.3]
     - [0.3, 0.3, 0.3, 1, 0.3, 0.3, 0.3, 0.3]
   rowLabel: "local image rows, rank 0"
-  colLabel: "gathered text columns, W·N = 8"
+  colLabel: "gathered text columns, W·B_local = 8"
   rowTicks: ["a_0", "a_1", "a_2", "a_3"]
   colTicks: ["b_0", "b_1", "b_2", "b_3", "b_4", "b_5", "b_6", "b_7"]
   highlight:
@@ -301,75 +314,74 @@ spec:
 ## Implementation
 
 ```text
-Tensor trace (prefix-token image conditioning, R4.19 layout)
-[B, 3, H, W] image → frozen vision encoder → [B, n_img, d_vis] → W ∈ [d_vis, d] → [B, n_img, d] prefix
-[B, T_txt] text ids → Emb → [B, T_txt, d]
-concat → [B, n_img + T_txt, d] → causal LM → [B, n_img + T_txt, V] → CE with m_t = 0 on image and prompt positions, 1 on answer positions
+image prefix: image -> frozen/trainable encoder phi -> projection -> prefix embeddings
+              prefix + prompt + shifted answer -> causal decoder -> answer-target CE
+cross-attention: audio -> encoder memory; task/previous-output tokens -> decoder
+contrastive: paired inputs -> two encoders -> normalized vectors -> global candidates -> two CEs
+action prediction: return/state/action history -> causal model -> categorical or continuous head
 ```
 
-Memory: the image prefix occupies n_img cache positions per layer at inference, so a conditioning image costs 2·L·n_img·H_kv·d_h·b bytes of KV (DERIVED from Eq. N.8). Communication: contrastive training adds an all-gather of embeddings per step (Algorithm 4.5 line 2); conditional generation adds nothing beyond the causal row. Kernels: cross-attention with a fixed encoder memory can cache the encoder K/V across decode steps (DERIVED).
+A modality position with m_t=0 can still receive gradient through later outputs. Freeze parameters explicitly when the recipe requires it; never implement a loss mask by detaching conditioning unless that different optimization graph is intended. At batching boundaries retain modality masks, segment/episode IDs, sequence alignment, and padding rules. A scalar sum of token CE and action MSE is meaningful only with declared reductions and coefficients, since the units differ (DERIVED).
+
+For contrastive training, log candidate count and scale with the loss. A local negative set, global negative set, memory queue, and multiple-positive objective are different specifications. Record communication topology and gather gradient behavior when interpreting distributed throughput. The source papers supply empirical results for their systems; the chapter has not measured latency, energy, money, or throughput for these reconstructed rows.
 
 ## Experimental design
 
-### Experiment 4.5 — Mask placement over conditioning positions
+### Reported experiments
 
-- **Hypothesis:** applying loss to conditioning placeholders (m_t = 1 on image or document positions) measurably degrades answer-slice NLL at equal token budget relative to m_t = 0, because gradient is spent reproducing inputs.
-- **Setup:** §3.5 reference model with a synthetic prefix-conditioning task (document → question → answer).
-- **Independent variables:** mask over conditioning positions ∈ {0, 1}.
-- **Controlled variables:** tokens, seeds, data, tokenizer, schedule.
-- **Dataset/workload:** public QA-style corpus with clear document/answer segmentation.
-- **Hardware:** one accelerator.
-- **Metrics:** answer-slice NLL (nats/token); full-sequence NLL reported separately and labelled incomparable.
-- **Baselines:** m_t = 0 on conditioning.
-- **Expected result:** higher answer-slice NLL with loss on conditioning at fixed budget; the size of the effect depends on ρ.
-- **Ablation:** vary |c| / |x|.
-- **Interpretation:** establishes the mask field as consequential, not cosmetic.
-- **Threats to validity:** the effect may reverse if the conditioning domain is under-represented in pretraining, where loss on c acts as continued pretraining.
+CLIP evaluates transfer by constructing text representations of candidate class names/prompts and comparing them with image representations, with zero-shot and other transfer evaluations across its reported suite. The learned pretraining objective discriminates paired image/text examples; zero-shot classification measures a separate downstream use of the encoders ([P44](references.md#p44), sections 2-3, PAPER-REPORTED). Prompt construction, label set, and test distribution therefore belong in the evaluation record; a contrastive loss number alone is not a classification result.
 
-Proposal only; no run was executed.
+Whisper evaluates speech recognition and translation across the report's datasets and languages, including robustness analyses (R4.18 experiments). LLaVA evaluates its visual instruction-tuning procedure with the source's instruction/evaluation construction (R4.19 section 4). These test their complete data/interface/training choices and cannot isolate the effect of a loss mask without a matched intervention.
+
+Decision Transformer evaluates offline control with specified datasets and desired-return conditioning, including discrete Atari and continuous-control settings (R4.20 section 4, PAPER-REPORTED). Its metrics are task returns under the evaluation environment, not token perplexity. Conditioning on a desired return does not supply an online reward-learning guarantee or establish behavior outside the offline data's coverage. The chapter proposes no invented multimodal experiment as a published result.
 
 ## Observations
 
-**What the paper claims.** P44 claims contrastive pair prediction is more efficient than predictive captioning for zero-shot transfer in its setting (PAPER-REPORTED · P44). R4.19 claims a projection-only alignment stage followed by end-to-end tuning suffices for multimodal instruction following at its scale (PAPER-REPORTED · R4.19). R4.18 claims weak supervision at scale yields robust zero-shot speech recognition with a multitask token format (PAPER-REPORTED · R4.18). R4.20 and R4.21 claim that return- or context-conditioned sequence modeling yields competent policies in their benchmarks (PAPER-REPORTED).
+**What the paper claims.** The sources report transferable paired representations, multitask speech generation, visual instruction-following, and return-conditioned offline control under distinct architectures and protocols (PAPER-REPORTED: P44; R4.18-R4.20).
 
-**What the evidence shows.** Each claim is within one report; the ledger rows are nonetheless well-specified because the reports state interface, targets, and mask. Efficiency comparisons between contrastive and generative objectives (P44) are at one scale and with one downstream metric and do not transfer as a general ranking.
+**What the evidence shows.** Each result combines a target space, data distribution, interface, and evaluation procedure. Discrete and continuous action settings use different losses; contrastive training depends on its candidate set; multimodal generation depends on its sequence and trainable-parameter schedule.
 
-**What we infer.** The unifying fact is that only the conditioning interface and the mask change across modalities; the normalisation and target set are inherited from §4.1 (DERIVED). We infer, marked ASSUMED, that many production multimodal decoders use m_t = 0 on conditioning positions, as R4.19 does; for any named model this is NOT-DISCLOSED.
+**What we infer.** A complete objective ledger must specify conditioning visibility, gradient paths, target type, normalization, and candidate set. A response-only loss mask removes direct prompt losses without necessarily removing prompt/encoder gradients (MATHEMATICALLY-DERIVED).
 
-**What remains unknown.** Whether gradient flows to the conditioning encoder is a per-stage design choice that reports often leave unstated (NOT-DISCLOSED in general). Cross-rank gradient handling in contrastive implementations is UNVERIFIED for every reference-stack system.
+**What remains unknown.** An uninspected production system's modality loss weights, training mask, distributed gradient behavior, or deployment schedule is NOT-DISCLOSED or UNVERIFIED. The cited results do not identify a universally best interface across modalities.
 
 ## Failure modes
 
-> **Failure mode — Loss on placeholders.** *Symptom:* the model emits image-placeholder or document text in answers. *Cause:* m_t = 1 over conditioning positions. *Detection:* per-segment loss logging. *Mitigation:* segment-aware mask construction (§10.5 serialisation contract).
+> **Failure mode — Incorrect conditioning gradient policy.** *Symptom:* projection/encoder training differs from the recipe. *Cause:* confusing zero direct loss with detachment or frozen parameters. *Detection:* inspect trainable parameter sets and gradients from response losses. *Mitigation:* specify masks, freezes, and detach operations independently (DERIVED).
 
-> **Failure mode — Batch-size aliasing.** *Symptom:* contrastive loss values differ across cluster sizes at the same per-device batch. *Cause:* candidate set = global batch, which changed. *Detection:* loss vs W at fixed local N. *Mitigation:* fix the global N; gather across ranks.
+> **Failure mode — Candidate-set or gather-gradient drift.** *Symptom:* a distributed objective differs from a global reference. *Cause:* local-only negatives or lost remote candidate gradients. *Detection:* compare a small global batch's loss and parameter gradients. *Mitigation:* preserve global pairing, differentiable gather semantics, and reducer scaling (DERIVED).
 
-> **Failure mode — Temperature collapse.** *Symptom:* contrastive loss saturates near log N or diverges. *Cause:* learned τ_c unbounded. *Detection:* log exp(ℓτ). *Mitigation:* clamp the log-temperature (P44 reports a learned log-parameterisation; clamping is the book's suggestion, ASSUMED).
+> **Failure mode — Uncontrolled contrastive scale.** *Symptom:* unstable large similarity logits. *Cause:* an unsuitable learned-scale trajectory is one possible contributor. *Detection:* log scale and per-direction loss. *Mitigation:* reproduce the bounded scale reported in the original CLIP recipe when reproducing that experiment (P44 section2.5, PAPER-REPORTED).
 
-> **Failure mode — Frozen-encoder drift.** *Symptom:* multimodal quality degrades when the language model is updated without the projection. *Cause:* the interface φ was trained for a different decoder representation. *Detection:* alignment-stage loss on a fixed probe set. *Mitigation:* retrain the projection after decoder changes.
+> **Failure mode — Mixed loss units or episode leakage.** *Symptom:* one modality/episode dominates feedback or future actions become visible. *Cause:* combining CE/MSE without declared reductions or packing without temporal masks. *Detection:* inspect per-term units, counts, and admissible context. *Mitigation:* define weights and episode boundaries explicitly (DERIVED).
 
 ## Siblings
 
-**Causal LM with text c** — [04-1-autoregressive-modeling.md](04-1-autoregressive-modeling.md)
-Why it exists: the base row. What assumption changed here: c is text. What objective changed: none. What problem it solved: none of the interface ones. What new failure mode it introduced: none. Changed primitive: encoder/adapter → none.
+Text-prefix generation, image-prefix generation, and encoder-decoder generation can all score a conditional target distribution while using different context interfaces and trainable-parameter schedules. An encoder-decoder denoiser makes the source a corrupted text sequence; FIM instead makes the suffix available earlier in a causal serialization. Their conditional targets and visibility are described in [§4.2](04-2-alternative-objectives.md) and [§4.3](04-3-code-and-structured-sequences.md).
 
-**Encoder–decoder span corruption** — [04-2-alternative-objectives.md](04-2-alternative-objectives.md)
-Why it exists: text-to-text denoising. What assumption changed: c is corrupted text, same modality as x. What objective changed: reconstruction targets. What problem it solved: bidirectional text encoding. What new failure mode it introduced: sentinels. Changed primitive: cross-modal encoder → text encoder.
+Contrastive classification defines a distribution over a declared candidate set, and a discriminative head defines one over its labels. Both can support categorical sampling within that finite set, but neither alone specifies unrestricted autoregressive sequence generation. Continuous action regression specifies another output geometry and loss unit; identifying it with a probability model requires an explicit observation/noise model rather than the presence of a scalar training loss.
 
-**Fill-in-the-middle** — [04-3-code-and-structured-sequences.md](04-3-code-and-structured-sequences.md)
-Why it exists: suffix conditioning. What assumption changed: c includes text that follows x in the document. What objective changed: none. What problem it solved: infilling. What new failure mode it introduced: sentinel handling. Changed primitive: modality interface → document rearrangement.
+
 
 ## Extensions
 
-For diffusion and flow objectives over continuous targets (images, actions), the generative row keeps its conditioning field but replaces the categorical softmax with a regression on noise or velocity, developed in [§58.2](../../../vol-03-grounded-and-interactive-intelligence/part-10-multimodal-world-and-embodied-models/ch58-generative-multimodal-models-and-alternative-generation-paths/58-2-objectives.md); the mask and normalisation fields still apply (DERIVED). For latent prediction (JEPA-family), the target is an encoded representation rather than observed data, developed in [§59.2](../../../vol-03-grounded-and-interactive-intelligence/part-10-multimodal-world-and-embodied-models/ch59-predictive-representations-jepa-and-world-models/59-2-predictive-learning.md). For agents, environment observations enter as c and tool outputs are untrusted conditioning whose boundary is fixed in [§10.5](../../part-02-data-and-representation-engineering/ch10-tokenization-serialization-and-interface-correctness/10-5-tool-and-multimodal-interfaces.md).
+### Improvements
+
+Two-stage visual alignment followed by instruction tuning changes which parameters receive supervised feedback and which task distribution is optimized (R4.19 section 3). Multitask speech tokens expose the requested operation in the decoder's conditioning sequence (R4.18 section 2). Both are documented methodological choices, not consequences of adding a new modality name.
+
+Contrastive pretraining can supply an encoder to a conditional generator, but the downstream generative loss and interface still require their own specification. Multiple-positive objectives or altered negative sampling change the contrastive estimand and should be separate ledger rows. Their benefit must be established by their own sources rather than inferred from CLIP's result.
+
+For control, replacing tokenized action classification by a continuous regression head changes output geometry and units. A later online feedback or verifier stage changes the learning setup again; offline return conditioning alone is not that stage (DERIVED).
 
 ## Limitations
 
-Generative rows are valid where a sampler over the target modality is needed and the target is discretisable or has a tractable density; contrastive rows are valid where a candidate set exists at inference. Each is falsified as a choice if the deployment needs the other's output. Decision consequence: choose the row from the required output (samples vs scores), then record the interface, the gradient path into φ, the mask over c, and — for contrastive rows — the global N.
+Generative, discriminative, contrastive, and continuous-regression objectives serve different output and supervision contracts. A classifier can sample labels; a contrastive model can score new candidates; neither alone specifies unrestricted autoregressive generation. Joint models can combine objectives, but then require explicit heads, masks, reductions, and coefficients.
+
+Cross-modal alignment and control results are conditional on training data and evaluation distributions. The cited reports do not identify a universally preferred interface or provide measurements for this chapter's reconstructed implementation.
 
 ## Reproducibility
 
-Versions: P44 arXiv 2103.00020 (ar5iv, accessed 2026-09-20); R4.18, R4.19, R4.20, R4.21 arXiv abs/ar5iv pages accessed 2026-09-20; P01 §3.2.3. Artifacts: ledger rows `cond_gen_doc`, `cond_gen_image_prefix`, `cond_gen_audio_encdec`, `action_conditioned`, `contrastive_pair`, `discriminative_head` in [verification.md](verification.md). Configuration: interface type, gradient into φ, mask over c, global N, τ_c parameterisation. Metrics: answer-slice NLL; contrastive accuracy over the stated candidate set. Unresolved: cross-rank gradient semantics in reference implementations (UNVERIFIED); production mask choices (NOT-DISCLOSED).
+Record conditioning/target schemas, encoder and tokenizer identifiers, feature dimensions, trainable parameters by stage, visibility and response/task masks, candidate set and pairing policy, temperature parameterization/bounds, loss units and coefficients, and distributed gradient scaling. Control records require trajectory/episode boundaries, action units, desired-return construction, and environment versions. Source locators are in [references.md](references.md); no training or distributed-gradient check was executed.
 
 ## References
 

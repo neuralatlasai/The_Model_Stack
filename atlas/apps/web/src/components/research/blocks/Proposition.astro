@@ -18,15 +18,23 @@ const head = `${PROPOSITION_TITLES[block.variant]}${block.number === null ? '' :
 ---
 
 <div class={`rb-prop rb-prop--${block.variant}`} id={block.anchor ?? undefined} {...depthAttrs(block.depth)}>
-  <p class="rb-prop__stmt"><span class="rb-prop__head">{head}</span> <span class="rb-prop__body"><Inline nodes={block.content} /></span></p>
-  {
-    block.proof !== null && block.proof.length > 0 && (
-      <details class="rb-expand rb-expand--proof">
-        <summary class="rb-expand__summary"><span class="rb-expand__caret" aria-hidden="true">▸</span><span class="rb-expand__label">Proof sketch</span></summary>
-        <div class="rb-expand__body">
-          <Blocks blocks={block.proof} />
-        </div>
-      </details>
-    )
-  }
+  <p class="rb-prop__stmt">
+    <span class="rb-prop__head">{head}</span>{' '}
+    <span class="rb-prop__body">
+      <Inline nodes={block.content} />
+    </span>
+  </p>
+  {block.proof !== null && block.proof.length > 0 && (
+    <details open={Astro.locals.completeReading === true} class="rb-expand rb-expand--proof">
+      <summary class="rb-expand__summary">
+        <span class="rb-expand__caret" aria-hidden="true">
+          ▸
+        </span>
+        <span class="rb-expand__label">Proof sketch</span>
+      </summary>
+      <div class="rb-expand__body">
+        <Blocks blocks={block.proof} />
+      </div>
+    </details>
+  )}
 </div>

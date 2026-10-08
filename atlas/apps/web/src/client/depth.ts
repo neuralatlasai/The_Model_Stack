@@ -16,7 +16,15 @@
  * use (pointerdown, focus, context menu) so copied or new-tab links carry it.
  */
 import type { Depth } from '@atlas/core';
-import { ATTR, DEPTH_DESCRIPTIONS, DEPTH_LABELS, EVENTS, isDepth, READING_THRESHOLD, STORAGE_KEYS } from './contract.ts';
+import {
+  ATTR,
+  DEPTH_DESCRIPTIONS,
+  DEPTH_LABELS,
+  EVENTS,
+  isDepth,
+  READING_THRESHOLD,
+  STORAGE_KEYS,
+} from './contract.ts';
 import { $$, isRendered } from './dom.ts';
 import { depthFromUrl, linkWithDepth, pageUrlWithDepth, resolveDepth } from './depth-url.ts';
 import { emit } from './events.ts';
@@ -26,6 +34,7 @@ import type { PageContext } from './page.ts';
 export function initDepth(ctx: PageContext): void {
   const { doc, ctl, store } = ctx;
   const root = doc.documentElement;
+  const completeReading = root.getAttribute('data-reading-mode') === 'complete';
 
   const controls = (): HTMLElement[] => $$(actionSelector(ACTIONS.depth), doc);
   const valueOf = (control: Element): Depth | null => {
@@ -50,29 +59,37 @@ export function initDepth(ctx: PageContext): void {
     }
   };
 
-  const setDepth = (depth: Depth): void => {
+  const setDepth = (requested: Depth): void => {
+    // Legacy controls cannot collapse a complete article or persist its
+    // mandatory display depth as the preference for unrelated atlas pages.
+    const depth = completeReading ? 'implementation' : requested;
     if (depth === ctx.state.depth && root.getAttribute(ATTR.depth) === depth) return;
     const anchor = readingAnchor(doc, ctx.article);
     root.setAttribute(ATTR.depth, depth);
     if (anchor !== null) restoreAnchor(anchor);
     ctx.state.depth = depth;
     syncUrl(depth);
-    store.write(STORAGE_KEYS.depth, depth);
+    if (!completeReading) store.write(STORAGE_KEYS.depth, depth);
     paintControls(depth);
     emit(doc, EVENTS.depth, { depth });
     ctx.announce(`Depth: ${DEPTH_LABELS[depth]}. ${DEPTH_DESCRIPTIONS[depth]}.`);
   };
-  ctx.actions.setDepth = setDepth;
+  // The palette omits commands whose action is absent. Legacy inline controls
+  // still pass through the guarded handler below.
+  if (completeReading) delete ctx.actions.setDepth;
+  else ctx.actions.setDepth = setDepth;
 
   // Initial state: URL (a shared link states its depth) → stored preference → default. The inline
   // bootstrap has already resolved the stored preference (enumerated values only) onto <html data-depth>
   // before first paint; reading it back here keeps zod out of the eager chunk.
   const fromUrl = depthFromUrl(location.href);
   const fromRoot = root.getAttribute(ATTR.depth);
-  const initial = resolveDepth(fromUrl, fromRoot !== null && isDepth(fromRoot) ? fromRoot : null);
+  const initial = completeReading
+    ? 'implementation'
+    : resolveDepth(fromUrl, fromRoot !== null && isDepth(fromRoot) ? fromRoot : null);
   ctx.state.depth = initial;
   if (root.getAttribute(ATTR.depth) !== initial) root.setAttribute(ATTR.depth, initial);
-  if (fromUrl !== null) store.write(STORAGE_KEYS.depth, fromUrl);
+  if (!completeReading && fromUrl !== null) store.write(STORAGE_KEYS.depth, fromUrl);
   syncUrl(initial);
   paintControls(initial);
 

@@ -37,7 +37,7 @@ evidence_summary:
   labels_used: [PAPER-REPORTED, OFFICIAL-DOCUMENTATION, DERIVED, KNOWN, NOT-DISCLOSED]
   empirically_observed: false
 word_count_target: 1700
-updated_at: 2026-09-20
+updated_at: 2026-10-07
 editorial_status: manuscript_draft
 ---
 
@@ -45,80 +45,59 @@ editorial_status: manuscript_draft
 
 ## Scope
 
-Objective: define the foundation-model lifecycle as a conditional graph of interventions (pretraining, continued training, adaptation, preference learning, RL, distillation, retrieval, compression, deployment, feedback) and state the four compatibility conditions every edge must satisfy. Baseline: the linear recipe pretrain → SFT → preference → RL read as obligatory. Success criterion: any proposed route can be checked edge by edge for a compatible objective, data distribution, artifact interface, and evaluation gate. Boundaries: each intervention's mechanism is owned elsewhere ([19](../../part-04-training-science-and-adaptation/ch19-pretraining-objectives-and-the-full-training-loop/README.md), [22](../../part-04-training-science-and-adaptation/ch22-continued-pretraining-mid-training-and-domain-adaptation/README.md)–[24](../../part-04-training-science-and-adaptation/ch24-continual-learning-model-editing-and-unlearning/README.md), [31–36](../../../vol-02-execution-and-optimization/part-06-post-training-and-reinforcement-learning/ch31-supervised-fine-tuning-and-behavior-acquisition/README.md), [39–41](../../../vol-02-execution-and-optimization/part-07-inference-algorithms-distillation-and-compression/ch39-knowledge-response-and-policy-distillation/README.md), [49](../../../vol-03-grounded-and-interactive-intelligence/part-09-retrieval-context-and-agent-systems/ch49-retrieval-models-indexing-and-evidence-access/README.md), [66](../../../vol-03-grounded-and-interactive-intelligence/part-11-evaluation-interpretability-and-deployment-assurance/ch66-release-decisions-reproducibility-and-research-to-production-closure/README.md)); this section owns the graph.
+The lifecycle includes pretraining, continued training, supervised or parameter-efficient adaptation, preference learning, reinforcement learning, distillation, retrieval integration, compression, deployment, and feedback. Published pipelines traverse different subsets. This section reconstructs their artifact and data dependencies, objective/interface compatibility, stage evaluation, and final-release criteria. It compares InstructGPT and DeepSeek-R1 routes without presenting either as obligatory. Canonical method chapters supply the full optimization derivations.
 
 ## Why this exists
 
-What failed: the three-stage pipeline of InstructGPT (SFT on demonstrations, reward model on rankings, RL against the reward model; PAPER-REPORTED · P21) was generalized into a universal recipe, so that teams ran stages they did not need and skipped gates they did. The bottleneck is that each stage consumes an artifact with an interface (tokenizer, template, precision, reference policy) and produces one, and interface mismatches are discovered only at evaluation or deployment. What changed: DeepSeek-R1 documented three distinct routes from one base checkpoint (RL alone; cold-start SFT followed by multi-stage RL; SFT-only distillation into other base families; PAPER-REPORTED · P26), which makes the branching explicit. This section turns that into a graph with edge conditions.
+PAPER-REPORTED · [P21, §3.1](https://arxiv.org/pdf/2203.02155) documents demonstration fine-tuning, reward modeling, and PPO, including iteration between comparison collection and policy optimization. PAPER-REPORTED · [P26, §§2.2–2.4](https://arxiv.org/html/2501.12948v1) documents a different collection of routes: RL directly on a base policy; cold-start SFT followed by several data/optimization stages; and SFT of smaller students on curated teacher responses. DERIVED: these are existence examples of different routes, not evidence that one sequence is universally necessary. A lifecycle record must specify the dependencies and acceptance conditions for the route actually chosen.
 
 ```figure
 id: fig-1.18
 kind: compare
-title: Four post-training routes from a base checkpoint
+title: Four published post-training routes
 caption: >-
-  No two columns traverse the same edges: one skips SFT, one skips RL, and
-  one leaves the model family entirely. Read the condition row: each route
-  is explained by the compatibility condition it had to satisfy, and
-  R1-Zero's readability failure is a data-distribution condition the base
-  gate never measured. The outcome row is the authors' own and is not
-  reproduced here.
+  These are dated source pipelines, not obligatory lifecycle stages.
+  The R1 student collection includes one instruction-tuned starting model;
+  repository and upstream model licenses remain distinct.
 placement: wide
 evidence: PAPER-REPORTED
 source: [P21, P26, R1.15, R1.16]
-concepts: [ms.section.1.4]
 alt: >-
-  Comparison of four routes. InstructGPT (P21): SFT on demonstrations, a
-  reward model on rankings, then RL against the reward model; learned reward
-  from human demonstrations and rankings; leans on objective compatibility,
-  since RL needs sequences a reward model can score; reported that labelers
-  preferred the 1.3B model to 175B GPT-3 with minimal regressions on public
-  NLP datasets. R1-Zero (P26): GRPO directly on DeepSeek-V3-Base with
-  rule-based accuracy and format rewards and no SFT; showed poor readability
-  and language mixing, a distribution the base gate never measured.
-  DeepSeek-R1 (P26): cold-start SFT then multi-stage RL, adding data and a
-  language-consistency reward so the gate can measure it. R1 distillation
-  (P26, R1.15): SFT only on 800k curated samples into six open models on
-  Qwen2.5 and Llama-3 checkpoints, five base and one instruction-tuned
-  (Llama-3.3-70B-Instruct, R1.16), under an MIT license, no RL stage; response-only
-  because the students are other base families, so no logit KL term is
-  defined; the authors report it beating small-model RL.
+  InstructGPT uses demonstrations, a learned reward model, and PPO;
+  R1-Zero directly applies RL; R1 adds cold start and further SFT/RL;
+  R1 distillation uses response-only SFT into six students.
 spec:
-  axis: >-
-    Route from a base checkpoint: edges traversed, feedback source, and the
-    compatibility condition the route leans on
+  axis: "Stages, feedback, and scope of the published comparison"
   columns:
-    - { id: igpt, label: "InstructGPT (P21)" }
-    - { id: r1z, label: "R1-Zero (P26)" }
-    - { id: r1, label: "DeepSeek-R1 (P26)" }
-    - { id: dist, label: "R1 distillation (P26, R1.15)" }
+    - { id: igpt, label: "InstructGPT" }
+    - { id: zero, label: "R1-Zero" }
+    - { id: r1, label: "DeepSeek-R1" }
+    - { id: dist, label: "R1 students" }
   rows:
-    - { dimension: "edges traversed", values: { igpt: "SFT on demonstrations → reward model on rankings → RL against it", r1z: "GRPO directly on DeepSeek-V3-Base; no SFT", r1: "cold-start SFT → multi-stage RL", dist: "SFT only, on 800k curated teacher samples; no RL stage" } }
-    - { dimension: "feedback source", values: { igpt: "human demonstrations and rankings; learned reward", r1z: "rule-based accuracy and format rewards", r1: "adds cold-start data and a language-consistency reward", dist: "teacher responses (response-only)" } }
-    - { dimension: "condition the route leans on", values: { igpt: "objective: RL needs sequences a reward model can score", r1z: "data distribution: readability and language mixing never gated", r1: "data distribution: widens what the gate measures", dist: "objective and interface: students are other base families, so no logit KL" } }
-    - { dimension: "artifact produced", values: { igpt: "a 1.3B instruction-following model", r1z: "an RL policy on the same base", r1: "an RL policy on the same base", dist: "six students, MIT license (R1.15): five on Qwen2.5 and Llama-3.1 base checkpoints, one on instruction-tuned Llama-3.3-70B-Instruct (R1.16)" } }
-    - { dimension: "authors' reported outcome", values: { igpt: "1.3B preferred by labelers to 175B GPT-3; minimal regressions on public NLP datasets", r1z: "poor readability and language mixing", r1: "not restated in §1.4", dist: "'excellent results'; small-model RL may not reach distillation (Section 4.1)" } }
+    - { dimension: "route", values: { igpt: "SFT → reward-model fitting → PPO, optionally ptx", zero: "base → rule-reward RL", r1: "cold-start SFT → reasoning RL → curated SFT → final RL", dist: "800k response examples → student SFT; no added student RL" } }
+    - { dimension: "feedback", values: { igpt: "demonstrations and ranked completions", zero: "accuracy and format rewards", r1: "reasoning rewards, curated responses, further rewards", dist: "teacher-generated response supervision" } }
+    - { dimension: "reported limit", values: { igpt: "retention measured separately; PPO-ptx mitigates regressions", zero: "poor readability and language mixing", r1: "added-stage contributions not all isolated", dist: "comparison with small-model RL is not a complete cost match" } }
+    - { dimension: "interface", values: { igpt: "reward model and policy are separate artifacts", zero: "starting base is measured by the source", r1: "intermediate artifacts have different stage criteria", dist: "cross-family responses can be retokenized; logit matching needs an event-space mapping" } }
 ```
 
 ## Intuition
 
-Physically, each edge re-spends a resource on an artifact: pretraining spends the largest FLOP budget on the widest data; continued training spends a smaller budget on narrowed data; adaptation spends optimizer state on a subset of parameters; preference and RL spend generation FLOPs (sampling) plus training FLOPs; distillation spends teacher inference FLOPs to make data or logits; compression spends calibration FLOPs to reduce bytes per value; retrieval spends index-build FLOPs once and memory traffic per query; deployment spends serving capacity; feedback spends curation labor. A route is a sequence of such spends, and the gate after each is the only place the spend can be found wasted.
-
-Heuristically, the graph is a supply chain with inspection stations. The analogy breaks where it matters: a rejected artifact is not discarded but frequently reused as data for a different edge (distillation), which supply chains do not do.
+DERIVED: each edge changes a specific artifact and its resource ledger. Continued training need not use fewer tokens or a narrower distribution than the original run. Full adaptation updates all weights; parameter-efficient adaptation updates a restricted parameterization. RL includes rollout generation, scoring, and learner updates, whose relative costs depend on the configuration. Compression may require retraining, calibration, or neither. Retrieval may rebuild the index when the corpus or encoder changes. These distinctions prevent a stage name from substituting for its actual procedure or cost.
 
 ## Formulation
 
 > **Definition — foundation-model lifecycle.** A directed graph whose nodes are typed artifacts (datasets, checkpoints, deployments, feedback records) and whose edges are interventions or gates; an edge is admissible only if its four compatibility conditions hold.
 
-> **Definition — intervention.** A process that consumes one or more versioned artifacts and data under a stated objective and produces a new versioned artifact that must pass an evaluation gate before any further edge consumes it.
+> **Definition — intervention.** A process that consumes specified versioned artifacts and data under a stated objective and produces a candidate artifact. A stage-specific compatibility check governs further processing; a final deployment gate governs release. A base policy need not satisfy the final product criteria before adaptation can improve it.
 
-> **Definition — evaluation gate.** A boundary node that, given an artifact and the specification of [§1.1](01-1-problem-formulation.md), returns accept, reject, or return-for-revision using criteria fixed before the artifact existed.
+> **Definition — evaluation gate.** A boundary node returning accept, reject, or return-for-revision under versioned, stage-appropriate criteria fixed before the candidate evaluation. Acceptance at an intermediate stage is not deployment authorization or proof of final task quality.
 
 > **Definition — artifact interface.** The tuple (tokenizer and vocabulary, serialization template, tensor format and precision, reference-policy identity, metadata) that a consuming edge requires of the artifact it consumes.
 
 The four compatibility conditions for an edge from artifact a to intervention I:
 
 1. **Objective compatibility.** I's objective is well-defined on a's outputs (an RL objective needs a policy that emits sequences the reward can score; a logit-distillation loss needs teacher logits over the student's vocabulary, [Eq. N.7](../../../front-matter/notation.md)).
-2. **Data-distribution compatibility.** I's data lie inside the support that a's evaluation covered, or the gate after I is widened to cover the new support.
+2. **Data-distribution compatibility.** I's data and preprocessing are characterized; the next evaluation covers the newly claimed domain and any required retention population. A finite prior evaluation cannot certify coverage of an entire distributional support, and adaptation is permitted to introduce a new domain.
 3. **Artifact-interface compatibility.** a's interface equals what I consumes, or an explicit conversion is applied and versioned (tokenizer migration is [§10.6](../../part-02-data-and-representation-engineering/ch10-tokenization-serialization-and-interface-correctness/10-6-migration-and-compatibility.md)).
 4. **Evaluation-gate compatibility.** The gate after I measures the specification's success criteria on the artifact I actually produces (a quantized artifact is gated as itself, not through its unquantized parent).
 
@@ -131,7 +110,7 @@ caption: >-
   preconditions are checked before the spend; the gate reads the artifact
   the edge actually produced, with criteria that existed before it did.
   Scroll: the lit parts follow the section from the definitions to the
-  counterexamples, Algorithm 1.4, the interface ablation, and the failure
+  counterexamples, Algorithm 1.4, the published retention ablation, and the failure
   modes.
 placement: rail
 anchor: formulation
@@ -141,9 +120,9 @@ concepts: [ms.section.1.4]
 alt: >-
   Top-to-bottom diagram of one edge. Artifact a, carrying its interface
   (tokenizer, template, precision, reference policy), flows into
-  intervention I_j, whose cost is added to the ledger before the spend.
+  intervention I_j, whose estimated cost is reserved before execution and incurred cost recorded afterward.
   Three preconditions feed I_j: 1, the objective is defined on a's outputs;
-  2, the data lie inside the support a's gate covered; 3, the interface is
+  2, the data shift and required retention checks are documented; 3, the interface is
   equal or the conversion is versioned. I_j produces a′ = I_j(a), which
   flows along the emphasized path to the gate G(a′, σ); precondition 4, the
   gate measures the artifact produced, feeds the gate. The gate returns
@@ -151,20 +130,20 @@ alt: >-
   revision budget) or reject (record the edge and the failing condition).
   States light the four conditions; conditions 1 and 2 for the
   counterexamples; the gate and its outcomes for Algorithm 1.4; condition 3
-  for the interface ablation; conditions 3 and 4 and the gate for the
+  for the published retention ablation; conditions 3 and 4 and the gate for the
   failure modes.
 states:
   - { anchor: formulation, label: "four conditions", highlight: [c1, c2, c3, c4], note: "An edge from a to I_j is admissible only if all four hold, and the gate's criteria come from the §1.1 specification before a′ exists." }
-  - { anchor: mechanism, label: "counterexamples", highlight: [c1, c2], note: "A logit loss across tokenizers has no KL term (condition 1), so R1 distills response-only; R1-Zero's language mixing is a distribution the base gate never measured (condition 2)." }
+  - { anchor: mechanism, label: "counterexamples", highlight: [c1, c2], note: "Cross-tokenizer logit matching needs a common event space; R1 uses response-only supervision. Readability and language consistency require separately defined outcomes." }
   - { anchor: algorithm, label: "Algorithm 1.4, lines 3–9", highlight: [g, acc, ret, rej, "a2->g"], note: "Conditions are checked before the spend (line 3); the gate reads the artifact actually produced (line 6); return revises I_j within a revision budget; reject records edge and condition." }
-  - { anchor: experimental-design, label: "interface ablation", highlight: [c3], note: "The matched-route proposal mismatches the template in one arm on purpose, to measure the interface effect at matched post-training FLOPs." }
+  - { anchor: experimental-design, label: "published retention ablation", highlight: [c3], note: "P21 compares PPO and PPO-ptx for benchmark retention; no template-ablation experiment is reported in this chapter." }
   - { anchor: failure-modes, label: "drift · parent · contamination", highlight: [c3, c4, g], note: "Interface drift breaks condition 3; gating the parent breaks condition 4 (no gate record for the deployed checksum); contaminated feedback inflates the gate itself." }
 spec:
   direction: TB
   nodes:
     - { id: a, kind: model, label: "artifact a", sub: "tokenizer · template · precision · ref policy" }
     - { id: c1, kind: dependency, label: "1 objective defined on a's outputs" }
-    - { id: c2, kind: dependency, label: "2 data inside the support a's gate covered" }
+    - { id: c2, kind: dependency, label: "2 data shift and retention checks documented" }
     - { id: c3, kind: dependency, label: "3 interface equal, or conversion versioned" }
     - { id: i, kind: process, label: "intervention I_j", sub: "Λ += cost(I_j, a) before the spend" }
     - { id: a2, kind: model, label: "artifact a′ = I_j(a)" }
@@ -233,67 +212,60 @@ Text equivalent:
 
 ## Mechanism
 
+### Methodology
+
+DERIVED: the graph and four checks are this book's analytical representation of disclosed pipelines. The canonical mathematical objectives and optimizer derivations remain in the linked owner chapters. At lifecycle level the executable object is a versioned route: each stage records its inputs, objective, data transformation, model state updated, output serialization, estimated budget, and evaluation evidence. Candidate output is written separately from the currently accepted artifact; failure retains the parent identity and records partial cost rather than replacing it silently.
+
+PAPER-REPORTED · [P21, §3.5, Eqs. 1–2 and Appendix C](https://arxiv.org/pdf/2203.02155): SFT fits demonstrations; the reward model fits ranked completions using pairwise logistic comparisons grouped by prompt; PPO improves the supervised policy with reward and a KL penalty to the SFT reference. PPO-ptx additionally mixes pretraining gradients. These are separate data sources, objectives, and model states. The scalar reward model is an auxiliary artifact, not the final deployed policy. Policy-dependent comparison collection makes the feedback loop part of the method rather than a fixed dataset followed by a one-time update.
+
+PAPER-REPORTED · [P26, §§2.3–2.4](https://arxiv.org/html/2501.12948v1): the R1 route first fine-tunes on thousands of cold-start examples, applies reasoning-focused RL, curates reasoning and non-reasoning responses, fine-tunes again, and applies a final RL stage. Smaller students receive the resulting 800k-example collection through SFT without a subsequent RL stage in the described study. A response-only dataset can be retokenized for each student. This is distinct from matching teacher/student vocabulary logits: a cross-tokenizer KL needs an explicit common event space or mapping, but different architectures alone do not make KL undefined.
+
+PAPER-REPORTED · [P32, §2](https://arxiv.org/pdf/1503.02531): soft-target distillation uses teacher probabilities at a shared temperature, with an optional hard-label term and temperature-squared scaling for gradient balance. The response-only R1 route does not use that exact loss. PAPER-REPORTED · [P40, §§2.1–2.4](https://arxiv.org/pdf/2005.11401): original RAG initializes a DPR retriever and BART generator, marginalizes retrieved documents at sequence or token level, and jointly trains query encoder and generator while keeping document embeddings fixed. Generic retrieval concatenation is therefore not automatically this published RAG training procedure. Its full derivation is owned by Chapter 50.
+
 Each edge, what it consumes and produces, and its cost line:
 
 | Intervention | Consumes → produces | Cost line | Owner |
 |---|---|---|---|
-| Pretraining | data, initialization → base checkpoint | FLOPs ≈ 6ND under the dense accounting of [Eq. N.3](../../../front-matter/notation.md); memory per [Eq. N.5](../../../front-matter/notation.md); communication set by parallelism; largest single spend | [19](../../part-04-training-science-and-adaptation/ch19-pretraining-objectives-and-the-full-training-loop/README.md), [21](../../part-04-training-science-and-adaptation/ch21-scaling-laws-and-compute-allocation/README.md) |
-| Continued training | checkpoint, narrowed data → checkpoint | same per-token FLOPs on fewer tokens; retention loss is the hidden cost | [22.1](../../part-04-training-science-and-adaptation/ch22-continued-pretraining-mid-training-and-domain-adaptation/22-1-stage-definitions.md), [24.1](../../part-04-training-science-and-adaptation/ch24-continual-learning-model-editing-and-unlearning/24-1-sequential-learning-regimes.md) |
-| Adaptation (SFT, PEFT) | checkpoint, labeled sequences → checkpoint or adapter | full SFT: optimizer state for all N; LoRA: trainable parameters reduced by up to 10,000× and GPU memory by 3× on GPT-3 175B with Adam, with no added inference latency when merged (PAPER-REPORTED · P14) | [31](../../../vol-02-execution-and-optimization/part-06-post-training-and-reinforcement-learning/ch31-supervised-fine-tuning-and-behavior-acquisition/README.md), [23.2](../../part-04-training-science-and-adaptation/ch23-parameter-efficient-adaptation-and-model-composition/23-2-lora-mechanics.md) |
-| Preference learning | checkpoint, pairwise preferences, reference policy → checkpoint | reference-policy forward passes per example; memory for two policies | [33.1](../../../vol-02-execution-and-optimization/part-06-post-training-and-reinforcement-learning/ch33-direct-preference-optimization-and-related-objectives/33-1-dpo-derivation.md) |
-| RL | policy, prompts, reward source → policy | generation FLOPs per rollout dominate; actor, reference, and reward placement multiply memory ([Eq. N.6](../../../front-matter/notation.md)) | [34.6](../../../vol-02-execution-and-optimization/part-06-post-training-and-reinforcement-learning/ch34-policy-gradients-ppo-and-rlhf/34-6-resource-accounting.md), [35.1](../../../vol-02-execution-and-optimization/part-06-post-training-and-reinforcement-learning/ch35-verifiable-reward-rl-and-reasoning-policy-optimization/35-1-rlvr-formulation.md) |
+| Pretraining | data, initialization → base checkpoint | FLOPs ≈ 6ND under the dense accounting of [Eq. N.3](../../../front-matter/notation.md); memory per [Eq. N.5](../../../front-matter/notation.md); communication set by parallelism; budget depends on the chosen run | [19](../../part-04-training-science-and-adaptation/ch19-pretraining-objectives-and-the-full-training-loop/README.md), [21](../../part-04-training-science-and-adaptation/ch21-scaling-laws-and-compute-allocation/README.md) |
+| Continued training | checkpoint, narrowed data → checkpoint | per-token FLOPs depend on the architecture; token budget and retention evaluation are recorded separately | [22.1](../../part-04-training-science-and-adaptation/ch22-continued-pretraining-mid-training-and-domain-adaptation/22-1-stage-definitions.md), [24.1](../../part-04-training-science-and-adaptation/ch24-continual-learning-model-editing-and-unlearning/24-1-sequential-learning-regimes.md) |
+| Adaptation (SFT, PEFT) | checkpoint, labeled sequences → checkpoint or adapter | full SFT: optimizer state for all N; LoRA: fewer trainable matrices and optimizer state; merged inference uses the updated full matrix (P14, §4) | [31](../../../vol-02-execution-and-optimization/part-06-post-training-and-reinforcement-learning/ch31-supervised-fine-tuning-and-behavior-acquisition/README.md), [23.2](../../part-04-training-science-and-adaptation/ch23-parameter-efficient-adaptation-and-model-composition/23-2-lora-mechanics.md) |
+| Preference learning | checkpoint, pairwise preferences, reference policy → checkpoint | objective-dependent reference evaluation; reference scores may be precomputed, with storage and scheduling recorded | [33.1](../../../vol-02-execution-and-optimization/part-06-post-training-and-reinforcement-learning/ch33-direct-preference-optimization-and-related-objectives/33-1-dpo-derivation.md) |
+| RL | policy, prompts, reward source → policy | rollout generation and learner updates are separate entries; actor, reference, and reward placement multiply memory ([Eq. N.6](../../../front-matter/notation.md)) | [34.6](../../../vol-02-execution-and-optimization/part-06-post-training-and-reinforcement-learning/ch34-policy-gradients-ppo-and-rlhf/34-6-resource-accounting.md), [35.1](../../../vol-02-execution-and-optimization/part-06-post-training-and-reinforcement-learning/ch35-verifiable-reward-rl-and-reasoning-policy-optimization/35-1-rlvr-formulation.md) |
 | Distillation | teacher, prompts → data (response-only) or logits (Eq. N.7) → student | teacher inference FLOPs × samples; R1 reports SFT-only distillation on 800k curated samples into six open models with no RL stage, listing all six as "base models" (PAPER-REPORTED · P26, Section 2.4); one of them, Llama-3.3-70B-Instruct, is documented by Meta as an instruction-tuned model aligned with SFT and RLHF, so five students start from base checkpoints and one from an instruction-tuned one (OFFICIAL-DOCUMENTATION · R1.16) | [39.1](../../../vol-02-execution-and-optimization/part-07-inference-algorithms-distillation-and-compression/ch39-knowledge-response-and-policy-distillation/39-1-distillation-objectives.md) |
 | Retrieval integration | index, retriever, context policy → gated system | index build once; per-query retrieval latency and prompt tokens; parametric plus non-parametric memory (PAPER-REPORTED · P40) | [49](../../../vol-03-grounded-and-interactive-intelligence/part-09-retrieval-context-and-agent-systems/ch49-retrieval-models-indexing-and-evidence-access/README.md) |
-| Compression | checkpoint, calibration data → artifact with smaller b | calibration FLOPs; memory capacity and weight traffic fall with b; quality is re-gated | [40.1](../../../vol-02-execution-and-optimization/part-07-inference-algorithms-distillation-and-compression/ch40-quantization-from-numerical-model-to-deployable-artifact/40-1-quantization-formulation.md) |
+| Compression | checkpoint, optional calibration data → quantized or otherwise compressed artifact | quantization: calibration and format-conversion cost; pruning: changed structure; actual footprint, traffic, kernels, and quality are re-evaluated | [40.1](../../../vol-02-execution-and-optimization/part-07-inference-algorithms-distillation-and-compression/ch40-quantization-from-numerical-model-to-deployable-artifact/40-1-quantization-formulation.md) |
 | Deployment | gated artifact, runtime → versioned service | serving capacity: M_params + M_KV per replica ([Eq. N.8](../../../front-matter/notation.md)); latency and throughput per Ω | [44](../../../vol-02-execution-and-optimization/part-08-inference-engines-and-production-serving/ch44-scheduling-distributed-serving-and-disaggregation/README.md), [66.4](../../../vol-03-grounded-and-interactive-intelligence/part-11-evaluation-interpretability-and-deployment-assurance/ch66-release-decisions-reproducibility-and-research-to-production-closure/66-4-deployment-strategy.md) |
 | Feedback | interactions → curated data | curation labor; permission and sanitization checks; leakage audit against evaluation sets | [66.6](../../../vol-03-grounded-and-interactive-intelligence/part-11-evaluation-interpretability-and-deployment-assurance/ch66-release-decisions-reproducibility-and-research-to-production-closure/66-6-research-feedback.md) |
 
 ```figure
 id: fig-1.20
 kind: systems-trace
-title: Cost line of every lifecycle edge
+title: Resource entries associated with lifecycle interventions
 caption: >-
-  Read down the compute column: only pretraining and continued training are
-  dominated by 6ND-style training FLOPs; RL and distillation are dominated
-  by generation (rollouts, teacher inference), retrieval by a one-time index
-  build, and feedback by labor rather than FLOPs. The failure column is
-  where each edge's hidden cost lives, and three of its entries are
-  violations of a compatibility condition.
+  Entries identify work to account for, without asserting a universal
+  dominant cost. Precision reduction and pruning require separate execution checks.
 placement: wide
-evidence: PAPER-REPORTED
-source: [P14, P26, P40, "DERIVED:alg-1.4"]
+evidence: ASSUMED
+source: [P14, P21, P26, P32, P40, "DERIVED:alg-1.4"]
 alt: >-
-  Systems trace of ten edges over compute, memory, communication, latency
-  and failure. Pretraining: about 6ND under dense accounting, the largest
-  spend; memory per Eq. N.5; communication set by the parallelism plan.
-  Continued training: same per-token FLOPs on fewer tokens; retention loss.
-  Adaptation: full SFT holds optimizer state for all N; LoRA cuts trainable
-  parameters by up to 10,000 times and GPU memory 3 times on GPT-3 175B with
-  Adam, with no added latency once merged (P14). Preference learning:
-  reference forward passes; two policies resident. RL: rollout generation
-  dominates; actor, reference and reward placement multiply memory.
-  Distillation: teacher inference times samples, 800k in R1 (P26); logit
-  loss undefined across tokenizers. Retrieval: index built once; per-query
-  retrieval and prompt tokens (P40). Compression: calibration FLOPs; memory
-  falls with b; gating the parent. Deployment: M_params plus M_KV per
-  replica; template or precision drift. Feedback: curation labor; leakage
-  into gate sets.
+  Ten lifecycle stages are paired with compute, state, communication,
+  latency, and failure checks. Stage costs depend on route and workload.
 spec:
   columns: [compute, memory, communication, latency, failure]
   stages:
-    - { name: "Pretraining", values: { compute: "C ≈ 6ND, dense accounting (Eq. N.3); the largest single spend", memory: "Eq. N.5, term by term", communication: "set by the parallelism plan", failure: "an objective mis-specified before the run is not cheaply repaired after it" }, emphasis: true }
-    - { name: "Continued training", values: { compute: "same per-token FLOPs on fewer, narrowed tokens", failure: "retention loss, the hidden cost" } }
-    - { name: "Adaptation (SFT, PEFT)", values: { compute: "LoRA: trainable parameters reduced by up to 10,000× on GPT-3 175B (P14)", memory: "full SFT: optimizer state for all N; LoRA: GPU memory reduced 3× with Adam (P14)", latency: "none added once LoRA is merged (P14)" } }
-    - { name: "Preference learning", values: { compute: "reference-policy forward pass per example", memory: "two policies resident" } }
-    - { name: "RL", values: { compute: "generation FLOPs per rollout dominate", memory: "actor, reference and reward placement multiply memory (Eq. N.6)" } }
-    - { name: "Distillation", values: { compute: "teacher inference FLOPs × samples; R1: 800k curated samples (P26)", failure: "logit loss undefined across tokenizers (condition 1)" } }
-    - { name: "Retrieval integration", values: { compute: "index built once", memory: "parametric plus non-parametric memory (P40)", latency: "per-query retrieval plus added prompt tokens" } }
-    - { name: "Compression", values: { compute: "calibration FLOPs", memory: "capacity and weight traffic fall with b", failure: "gating the parent instead of the artifact (condition 4)" } }
-    - { name: "Deployment", values: { memory: "M_params + M_KV per replica (Eq. N.8)", latency: "TTFT, TPOT per Ω at a stated boundary", failure: "template or precision drift from the gate's harness (condition 3)" } }
-    - { name: "Feedback", values: { compute: "curation labor, not FLOPs", failure: "leakage into gate sets contaminates the gate" } }
+    - { name: "Pretraining", values: { compute: "conditional dense 6ND estimate", memory: "parameters, gradients, optimizer, activations", communication: "parallelism plan", failure: "objective/data mismatch" } }
+    - { name: "Continued training", values: { compute: "new token exposure and retention evaluation", failure: "retention regression" } }
+    - { name: "SFT / PEFT", values: { compute: "training forward/backward work", memory: "trainable versus frozen state; adapter state", latency: "merged LoRA uses updated full matrices" } }
+    - { name: "Preference learning", values: { compute: "policy and optional reference evaluation", memory: "cached scores or reference placement", failure: "preference population mismatch" } }
+    - { name: "RL", values: { compute: "rollout generation, reward, learner updates", memory: "actor/reference/reward/critic as applicable", failure: "reward or estimator mismatch" } }
+    - { name: "Distillation", values: { compute: "teacher generation plus student training", failure: "unmapped output-event space for logit matching" } }
+    - { name: "Retrieval", values: { compute: "index construction/update; retrieval", memory: "index plus model state", latency: "retrieval and added context" } }
+    - { name: "Compression", values: { compute: "calibration, conversion, optional retraining", memory: "format and structure dependent", failure: "untested child artifact" } }
+    - { name: "Deployment", values: { memory: "resident state and workspace", latency: "measured under declared load", failure: "interface drift" } }
+    - { name: "Feedback", values: { compute: "collection, curation, deduplication, auditing", failure: "permission or evaluation leakage" } }
 ```
 
-Why each condition is required, by counterexample. Objective: applying [Eq. N.7](../../../front-matter/notation.md) to a teacher with a different tokenizer has no defined KL term; R1's distillation is response-only SFT precisely because the students are other base families (P26). Data distribution: R1-Zero's readability and language-mixing failures (P26) are a distribution the base gate never measured; the cold-start route adds data and a language-consistency reward so that the gate can. Artifact interface: a chat template introduced at SFT must be the template used at deployment, or the deployed model is evaluated on prompts it never saw ([§10.4](../../part-02-data-and-representation-engineering/ch10-tokenization-serialization-and-interface-correctness/10-4-conversation-serialization.md)). Evaluation gate: a quantized artifact changes the numerical function; gating its parent instead gates a different model.
+DERIVED: each compatibility check addresses a distinct invalid inference. A tokenwise KL over unmatched vocabulary indices compares different events. Changing the prompt serialization changes the conditioning even when the weight checksum is fixed. Evaluating an unquantized parent does not evaluate a quantized child. None of these establishes that an untested change necessarily causes a regression. PAPER-REPORTED · P26, §2.3.2: the language-consistency reward trades a reported slight reasoning-performance degradation for more readable outputs; it does not establish what a prior base-model gate measured.
 
 Feedback closes the loop only through curation: production logs become training data after selection, permissions, sanitization, and leakage checks against every evaluation set the gate uses; otherwise the gate is contaminated by its own outputs (DERIVED from condition 4).
 
@@ -303,9 +275,9 @@ kind: cycle
 title: Feedback closes only through curation
 caption: >-
   Production traffic reaches the training data through four checks in
-  series, and the last one protects the gate itself: without the leakage
-  audit, gate items or their paraphrases enter training, held-out scores
-  rise each cycle, and production acceptance does not. The return arc
+  series, and the last one protects the gate itself: without leakage checks, evaluation material can enter training and
+  invalidate interpretation of later held-out scores. A check does not
+  guarantee complete exclusion of paraphrases. The return arc
   starts a new route; it is not a loop inside one call of Algorithm 1.4.
 placement: inline
 evidence: DERIVED
@@ -350,17 +322,17 @@ Algorithm 1.4 — Gated lifecycle traversal
 INPUT   route ρ = (I_1, …, I_n) of interventions; specification σ; base artifact a_0; gate G(·, σ)
 OUTPUT  accepted artifact a* or a rejection record with the failing edge and condition
 STATE   current artifact a; ledger Λ (Algorithm 1.5); provenance log
-INVARIANT  every artifact in the log passed G before being consumed; each edge has conditions 1–4 checked and recorded
- 1. a := a_0; if G(a, σ) = reject: return rejection(edge 0, "base fails σ")
+INVARIANT  accepted parent is unchanged until a candidate passes its stage gate; incurred and reserved costs are separate
+ 1. a := a_0; validate its identity and input contract; record its baseline evaluation without requiring final release quality
  2. for j in 1..n:
  3.     for cond in (objective, data, interface, gate): if not compatible(a, I_j, cond): return rejection(j, cond)
- 4.     Λ := Λ + cost(I_j, a)                       # every spend is recorded before it happens
- 5.     a' := I_j(a)                                # produce the new artifact
- 6.     v := G(a', σ)                               # gate the artifact actually produced
+ 4.     reserve estimated cost(I_j, a); stop if the total route/revision budget is exhausted
+ 5.     a' := I_j(a) in a separate candidate location; record incurred cost and any execution failure
+ 6.     v := G_stage(j, a', σ)                      # gate the artifact actually produced against stage criteria
  7.     if v = accept: a := a'; log(j, a', Λ)
  8.     else if v = return: I_j := revise(I_j, v.diagnostics); goto 3  (bounded by a revision budget)
  9.     else: return rejection(j, "gate", v.diagnostics)
-10. deploy(a); collect O; C := curate(O)           # selection, permissions, sanitization, leakage check
+10. if G_release(a, σ) ≠ accept: return rejection("release gate"); deploy only the accepted release identity
 11. if C non-empty: D := version(D ∪ C)
 12. return a
 TERMINATION  n edges; step 8 bounded by the revision budget; the feedback edge starts a new route, not a loop inside this call
@@ -407,7 +379,7 @@ spec:
     - { label: "δ = 0.01", values: { delta: 0.01 } }
 ```
 
-Complexity: n + 1 gate evaluations (line 1 gates the base, line 6 each produced artifact) plus r re-evaluations after revision (line 8), n + 1 + r in all, plus the interventions' own costs, each revision re-running its intervention; each gate costs evaluation FLOPs × held-out units per gate. Implementation link: release gates in [§66.3](../../../vol-03-grounded-and-interactive-intelligence/part-11-evaluation-interpretability-and-deployment-assurance/ch66-release-decisions-reproducibility-and-research-to-production-closure/66-3-release-gates.md).
+Complexity: n stage-gate evaluations plus one release-gate evaluation and r repeated stage evaluations, n + 1 + r in all, excluding any separate baseline evaluation; add the interventions' own costs, each revision re-running its intervention; each gate costs evaluation FLOPs × held-out units per gate. Implementation link: release gates in [§66.3](../../../vol-03-grounded-and-interactive-intelligence/part-11-evaluation-interpretability-and-deployment-assurance/ch66-release-decisions-reproducibility-and-research-to-production-closure/66-3-release-gates.md).
 
 ## Implementation
 
@@ -415,17 +387,21 @@ Interventions map onto the stack layers of `AI_REFERENCE_STACK.md` §4.1: pretra
 
 ## Experimental design
 
-Proposal: for one specification, run three routes from the same base checkpoint at matched post-training FLOPs: (a) SFT → preference learning; (b) RL with a verifiable reward directly; (c) SFT on teacher samples (response-only distillation) from an already-gated model. Gate each with the same held-out units and evaluator; report the success criterion with bootstrap intervals and the ledger of every edge; ablate the artifact-interface condition by deliberately mismatching the template in one arm to measure the size of the interface effect. Not executed.
+### Reported experiments
+
+PAPER-REPORTED · [P21, §§3.6, 4.2, Appendix C](https://arxiv.org/pdf/2203.02155): comparison arms include pretrained GPT-3, SFT, PPO, and PPO-ptx at several policy sizes, with human preference and public-dataset metrics. PPO-ptx tests mixing pretraining gradients to reduce regressions; preference improvement and benchmark retention are measured separately. These comparisons do not give a compute-matched ranking of all post-training families.
+
+PAPER-REPORTED · [P26, §3, §4.1 and Tables 5–6](https://arxiv.org/html/2501.12948v1): student evaluation covers mathematical and coding tasks. The default reported sampling setup uses temperature 0.6, top-p 0.95, a 32,768-token generation cap, and repeated responses for pass@1 estimation. The authors also train Qwen-32B-Base with RL for over 10k steps and compare it with the distilled 32B model. Exact equality of teacher-generation cost, student-training cost, data, and evaluation compute between the two routes is not established; the comparison is conditional on the disclosed runs, not a universal advantage of distillation.
 
 ## Observations
 
-**What the paper claims.** InstructGPT reports that a 1.3B model trained by its three-stage route was preferred by labelers to the 175B base model, with "minimal performance regressions on public NLP datasets" (PAPER-REPORTED · P21). DeepSeek-R1 reports that distilling its outputs into smaller base models "yields excellent results, whereas smaller models relying on the large-scale RL … require enormous computational power and may not even achieve the performance of distillation" (PAPER-REPORTED · P26, Section 4.1, v1 accessed 2026-09-20). The official repository lists six distilled models on Qwen2.5 and Llama-3 checkpoints under an MIT license (OFFICIAL-DOCUMENTATION · R1.15, accessed 2026-09-20).
+**What the paper claims.** PAPER-REPORTED · P21, §4.2: mixing pretraining gradients mitigates measured public-benchmark regressions. PAPER-REPORTED · P26, §4.1: the described 32B distillation run outperforms the authors' small-model RL comparison on their reported mathematical evaluations. OFFICIAL-DOCUMENTATION · R1.15–R1.16: one of the six student starting checkpoints is Llama-3.3-70B-Instruct; the students do not all start from base models. Upstream licenses remain separate from the repository's MIT license.
 
 **What the evidence shows.** Both results are the authors' own; neither has been independently reproduced in this book. The R1 distillation-versus-RL comparison holds at the compute the authors allotted to small-model RL, which is not reported here as a general law.
 
-**What we infer.** DERIVED: routes are not interchangeable at fixed budget, so route choice is a decision variable of Eq. 1.2, not a convention. DERIVED: an accepted teacher is the cheapest source of a compatible data distribution for a student, which is why the distillation edge returns to data.
+**What we infer.** DERIVED: response-only distillation creates a dataset dependency from teacher to student; it does not imply the teacher is the cheapest or best data source. Route choice belongs in Eq. 1.2 because its data, training, generation, and retention measurements differ.
 
-**What remains unknown.** The routes actually used for most proprietary deployments are NOT-DISCLOSED. Whether a preference-learning edge after SFT is necessary for a given specification is UNVERIFIED without the matched-route experiment above.
+**What remains unknown.** The routes actually used for most proprietary deployments are NOT-DISCLOSED. Whether a preference-learning edge after SFT is necessary for a given specification is UNVERIFIED without a matched-route experiment such as the proposal in verification.md.
 
 ## Failure modes
 
@@ -433,7 +409,7 @@ Proposal: for one specification, run three routes from the same base checkpoint 
 
 > **Failure mode — gating the parent.** *Symptom:* a quantized or distilled artifact underperforms the accepted score. *Cause:* condition 4 violated. *Detection:* no gate record exists for the deployed artifact's checksum. *Mitigation:* every artifact is gated as itself.
 
-> **Failure mode — feedback contamination.** *Symptom:* held-out scores rise after each feedback cycle while acceptance in production does not. *Cause:* evaluation items or paraphrases entered training through logs. *Detection:* leakage audit of curated feedback against gate sets. *Mitigation:* the curation step of Algorithm 1.4 line 10.
+> **Failure mode — feedback contamination.** *Symptom:* held-out scores rise after each feedback cycle while acceptance in production does not. *Cause:* evaluation items or paraphrases entered training through logs. *Detection:* leakage audit of curated feedback against gate sets. *Mitigation:* the separate feedback route of Algorithm 1.4 line 11.
 
 ## Siblings
 
@@ -448,11 +424,13 @@ Why it exists: to treat repeated continued-training edges as a regime with reten
 
 ## Extensions
 
-Domain adaptation adds a continued-training or adaptation edge with a narrowed data distribution and a retention gate. Long context adds a continued-training edge whose interface change (position handling) must be versioned. Multimodality adds encoder-alignment edges before adaptation. Agents add environment-return RL edges and trajectory data through the feedback loop, with side-effect controls at curation. Embodiment adds real-world data whose permissions and safety checks dominate curation. Proposals only.
+### Improvements
+
+PAPER-REPORTED · P21, §4.2: PPO-ptx changes the learner objective by adding pretraining gradients; its supporting ablation measures benchmark retention as well as preference. Its cost includes additional pretraining forward/backward work. PAPER-REPORTED · P26, §2.3: the R1 route adds readable cold-start data, language-consistency reward, rejection-sampled SFT, and a final RL stage to address R1-Zero's limitations. The report does not isolate the contribution of every added stage, so complete-route gains cannot be assigned to cold start alone. The language reward has a stated quality trade-off. These are dated improvements in specific pipelines, with unresolved component attribution, rather than obligatory lifecycle edges.
 
 ## Limitations
 
-Valid regime: any lifecycle whose artifacts are versioned; unversioned artifacts make the gate invariant unverifiable. Falsification: if a route violating one condition passes the gate and deploys without the predicted symptom over the operating envelope, that condition is unnecessary for that edge and specification. Decision consequence: a route is rejected at the first failing condition, before its cost is spent.
+DERIVED: the graph is a bookkeeping and dependency contract, not a theorem guaranteeing quality. Passing finite tests does not establish full distributional support or exclude rare failures. Intermediate gates can permit experimental artifacts that fail final release requirements. Repeated revision against the same held-out set creates selection dependence; a final independent evaluation is required by the declared protocol. The atomicity guarantee is limited to artifact identity and promotion; incurred compute, sampled data, and external side effects cannot be rolled back by restoring a checkpoint.
 
 ## Reproducibility
 

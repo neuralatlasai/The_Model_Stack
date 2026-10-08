@@ -23,12 +23,12 @@
  * implementation. No `data-depth` on <html> shows everything (the default
  * depth is implementation). */
 
-html[data-depth='overview'] [data-depth-min='technical'],
-html[data-depth='overview'] [data-depth-min='research'],
-html[data-depth='overview'] [data-depth-min='implementation'],
-html[data-depth='technical'] [data-depth-min='research'],
-html[data-depth='technical'] [data-depth-min='implementation'],
-html[data-depth='research'] [data-depth-min='implementation'] {
+html:not([data-reading-mode='complete'])[data-depth='overview'] [data-depth-min='technical'],
+html:not([data-reading-mode='complete'])[data-depth='overview'] [data-depth-min='research'],
+html:not([data-reading-mode='complete'])[data-depth='overview'] [data-depth-min='implementation'],
+html:not([data-reading-mode='complete'])[data-depth='technical'] [data-depth-min='research'],
+html:not([data-reading-mode='complete'])[data-depth='technical'] [data-depth-min='implementation'],
+html:not([data-reading-mode='complete'])[data-depth='research'] [data-depth-min='implementation'] {
   display: none !important;
 }
 
@@ -46,8 +46,7 @@ html[data-depth='research'] [data-depth-min='implementation'] {
   border: 0;
 }
 
-:where(.rb-region, .rb-flow, .rb-header, .rb-rail, .rb-minimap)
-  :is(a, button, summary, [tabindex='0']):focus-visible {
+:where(.rb-region, .rb-flow, .rb-header, .rb-rail, .rb-minimap) :is(a, button, summary, [tabindex='0']):focus-visible {
   outline: 2px solid var(--focus);
   outline-offset: 2px;
 }
@@ -906,8 +905,10 @@ a.rb-eq__num:hover {
   background:
     linear-gradient(to right, var(--paper) 40%, transparent) left / 1.5rem 100% no-repeat local,
     linear-gradient(to left, var(--paper) 40%, transparent) right / 1.5rem 100% no-repeat local,
-    radial-gradient(farthest-side at 0 50%, color-mix(in oklab, var(--ink) 24%, transparent), transparent) left / 0.75rem 100% no-repeat scroll,
-    radial-gradient(farthest-side at 100% 50%, color-mix(in oklab, var(--ink) 24%, transparent), transparent) right / 0.75rem 100% no-repeat scroll;
+    radial-gradient(farthest-side at 0 50%, color-mix(in oklab, var(--ink) 24%, transparent), transparent) left /
+      0.75rem 100% no-repeat scroll,
+    radial-gradient(farthest-side at 100% 50%, color-mix(in oklab, var(--ink) 24%, transparent), transparent) right /
+      0.75rem 100% no-repeat scroll;
 }
 
 /* KaTeX sets display math at 1.21 × the 19 px body; ~20 px keeps long
@@ -3247,7 +3248,9 @@ a.rb-secidx__title:hover {
 
 /* Section index ↔ at-a-glance cross-lighting (client chapter-links.ts). */
 .rb-secidx__item {
-  transition: box-shadow var(--t-hover) ease, background-color var(--t-hover) ease;
+  transition:
+    box-shadow var(--t-hover) ease,
+    background-color var(--t-hover) ease;
 }
 
 /* Lit = the same section pointed at in the other view: a margin rule plus a

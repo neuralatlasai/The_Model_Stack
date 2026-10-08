@@ -27,8 +27,8 @@ benchmarks: []
 datasets: []
 status: {maturity: established, disputed: false}
 evidence_summary: {labels_used: [MATHEMATICALLY-DERIVED, PAPER-REPORTED, OFFICIAL-DOCUMENTATION, NOT-DISCLOSED, UNVERIFIED], empirically_observed: false}
-word_count_target: 1050
-updated_at: 2026-09-20
+word_count_target: 2200
+updated_at: 2026-10-07
 editorial_status: manuscript_draft
 ---
 
@@ -36,38 +36,36 @@ editorial_status: manuscript_draft
 
 ## Scope
 
-Objective: fix, for every format a training program may use, the exponent range, the precision (machine epsilon), the rounding rule, and the overflow, underflow, and subnormal behavior, so that later sections can derive tolerances rather than assert them. Baseline: FP32 as the working format and FP64 as the reference. Success criterion: the reader can compute, from the table below, the relative error bound of any elementwise operation and the magnitude at which a gradient vanishes. Boundaries: quantization mappings (scale, zero point, granularity) are owned by [§40.1](../../../vol-02-execution-and-optimization/part-07-inference-algorithms-distillation-and-compression/ch40-quantization-from-numerical-model-to-deployable-artifact/40-1-quantization-formulation.md); this section defines the formats those mappings target.
+The numerical representation contract specifies which real values a tensor can encode, how conversion rounds them, which exceptional values exist, and which metadata is required to decode them. FP32 is the working baseline; FP64 is a reference format, not exact arithmetic. This section owns FP32, FP16, BF16, FP8, FP4, integer encodings, range, precision, rounding, overflow, and underflow. Scaling algorithms belong to [§3.4](03-4-mixed-precision-execution.md); calibrated inference quantization belongs to [§40.1](../../../vol-02-execution-and-optimization/part-07-inference-algorithms-distillation-and-compression/ch40-quantization-from-numerical-model-to-deployable-artifact/40-1-quantization-formulation.md).
 
 ## Why this exists
 
-What failed: programs assumed that a 16-bit float is "a float with less precision", when FP16 and BF16 differ in *which* resource is reduced — FP16 keeps ten mantissa bits and gives up exponent range; BF16 keeps FP32's exponent range and gives up precision [MATHEMATICALLY-DERIVED — from the bit layouts in Table 3.1]. Bottleneck: accelerator throughput and HBM traffic both scale with bytes per value b, so narrower formats are the cheapest lever available [KNOWN — notation.md §1, b]. Dominant constraint: below 16 bits, no format has both the range and the precision to represent weights, activations, and gradients unscaled; a per-tensor or per-block scale becomes part of the representation [PAPER-REPORTED — R3.2, R3.5]. What changed: the format is now a tuple (element encoding, scale granularity, accumulation width), and the chapter treats it as such.
+A dtype name specifies storage but does not establish the arithmetic used by an operator. PyTorch documents separate controls for FP32 matmul precision and reduced-precision intermediate reductions; cuBLAS separates operand types from compute type. Consequently, an FP32 output tensor does not establish that every input bit or intermediate partial sum was retained [OFFICIAL-DOCUMENTATION — R3.33, "TensorFloat-32" and "Reduced Precision Reduction"; R3.13, compute-type enumeration]. The question is which numerical information is lost at each boundary, and whether the resulting operation remains acceptable for its task.
 
 ## Intuition
 
-Physically, a floating-point number is a fixed budget of bits split between an exponent (how far the value can reach) and a significand (how finely it can be resolved). Adding one exponent bit doubles the number of binades; adding one significand bit halves the relative spacing in every binade. Training needs reach for gradients, whose magnitudes span many orders across layers, and resolution for parameter updates, whose relative size is set by the learning rate. No 8-bit split satisfies both, which is why scaling factors exist [MATHEMATICALLY-DERIVED — Eq. 3.2 and Eq. 3.3].
+In a binary normal number, the exponent selects a binade and the significand selects a uniform grid inside it. The spacing doubles at each positive binade boundary. A fixed relative update therefore confronts approximately fixed relative resolution, while an absolute update can disappear as its parameter grows. Subnormals use a fixed absolute grid without the implicit leading one; their relative accuracy deteriorates toward zero. These are properties of encodings, not empirical claims about convergence [MATHEMATICALLY-DERIVED — Eq. 3.1–3.3].
 
 ## Formulation
 
-A binary floating-point format with p stored significand bits, w exponent bits, and bias β represents
+Let $p$ denote stored fraction bits, $w$ exponent bits, $e$ the encoded exponent, $m$ the encoded fraction, and $s\in\{0,1\}$ the sign. For conventional IEEE-style normal encodings,
 
 $$
-x = (-1)^{s}\, 2^{\,e-\beta}\,\Big(1 + \frac{m}{2^{p}}\Big), \qquad 1 \le e \le 2^{w}-2,\; 0 \le m < 2^{p}
+x=(-1)^s2^{e-\beta}(1+m2^{-p}),\quad \beta=2^{w-1}-1,\quad 1\le e\le2^w-2.
 $$
-*(Eq. 3.1)* where s = sign bit, e = biased exponent field, m = integer significand field, p = stored significand bits, w = exponent bits, β = 2^(w−1) − 1.
+*(Eq. 3.1)* [MATHEMATICALLY-DERIVED — decoding the sign, exponent, and fraction fields; IEEE text itself remains uninspected, R3.1].
 
-Machine epsilon and unit roundoff:
-
-$$
-\varepsilon = 2^{-p}, \qquad u = \tfrac{1}{2}\varepsilon = 2^{-(p+1)}, \qquad \mathrm{fl}(x) = x(1+\delta),\; |\delta| \le u
-$$
-*(Eq. 3.2)* where fl(·) is round-to-nearest into the format and x is inside the normal range. The model fl(x) = x(1+δ) is the standard model of floating-point arithmetic and holds for +, −, ×, ÷, √ on IEEE-compliant hardware [R3.7].
-
-Largest finite value, smallest normal, and smallest subnormal:
+The spacing above one and the round-to-nearest relative bound are different quantities:
 
 $$
-x_{\max} = (2 - 2^{-p})\, 2^{\,e_{\max}}, \qquad x_{\min}^{\text{norm}} = 2^{\,1-\beta}, \qquad x_{\min}^{\text{sub}} = 2^{\,1-\beta-p}
+\varepsilon_{\rm mach}=2^{-p},\qquad u=2^{-(p+1)},\qquad |\operatorname{RN}(x)-x|\le u|x|.
 $$
-*(Eq. 3.3)* where e_max = 2^w − 2 − β for IEEE formats; E4M3 departs from this by spending its top exponent code on finite values (see below).
+*(Eq. 3.2)* The last inequality requires a finite normal-range exact result and nearest rounding without overflow. It is not a bound for arbitrary composite operators or transcendental library implementations [MATHEMATICALLY-DERIVED — half a grid interval in each binade].
+
+$$
+x_{\max}=(2-2^{-p})2^{e_{\max}},\qquad x_{\min}^{\rm norm}=2^{1-\beta},\qquad x_{\min}^{\rm sub}=2^{1-\beta-p}.
+$$
+*(Eq. 3.3)* Here $e_{\max}=2^w-2-\beta$ for the conventional encoding. E4M3 and E2M1 require their explicitly defined top exponent patterns [MATHEMATICALLY-DERIVED — Eq. 3.1; OFFICIAL-DOCUMENTATION for the format-specific patterns is supplied separately below].
 
 ```figure
 id: fig-3.3
@@ -114,20 +112,29 @@ spec:
     - { key: "ln x_max: unshifted exp overflows", formula: "ln(2 - (1 + ext)*2^-p) + (2^w - 2 - (2^(w-1) - 1) + ext)*ln(2)", format: fixed2 }
 states:
   - { anchor: formulation, label: "FP32 · 1-8-23", variables: { w: 8, p: 23, ext: 0 }, highlight: ["ε = 2^−p", "u = ε/2, worst RN error"], note: "Eq. 3.1–3.3 for the working format: β = 127, ε = 2^−23 ≈ 1.19e−7, u ≈ 5.96e−8, and 277 binades from 2^−149 to about 2^128." }
-  - { anchor: mechanism, label: "FP16 · 1-5-10", variables: { w: 5, p: 10, ext: 0 }, highlight: ["log₂ x_min^norm = 1 − β", "log₂ x_min^sub = 1 − β − p", "ln x_max: unshifted exp overflows"], note: "Table 3.1's FP16 row: normals stop at 2^−14 ≈ 6.1e−5 and subnormals at 2^−24. That is the gap where gradients vanish. x_max = 65504, so exp overflows past ln 65504 ≈ 11.09." }
-  - { anchor: observations, label: "BF16 · 1-8-7", variables: { w: 8, p: 7, ext: 0 }, highlight: ["u = ε/2, worst RN error", "log₂ x_max"], note: "FP32's exponent with 7 stored bits: u = 2^−8 ≈ 0.39 %. A relative update below that rounds away, which is the inference that motivates FP32 master weights." }
+  - { anchor: mechanism, label: "FP16 · 1-5-10", variables: { w: 5, p: 10, ext: 0 }, highlight: ["log₂ x_min^norm = 1 − β", "log₂ x_min^sub = 1 − β − p", "ln x_max: unshifted exp overflows"], note: "Table 3.1's FP16 row: normals stop at 2^−14 ≈ 6.1e−5 and subnormals at 2^−24. Subnormals retain reduced absolute precision; flushing is operator-specific. x_max = 65504, so exp overflows past ln 65504 ≈ 11.09." }
+  - { anchor: observations, label: "BF16 · 1-8-7", variables: { w: 8, p: 7, ext: 0 }, highlight: ["u = ε/2, worst RN error", "log₂ x_max"], note: "FP32's exponent with 7 stored bits: u = 2^−8 ≈ 0.39 %. The local half-spacing determines which updates round away, which is the inference that motivates FP32 master weights." }
   - { anchor: failure-modes, label: "E4M3 · 1-4-3", variables: { w: 4, p: 3, ext: 1 }, highlight: ["log₂ x_max", "u = ε/2, worst RN error"], note: "The top exponent code holds finite values, so x_max = 1.75·2^8 = 448 and u = 6.25 %. A value beyond 448/scale becomes NaN unless the conversion saturates." }
   - { anchor: siblings, label: "E5M2 · 1-5-2", variables: { w: 5, p: 2, ext: 0 }, highlight: ["binades, x_min^sub to x_max", "log₂ x_min^sub = 1 − β − p"], note: "E5M2 keeps FP16's five exponent bits (x_max 57344, subnormals to 2^−16, about 32 binades) for gradients, at u = 12.5 %." }
 ```
 
-Integer formats of k bits in two's complement represent the range [−2^(k−1), 2^(k−1) − 1] with unit spacing; a real value is mapped onto that grid by a scale and zero point owned by §40.1 [MATHEMATICALLY-DERIVED].
+| Format | Sign / exponent / fraction | $u$ | Largest finite magnitude | Smallest normal | Smallest encoded subnormal |
+|---|---|---|---|---|---|
+| FP32 | 1 / 8 / 23 | $2^{-24}$ | $(2-2^{-23})2^{127}$ | $2^{-126}$ | $2^{-149}$ |
+| FP16 | 1 / 5 / 10 | $2^{-11}$ | 65504 | $2^{-14}$ | $2^{-24}$ |
+| BF16 | 1 / 8 / 7 | $2^{-8}$ | $(2-2^{-7})2^{127}$ | $2^{-126}$ | $2^{-133}$ |
+| FP8 E4M3 | 1 / 4 / 3 | $2^{-4}$ | 448 | $2^{-6}$ | $2^{-9}$ |
+| FP8 E5M2 | 1 / 5 / 2 | $2^{-3}$ | 57344 | $2^{-14}$ | $2^{-16}$ |
+| FP4 E2M1 | 1 / 2 / 1 | $2^{-2}$ | 6 | 1 | 0.5 |
 
-Block-scaled formats represent a block of n_b elements as
+*Table 3.1 — Encoding constants. FP32/FP16/BF16 entries are derived from Eq. 3.1–3.3; actual subnormal execution remains operator-specific [MATHEMATICALLY-DERIVED]. FP8 patterns are reported in R3.2 Table 1 [PAPER-REPORTED]. E2M1 patterns are specified in R3.6 §5.3.3, Table 5 [OFFICIAL-DOCUMENTATION].*
+
+For a block of $n_b$ elements represented by one scale $s_{\rm blk}$ and codes $q_i$,
 
 $$
-x_i \approx s_{\text{blk}}\, q_i, \quad i = 1,\dots,n_b
+x_i\approx s_{\rm blk}q_i,\qquad b_{\rm effective}=\frac{\operatorname{bits}(q)}8+\frac{\operatorname{bits}(s)}{8n_b}.
 $$
-*(Eq. 3.4)* where q_i is a low-precision element (for example E4M3 or E2M1) and s_blk is one shared scale stored once per block. Bits per element are then bits(q) + bits(s)/n_b.
+*(Eq. 3.4)* This counts payload and scale bytes before alignment, padding, transpose copies, global scales, and allocator overhead [MATHEMATICALLY-DERIVED].
 
 ```figure
 id: fig-3.4
@@ -170,28 +177,6 @@ spec:
     - { label: "NVFP4: FP4 + E4M3 per 16", values: { q: 4, s: 8, nb: 16 } }
     - { label: "MX 6-bit element per 32", values: { q: 6, s: 8, nb: 32 } }
 ```
-
-> **Definition — Machine epsilon (ε) and unit roundoff (u).** ε is the spacing between 1 and the next representable number in a format; u = ε/2 bounds the relative error of a single round-to-nearest operation on a value in the normal range.
-
-> **Definition — Subnormal number.** A value with biased exponent field zero, represented as (−1)^s 2^(1−β) (m/2^p); subnormals fill the gap between zero and the smallest normal with reduced relative precision.
-
-> **Definition — Block-scaled format.** A representation in which a fixed-size block of low-precision elements shares one stored scale factor, so that the effective dynamic range is set by the scale and the per-element resolution by the element format.
-
-## Mechanism
-
-**Table 3.1 — Format constants** (MATHEMATICALLY-DERIVED from the layouts for FP64/FP32/FP16/BF16/TF32; PAPER-REPORTED from R3.2 Table 1 for E4M3/E5M2; the E2M1 row is derived from Eq. 3.1–3.3 for a 1-2-1 layout without infinities or NaN, the element format R3.5 names for MXFP4):
-
-| Format | Bits | Exp. bits | Stored mantissa bits | ε = 2^−p | u | x_max | x_min^norm | x_min^sub |
-|---|---:|---:|---:|---|---|---|---|---|
-| FP64 | 64 | 11 | 52 | 2.22e−16 | 1.11e−16 | ≈1.80e308 | 2^−1022 ≈ 2.23e−308 | 2^−1074 ≈ 4.94e−324 |
-| FP32 | 32 | 8 | 23 | 1.19e−7 | 5.96e−8 | ≈3.40e38 | 2^−126 ≈ 1.18e−38 | 2^−149 ≈ 1.40e−45 |
-| TF32 (compute input) | 32 (19 used) | 8 | 10 | 9.77e−4 | 4.88e−4 | as FP32 | as FP32 | not a storage format |
-| FP16 | 16 | 5 | 10 | 9.77e−4 | 4.88e−4 | 65504 | 2^−14 ≈ 6.10e−5 | 2^−24 ≈ 5.96e−8 |
-| BF16 | 16 | 8 | 7 | 7.81e−3 | 3.91e−3 | ≈3.39e38 | 2^−126 ≈ 1.18e−38 | 2^−133 ≈ 9.18e−41 |
-| FP8 E4M3 | 8 | 4 | 3 | 0.125 | 0.0625 | 448 | 2^−6 = 0.0156 | 2^−9 ≈ 1.95e−3 |
-| FP8 E5M2 | 8 | 5 | 2 | 0.25 | 0.125 | 57344 | 2^−14 ≈ 6.10e−5 | 2^−16 ≈ 1.53e−5 |
-| FP4 E2M1 | 4 | 2 | 1 | 0.5 | 0.25 | 6.0 | 1.0 | 0.5 |
-
 ```figure
 id: fig-3.5
 kind: hierarchy
@@ -229,21 +214,25 @@ spec:
     - { label: "BF16 · 1-8-7", kind: tensor, capacity: "2 B · ε = 2^−7 ≈ 7.81e−3", note: "FP32's range; updates below 2^−8·|w| are lost without an FP32 master" }
     - { label: "FP8 E4M3 · 1-4-3", kind: tensor, capacity: "1 B · ε = 0.125", note: "x_max 448, no ∞; weights and activations, with a scale (R3.2)" }
     - { label: "FP8 E5M2 · 1-5-2", kind: tensor, capacity: "1 B · ε = 0.25", note: "x_max 57344, IEEE ∞ and NaN; gradients (R3.2)" }
-    - { label: "FP4 E2M1 · 1-2-1", kind: tensor, capacity: "0.5 B · ε = 0.5", note: "x_max 6.0; element of MXFP4 blocks (R3.5); derived, OCP text UNVERIFIED" }
+    - { label: "FP4 E2M1 · 1-2-1", kind: tensor, capacity: "0.5 B · ε = 0.5", note: "x_max 6.0; element of MXFP4 blocks (R3.5); OCP MX v1.0 §5.3.3 inspected" }
 ```
 
-> **Claim [PAPER-REPORTED · R3.2].** E4M3 obtains x_max = 448 by not encoding infinities and by reserving only one mantissa pattern per sign for NaN, so that the top exponent code carries finite values; E5M2 keeps IEEE conventions for infinities and NaN. The proposal uses E4M3 for weights and activations and E5M2 for gradients.
+## Mechanism
 
-> **Claim [PAPER-REPORTED · R3.5].** The microscaling (MX) formats pair E4M3/E5M2, E3M2/E2M3, or E2M1 elements with a shared 8-bit power-of-two scale per block of 32 elements; MXFP8 and MXFP4 are the two block-scaled families relevant to training. By Eq. 3.4 the overhead is 8/32 = 0.25 bits per element.
+### Methodology
 
-> **Claim [OFFICIAL-DOCUMENTATION · OD:transformer-engine-docs].** NVIDIA Transformer Engine (Kernels / numerics / collectives layer) documents FP8, MXFP8, and NVFP4 recipes at https://docs.nvidia.com/deeplearning/transformer-engine/ (release 2.13/2.14 pages, accessed 2026-09-20). MXFP8 there is E4M3 data with one E8M0 scale per 32 consecutive values, computed against max_fp8 = 448; NVFP4 uses one FP8 E4M3 scale per block of 16 elements (a 16×16 two-dimensional block for weights), i.e. 8/16 = 0.5 bit per element of scale overhead by Eq. 3.4. Both are documented as requiring Blackwell-class devices. Whether NVFP4 carries an additional per-tensor FP32 scale is not asserted here [that detail alone is UNVERIFIED].
+Conversion first classifies the input as finite, infinite, NaN, or zero; determines the target grid; rounds; then applies the target's exceptional-value rule. For a normal value in $[2^a,2^{a+1})$, the grid spacing is $2^{a-p}$. Nearest-even chooses the nearest grid point and resolves a midpoint using the parity of the retained significand. In the subnormal interval the spacing is instead the constant $x_{\min}^{\rm sub}$. Thus $|x|<x_{\min}^{\rm sub}/2$ rounds to zero; at the midpoint nearest-even also selects zero. Values between half the minimum subnormal and the minimum subnormal can round to a nonzero value. "Below the minimum subnormal means zero" is therefore an incorrect conversion rule [MATHEMATICALLY-DERIVED — nearest-grid construction].
 
-**Rounding.** Round-to-nearest-even (RN) is the IEEE default and the one assumed by Eq. 3.2; directed modes (toward zero, +∞, −∞) give |δ| ≤ ε and are used for interval bounds, not training. Stochastic rounding rounds up with probability equal to the fractional distance between the two neighbouring representable values x⁻ ≤ x ≤ x⁺:
+For a conventional IEEE-style finite format with infinities, the nearest-rounding overflow threshold is the midpoint beyond the largest finite number, $x_{\max}+2^{e_{\max}-p-1}$, rather than $x_{\max}(1+u)$. FP16 therefore overflows at magnitude 65520 under nearest-even. Saturating conversions impose a different boundary. FP8 E4M3 has no infinity encoding; software must distinguish saturating from non-saturating conversion rather than importing FP16 rules [MATHEMATICALLY-DERIVED for the midpoint; PAPER-REPORTED — R3.2 §3.1 for E4M3 exceptional patterns].
+
+Stochastic rounding chooses between adjacent values $x^-\le x\le x^+$ with
 
 $$
-\mathrm{SR}(x) = \begin{cases} x^{+} & \text{with probability } (x - x^{-})/(x^{+} - x^{-}) \\ x^{-} & \text{otherwise} \end{cases} \qquad\Rightarrow\qquad \mathbb{E}[\mathrm{SR}(x)] = x,\quad \mathrm{Var}[\mathrm{SR}(x)] \le \tfrac{1}{4}(x^{+}-x^{-})^2
+\Pr(\widehat x=x^+)=\frac{x-x^-}{x^+-x^-},\qquad
+\mathbb E[\widehat x\mid x]=x,\qquad
+\operatorname{Var}(\widehat x\mid x)=(x-x^-)(x^+-x).
 $$
-*(Eq. 3.5)* where x⁺ − x⁻ = ε·2^⌊log₂|x|⌋ in the normal range. It is unbiased, so an update smaller than u·|w| survives in expectation where round-to-nearest would discard it every time, at the price of variance; it is not an IEEE mode, and R3.2 leaves the rounding choice "to the implementation" [MATHEMATICALLY-DERIVED for mean and variance; PAPER-REPORTED — R3.2 §2 for the format's neutrality; per-device availability NOT-DISCLOSED].
+*(Eq. 3.5)* The variance is at most $(x^+-x^-)^2/4$. The conditional unbiasedness requires exact probabilities, representable neighbors, and no saturation. It neither proves independence across conversions nor proves that a product of rounded operands or a long training trajectory is unbiased [MATHEMATICALLY-DERIVED — expectation of the two-point distribution].
 
 ```figure
 id: fig-3.6
@@ -292,20 +281,20 @@ spec:
     - { label: "|w| = 1", values: { w: 1 } }
 ```
 
-**Overflow.** Under RN an IEEE format returns ±∞ once |x| ≥ x_max(1 + u); subsequent arithmetic propagates ∞ and produces NaN from ∞ − ∞ or 0·∞. E4M3 has no ∞, so a conversion must either saturate to ±448 or emit NaN; R3.2 describes saturation to the maximum representable value as the expected conversion, notes that infinities and NaNs of the wider type both become NaN in E4M3, and allows a non-saturating mode; which one a given kernel uses is a property of the kernel, not of the format [PAPER-REPORTED — R3.2 §2; per-kernel mode NOT-DISCLOSED].
+A signed two's-complement $k$-bit integer has range $[-2^{k-1},2^{k-1}-1]$ and unit spacing; an unsigned integer has range $[0,2^k-1]$. Integer multiply-accumulate can overflow without any floating-point infinity. For symmetric INT8 operands bounded by 127, a sufficient INT32 safety condition is $n\,127^2\le2^{31}-1$ for a length-$n$ dot product; asymmetric zero points change this bound because the centered operands can be larger. A scale changes decoded units, not the accumulator's integer capacity [MATHEMATICALLY-DERIVED — triangle inequality on the integer sum].
 
-**Underflow.** Below x_min^norm, IEEE arithmetic degrades gradually through subnormals; below x_min^sub the result is zero. Hardware may run in flush-to-zero mode, in which subnormal results are replaced by zero; the NVIDIA CUDA compiler exposes this as a compile option and fast-math implies it [OFFICIAL-DOCUMENTATION — NVIDIA CUDA docs root https://docs.nvidia.com/cuda/]. For FP16 the gap between 6.1e−5 and zero is the region in which gradients vanish, and it motivates loss scaling in [§3.4](03-4-mixed-precision-execution.md).
+MXFP8 and MXFP4 pair 32 elements with one E8M0 power-of-two scale. The encoding does not prescribe the memory layout or require every implementation to support every concrete MX format. NVFP4 differs: its E2M1 payload uses local E4M3 scales and a global FP32 scale; it is not interchangeable with MXFP4 [OFFICIAL-DOCUMENTATION — R3.6 §§5.1–5.4; R3.41, "Data Format"]. These scales encode range but consume metadata and introduce their own rounding boundaries.
 
 ```figure
 id: fig-3.7
 kind: chart
-title: Worst relative rounding error against magnitude, per format
+title: Normal-rounding bound and subnormal absolute-error envelope
 caption: >-
   Each line is flat at log₂ u, the Eq. 3.2 bound, across its normal range. It
   climbs one step per binade through the subnormals, where spacing is fixed
-  at x_min^sub. It is pinned at 2^0 = 100 % once the value flushes to zero or
-  passes x_max, which marks ±∞ for IEEE formats and NaN or saturation for
-  E4M3. Over Experiment 3.1's band, 2^−30 to 2^30, FP32 and BF16 never leave
+  at x_min^sub. It is clipped at the display ceiling after underflow or
+  passage beyond x_max, which marks ±∞ for IEEE formats and NaN or saturation for
+  E4M3. Over the verification protocol's band, 2^−30 to 2^30, FP32 and BF16 never leave
   their plateau. FP16 holds full precision only from 2^−14 to 65504, 30 of the
   band's 60 binades. E4M3 holds it only from 2^−6 to 448, and represents
   nothing below 2^−9. That is why FP16 needs loss scaling and FP8 needs a
@@ -314,7 +303,7 @@ placement: inline
 evidence: MATHEMATICALLY-DERIVED
 source: ["DERIVED:eq-3.2", "DERIVED:eq-3.3"]
 alt: >-
-  Line chart of the base-2 logarithm of the worst relative rounding error
+  Line chart of the base-2 logarithm of the illustrative relative-error envelope
   against log₂|x| from −30 to 30, for six formats. FP32 is flat at −24 and
   BF16 flat at −8 over the whole band. FP16 is at 0 (flushed to zero) below
   2^−25, rises from −1 at 2^−24 to −11 at 2^−14, stays at −11 up to 65504,
@@ -325,7 +314,7 @@ alt: >-
 spec:
   type: line
   x: { label: "log₂|x|, magnitude of the value", scale: linear, format: integer, domain: [-30, 30] }
-  y: { label: "log₂ of worst relative rounding error", scale: linear, format: integer, domain: [-25, 0] }
+  y: { label: "log₂ of illustrative relative-error envelope", scale: linear, format: integer, domain: [-25, 0] }
   series:
     - { id: fp32, label: "FP32, u = 2^−24", formula: "min(0, max(-24, -150 - x, 1000*(x - 128)))", sample: { from: -30, to: 30, count: 61 } }
     - { id: bf16, label: "BF16, u = 2^−8", formula: "min(0, max(-8, -134 - x, 1000*(x - 127.994)))", sample: { from: -30, to: 30, count: 61 } }
@@ -341,79 +330,69 @@ spec:
     - { x: 15.999, label: "FP16 x_max = 65504" }
 ```
 
-Cost line: bytes per value b = 4 (FP32), 2 (FP16/BF16), 1 (FP8), 0.5 (FP4) plus scale overhead of Eq. 3.4; HBM traffic and capacity scale with b; compute throughput per format is vendor-specific and advertised peaks are not application throughput [KNOWN — notation.md; UNVERIFIED for any specific ratio].
+**Resource boundary.** An $n$-element conversion is $O(n)$ work and reads and writes $O(n)$ bytes; streaming auxiliary state is constant for scalar conversion and one scale per block for block conversion. Payload bytes per value are 4, 2, 1, and 0.5 for FP32, 16-bit, 8-bit, and packed 4-bit values. Eq. 3.4 adds scale storage. Parameter count and token count do not change. Communication shrinks only when the wire representation also narrows; single-device conversion has none. Latency, realized FLOP/s, energy, and monetary savings are NOT-DISCLOSED for this abstract conversion and cannot be inferred from bit width [MATHEMATICALLY-DERIVED].
 
 ## Algorithm
 
 ```text
-Algorithm 3.1 — Round-to-nearest-even into a (w, p) format
-INPUT   real x ≠ 0; format (w, p, β); saturate ∈ {true, false}
-OUTPUT  representable value fl(x), or ±∞ / NaN / ±x_max on overflow
-STATE   e = floor(log2 |x|); m_real = |x| / 2^e − 1 (in [0,1))
-INVARIANT  |fl(x) − x| ≤ u |x| whenever x_min^norm ≤ |x| ≤ x_max
-1  if e + β < 1:                       # subnormal range
-2      set e ← 1 − β; m_real ← |x| / 2^e         # no implicit leading 1
-3  q ← m_real · 2^p; q_lo ← floor(q); r ← q − q_lo
-4  if r > 1/2 or (r = 1/2 and q_lo is odd): q_lo ← q_lo + 1   # ties-to-even
-5  if q_lo = 2^p: q_lo ← 0; e ← e + 1                        # carry into exponent
-6  if e > e_max: return saturate ? sign(x)·x_max : (format has ∞ ? sign(x)·∞ : NaN)
-7  if |x| < x_min^sub / 2: return sign(x)·0
-8  return sign(x) · 2^e · (1 + q_lo / 2^p)   # or 2^(1−β) · q_lo/2^p if subnormal
-9  TERMINATION: constant number of steps
+Algorithm 3.1 — Finite-value nearest-even conversion (explanatory)
+INPUT x finite; ordered target finite grid; target overflow mode
+OUTPUT target code and class: finite, zero, saturated, or overflow
+1. Handle signed zero explicitly.
+2. If x lies beyond the finite grid, apply the specified overflow rule.
+3. Find adjacent target grid values x_minus <= x <= x_plus.
+4. Choose the closer neighbor; at equal distance choose even retained code.
+5. Return that code and its class.
+INVARIANT the finite result is a nearest representable neighbor.
+TERMINATION constant field operations for fixed-width scalar formats.
 ```
 
-Complexity: O(1) per element. Implementation: `Tensor.to(dtype)` in PyTorch and `astype` in JAX perform RN conversion; the saturate flag corresponds to conversion-mode options in FP8 kernels [OFFICIAL-DOCUMENTATION — https://pytorch.org/docs/stable/, https://docs.jax.dev/].
+This abstraction deliberately separates IEEE-style and finite-only exceptional encodings. A format implementation must supply those rules; a generic exponent-carry routine cannot safely implement every row of Table 3.1 [MATHEMATICALLY-DERIVED].
 
 ## Implementation
 
-Tensors carry a dtype (storage); operators declare a compute dtype and, for reductions, an accumulation dtype ([§3.2](03-2-stable-primitives.md)). In the reference stack this is visible at the Kernels / numerics / collectives layer: NVIDIA cuBLAS / cuBLASLt take input, output, and compute types as separate arguments so that BF16 inputs can accumulate in FP32 [OFFICIAL-DOCUMENTATION — https://docs.nvidia.com/cuda/cublas/]. At the Model / autograd framework layer, PyTorch exposes `torch.float32`, `torch.float16`, `torch.bfloat16`, `torch.float8_e4m3fn`, `torch.float8_e5m2`, and integer dtypes, and a matmul-precision switch controlling TF32 use for FP32 inputs [OFFICIAL-DOCUMENTATION — https://pytorch.org/docs/stable/]. Block-scaled FP8/FP4 execution is provided by NVIDIA Transformer Engine layers rather than by plain dtypes, because the scale is per block, not per tensor [OFFICIAL-DOCUMENTATION — Transformer Engine docs root]. Memory: converting a [B, T, D] BF16 activation to FP8 halves its bytes and adds bits(s)/n_b per element. Communication: collectives over reduced formats reduce bytes but reduce in the wire dtype unless the collective promotes; this is developed in [§29.5](../../../vol-02-execution-and-optimization/part-05-hardware-kernels-and-distributed-execution/ch29-parallelism-collectives-and-distributed-optimization/29-5-collective-communication.md).
+PyTorch and JAX occupy **Model / autograd framework**; NVIDIA CUDA occupies **Accelerator / driver / compiler**; NVIDIA cuBLAS / cuBLASLt and NVIDIA Transformer Engine occupy **Kernels / numerics / collectives**. PyTorch documents FP8 storage dtypes with restricted operator support, so dtype existence does not imply an arbitrary kernel can consume it. CUDA's floating-point documentation describes rounding and subnormal controls. JAX's matmul-precision setting controls dot/convolution evaluation separately from array storage [OFFICIAL-DOCUMENTATION — R3.33; R3.25 §§2–4; R3.48]. Actual kernel selection, scale layout, supported devices, and runtime versions must be recorded with an execution, which this manuscript does not claim to have performed.
 
 ## Experimental design
 
-Proposed: Experiment 3.1 in [verification.md](verification.md) converts fixtures spanning 2^−30 … 2^30 into each format and measures |fl(x) − x|/|x| against the u column of Table 3.1; a violation on any in-range value rejects the implementation's rounding mode. An extreme set includes values straddling x_max and x_min^sub of each format.
+### Reported experiments
+
+The 2022 FP8 format study preserves model initializations and optimizer hyperparameters and emulates FP8 GEMM inputs while evaluating arithmetic in wider precision; outputs remain wider. Its image-classification table and language-model experiments therefore test format perturbation in a training recipe, rather than native FP8 kernel speed [PAPER-REPORTED — R3.2 §4.1, Tables 2–5].
+
+Rouhani et al. separately evaluate direct-cast inference, calibrated inference, fine-tuning, and training with emulated MX operators. Their Table 2 applies weight and activation conversion without retraining; Table 5 concerns training. Mixing these settings would conflate representation error with adaptation [PAPER-REPORTED — R3.5 §§4.1–4.3]. Proposed format-boundary checks are confined to [verification.md](verification.md).
 
 ## Observations
 
-**What the paper claims.** R3.2 reports that FP8 training matched FP16/BF16 baselines on the image, translation, and language models it tested, up to a 175B-parameter GPT model, with hyperparameters unchanged; the experiments used *simulated* FP8 — GEMM input tensors clipped to FP8-representable values with scaling and saturation, arithmetic carried out in the wider 16-bit format [PAPER-REPORTED]. P13 reports that a fine-grained FP8 recipe (E4M3 throughout, 1×128 activation tiles, 128×128 weight blocks, FP32 promotion of partial sums) kept relative loss error below 0.25% against a BF16 baseline on its ablation models [PAPER-REPORTED].
+**What the paper claims.** In the MX direct-cast WMT-17 Transformer-Base experiment, FP32 BLEU is 26.85 and MXFP4 BLEU is 22.68. The narrower encoding is consequently not a drop-in accuracy guarantee [PAPER-REPORTED — R3.5 Table 2].
 
-**What the evidence shows.** Table 3.1 is definitional and needs no reproduction. The equivalence of FP8 and BF16 training is reported by the authors on their workloads and has not been independently reproduced in this book; it depends on the scaling recipe, not on the format alone.
+**What the evidence shows.** The FP8 study reports close baseline task results under its simulated conversion recipe. It does not establish native hardware throughput or unchanged training under arbitrary scale and accumulator choices [PAPER-REPORTED — R3.2 §4].
 
-**What we infer.** From Eq. 3.2, a single E4M3 rounding contributes relative error up to 6.25%; usable training therefore requires that error to be uncorrelated across many elements and accumulated in a wider format [DERIVED]. From Table 3.1, BF16 cannot represent a relative parameter update smaller than 2^−8 ≈ 0.39% of the parameter, which is the origin of FP32 master weights in [§3.4](03-4-mixed-precision-execution.md) [DERIVED].
+**What we infer.** Scaling can move the represented interval but cannot restore fraction bits. BF16 has broader exponent range than FP16 and coarser normal spacing; neither fact alone decides convergence [MATHEMATICALLY-DERIVED — Table 3.1].
 
-**What remains unknown.** The accumulator width inside any vendor's tensor cores for a given input format is NOT-DISCLOSED in the material inspected here; P13 states that its target device retained about 14 bits of accumulation precision for FP8 GEMMs and designs around it, which this book records as the report's statement rather than as a device specification [PAPER-REPORTED].
+**What remains unknown.** Independent replication, runtime compatibility, and undisclosed kernel arithmetic are UNVERIFIED for this edition; experimental seeds not supplied by a particular source remain NOT-DISCLOSED, not zero by default.
 
 ## Failure modes
 
-> **Failure mode — Silent exponent overflow in FP16.** *Symptom:* loss becomes inf then NaN within one step. *Cause:* an activation or attention logit exceeded 65504 or exp(z) with z > ln 65504 ≈ 11.09 was evaluated without max subtraction. *Detection:* per-tensor finite checks after each block. *Mitigation:* BF16 storage, max-subtracted softmax (§3.2), or scaling.
-
-> **Failure mode — Gradient underflow in FP16.** *Symptom:* a fraction of gradient elements are exactly zero while their FP32 twins are not. *Cause:* magnitudes below 2^−24 (or below 2^−14 under flush-to-zero). *Detection:* histogram of |g| against Table 3.1 thresholds. *Mitigation:* loss scaling (§3.4).
-
-> **Failure mode — NaN from E4M3 conversion.** *Symptom:* NaNs appear only in FP8 layers. *Cause:* a value beyond 448/scale was converted without saturation. *Detection:* amax monitoring per tensor. *Mitigation:* correct scale (§3.4) or saturating conversion.
+Subnormal flushing can turn an encoded nonzero value into zero during an operation; this is distinct from conversion underflow. Saturation can produce finite but biased tensors. Wrong scale-axis or metadata decoding can produce finite values in incorrect units. Integer wraparound can return plausible bounded integers with the wrong sign. Each failure requires an operator-level input/output check and a recorded representation contract; a global finite-value test catches only a subset [MATHEMATICALLY-DERIVED].
 
 ## Siblings
 
-**FP16** — this section. Why it exists: half the bytes of FP32 with ten mantissa bits. What assumption changed: values fit in ±65504. What objective changed: none. What problem it solved: HBM traffic and tensor-core eligibility. What new failure mode it introduced: overflow and gradient underflow. Changed primitive: exponent field 8 → 5 bits.
-
-**BF16** — this section. Why it exists: FP16 range failures. What assumption changed: 7 mantissa bits suffice for activations and gradients when accumulation is FP32. What problem it solved: no loss scaling needed. What new failure mode it introduced: updates below 2^−8 relative are lost without master weights. Changed primitive: mantissa 10 → 7 bits, exponent 5 → 8.
-
-**FP8 E4M3 / E5M2** — this section. Why it exists: a further halving of bytes. What assumption changed: a per-tensor or per-block scale is part of the representation. What problem it solved: 8-bit GEMM eligibility. What new failure mode it introduced: scale staleness and saturation. Changed primitive: unscaled element → scaled element.
-
-**Block-scaled MXFP8 / NVFP4** — this section; execution owned by Transformer Engine layers. Why it exists: per-tensor scales are dominated by outliers. What assumption changed: a block of 16–32 elements shares an exponent. What problem it solved: dynamic range per block rather than per tensor. What new failure mode it introduced: scale-metadata layout and kernel availability. Changed primitive: one scale per tensor → one scale per block.
-
-**Integer INT8 / INT4** — [§40.1](../../../vol-02-execution-and-optimization/part-07-inference-algorithms-distillation-and-compression/ch40-quantization-from-numerical-model-to-deployable-artifact/40-1-quantization-formulation.md). Why it exists: uniform grids are cheapest to multiply. What assumption changed: values are bounded and approximately uniformly distributed within a block. Changed primitive: floating spacing → uniform spacing.
+[FP16 and BF16](03-1-numeric-representations.md#formulation) trade exponent range against resolution at equal payload width. [E4M3 and E5M2](03-1-numeric-representations.md#formulation) trade finer spacing against wider range and different special encodings. [MXFP4 and NVFP4](03-4-mixed-precision-execution.md#mechanism) share E2M1 payloads but differ in block size and scale hierarchy. [Integer quantization](../../../vol-02-execution-and-optimization/part-07-inference-algorithms-distillation-and-compression/ch40-quantization-from-numerical-model-to-deployable-artifact/40-1-quantization-formulation.md) uses a uniform decoded grid per scale; that differs from the binade-dependent floating grid.
 
 ## Extensions
 
-Long context enlarges attention-logit magnitudes and reduction lengths, tightening the effective tolerance (developed in [§3.6](03-6-reproducibility-limits.md)). Multimodal encoders often keep FP32 normalization statistics while projecting into BF16; embodied control loops are sensitive to subnormal flushing in low-magnitude action outputs (proposal; UNVERIFIED).
+### Improvements
+
+The inspected lineage moves from scalar FP8 encoding to shared block scales, then to NVFP4's local fraction-bearing scale and global scale. Each reduces one range bottleneck while adding scale-state and layout requirements. These are representational changes; the training improvements and their ablations are reconstructed in [§3.4](03-4-mixed-precision-execution.md#extensions). No format-only theorem of superior task quality is claimed [OFFICIAL-DOCUMENTATION — R3.6; R3.41].
 
 ## Limitations
 
-The bounds hold for IEEE-compliant elementwise operations in the normal range; they do not describe fused kernels that internally reorder or promote. Falsification: a measured relative error exceeding u on an in-range elementwise conversion indicates a non-RN mode or a fast-math flag. Decision consequence: choose the storage format by required range first, then precision, and never assume the accumulation width.
+Eq. 3.2 covers an individual nearest rounding under its stated range conditions. Overflow, subnormal flushing, scale rounding, conditioning, and operator approximation require separate analysis. FP64 can itself overflow and round; a reference comparison establishes agreement at specified inputs, not exact mathematical truth [MATHEMATICALLY-DERIVED].
 
 ## Reproducibility
 
-Constants in Table 3.1 are derivable from Eq. 3.1–3.3 and need no software version. Framework dtype availability and FP8 conversion modes must be checked against the pinned version in the skeleton manifest ([§3.6](03-6-reproducibility-limits.md)). Unresolved: per-device accumulator width (NOT-DISCLOSED); NVFP4 second-level tensor scale (UNVERIFIED); E2M1 constants against the OCP specification text (UNVERIFIED, R3.6).
+References record the inspected revisions and 7 October 2026 access date. The OCP MX specification is v1.0, September 2023. Transformer Engine pages display 2.20.2; these are mutable documentation, not an installed-version claim. Record rounding, saturation, subnormal handling, packing, scale direction, scale dtype, and actual operator support with each executable artifact [OFFICIAL-DOCUMENTATION — R3.6; R3.41–R3.45].
 
 ## References
 
-P13; R3.1, R3.2, R3.4, R3.5, R3.6, R3.7, R3.8, R3.11, R3.12, R3.13, R3.16, R3.25.
+R3.1–R3.6; R3.33; R3.41–R3.45; R3.13; R3.48; R3.25. Full-text locators are in [references.md](references.md).

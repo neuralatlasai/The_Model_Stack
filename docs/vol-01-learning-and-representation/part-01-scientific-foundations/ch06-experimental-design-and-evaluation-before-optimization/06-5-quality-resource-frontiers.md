@@ -28,7 +28,7 @@ datasets: []
 status: {maturity: established, disputed: false}
 evidence_summary: {labels_used: [MATHEMATICALLY-DERIVED, DERIVED, ASSUMED, PAPER-REPORTED, OFFICIAL-DOCUMENTATION, NOT-DISCLOSED, UNVERIFIED], empirically_observed: false}
 word_count_target: 2200
-updated_at: 2026-09-20
+updated_at: 2026-10-08
 editorial_status: manuscript_draft
 ---
 
@@ -36,7 +36,9 @@ editorial_status: manuscript_draft
 
 ## Scope
 
-Objective: specify fixed-quality, fixed-latency, fixed-compute, and fixed-cost comparisons before interpreting an efficiency claim. Baseline: a quality table and a throughput table collected on different workloads. Success: every selected configuration satisfies a named resource constraint on the same evaluation unit, and apparent dominance is separated from supported dominance. Pareto definitions belong to [§2.6](../ch02-mathematical-and-statistical-foundations/02-6-optimization-language.md); workload generation and capacity planning are developed in [Chapter 48](../../../vol-02-execution-and-optimization/part-08-inference-engines-and-production-serving/ch48-capacity-planning-benchmarking-and-lifecycle-economics/README.md). This section owns the comparison protocol, not runtime scheduling.
+Efficiency is a relation between quality, resources, and an operating workload. A fixed-quality comparison asks how much resource is required to satisfy a declared quality criterion. A fixed-latency comparison asks which quality is achievable within a specified delay constraint. Fixed-compute and fixed-cost comparisons change the resource boundary again. A claim must preserve that boundary when comparing systems.
+
+Compute-optimal training, latency-constrained serving, and holistic quality evaluation supply distinct instances of this constrained design ([P09, P38, P50](references.md), PAPER-REPORTED). This section defines feasible configurations, conservative uncertainty-aware dominance, curation amortisation, and a bounded algorithm for the measured two-axis Pareto set. The result concerns tested candidates; it does not prove a global frontier.
 
 ## Why this exists
 
@@ -357,11 +359,9 @@ analysis           -> constraints then frontier / retain raw points and uncertai
 
 ## Siblings
 
-**Controlled attribution — [§6.3](06-3-controlled-comparisons.md).** DERIVED: holds non-intervention components fixed to identify a cause. A frontier comparison instead selects complete systems; it permits several components to differ but cannot assign causality to one of them.
+Controlled intervention studies seek the effect of a specified change under recorded controls. Frontier studies may compare complete systems that differ in several components, because the decision is which system satisfies the constraints most efficiently. Such a comparison can establish a useful operating-point difference while leaving its internal causes unidentified.
 
-**Scalar utility — [§2.6](../ch02-mathematical-and-statistical-foundations/02-6-optimization-language.md).** DERIVED: converts trade-offs into a scalar using explicit weights. The changed primitive is a utility function instead of dominance; sensitivity to units and weights becomes the failure mode. No utility is inferred from a leaderboard rank.
-
-**Capacity planning — [Chapter 48](../../../vol-02-execution-and-optimization/part-08-inference-engines-and-production-serving/ch48-capacity-planning-benchmarking-and-lifecycle-economics/README.md).** ASSUMED forward route: adds time-varying demand and deployment economics. The changed boundary is a service over an attribution window, requiring load and cost evidence beyond an isolated configuration test.
+Scalar utility assigns explicit exchange rates between quality and resources, whereas Pareto dominance leaves incomparable points unresolved. Deployment capacity planning adds demand over time, reservation and idle costs, service windows, and failure recovery. These additional constraints require measurements at that deployment boundary; an isolated kernel or single-request benchmark cannot supply them.
 
 ## Extensions
 

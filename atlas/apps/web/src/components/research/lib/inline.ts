@@ -10,6 +10,7 @@
 import type { CitationKey, EvidenceLabel, Inline } from '@atlas/core';
 import { assertNever, paperUrl } from '@atlas/core';
 import { isBareUrl, isInternalHref, isSafeExternalHref, shortUrl, withBase } from './url.ts';
+import { equationTextParts, spacedSectionReferences } from './inline-equations.ts';
 
 export type InlineView =
   | { readonly kind: 'text'; readonly value: string }
@@ -30,6 +31,7 @@ export type InlineView =
   | { readonly kind: 'label'; readonly label: EvidenceLabel }
   | { readonly kind: 'xref'; readonly href: string; readonly xref: string; readonly text: string }
   | { readonly kind: 'xref-missing'; readonly text: string }
+  | { readonly kind: 'derived-equation'; readonly href: string; readonly text: string; readonly source: string }
   | { readonly kind: 'break' };
 
 function internal(href: string, base: string): string | null {
@@ -39,7 +41,7 @@ function internal(href: string, base: string): string | null {
 export function inlineView(node: Inline, base: string): InlineView {
   switch (node.kind) {
     case 'text':
-      return { kind: 'text', value: node.value };
+      return { kind: 'text', value: spacedSectionReferences(node.value) };
     case 'emphasis':
     case 'strong':
     case 'delete':
@@ -67,13 +69,29 @@ export function inlineView(node: Inline, base: string): InlineView {
           const href = internal(target.href, base);
           return href === null
             ? { kind: 'plain', children: node.children }
-            : { kind: 'link', href, className: 'rb-link', title: undefined, rel: undefined, node: target.nodeId, children: node.children };
+            : {
+                kind: 'link',
+                href,
+                className: 'rb-link',
+                title: undefined,
+                rel: undefined,
+                node: target.nodeId,
+                children: node.children,
+              };
         }
         case 'planned': {
           const href = internal(target.href, base);
           return href === null
             ? { kind: 'plain', children: node.children }
-            : { kind: 'link', href, className: 'rb-link rb-planned', title: undefined, rel: undefined, node: target.nodeId, children: node.children };
+            : {
+                kind: 'link',
+                href,
+                className: 'rb-link rb-planned',
+                title: undefined,
+                rel: undefined,
+                node: target.nodeId,
+                children: node.children,
+              };
         }
         case 'external': {
           if (!isSafeExternalHref(target.href)) return { kind: 'plain', children: node.children };
@@ -101,8 +119,24 @@ export function inlineView(node: Inline, base: string): InlineView {
   }
 }
 
-export function inlineViews(nodes: readonly Inline[], base: string): InlineView[] {
-  return nodes.map((node) => inlineView(node, base));
+export function inlineViews(
+  nodes: readonly Inline[],
+  base: string,
+  equations?: ReadonlyMap<string, string>,
+): InlineView[] {
+  return nodes.flatMap((node): InlineView[] => {
+    if (node.kind !== 'text' || equations === undefined) return [inlineView(node, base)];
+    return equationTextParts(node.value, equations).map((part): InlineView =>
+      part.kind === 'text'
+        ? { kind: 'text', value: spacedSectionReferences(part.value) }
+        : {
+            kind: 'derived-equation',
+            href: withBase(part.href, base),
+            text: `Eq. ${part.number}`,
+            source: part.source,
+          },
+    );
+  });
 }
 
 /** Base-aware paper page for a citation key. */

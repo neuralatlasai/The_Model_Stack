@@ -29,7 +29,7 @@ datasets: []
 status: {maturity: foundational, disputed: false}
 evidence_summary: {labels_used: [MATHEMATICALLY-DERIVED, PAPER-REPORTED, ASSUMED, DERIVED, NOT-DISCLOSED, UNVERIFIED], empirically_observed: false}
 word_count_target: 1000
-updated_at: 2026-09-20
+updated_at: 2026-10-08
 editorial_status: manuscript_draft
 ---
 
@@ -37,19 +37,19 @@ editorial_status: manuscript_draft
 
 ## Scope
 
-Objective: fix the vocabulary in which design decisions are stated — decision variables, constraints, Lagrangians and their multipliers, Pareto frontiers, sensitivity analysis, and uncertainty propagation — so that Chapter 01's "constrained optimisation problem" can be written down and its solution's fragility computed. Baseline: a design chosen by scalarising quality and cost with an unstated weight. Success: every allocation decision in the book (N vs D, batch vs latency, precision vs accuracy, engine configuration) names its variables, constraints, binding multipliers, and the uncertainty of its inputs. Boundaries: fixed-budget frontier comparisons in evaluation are [§06.5](../ch06-experimental-design-and-evaluation-before-optimization/06-5-quality-resource-frontiers.md); compute-optimal fits are [§21.2](../../part-04-training-science-and-adaptation/ch21-scaling-laws-and-compute-allocation/21-2-compute-optimal-design.md); serving economics are [§48.5](../../../vol-02-execution-and-optimization/part-08-inference-engines-and-production-serving/ch48-capacity-planning-benchmarking-and-lifecycle-economics/48-5-economics.md).
+Constrained optimization specifies decision variables, an objective, feasible constraints, and any uncertainty in their inputs. Lagrangians and KKT conditions describe regular stationary solutions; Pareto dominance describes trade-offs without fixing an exchange rate; sensitivity and propagation quantify local or distributional uncertainty in a decision. Evaluation frontiers are developed in [§06.5](../ch06-experimental-design-and-evaluation-before-optimization/06-5-quality-resource-frontiers.md), compute allocation in [§21.2](../../part-04-training-science-and-adaptation/ch21-scaling-laws-and-compute-allocation/21-2-compute-optimal-design.md), and serving economics in [§48.5](../../../vol-02-execution-and-optimization/part-08-inference-engines-and-production-serving/ch48-capacity-planning-benchmarking-and-lifecycle-economics/48-5-economics.md).
 
 ## Why this exists
 
-What failed: decisions were presented as points — "train this size on this many tokens", "serve at this batch" — without the constraint that made them optimal or the sensitivity that would make them wrong. The bottleneck: constraints (compute, HBM, latency SLO, money) change between the paper and the reader, and a point optimum does not transfer; only the *rule* — the multiplier condition — transfers. The dominant constraint: uncertainty in the fitted inputs (scaling exponents, cost coefficients) that propagates into the decision. What changed: decisions are stated as optimisation problems with named multipliers, frontiers instead of scalarised winners, and propagated uncertainty.
+An allocation optimum depends on both the fitted objective and its compute constraint. Changing loss coefficients, scaling exponents, or cost assumptions can change the selected parameters and tokens even if the constrained algebra is unchanged. P09 evaluates three estimation approaches rather than treating one fitted allocation exponent as a mathematical constant [PAPER-REPORTED · P09, §§3.1–3.3]. A deployment frontier similarly depends on measured quality, latency, cost, and the uncertainty associated with each quantity.
 
 ## Intuition
 
-Physically, a Lagrange multiplier is a price: the marginal loss reduction per unit of extra compute, the marginal quality per millisecond of latency. Two designs at different prices are not comparable by a single number; they are two points on a frontier, and the frontier is what an engineer must see to choose. Sensitivity analysis asks how far the optimum moves when an input moves; uncertainty propagation asks how wide the interval on the optimum is when the input has an interval. No cognitive analogy is used.
+At a regular smooth solution, an inequality multiplier gives the negative derivative of the minimized objective with respect to a relaxed constraint bound. Its units are objective units per constraint unit, and the envelope interpretation is local. A Pareto frontier retains non-dominated alternatives; a weighted objective selects only supported alternatives. Propagating a joint distribution of fitted inputs through an allocation rule is distinct from differentiating that rule at one point [MATHEMATICALLY-DERIVED · DERIVED:eq-2.25; DERIVED:eq-2.27].
 
 ## Formulation
 
-> **Definition — decision variable, Lagrangian, KKT conditions.** For decision variables x ∈ ℝᵏ, objective f, inequality constraints g_i(x) ≤ b_i and equalities h_j(x) = 0, the Lagrangian is ℒ(x, λ, ν) = f(x) + Σ_i λ_i (g_i(x) − b_i) + Σ_j ν_j h_j(x), and the KKT conditions are its first-order optimality conditions.
+> **Definition — decision variable, Lagrangian, KKT conditions.** For decision variables x ∈ ℝᵏ, objective f, inequality constraints g_i(x) ≤ b_i and equalities h_j(x) = 0, the Lagrangian is ℒ(x, λ, ν) = f(x) + Σ_i λ_i (g_i(x) − b_i) + Σ_j ν_j h_j(x), and the KKT relations are first-order necessary conditions under a constraint qualification, and sufficient under the convexity conditions stated below.
 
 $$
 \min_{x} f(x) \;\; \text{s.t.}\;\; g_i(x) \le b_i,\; h_j(x) = 0; \qquad \mathcal{L}(x,\lambda,\nu) = f(x) + \sum_i \lambda_i\big(g_i(x) - b_i\big) + \sum_j \nu_j h_j(x)
@@ -57,7 +57,7 @@ $$
 *(Eq. 2.24)* where λ_i ≥ 0, ν_j free; the subscripted λ_i here are multipliers, local to this section and distinct from the loss weight λ and the arrival rate λ of notation.md.
 
 $$
-\nabla_x \mathcal{L} = 0, \quad g_i(x) \le b_i, \quad \lambda_i \ge 0, \quad \lambda_i\big(g_i(x) - b_i\big) = 0; \qquad \frac{\partial f^{*}}{\partial b_i} = -\lambda_i^{*}
+\nabla_x \mathcal{L} = 0, \quad g_i(x) \le b_i, \quad \lambda_i \ge 0, \quad \lambda_i\big(g_i(x) - b_i\big) = 0,\quad h_j(x)=0; \qquad \frac{\partial f^{*}}{\partial b_i} = -\lambda_i^{*}
 $$
 *(Eq. 2.25)* where f* = optimal value as a function of the constraint levels; the last identity (the sensitivity theorem) holds under standard regularity and identifies −λ_i* as the shadow price of constraint i.
 
@@ -116,7 +116,7 @@ spec:
 states:
   - { anchor: formulation, label: "α = β, k = 100", variables: { alpha: 0.3, beta: 0.3, k: 100, da: 0, db: 0 }, highlight: [aN, aD, gN, gD], note: "α = β gives exponents 1/2: 100× compute is 10× parameters and 10× tokens, P09's 'scaled equally' as a corollary of Eq. 2.26." }
   - { anchor: mechanism, label: "δβ = 0.02, k = 10⁴", variables: { alpha: 0.3, beta: 0.3, k: 10000, da: 0, db: 0.02 }, highlight: [db, k, sh], note: "An error of 0.02 in β moves N*'s growth over 10⁴× compute by 17 %: ln k multiplies every exponent error." }
-  - { anchor: experimental-design, label: "k = 10⁶", variables: { alpha: 0.3, beta: 0.3, k: 1000000, da: 0, db: 0.02 }, highlight: [k, sh], note: "Six decades past the pilot budget the same error is 26 %: the prediction that the interval on N* widens with log C." }
+  - { anchor: experimental-design, label: "k = 10⁶", variables: { alpha: 0.3, beta: 0.3, k: 1000000, da: 0, db: 0.02 }, highlight: [k, sh], note: "Six decades past the pilot budget the same error is 26 %: the conditional sensitivity of the growth ratio to exponent error." }
   - { anchor: failure-modes, label: "α ≠ β, unpropagated", variables: { alpha: 0.3, beta: 0.2, k: 10000, da: 0, db: 0.02 }, highlight: [aN, gN, gD, sh], note: "α = 0.3, β = 0.2: 10⁴× compute is 39.8× parameters and 251× tokens, and δβ = 0.02 shifts N* by 25 %. A point N* to three figures hides this." }
 ```
 
@@ -131,9 +131,11 @@ $$
 $$
 *(Eq. 2.27)* where the ratio form applies directly to cost per accepted task (notation.md §2.10), U = total cost, W = accepted tasks.
 
-> **Assumption.** Objectives and constraints are differentiable and the optimum is regular (constraint qualification holds) · *sensitivity:* at kinks (e.g. memory-capacity cliffs, batch-size steps) the multiplier is set-valued and Eq. 2.25's derivative becomes a one-sided bound.
+> **Assumption.** Objectives and constraints are differentiable and the optimum is regular (constraint qualification holds) · *sensitivity:* at kinks or discrete capacity steps, the smooth envelope derivative may fail; a one-sided or generalized derivative requires its own regularity assumptions.
 
 ## Mechanism
+
+### Methodology
 
 <details><summary>Derivation of Eq. 2.26</summary>
 
@@ -141,7 +143,7 @@ $$
 
 </details>
 
-**What the fitted inputs are and what they cost to trust.** P09 estimates compute-optimal allocation by three approaches, the third fitting the parametric form "L(N,D) = E + A/N^α + B/D^β" with a Huber loss minimised by L-BFGS, and its abstract states that "for compute-optimal training, the model size and the number of training tokens should be scaled equally" [PAPER-REPORTED · P09]. Eq. 2.26 shows that this conclusion is the statement α ≈ β under the fitted form; P09 also reports that its three approaches yield differing exponent estimates [PAPER-REPORTED · P09], which is exactly the input uncertainty that Eq. 2.27 must propagate into N*: since log N* = (β/(α+β)) log C + const, a perturbation (δα, δβ) moves log N* by (log C)(α δβ − β δα)/(α+β)² to first order, and the lever arm log C grows with the budget [MATHEMATICALLY-DERIVED · DERIVED:eq-2.27]. P08 reports power-law dependence of loss on model size, dataset size, and compute over "more than seven orders of magnitude" and a different allocation conclusion under its own accounting [PAPER-REPORTED · P08]; the disagreement between P08 and P09 is a disagreement about fitted inputs and constraints, not about Eq. 2.26, and is developed in [§21.2](../../part-04-training-science-and-adaptation/ch21-scaling-laws-and-compute-allocation/21-2-compute-optimal-design.md). The parameter covariance Σ of published fits is NOT-DISCLOSED in the reports inspected, so the propagation can be carried out only on the reader's own fits ([§21.5](../../part-04-training-science-and-adaptation/ch21-scaling-laws-and-compute-allocation/21-5-pilot-methodology.md)), where the bootstrap of §02.5 over pilot runs (each run a cluster) supplies Σ at a cost of R refits.
+**What the fitted inputs are and what they cost to trust.** P09's third approach fits final run losses with the positive additive family in Eq. N.3, minimizing Huber residuals in log-loss with L-BFGS and a grid of initializations [PAPER-REPORTED · P09, §3.3, Eqs. (2)–(4); Appendix D.2]. Equation 2.26 is the analytic allocation rule for that fitted family and the stated compute constraint. The three estimation approaches use different summaries of training runs; their exponent differences measure methodological sensitivity rather than contradicting the algebra [MATHEMATICALLY-DERIVED · DERIVED:eq-2.26]. P08 provides the historical comparison, with different empirical allocation conclusions under its modeling and training protocol; full scaling methodology is owned by Chapter 21 [PAPER-REPORTED · P08, §6]. A joint covariance matrix for fitted parameters is NOT-DISCLOSED in the inspected P09 fitting account, preventing a numerical propagation of fit uncertainty from the published point estimates alone.
 
 **Why scalarisation loses frontier points.** Minimising c(x) − w·q(x) for a weight w > 0 recovers only points where a supporting line touches the frontier, i.e. the convex hull; a frontier point inside a concave region is never the minimiser for any w. The ε-constraint form (maximise q subject to c ≤ ε, sweeping ε) recovers every frontier point, at the cost of one constrained solve per ε [MATHEMATICALLY-DERIVED]. This is why [§06.5](../ch06-experimental-design-and-evaluation-before-optimization/06-5-quality-resource-frontiers.md) compares at fixed quality, fixed latency, fixed compute, or fixed cost rather than by a weighted score, and why a "cost-adjusted" leaderboard score encodes an unstated w.
 
@@ -183,7 +185,7 @@ spec:
     - { x: 0.5, label: "(0.5, 0.25): no w selects it" }
 ```
 
-**Sensitivity in systems decisions.** For serving, the decision variables are batch size, precision, parallelism degree, and cache policy; the constraints are HBM capacity (Eq. N.8), p99 latency, and cost; the multipliers on the latency constraint are the price of quality in milliseconds, and [§44.6](../../../vol-02-execution-and-optimization/part-08-inference-engines-and-production-serving/ch44-scheduling-distributed-serving-and-disaggregation/44-6-load-adaptation.md) and [§48.5](../../../vol-02-execution-and-optimization/part-08-inference-engines-and-production-serving/ch48-capacity-planning-benchmarking-and-lifecycle-economics/48-5-economics.md) develop them. Cost per accepted task is a ratio, and Eq. 2.27's ratio form shows that its relative uncertainty is at least the relative uncertainty of the acceptance count — which is a Bernoulli mean whose interval §02.5 supplies [MATHEMATICALLY-DERIVED · DERIVED:eq-2.27]. Cost of the analyses: local sensitivity is one gradient (or the multipliers, free at the optimum); delta-method propagation is one gradient of g and a k×k covariance; Monte Carlo propagation is n evaluations of g, which for g = "re-solve the allocation" is n constrained solves.
+**Sensitivity in systems decisions.** For serving, the decision variables are batch size, precision, parallelism degree, and cache policy; the constraints are HBM capacity (Eq. N.8), p99 latency, and cost; the multipliers on the latency constraint are the price of quality in milliseconds, and [§44.6](../../../vol-02-execution-and-optimization/part-08-inference-engines-and-production-serving/ch44-scheduling-distributed-serving-and-disaggregation/44-6-load-adaptation.md) and [§48.5](../../../vol-02-execution-and-optimization/part-08-inference-engines-and-production-serving/ch48-capacity-planning-benchmarking-and-lifecycle-economics/48-5-economics.md) develop them. Cost per accepted task is a ratio. Its first-order relative uncertainty depends on both numerator and denominator and their covariance; positive covariance can cancel variation, so there is no universal lower bound from the denominator alone [MATHEMATICALLY-DERIVED · DERIVED:eq-2.27]. Cost of the analyses: local sensitivity is one gradient (or the multipliers, free at the optimum); delta-method propagation is one gradient of g and a k×k covariance; Monte Carlo propagation is n evaluations of g, which for g = "re-solve the allocation" is n constrained solves.
 
 ```figure
 id: fig-2.32
@@ -194,8 +196,8 @@ caption: >-
   four decision variables on the left, three constraints in the middle, and
   one multiplier per constraint. Follow the emphasised path: the latency
   constraint's multiplier is the price of quality in milliseconds, and by
-  Eq. 2.25 it is also ∂f*/∂b for that constraint. The dashed cliff is where
-  the multiplier stops being a derivative and becomes a one-sided bound.
+  Eq. 2.25 the minimized objective obeys ∂f*/∂b_i = −λ_i* under the envelope conditions. The dashed cliff is where
+  the smooth envelope formula can fail; discrete alternatives require direct comparison.
 placement: inline
 evidence: MATHEMATICALLY-DERIVED
 source: ["DERIVED:eq-2.24", "DERIVED:eq-2.25", "DERIVED:eq-2.27"]
@@ -211,7 +213,7 @@ alt: >-
   to the shadow prices ∂f*/∂b_i = −λ_i*, the price of quality per
   millisecond. Sweeping the constraint levels traces the quality–cost
   frontier of Algorithm 2.6. A dashed constraint-cliff node marks the HBM
-  constraint as non-smooth, where the multiplier is one-sided.
+  constraint as non-smooth, where smooth sensitivity is not established.
 spec:
   direction: LR
   nodes:
@@ -225,7 +227,7 @@ spec:
     - { id: q, kind: objective, label: "quality", sub: "with its §02.5 interval" }
     - { id: lam, kind: node, label: "multipliers λ_i ≥ 0", sub: "λ_i(g_i − b_i) = 0, Eq. 2.25" }
     - { id: price, kind: metric, label: "shadow prices ∂f*/∂b_i = −λ_i*", sub: "quality per ms, per GiB, per unit cost", emphasis: true }
-    - { id: front, kind: boundary, label: "quality–cost frontier", sub: "Algorithm 2.6, with ambiguous set U" }
+    - { id: front, kind: boundary, label: "quality–cost frontier", sub: "point frontier; interval dominance is separate" }
     - { id: cliff, kind: dependency, label: "constraint cliff", sub: "KV cache over HBM by one sequence" }
   edges:
     - { from: bs, to: hbm }
@@ -241,7 +243,7 @@ spec:
     - { from: lam, to: price, kind: emphasis }
     - { from: price, to: front, label: "sweep b_i" }
     - { from: q, to: front }
-    - { from: cliff, to: hbm, kind: dependency, label: "multiplier one-sided" }
+    - { from: cliff, to: hbm, kind: dependency, label: "smooth envelope conditions fail" }
   groups:
     - { id: dv, label: "decision variables x" }
     - { id: con, label: "constraints g_i(x) ≤ b_i" }
@@ -292,23 +294,52 @@ spec:
     - { label: "cost tracks acceptances, ρ = 0.9", values: { r: 0.9 } }
 ```
 
+### KKT conditions and the limits of multipliers
+
+A complete specification distinguishes decision variables from fixed inputs, admissible domains, measured responses, and uncertain model parameters. Discrete batch sizes or device counts have integer domains; differentiating a continuous relaxation does not certify an integer optimum. Equality constraints contribute unrestricted multipliers because a feasible perturbation must remain tangent to their level sets. At a regular smooth local optimum, the active constraint gradients restrict the feasible directions, yielding stationarity with nonnegative inequality multipliers. Linear independence of the active inequality and equality gradients is one sufficient constraint qualification. Without a qualification, a local optimum can exist without a KKT multiplier: minimize $x$ subject to $x^2\le0$. The only feasible point is zero, but stationarity would require $1+\eta\cdot0=0$, impossible for finite $\eta$ [MATHEMATICALLY-DERIVED · DERIVED:eq-2.25].
+
+For differentiable convex $f,g_i$ and affine equalities, a feasible KKT point is globally optimal. To prove this, convexity gives $\mathcal L(x,\eta^*,\nu^*)\ge\mathcal L(x^*,\eta^*,\nu^*)$ from its zero gradient. For any feasible $x$, nonnegative multipliers and $g_i(x)-b_i\le0$ give $f(x)\ge\mathcal L(x,\eta^*,\nu^*)$. Complementarity at $x^*$ gives $\mathcal L(x^*,\eta^*,\nu^*)=f(x^*)$, hence $f(x)\ge f(x^*)$. Nonconvex objectives lose this sufficiency; a stationary point may be a maximum or saddle. Slater's strict-feasibility condition supplies strong-duality and multiplier existence for the appropriate convex setting, rather than certifying arbitrary nonconvex training [MATHEMATICALLY-DERIVED · DERIVED:eq-2.25].
+
+For a perturbation of bound $b_i$, the value function obeys $\partial f^*/\partial b_i=-\eta_i^*$ when it is differentiable and the regular solution branch is tracked. Its units are objective units per constraint unit. Multiple optimizers, active-set switches, or discrete feasibility changes can make the derivative fail to exist. Infeasibility beyond a deadline does not imply an infinite multiplier: infeasible problems have no finite optimal point from which that sensitivity is computed. Likewise, capacity constraints do not universally bind first; the active set is part of the declared workload and design [MATHEMATICALLY-DERIVED · DERIVED:eq-2.25].
+
+### Allocation, dimensionless sensitivity, and uncertainty
+
+Put $u=\log N$, $v=\log D$ using fixed numerical units. The equality constraint becomes $u+v=\log(C/6)$ and the reducible loss becomes $Ae^{-\alpha u}+Be^{-\beta v}$. With positive $A,B,\alpha,\beta$, substituting $v$ gives a strictly convex one-dimensional function; its second derivative is positive. The stationary allocation is therefore the unique interior global optimum for this continuous model. Positivity and an unrestricted positive domain matter; lower/upper bounds on available tokens or allowed model sizes can move the optimum to a boundary [MATHEMATICALLY-DERIVED · DERIVED:eq-2.26].
+
+Including the coefficient rather than only its compute exponent gives
+
+$$
+N^*=\left(\frac{\alpha A}{\beta B}\right)^{1/(\alpha+\beta)}\left(\frac C6\right)^{\beta/(\alpha+\beta)},\qquad D^*=\frac{C}{6N^*}.
+$$
+*(Eq. 2.31)* This is the source-family optimum reconstructed from Eq. 2.26. To compare sensitivities across unit conventions, use reference values $N_0,D_0,C_0=6N_0D_0$, set $\tilde A=AN_0^{-\alpha}$ and $\tilde B=BD_0^{-\beta}$, and write $\log(N^*/N_0)=[\log(\alpha\tilde A/(\beta\tilde B))+\beta\log(C/C_0)]/(\alpha+\beta)$. Differentiation must include the coefficient term and any correlation among fitted inputs; using only a $\log C$ term is an incomplete sensitivity calculation [MATHEMATICALLY-DERIVED · DERIVED:eq-2.31].
+
+For an estimated input vector $\hat\psi$ with covariance $\Sigma_\psi$, linearize an output $g$ as $g(\hat\psi)\approx g(\psi_0)+\nabla g(\psi_0)^\top(\hat\psi-\psi_0)$. Taking variance proves Eq. 2.27. For a ratio $U/W$, the gradient is $(1/W,-U/W^2)$; substituting it yields the numerator, denominator, and negative covariance terms. If $U=kW$ exactly, the ratio is constant despite a random denominator, providing a counterexample to any denominator-only lower bound. If $W$ can approach zero, the linear approximation can fail or the ratio can be undefined [MATHEMATICALLY-DERIVED · DERIVED:eq-2.27].
+
+Monte Carlo propagation draws joint input vectors from a stated input law, then evaluates or re-solves the output map. Bootstrap propagation instead refits on resampled independent run units and carries each joint fit through allocation. Neither supplies missing out-of-range model validity: resampling observed pilots cannot certify the scaling family beyond their supported regime. A second-order bias term is $\tfrac12\mathrm{tr}(H_g\Sigma_\psi)$ when its Taylor approximation is justified. Report that approximation regime rather than interpreting a nonlinear transformation of point estimates as an unbiased decision [MATHEMATICALLY-DERIVED · DERIVED:eq-2.27].
+
+### Frontier extraction and uncertainty-aware dominance
+
+For finite candidates with cost minimized and quality maximized, sort by cost ascending and process equal-cost groups together. Only maximum-quality candidates at a given cost can survive; they survive if they exceed the best quality at strictly lower cost. Identical cost/quality candidates represent the same objective point but may retain distinct configuration identifiers. This sweep takes $O(n\log n)$ time and $O(n)$ output storage with constant-time finite numeric comparisons. General higher-dimensional frontiers need a suitable dominance-query algorithm; the two-dimensional sweep must not be generalized into an unbounded all-pairs loop [MATHEMATICALLY-DERIVED · DERIVED:eq-2.24].
+
+For simultaneous quality intervals and exactly known costs, candidate $j$ certainly dominates $i$ if $c_j\le c_i$ and $q_j^{\rm lo}>q_i^{\rm hi}$, or a corresponding strict cost improvement with a non-strict quality separation. Pointwise intervals alone do not deliver simultaneous coverage over all tested candidates. If costs are also estimated, their joint uncertainty and pairing enter the comparison. The point frontier and the set not ruled out by simultaneous dominance are separate outputs [MATHEMATICALLY-DERIVED · DERIVED:eq-2.27].
+
 ## Algorithm
 
 ```text
-Algorithm 2.6 — Pareto frontier of (quality ↑, cost ↓) with interval-aware dominance
-INPUT   candidates i = 1..n with quality q_i, cost c_i, and quality interval [q_i^lo, q_i^hi] from §02.5
-OUTPUT  frontier F (indices), and the set U of candidates that are frontier-ambiguous
-STATE   candidates sorted by cost ascending, ties by quality descending; running best quality q_best
-INVARIANT after processing candidate i, q_best = max quality among candidates with cost ≤ c_i
-1  sort candidates by (c_i ascending, q_i descending)
-2  q_best ← −∞;  F ← ∅;  U ← ∅
-3  for each candidate i in sorted order:
-4      if q_i > q_best:  F ← F ∪ {i};  q_best ← q_i        # strictly non-dominated
-5      else if q_i^hi ≥ q_best_lo:  U ← U ∪ {i}            # dominated at point estimates, not at interval level
-6  return F, U
+Algorithm 2.6 — Two-objective point frontier with explicit ties
+INPUT   finite candidates (id, cost, quality); cost lower and quality higher are preferred
+OUTPUT  nondominated objective points and their equivalent configuration identifiers
+INVARIANT best is the highest quality at all strictly smaller processed costs
+1  reject non-finite cost or quality
+2  sort by cost ascending; group equal costs; initialize best = -infinity
+3  for each equal-cost group G:
+4      qmax = maximum quality in G
+5      if qmax > best: emit every identifier in G whose quality equals qmax
+6      best = max(best, qmax)
+7  return emitted points and equivalence identifiers
 ```
 
-Complexity: O(n log n) for the sort, O(n) sweep; for more than two objectives the sweep becomes an O(n²) pairwise check or a divide-and-conquer non-dominated sort. Termination: one pass. The set U is reported, not discarded: with §02.5's intervals, a candidate dominated at point estimates but not at the interval level is undecided.
+Complexity is $O(n\log n)$ comparisons plus an $O(n)$ sweep; finite scalar comparisons have constant cost. Exact equality refers to the recorded numeric objective values, not an implicit experimental tolerance. Uncertainty-aware dominance uses the separately stated simultaneous-interval contract; it is not inferred from the point frontier [MATHEMATICALLY-DERIVED · DERIVED:eq-2.24].
 
 ## Implementation
 
@@ -316,17 +347,19 @@ The objects here are tables, not tensors. Implementation consists of (i) recordi
 
 ## Experimental design
 
-Proposal: fit Eq. N.3 to a pilot grid of training runs by the P09 Approach-3 procedure (Huber loss), bootstrap the fit over runs (Algorithm 2.5 with each run a cluster) to obtain Σ for (α, β, A, B, E), propagate to N* at several C by Eq. 2.27 and by Monte Carlo over the bootstrap replicates, and report the interval on N* against the point allocation. Prediction: the interval widens with log C. Controlled: tokenizer, data mixture, learning-rate schedule, and the definition of C. This is the pilot methodology of [§21.5](../../part-04-training-science-and-adaptation/ch21-scaling-laws-and-compute-allocation/21-5-pilot-methodology.md) and is not run here.
+### Reported experiments
+
+P09 §§3.1–3.3 estimates allocation from fixed-size training curves, isoFLOP experiments, and a parametric fit. The final-loss fit uses log-loss Huber residuals with threshold $10^{-3}$, L-BFGS, and multiple initializations; its third approach reports compute exponents 0.46 for parameters and 0.54 for tokens. The other approaches yield nearby but different exponents. This is evidence about a specified training family, not a universal optimization law [PAPER-REPORTED · P09, Eqs. (2)–(4); Table 2; Appendix D.2].
+
+P08 §6 provides the earlier allocation comparison. Its data/training/accounting protocol differs, so differing optima do not form a controlled ablation of one exponent alone [PAPER-REPORTED · P08, §6]. KKT, Pareto dominance, and the delta method are mathematical constructions with no training dataset. Unexecuted book refitting/uncertainty checks remain in [verification.md](verification.md).
 
 ## Observations
 
-**What the paper claims.** P09 reports the parametric fit, its fitting procedure, the "scaled equally" allocation rule, and differing exponent estimates across its three approaches; P08 reports power-law scaling across model size, data, and compute [PAPER-REPORTED].
+Balancing the two reducible-loss terms gives the allocation rule only for the positive additive fitted family, its feasible domain, and the chosen compute constraint. Those are premises of the optimization, rather than consequences of KKT. P09's approach-dependent exponent estimates record empirical methodological sensitivity within its studied regime [MATHEMATICALLY-DERIVED · DERIVED:eq-2.31; PAPER-REPORTED · P09, Table 2].
 
-**What the evidence shows.** Eq. 2.24–2.27 are theorems. That P09's allocation rule is a corollary of α ≈ β in Eq. 2.26 is a derivation, not a reported result. The published fits' parameter covariances are not available, so the size of the propagated uncertainty is not established by the sources [NOT-DISCLOSED].
+Uncertainty in an allocation depends jointly on coefficients, exponents, their covariance, reference units, and any active domain constraints. Increasing the compute budget does not universally increase that uncertainty. A point frontier likewise describes the supplied point estimates; simultaneous interval dominance requires a separate joint uncertainty statement [MATHEMATICALLY-DERIVED · DERIVED:eq-2.27].
 
-**What we infer.** The book infers (DERIVED) that the allocation decision is more uncertain at larger C by the lever-arm argument, and (ASSUMED) that fit uncertainty rather than the 6ND accounting dominates the decision interval; both are testable by the proposal above.
-
-**What remains unknown.** Whether the exponents are stable across data mixtures, tokenizers, and objectives is UNVERIFIED here and is Chapter 21's subject.
+The full joint parameter covariance needed for numerical propagation is NOT-DISCLOSED in the inspected P09 fitting account. No fit or allocation experiment was executed by the book [NOT-DISCLOSED · P09, §3.3 and Appendix D.2].
 
 ## Failure modes
 
@@ -336,19 +369,13 @@ Proposal: fit Eq. N.3 to a pilot grid of training runs by the P09 Approach-3 pro
 
 > **Failure mode — unpropagated fit uncertainty.** *Symptom:* a point N* reported to three significant figures. *Cause:* Σ ignored. *Detection:* absence of an interval. *Mitigation:* Eq. 2.27 or bootstrap-over-runs.
 
-> **Failure mode — constraint cliff.** *Symptom:* a design that is optimal at b and infeasible at b − ε (KV cache exceeds HBM by one sequence). *Cause:* non-smooth constraint. *Detection:* check slack at the optimum. *Mitigation:* margin on b; treat the multiplier as one-sided.
+> **Failure mode — constraint cliff.** *Symptom:* a design that is optimal at b and infeasible at b − ε (KV cache exceeds HBM by one sequence). *Cause:* non-smooth constraint. *Detection:* check slack at the optimum. *Mitigation:* evaluate neighboring feasible discrete choices and report slack; do not extrapolate the smooth multiplier across the boundary.
 
 ## Siblings
 
-**Lagrangian / KKT (constrained optimum)** — this file. Why it exists: transferable optimality rule. New failure mode: local validity. Changed primitive: point → rule.
+KKT describes regular stationary constrained solutions; convexity conditions determine when those conditions also certify a global minimum. Weighted scalarization supplies an explicit quality-cost exchange rate and selects supported points. It is legitimate when that exchange rate represents the objective, but can miss non-supported Pareto alternatives. An epsilon-constraint sweep can recover those alternatives when the relevant bounds are visited and the constrained problems are solved globally [MATHEMATICALLY-DERIVED · DERIVED:eq-2.25; DERIVED:alg-2.6].
 
-**Weighted scalarisation** — this file (as the thing to avoid); applied with stated w in [§48.5](../../../vol-02-execution-and-optimization/part-08-inference-engines-and-production-serving/ch48-capacity-planning-benchmarking-and-lifecycle-economics/48-5-economics.md) when cost is the objective. Why it exists: a single number. What assumption changed: a known exchange rate w. New failure mode: misses non-convex frontier points.
-
-**ε-constraint / fixed-budget comparison** — [§06.5](../ch06-experimental-design-and-evaluation-before-optimization/06-5-quality-resource-frontiers.md). Why it exists: recover the whole frontier. What problem it solved: comparisons at fixed quality, latency, compute, or cost. New failure mode: one solve per ε.
-
-**Delta-method propagation** — this file, Eq. 2.27. Why it exists: cheap first-order intervals. What assumption changed: g approximately linear over Σ. New failure mode: wrong for strongly nonlinear g (e.g. N* at large log C). Changed primitive: resampling → gradient.
-
-**Monte Carlo propagation** — this file; bootstrap-over-runs per §02.5. Why it exists: no linearity assumption. New failure mode: n re-solves.
+The delta method applies a local linearization to a joint input covariance. Monte Carlo propagation evaluates the response on joint draws and can capture nonlinear behavior under the chosen input law, but does not validate that law or repair a misspecified fitted family. If the response includes re-optimization, each draw incurs a solve. Bootstrap propagation additionally requires that the resampled observations match the fit's independent sampling units [MATHEMATICALLY-DERIVED · DERIVED:eq-2.27].
 
 ```figure
 id: fig-2.34
@@ -393,16 +420,20 @@ spec:
     - { dimension: "assumes", values: { kkt: "differentiable f and g; constraint qualification", scal: "a known exchange rate w", eps: "one constrained solve per ε is affordable", delta: "g close to linear over Σ", mc: "draws of the inputs, e.g. a bootstrap over runs" } }
     - { dimension: "frontier coverage", values: { kkt: "not a frontier method: one constrained optimum", scal: "supported, convex-hull points only", eps: "every frontier point", delta: "not applicable", mc: "not applicable" } }
     - { dimension: "cost", values: { kkt: "one solve; multipliers free at the optimum", scal: "one solve per w", eps: "one constrained solve per ε", delta: "one gradient of g and a k × k covariance", mc: "n evaluations of g; n re-solves if g re-solves the allocation" } }
-    - { dimension: "new failure mode", values: { kkt: "local validity; extrapolated multipliers", scal: "misses non-convex frontier points; hides w", eps: "one solve per ε", delta: "wrong for strongly nonlinear g, e.g. N* at large log C", mc: "n re-solves" } }
+    - { dimension: "new failure mode", values: { kkt: "local validity; extrapolated multipliers", scal: "misses non-convex frontier points; hides w", eps: "one solve per ε", delta: "wrong for strongly nonlinear g, small denominators or strong extrapolation", mc: "n re-solves" } }
 ```
 
 ## Extensions
 
-For agents the decision variables include tool-call budgets and retry limits and the constraints are cost per accepted task and side-effect bounds ([Chapter 54](../../../vol-03-grounded-and-interactive-intelligence/part-09-retrieval-context-and-agent-systems/ch54-multi-agent-coordination-and-system-level-evaluation/README.md)); for embodiment, a real-time constraint enters as a hard latency bound with an infinite multiplier beyond it ([Chapter 60](../../../vol-03-grounded-and-interactive-intelligence/part-10-multimodal-world-and-embodied-models/ch60-vision-language-action-policies-and-embodied-learning/README.md)). For long context the KV constraint (Eq. N.8) is the one that binds first. Cross-references, not proposals.
+### Improvements
+
+P09 changes the empirical allocation methodology by comparing fixed-size curves, matched-compute profiles, and a positive parametric family, rather than importing a single historical point optimum. Its reported comparisons support sensitivity to the training protocol; they do not isolate every changed ingredient as an independent gain [PAPER-REPORTED · P09, §§2–3].
+
+The epsilon-constraint formulation can recover non-supported frontier points missed by weighted scalarization, under exact solves and a sweep covering their costs. This is a mathematical coverage property; measured quality gains or execution-time savings do not follow [MATHEMATICALLY-DERIVED · DERIVED:eq-2.24]. Agent tool budgets, serving concurrency, and embodied deadlines add discrete or stochastic constraints. Their canonical models are developed in Chapters 48, 54, and 60, and no universally binding constraint is presumed here.
 
 ## Limitations
 
-Eq. 2.26 depends on the accounting C ≈ 6ND, which notation.md restricts to dense Transformers under stated assumptions; for MoE, long context, or multimodal training the constraint changes and so does the rule. The delta method is first-order. Falsification: an allocation rule that does not move when the fitted α, β move — i.e. a decision insensitive to its inputs — would indicate that the constraint, not the loss fit, is binding, which is itself a reportable finding.
+Eq. 2.26 depends on the accounting C ≈ 6ND, which notation.md restricts to dense Transformers under stated assumptions; for MoE, long context, or multimodal training the constraint changes and so does the rule. The delta method is first-order. Insensitivity along a particular perturbation can arise from active domain bounds, correlated coefficient/exponent changes, or a vanishing directional derivative; it does not by itself identify which constraint binds.
 
 ## Reproducibility
 

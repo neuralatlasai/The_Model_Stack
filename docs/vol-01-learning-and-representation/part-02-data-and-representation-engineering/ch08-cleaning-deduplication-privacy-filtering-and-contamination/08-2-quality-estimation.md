@@ -40,7 +40,7 @@ evidence_summary:
   labels_used: [MATHEMATICALLY-DERIVED, PAPER-REPORTED, OFFICIAL-DOCUMENTATION, DERIVED, ASSUMED, NOT-DISCLOSED, UNVERIFIED]
   empirically_observed: false
 word_count_target: 2300
-updated_at: 2026-09-23
+updated_at: 2026-10-08
 editorial_status: manuscript_draft
 ---
 
@@ -73,16 +73,107 @@ $$
 $$
 *(Eq. 8.3)* where π = good prior in the input; Prec = fraction of survivors that are good; Rec = fraction of good input that survives.
 
+MATHEMATICALLY-DERIVED: for a fixed threshold and binary document-level criterion, require $0\leq\pi,\mathrm{TPR},\mathrm{FPR}\leq1$ and $\pi\,\mathrm{TPR}>0$. Divide the numerator and denominator of precision by the accepted positive mass $\pi\,\mathrm{TPR}$:
+
+$$
+x=\frac{(1-\pi)\,\mathrm{FPR}}{\pi\,\mathrm{TPR}}\geq0,
+\qquad \mathrm{Prec}=\frac1{1+x}. \tag{8.3a}
+$$
+
+Here $x$ is the ratio of accepted negative to accepted positive probability mass in the input population. It combines prevalence and both error rates; it is not FPR alone. At $x=1$, the two accepted masses are equal and precision is one half. No prior or classifier error rate is selected to draw the identity. If $\pi\,\mathrm{TPR}=0$, $x$ is undefined: precision is zero when accepted negative mass is positive, and undefined when nothing is accepted. The chart excludes those cases.
+
+```figure
+id: fig-8.37
+kind: chart
+title: Retained precision depends on the ratio of accepted masses
+caption: >-
+  Exact algebra from Eq. 8.3: precision = 1/(1+x), where
+  x = ((1−π)·FPR)/(π·TPR). Probabilities lie in [0,1] and π·TPR > 0.
+  The chart displays 0 ≤ x ≤ 9; the identity holds for all finite x ≥ 0.
+  At x = 1, accepted negative and positive masses are equal and precision
+  is 50%. No prevalence, classifier operating point or measured corpus
+  outcome is assumed; x combines all three quantities.
+placement: wide
+anchor: formulation
+evidence: MATHEMATICALLY-DERIVED
+source: ["DERIVED:eq-8.3"]
+concepts: [ms.section.8.2]
+alt: >-
+  Analytical curve of document-level retained precision, 1/(1+x), versus
+  the dimensionless ratio of accepted negative to positive probability mass.
+  It decreases from 100% at x = 0 to 50% at x = 1 and 10% at x = 9.
+  The horizontal range is a display window, not a selected prevalence or
+  classifier scenario. The positive accepted mass π times TPR must be nonzero;
+  no-acceptance and zero-positive-mass cases are outside this chart.
+spec:
+  type: line
+  x: {label: "Accepted negative/positive mass ratio x", scale: linear, format: ratio, domain: [0, 9], ticks: [0, 1, 3, 5, 7, 9]}
+  y: {label: "Retained document precision", scale: linear, format: percent, domain: [0, 1], ticks: [0, 0.25, 0.5, 0.75, 1]}
+  series:
+    - id: precision
+      label: "Precision = 1/(1+x)"
+      formula: "1/(1+x)"
+      sample: {from: 0, to: 9, count: 181}
+      emphasis: true
+  annotations:
+    - {x: 1, y: 0.5, label: "Equal accepted masses → 50% precision"}
+```
+
+
 Two consequences follow. First, tokens available after filtering are D_keep = σ(τ)·D_in, so at a fixed training budget D the filter is neutral to compute only while σ(τ)·D_in ≥ D; below that the model repeats data ([§9.6](../ch09-data-mixtures-curricula-and-sample-efficiency/09-6-data-scaling-limits.md)). Second, the retained *good* distribution p_g|keep is not p_g: it is p_g re-weighted toward high scores, so a filter with perfect precision still narrows the good distribution. That narrowing is the "rare-data loss" of §8.6.
 
 > **Definition — rule filter / learned quality filter / perplexity filter.** Three families of s: a rule filter computes document statistics and thresholds them individually; a learned quality filter is a classifier trained to separate a reference set from the crawl; a perplexity filter scores documents by a reference language model's cross-entropy.
 
-A stochastic threshold replaces the step at τ by an acceptance probability a(s). GPT-3 kept a document iff `np.random.pareto(α) > 1 − document_score` with α = 9 (R8.7 Appendix A, PAPER-REPORTED). Under NumPy's Lomax parameterisation, P(X > x) = (1 + x)^{−α}, so
+A stochastic threshold replaces the step at τ by an acceptance probability a(s). GPT-3 kept a document iff `np.random.pareto(α) > 1 − document_score` with α = 9 (R8.7 Appendix A, PAPER-REPORTED). OFFICIAL-DOCUMENTATION · NumPy documents `random.pareto` as a unit-scale Lomax draw (R8.41, Overview). MATHEMATICALLY-DERIVED: the continuous survival function is P(X > x) = (1 + x)^{−α} for x ≥ 0, so
 
 $$
 a(s) = P(\text{keep} \mid s) = (2 - s)^{-\alpha}, \qquad a(1) = 1,\; a(0.9) \approx 0.42,\; a(0.5) \approx 0.026 \text{ at } \alpha = 9
 $$
-*(Eq. 8.4)* where s ∈ [0,1] is the classifier score; the parameterisation of the sampler is ASSUMED to be NumPy's Lomax form because R8.7 names the function but not the distribution.
+*(Eq. 8.4)* where $s\in[0,1]$ is a classifier score and $\alpha>0$. This is the analytical acceptance law of the documented continuous sampler, not a measured acceptance fraction or a bitwise guarantee for a finite random-number implementation. R8.7 names the NumPy function but does not pin its software version.
+
+PAPER-REPORTED · GPT-3 uses $\alpha=9$ to match its classifier's WebText score distribution (R8.7, Appendix A). The Pile uses the same thresholding construction with $\alpha=3$ to target its desired Pile-CC filtering ratio (P03, Appendix C.1.4). MATHEMATICALLY-DERIVED: at a common numerical score below one, the latter function has higher acceptance. The papers use different classifiers/reference sets; the functions do not place their documents on a matched quality scale. A corpus retention fraction additionally requires its score distribution, $\sigma_\alpha=\mathbb E[a_\alpha(S)]$; neither curve supplies that distribution.
+
+```figure
+id: fig-8.36
+kind: chart
+title: Score-to-acceptance laws for two reported Pareto exponents
+caption: >-
+  Analytical functions a(s) = (2−s)^(−α), derived from keeping a document
+  when a unit-scale Lomax draw exceeds 1−s, for 0 ≤ s ≤ 1. GPT-3 Appendix A
+  reports α = 9; The Pile Appendix C.1.4 reports α = 3. Both functions reach
+  one at s = 1; the α = 3 function is larger below one. These are conditional
+  sampling probabilities, not measured model performance or corpus retention.
+  The source classifiers and score distributions differ; equal numerical
+  scores are not matched document quality.
+placement: wide
+anchor: formulation
+evidence: MATHEMATICALLY-DERIVED
+source: [R8.7, P03, R8.41, "DERIVED:eq-8.4"]
+concepts: [ms.section.8.2]
+alt: >-
+  Two analytical acceptance-probability curves over classifier score s from
+  zero to one. The GPT-3-reported exponent α = 9 gives (2−s)^−9, starting
+  at 1/512; The Pile-reported exponent α = 3 gives (2−s)^−3, starting at 1/8.
+  Both increase to one at score one. The α = 3 curve lies above α = 9 for
+  every score below one. These functions do not estimate total retained
+  tokens, downstream accuracy, or comparable quality across the source classifiers.
+spec:
+  type: line
+  x: {label: "Classifier score s (source-specific)", scale: linear, format: fixed2, domain: [0, 1], ticks: [0, 0.25, 0.5, 0.75, 1]}
+  y: {label: "Conditional acceptance probability a(s)", scale: linear, format: percent, domain: [0, 1], ticks: [0, 0.25, 0.5, 0.75, 1]}
+  series:
+    - id: alpha9
+      label: "α = 9 · GPT-3 rule"
+      formula: "(2-x)^(-9)"
+      sample: {from: 0, to: 1, count: 201}
+      emphasis: true
+    - id: alpha3
+      label: "α = 3 · The Pile rule"
+      formula: "(2-x)^(-3)"
+      sample: {from: 0, to: 1, count: 201}
+      dashed: true
+```
+
 
 A perplexity filter scores a document by the reference model's per-token or per-byte cross-entropy ([§2.3](../../part-01-scientific-foundations/ch02-mathematical-and-statistical-foundations/02-3-information-theory.md), [§4.6](../../part-01-scientific-foundations/ch04-language-modeling-and-learning-objectives/04-6-likelihood-and-capability.md)):
 
@@ -108,7 +199,7 @@ FineWeb's contribution is a procedure rather than a rule. It computed "over 50 h
 **Domain-sensitive filters.** Filters encode the domain of their reference set. R8.11 found that C4's bad-word blocklist "disproportionately removes documents in dialects of English associated with minority identities" (PAPER-REPORTED); P04 chose "neutral filtering" — "we avoid using ML-based filtering outside of language identification" and "use only URL filtering for adult content" — citing that content-word blocklists over-filter "legal and medical content" (P04 §3, Appendix G.1, PAPER-REPORTED); R8.1 used SafeSearch signals rather than word lists for the same reason (PAPER-REPORTED). The educational classifier of P06 is domain-sensitive by design (grade-school focus) and its card warns that "the model's performance might change for other datasets" (R8.27, OFFICIAL-DOCUMENTATION). Eq. 8.3 states the trade: raising precision on the reference domain raises the FPR on every domain the reference set under-represents.
 
 <details><summary>Derivation of Eq. 8.4</summary>
-NumPy's `pareto(a)` draws from the Lomax (Pareto II) distribution with survival function P(X > x) = (1 + x)^{−a} for x ≥ 0. The keep condition X > 1 − s has probability (1 + 1 − s)^{−a} = (2 − s)^{−a}. At a = 9: (1.1)^{−9} = 0.424, (1.5)^{−9} = 0.026. MATHEMATICALLY-DERIVED under the ASSUMED parameterisation.
+OFFICIAL-DOCUMENTATION · NumPy identifies `pareto(a)` as a unit-scale, zero-location Lomax variable X and describes X + 1 as a unit-scale classical Pareto variable (R8.41, Overview/Notes/Examples). MATHEMATICALLY-DERIVED: integrating the latter's density a·z^(−a−1) above z = 1 + x gives P(X > x) = (1 + x)^(−a), for a > 0 and x ≥ 0. Substituting x = 1 − s gives Eq. 8.4 on 0 ≤ s ≤ 1. At a = 9, a(0.9) = 0.424 and a(0.5) = 0.026 to three decimal places. These are evaluations of the continuous law, not observed document counts.
 </details>
 
 ## Algorithm
@@ -218,4 +309,4 @@ Record: rule set and thresholds with version; classifier training data (positive
 
 ## References
 
-P02 · P03 · P04 · P06 · P07 · R8.1 · R8.2 · R8.7 · R8.10 · R8.11 · R8.12 · R8.16 · R8.25 · R8.26 · R8.27 · R8.32 · [references.md](references.md)
+P02 · P03 · P04 · P06 · P07 · R8.1 · R8.2 · R8.7 · R8.10 · R8.11 · R8.12 · R8.16 · R8.25 · R8.26 · R8.27 · R8.32 · R8.41 · [references.md](references.md)

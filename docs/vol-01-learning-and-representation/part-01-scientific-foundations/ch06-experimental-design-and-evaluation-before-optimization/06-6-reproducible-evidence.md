@@ -28,7 +28,7 @@ datasets: []
 status: {maturity: established, disputed: false}
 evidence_summary: {labels_used: [DERIVED, ASSUMED, PAPER-REPORTED, OFFICIAL-DOCUMENTATION, NOT-DISCLOSED, UNVERIFIED], empirically_observed: false}
 word_count_target: 2200
-updated_at: 2026-09-20
+updated_at: 2026-10-08
 editorial_status: manuscript_draft
 ---
 
@@ -36,7 +36,9 @@ editorial_status: manuscript_draft
 
 ## Scope
 
-Objective: bind hypotheses, immutable manifests, raw outcomes, provenance, negative results, and extrapolation limits into one auditable evidence package. Baseline: a score table plus a command containing mutable model and dataset names. Success: another researcher can reconstruct every reported statistic, identify every failed or excluded run, and distinguish a registered test from exploratory analysis. Numerical repeatability is owned by [§3.6](../ch03-numerical-computation-and-trustworthy-training/03-6-reproducibility-limits.md); dataset provenance is developed in [Chapter 07](../../part-02-data-and-representation-engineering/ch07-data-provenance-acquisition-and-dataset-semantics/README.md), ingestion in [Chapter 12](../../part-02-data-and-representation-engineering/ch12-scalable-data-infrastructure-and-reproducible-ingestion/README.md), and release assurance in [Chapter 66](../../../vol-03-grounded-and-interactive-intelligence/part-11-evaluation-interpretability-and-deployment-assurance/ch66-release-decisions-reproducibility-and-research-to-production-closure/README.md).
+Reproducible evidence connects the hypothesis and analysis rule to the exact inputs, execution, raw outcomes, scoring implementation, and reported statistic. Code availability alone does not preserve that connection. Mutable model aliases, overwritten responses, missing failures, and undocumented scoring changes can make a published number impossible to reconstruct even when the software remains accessible.
+
+HELM's retained prompts and completions and the LM Evaluation Harness's protocol analysis motivate preserving item-level evidence ([P50, R6.4](references.md), PAPER-REPORTED). This section specifies a proposed immutable evidence graph, attempt identities, replay checks, negative-result records, and an extrapolation envelope. Replay of retained outcomes and repetition of stochastic model execution are separate guarantees.
 
 ## Why this exists
 
@@ -398,11 +400,9 @@ spec:
 
 ## Siblings
 
-**Numerical repeatability — [§3.6](../ch03-numerical-computation-and-trustworthy-training/03-6-reproducibility-limits.md).** DERIVED: holds execution conditions fixed to examine repeated computations. The objective is numerical agreement; evidence replay instead reconstructs a statistic from retained outcomes and cannot guarantee identical future generations.
+Numerical repeatability concerns repeated computations under fixed execution conditions. Evidence replay concerns reconstructing a published statistic from retained outcomes and analysis code. Dataset provenance identifies acquisition and transformations, but still needs a consumption record to connect a dataset to an executed run. None of these guarantees implies the others.
 
-**Dataset provenance — [Chapter 07](../../part-02-data-and-representation-engineering/ch07-data-provenance-acquisition-and-dataset-semantics/README.md).** ASSUMED forward route: traces acquisition and transformation of data. The changed primitive is dataset lineage rather than result lineage; a complete source history still needs an execution record showing what a run consumed.
-
-**Release assurance — [Chapter 66](../../../vol-03-grounded-and-interactive-intelligence/part-11-evaluation-interpretability-and-deployment-assurance/ch66-release-decisions-reproducibility-and-research-to-production-closure/README.md).** ASSUMED forward route: connects evidence to deployment criteria and accountability. A reproducible score may still be insufficient for release if the intended workload lies outside E.
+Release assurance uses these records to assess a decision against deployment criteria. A completely replayable result can remain insufficient if the workload, subgroup, environment, or resource boundary differs from the proposed deployment. The tested envelope must therefore accompany the evidence graph rather than being inferred from the presence of a repository.
 
 ## Extensions
 

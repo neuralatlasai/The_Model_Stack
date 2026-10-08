@@ -25,9 +25,9 @@ implementations: [impl.hugging-face-transformers]
 benchmarks: []
 datasets: []
 status: {maturity: established, disputed: false}
-evidence_summary: {labels_used: [PAPER-REPORTED, OFFICIAL-DOCUMENTATION, MATHEMATICALLY-DERIVED, DERIVED, ASSUMED, NOT-DISCLOSED, UNVERIFIED], empirically_observed: false}
+evidence_summary: {labels_used: [PAPER-REPORTED, OFFICIAL-DOCUMENTATION, MATHEMATICALLY-DERIVED, DERIVED, NOT-DISCLOSED, UNVERIFIED], empirically_observed: false}
 word_count_target: 1000
-updated_at: 2026-09-20
+updated_at: 2026-10-08
 editorial_status: manuscript_draft
 ---
 
@@ -35,7 +35,9 @@ editorial_status: manuscript_draft
 
 ## Scope
 
-Objective: specify fill-in-the-middle (FIM) as a *document rearrangement* applied before the causal objective, distinguish its PSM and SPM layouts, and separate it from the causal-masking variant that moves masked spans to the end; then state what changes when data are syntax-bearing (code, JSON, AST serialisations) and when targets are grounded in execution rather than text. Baseline: the causal row of §4.1. Success: the reader can produce the FIM-transformed token sequence and loss mask for the hand-audited example in [verification.md](verification.md) and can say which parts of "code capability" the likelihood objective does and does not measure. Boundaries: tokenizer and serialisation contracts are owned by [§10.5](../../part-02-data-and-representation-engineering/ch10-tokenization-serialization-and-interface-correctness/10-5-tool-and-multimodal-interfaces.md); constrained decoding by [§37.4](../../../vol-02-execution-and-optimization/part-07-inference-algorithms-distillation-and-compression/ch37-decoding-constrained-generation-and-speculative-execution/37-4-structured-generation.md).
+Fill-in-the-middle training changes which document continuations a causal language model learns by rearranging prefix, middle, and suffix spans before applying the autoregressive loss. Prefix-suffix-middle and suffix-prefix-middle layouts differ in delimiter placement and adjacency; real tokenization can also change the sequence at a split boundary. For code and other structured sequences, likelihood measures agreement with serialized targets, while execution-based evaluation measures success under a specified test environment. This section separates the data transformation, token alignment, sampling protocol, and execution criterion. (PAPER-REPORTED; R4.5 sections3-4 and AppendixD; R4.10 section3; R4.12 AppendixE.)
+
+Boundaries: tokenizer and serialisation contracts are owned by [§10.5](../../part-02-data-and-representation-engineering/ch10-tokenization-serialization-and-interface-correctness/10-5-tool-and-multimodal-interfaces.md); constrained decoding by [§37.4](../../../vol-02-execution-and-optimization/part-07-inference-algorithms-distillation-and-compression/ch37-decoding-constrained-generation-and-speculative-execution/37-4-structured-generation.md).
 
 ## Why this exists
 
@@ -65,7 +67,7 @@ caption: >-
   changed. The highlighted row is ⟨MID⟩ at slot 9: it predicts the first
   middle token, a, from a state that has already read the prefix and the
   whole suffix. That is suffix conditioning with no bidirectional attention,
-  for 4 extra tokens and no extra parameters.
+  with explicitly counted delimiter and tokenization overhead.
 placement: inline
 evidence: MATHEMATICALLY-DERIVED
 source: ["DERIVED:eq-4.7", R4.5]
@@ -122,8 +124,8 @@ alt: >-
   With middle-only loss, |middle|/T = 5/12 = 0.417 by this section's formula,
   or 6/16 = 0.375 in the audit table, which counts EOT and the sentinels. At
   R4.5's 50% transform rate half of the documents are rearranged and the
-  expected overhead is 2 tokens per document; at Code Llama's 0.9 rate it is
-  3.6 tokens per document, and at Experiment 4.3's 0.25 arm it is 1.
+  expected overhead is 2 tokens per document in this toy comparison without a baseline EOT; at Code Llama's 0.9 rate it is
+  3.6 tokens per document, and at the illustrative rate 0.25 it is 1.
 spec:
   header: "FIM · AUDIT SPLIT 3 / 5 / 4 · PSM"
   variables: { np: 3, nm: 5, ns: 4, r: 0.5 }
@@ -136,11 +138,11 @@ spec:
     - { key: "ρ middle-only, |middle|/T", formula: "nm/(np + nm + ns)", format: fixed3 }
     - { key: "middle-only Σm/|z|, §2.1 table", formula: "(nm + 1)/(np + nm + ns + 4)", format: fixed3 }
     - { key: "documents transformed, rate r", formula: "r", format: percent }
-    - { key: "expected extra tokens per document", formula: "4*r", format: fixed2, note: "4 per transformed document" }
+    - { key: "expected toy delimiters/doc", formula: "4*r", format: fixed2, note: "4 per transformed document" }
 states:
   - { anchor: formulation, label: "audit, R4.5 rate 0.5", variables: { r: 0.5 }, highlight: ["rearranged length |z|", "ρ middle-only, |middle|/T", "middle-only Σm/|z|, §2.1 table"], note: "The audit's 12 tokens become 16. Loss on all sections keeps ρ = 1; a middle-only mask keeps 5 of 12 document tokens, or 6 of 16 slots once EOT is counted." }
-  - { anchor: mechanism, label: "Code Llama rate 0.9", variables: { r: 0.9 }, highlight: ["documents transformed, rate r", "expected extra tokens per document"], note: "R4.12 transforms 90% of documents, half in PSM and half in SPM (45% each), for 3.6 extra tokens per document on average and no extra parameters." }
-  - { anchor: experimental-design, label: "Exp. 4.3 arm r = 0.25", variables: { r: 0.25 }, highlight: ["documents transformed, rate r", "ρ middle-only, |middle|/T"], note: "Experiment 4.3 sweeps r over {0, 0.25, 0.5, 0.9}; its middle-only arm removes 1 − ρ of the gradient-bearing tokens, 7 of 12 on this split." }
+  - { anchor: mechanism, label: "Code Llama rate 0.9", variables: { r: 0.9 }, highlight: ["documents transformed, rate r", "expected toy delimiters/doc"], note: "R4.12 transforms 90% of documents, half in PSM and half in SPM (45% each), for 3.6 toy delimiter tokens/doc on average and no extra parameters." }
+  - { anchor: experimental-design, label: "illustrative transform rate r = 0.25", variables: { r: 0.25 }, highlight: ["documents transformed, rate r", "ρ middle-only, |middle|/T"], note: "This illustrative rate changes the fraction transformed, not this selected split; the middle-only mask excludes 7 of 12 ordinary document targets. No training result is implied." }
 ```
 
 > **Definition — Execution-grounded target.** A training or evaluation target whose value is determined by executing the model's output (compiling, running tests, calling a checker) rather than by comparing it with reference text.
@@ -148,7 +150,7 @@ states:
 For n samples per problem of which c pass the tests, the unbiased estimator of pass@k is
 
 $$
-\widehat{\text{pass@}k} = \mathbb{E}\!\left[1 - \frac{\binom{n-c}{k}}{\binom{n}{k}}\right]
+\widehat{\text{pass@}k} = 1 - \frac{\binom{n-c}{k}}{\binom{n}{k}}
 $$
 *(Eq. 4.8)* where n = samples drawn, c = samples passing all tests, k ≤ n (PAPER-REPORTED · R4.10).
 
@@ -202,22 +204,32 @@ states:
 
 ## Mechanism
 
-**FIM (R4.5).** The paper transforms documents so that "the middle span is chosen uniformly at random where the split between prefix, middle, suffix happens at the character level", assembles them in the PSM order of Eq. 4.7, and trains with the ordinary causal loss; it states that "we keep the loss on all three sections prefix, middle, and suffix" (PAPER-REPORTED · R4.5). Its central empirical claim is the "FIM-for-free" property: with a large fraction of documents transformed, "FIM models achieve similar AR test loss as the non-FIM models", and the abstract states that such training "does not harm the original left-to-right generative capability, as measured by perplexity" (PAPER-REPORTED · R4.5). The main models use a 50% FIM rate with ablations at other rates (PAPER-REPORTED · R4.5). The paper distinguishes *document-level* FIM (transform before chunking and packing into contexts) from *context-level* FIM (transform after chunking), and reports the latter performs better because more contexts actually contain an infilling example (PAPER-REPORTED · R4.5).
+### Methodology
 
-**SPM.** The SPM layout places the suffix first, then the prefix, then the middle. The stated reason is cache reuse at inference: "appending tokens to the prefix no longer invalidates the keys and values computed in the suffix section", because prefix and middle are now contiguous at the end of the sequence (PAPER-REPORTED · R4.5). The exact sentinel placement in the SPM variant differs between implementations; the segment order is the durable definition and the sentinel layout is recorded as UNVERIFIED in the ledger. Code Llama reports applying the transformation "with a probability of 0.9", "half of the splits in the prefix-suffix-middle (PSM) format and the other half in" SPM, following R4.5's character-level splitting, and notes that "In SPM format, we concatenate the prefix and the middle part before encoding to tokens" to avoid the split-subtoken artefact at the prefix/middle boundary (PAPER-REPORTED · R4.12). Whether Code Llama restricts loss to the middle is not stated (NOT-DISCLOSED · R4.12).
+FIM first samples a document or context fragment for transformation, chooses two character boundaries, and constructs prefix, middle, and suffix. The transformed order changes which original-document information precedes a target under an ordinary causal model. It retains the cross-entropy operator while changing the training distribution and its expected objective. The original FIM study scores all three segments; a middle-only mask would be a different supervision choice ([R4.5](references.md#r45), section 3 and Appendix C, PAPER-REPORTED).
 
-**Causal masking (R4.9).** InCoder's objective instead masks spans in place, replaces them with sentinels, and moves the masked content to the end of the file: "regions of code have been randomly masked and moved to the end of each file, allowing code infilling with bidirectional context" (PAPER-REPORTED · R4.9). In ledger terms it is span corruption executed inside a single causal stack: the sentinel positions in the body are inputs, the appended spans are targets. StarCoder reports "infilling capabilities" among its released features (PAPER-REPORTED · R4.11).
+The inspected study's compatible SPM layout is PRE + SUF + Enc(suffix) + MID + Enc(prefix) + Enc(middle) + EOT. This differs from the superficially natural SUF-suffix-PRE-prefix-MID-middle arrangement. The sentinel positions are part of the method, not cosmetic formatting (R4.5 Appendix D, PAPER-REPORTED). Code Llama follows compatible PSM/SPM formats, transforms eligible documents at its disclosed rate, and jointly tokenizes prefix and middle for SPM to avoid a split-subtoken training boundary (R4.12 section 2.3 and Appendix E, PAPER-REPORTED). Consequently a random character split that lands inside a token can be out of distribution for that particular SPM recipe.
+
+For an editor, SPM places a fixed suffix before an expanding prefix, allowing reuse of the unchanged initial token-prefix cache. This benefit requires exact equality of the already cached token IDs, positions, and conditioning state. Appending characters can retokenize the final prefix token, so reuse ends at the longest unchanged token prefix, not necessarily the previous character boundary. A changed suffix invalidates later prefix cache state. Cache savings are thus workload- and tokenizer-dependent (DERIVED).
+
+InCoder's causal masking replaces several spans in place with distinct sentinels and appends their contents in sentinel-marked blocks. This construction permits multiple missing regions while retaining a causal decoder (R4.9 method, PAPER-REPORTED). Serialization must preserve recoverable boundaries, escape reserved markers when they are data, and record whether the target is one span, several spans, or the full transformed stream. Syntax-aware span sampling and constrained decoding are separate interventions; neither follows automatically from FIM.
+
+Execution-grounded evaluation introduces an external verifier. A candidate passing HumanEval's unit tests is correct under that test suite, not proven correct for every possible input ([R4.10](references.md#r410), section 3). The pipeline must preserve the prompt, generated text, extracted program, environment, timeout, tests, and result. Parse failures, execution failures, and timeouts are distinct outcomes. Text overlap does not determine those outcomes, so likelihood, exact match, and test pass rates require separate reporting.
+
+To derive Eq. 4.8, condition on n candidates with c successes and choose k distinct candidates uniformly. Of the binomial(n,k) subsets, binomial(n-c,k) contain no success. Subtracting their ratio from one gives the conditional probability of at least one observed success. Averaging this estimator over independent samples from a fixed candidate distribution estimates that distribution's pass@k; changing temperature, filtering, or reranking changes the estimand (MATHEMATICALLY-DERIVED; estimator attributed to R4.10).
+
+Cost boundary: transformed token count is |Enc(prefix)|+|Enc(middle)|+|Enc(suffix)|+4 in the written PSM convention. Relative to Enc(document)+EOT, the difference is three extra delimiters plus any retokenization change. It is not universally four extra tokens. No new backbone parameters are required beyond added vocabulary embeddings/output rows if new IDs extend the vocabulary. Execution adds sample generation, test runtime, process isolation, and resource limits; latency and energy require measured workload distributions (DERIVED).
 
 ```figure
 id: fig-4.18
 kind: compare
 title: Four ways to give a generated span its right-hand context
 caption: >-
-  Only the last column changes the objective; the first three keep one
-  causal stack and change the sequence. PSM and SPM differ in one row, what an
-  appended keystroke invalidates in the KV cache, which is why SPM exists.
-  Causal masking reorders the same way as FIM but corrupts the body in place,
-  like span corruption inside one stack.
+  The first three constructions use a causal decoder with different
+  transformed data and target policies; encoder-decoder span corruption
+  uses a separate bidirectional source. PSM and SPM differ in serialization,
+  boundary behavior, and cache reuse when the prefix changes. All target
+  policies are part of the objective, despite a shared CE primitive.
 placement: wide
 evidence: PAPER-REPORTED
 source: [R4.5, R4.12, R4.9, P02]
@@ -225,15 +237,15 @@ concepts: [ms.section.4.3, ms.section.4.2]
 alt: >-
   Comparison of FIM in PSM order, FIM in SPM order, causal masking, and
   encoder–decoder span corruption. Sequence: PSM is PRE, prefix, SUF, suffix,
-  MID, middle, EOT; SPM is suffix, prefix, middle (sentinel layout
-  UNVERIFIED); causal masking puts sentinels in the body and appends the
+  MID, middle, EOT; SPM is PRE, SUF, suffix, MID, prefix, middle, EOT; causal masking puts sentinels in the body and appends the
   spans; span corruption sends corrupted text to an encoder and the
   sentinel-delimited spans to a decoder. Mask: causal for the first three;
   bidirectional encoder plus causal decoder with cross-attention for the
   last. Loss: all sections for FIM, middle-only as a variant; appended spans
   for causal masking, body NOT-DISCLOSED; all of y for span corruption. Extra
-  tokens: 4 per document for FIM, sentinels per span otherwise. Parameters:
-  none, except a second stack for span corruption. An appended keystroke
+  tokens: the toy FIM layout contains four markers, with retokenization
+  affecting its overhead relative to ordinary completion. Added vocabulary
+  IDs need embedding/output rows; a second stack is architecture dependent. An appended keystroke
   forces suffix re-prefill under PSM and changes only the tail under SPM.
   Reported rates: 50% (R4.5); 0.9 split evenly between PSM and SPM (R4.12);
   15% corruption (P02).
@@ -247,21 +259,15 @@ spec:
     - { id: cm, label: "Causal masking (R4.9)", node: ms.section.4.3 }
     - { id: span, label: "Span corruption, enc–dec (P02)", node: ms.section.4.2 }
   rows:
-    - { dimension: "sequence construction", values: { psm: "PRE∘prefix∘SUF∘suffix∘MID∘middle∘EOT (Eq. 4.7)", spm: "suffix, then prefix, then middle; sentinel layout UNVERIFIED", cm: "sentinels replace spans in the body; spans appended at the end", span: "x̃ with sentinels to the encoder; s_1∘span_1∘…∘s_{K+1} to the decoder" } }
+    - { dimension: "sequence construction", values: { psm: "PRE∘prefix∘SUF∘suffix∘MID∘middle∘EOT (Eq. 4.7)", spm: "suffix, then prefix, then middle; PRE+SUF+suffix+MID+prefix+middle+EOT (R4.5 Appendix D)", cm: "sentinels replace spans in the body; spans appended at the end", span: "x̃ with sentinels to the encoder; s_1∘span_1∘…∘s_{K+1} to the decoder" } }
     - { dimension: "attention mask", values: { psm: "causal", spm: "causal", cm: "causal", span: "bidirectional encoder; causal decoder + cross-attention" } }
     - { dimension: "context seen when the span is generated", values: { psm: "prefix and suffix", spm: "suffix and prefix; prefix contiguous with the middle", cm: "the whole body, with sentinels at the gaps", span: "the whole corrupted input, both directions" } }
     - { dimension: "loss sections", values: { psm: "all three (R4.5); middle-only is a ledger variant", spm: "as PSM; R4.12 does not state its choice", cm: "appended spans; body treatment NOT-DISCLOSED", span: "all of y" } }
-    - { dimension: "extra tokens per document", values: { psm: "+4: PRE, SUF, MID, EOT", spm: "+4", cm: "one sentinel per span in the body and one per appended span", span: "K sentinels in x̃, K + 1 in y" } }
-    - { dimension: "extra parameters", values: { psm: "none", spm: "none", cm: "none", span: "second stack plus cross-attention projections" } }
+    - { dimension: "toy delimiters/doc", values: { psm: "+4: PRE, SUF, MID, EOT", spm: "+4", cm: "one sentinel per span in the body and one per appended span", span: "K sentinels in x̃, K + 1 in y" } }
+    - { dimension: "extra parameters", values: { psm: "new embedding/output rows if vocabulary extends", spm: "same vocabulary condition", cm: "same vocabulary condition", span: "encoder/decoder sharing and cross-attention determine parameters" } }
     - { dimension: "a keystroke appended to the prefix", values: { psm: "changes tokens before the suffix: suffix K/V re-prefilled", spm: "only the tail changes; suffix K/V reused", cm: "not analysed in §4.3", span: "encoder input changes: re-encode (§4.2 Limitations)" } }
     - { dimension: "reported rate", values: { psm: "50% of documents (R4.5 main models)", spm: "R4.12: 0.9 of documents, half PSM, half SPM", cm: "not stated here", span: "15% of tokens (P02 baseline)" } }
 ```
-
-Cost line for FIM: +4 tokens per transformed document; no extra parameters; no extra FLOPs beyond those tokens; the KV cache at inference is the same size as for completion (DERIVED). Cost line for causal masking: sentinel tokens in the body plus one sentinel per appended span; targets are appended so the sequence grows by the number of spans (DERIVED).
-
-**Syntax-sensitive data.** Code and serialised structures are token sequences with hard constraints (balanced delimiters, grammar) that the likelihood objective does not know about. Tokenisation of whitespace-significant languages, of long identifiers, and of the prefix/middle boundary (the split-subtoken problem above) all change what the objective measures; the ledger records the tokenizer id for this reason, and the serialisation of tool calls, JSON, and ASTs is fixed in [§10.5](../../part-02-data-and-representation-engineering/ch10-tokenization-serialization-and-interface-correctness/10-5-tool-and-multimodal-interfaces.md).
-
-**Execution-grounded targets.** R4.10 introduces HumanEval, where "a sample is considered correct if it passes a set of unit tests", gives Eq. 4.8 and a numerically stable implementation, and shows "significant overlap" between BLEU distributions of correct and incorrect programs, concluding that "optimizing for BLEU score is not equivalent to optimizing for functional correctness" (PAPER-REPORTED · R4.10). The consequence for this chapter is a category boundary: the pretraining objective is text likelihood; the capability of interest is a property of executed programs; the two are connected only empirically, and that connection is the subject of §4.6.
 
 ```figure
 id: fig-4.19
@@ -271,8 +277,9 @@ caption: >-
   Every curve has the same observed rate c/n = 0.1, so all start at
   pass@1 = 0.10, yet they separate as k grows: at k = 10 the estimate is 1.00
   from 10 samples and 0.67 from 100. The estimate is not a function of c/n
-  alone; it reaches the plug-in value 1 − (1 − c/n)^k only as n → ∞. A pass@k
-  reported without its n cannot be placed on a shared axis. Illustrative
+  alone; it reaches the plug-in value 1 − (1 − c/n)^k only as n → ∞. Under iid sampling from a fixed candidate law, every valid n≥k estimates
+  the same population pass@k; n affects precision and the conditional
+  finite-sample value, so it must be disclosed. Illustrative
   counts, not a reported evaluation.
 placement: inline
 evidence: MATHEMATICALLY-DERIVED
@@ -304,28 +311,33 @@ spec:
 ## Algorithm
 
 ```text
-Algorithm 4.3 — FIM document transform (PSM, character-level split)
-INPUT   document string s of length n chars, FIM rate r ∈ [0,1], tokenizer Enc, sentinel ids PRE, SUF, MID, EOT, RNG
-OUTPUT  token sequence z, loss mask m (all ones unless middle_only)
-STATE   split points a ≤ b in [0, n]
-INVARIANT  Enc(prefix) ∘ Enc(middle) ∘ Enc(suffix) decodes to s (up to tokenizer boundary effects); |z| = |Enc(prefix)| + |Enc(middle)| + |Enc(suffix)| + 4
-1  if RNG.uniform() ≥ r:  return Enc(s) ∘ [EOT], m = 1          # untransformed document
-2  a, b ← sorted(RNG.uniform_int(0, n), RNG.uniform_int(0, n))   # two uniform character positions
-3  prefix, middle, suffix ← s[0:a], s[a:b], s[b:n]
-4  z ← [PRE] ∘ Enc(prefix) ∘ [SUF] ∘ Enc(suffix) ∘ [MID] ∘ Enc(middle) ∘ [EOT]
-5  m ← 1 for all positions of z                                  # R4.5 keeps loss on all three sections
-6  if middle_only:  m[t] ← 1[position t is after MID]            # ledger variant; not the R4.5 choice
-7  return z, m                                                   # terminates; no cross-document state
+Algorithm 4.3 — Character-level PSM data construction
+INPUT string s, transform probability r, mode in {all_segments,middle_only},
+      tokenizer Enc, atomic reserved IDs PRE/SUF/MID/EOT, RNG
+OUTPUT transformed IDs, aligned target mask, mode, split boundaries
+1 if uniform(RNG)>=r: return Enc(s)+[EOT], ordinary causal target mask
+2 draw a,b from the declared boundary distribution on 0...len(s); order a<=b
+3 prefix,middle,suffix <- s[:a],s[a:b],s[b:]
+4 p,m,q <- Enc(prefix),Enc(middle),Enc(suffix)
+5 z <- [PRE]+p+[SUF]+q+[MID]+m+[EOT]
+6 score all z targets for all_segments; for middle_only score middle and EOT targets
+7 apply the same BOS/one-position target shift as Algorithm 4.1
+INVARIANTS reconstruction in original segment order equals s when Enc is lossless;
+           |z|=|p|+|m|+|q|+4; no assertion that |p|+|m|+|q|=|Enc(s)|
 ```
-Complexity: O(n) per document; the transform runs on the data pipeline, not the accelerator. Applying it after chunking (context-level FIM) replaces line 1's document with the chunk (PAPER-REPORTED · R4.5). Implementation link: the sentinels must exist in the tokenizer vocabulary as single ids; the Hugging Face Transformers tokenizer for a FIM-trained model must expose them as special tokens, otherwise Enc splits them into pieces (DERIVED; specific model tokenizers UNVERIFIED).
+
+String slicing and assembly are O(|s|) excluding tokenizer complexity; tokenization cost depends on the selected implementation and must not be assumed linear for every tokenizer. For context-level transformation, preserve partial-document and Unicode decoding rules before transforming, then apply the declared length trimming/padding policy (R4.5 Appendix C). The middle-only option is a declared analytical variant, not an attributed recipe.
+
+For pass@k, require 1<=k<=n and 0<=c<=n. If n-c<k, return one. Otherwise compute 1-product(j=0,...,k-1)[(n-c-j)/(n-j)], preferably with log1p/expm1 for stability. This needs O(k) arithmetic and O(1) auxiliary storage without large binomial integers (MATHEMATICALLY-DERIVED). Average per-problem estimates over the declared problem weighting.
 
 ```figure
 id: fig-4.20
 kind: diagram
 title: The FIM transform of Algorithm 4.3 in the data pipeline
 caption: >-
-  Everything inside the boundary runs on the data pipeline in O(n) per
-  document; the accelerator only ever sees a causal objective. The heavy path
+  String slicing and assembly run in the data pipeline; tokenizer complexity
+  is separately specified. The accelerator evaluates the transformed causal
+  objective. The heavy path
   is the transformed branch. The two places this pipeline can break the
   objective are the tokeniser boundary at the split point and the loss-mask
   choice, and neither is recoverable from a checkpoint.
@@ -340,7 +352,7 @@ alt: >-
   positions a ≤ b split it into prefix, middle and suffix; each segment is
   tokenised, with a split-subtoken risk at the boundary that R4.12 avoids in
   SPM by encoding prefix and middle together; the segments are assembled in
-  PSM order with PRE, SUF, MID and EOT, 4 extra tokens; a loss-mask branch
+  PSM order with PRE, SUF, MID and EOT, four delimiters in the toy convention; a loss-mask branch
   chooses all sections (R4.5) or the middle only. Both branches feed the
   unchanged causal cross-entropy of Eq. N.2 on the accelerator. The
   transform-and-mask steps are grouped as the data pipeline, O(n) per
@@ -370,88 +382,80 @@ spec:
     - { from: plain, to: ce }
     - { from: spmjoin, to: enc, kind: dependency, label: "SPM variant" }
   groups:
-    - { id: pipe, label: "data pipeline, O(n) per document, no accelerator" }
+    - { id: pipe, label: "data pipeline; slicing O(|s|), tokenizer cost separate" }
 ```
 
 ## Implementation
 
 ```text
-Tensor trace (FIM inference, PSM)
-[1, P+S+3] prompt = PRE ∘ prefix ∘ SUF ∘ suffix ∘ MID → prefill → KV cache [L, P+S+3, H_kv, d_h] → decode middle until EOT
+PSM prompt: PRE -> prefix IDs -> SUF -> suffix IDs -> MID -> prefill -> sample middle -> EOT
+SPM prompt: PRE -> SUF -> suffix IDs -> MID -> prefix IDs -> prefill -> sample continuation -> EOT
+verifier: generated text -> declared extraction -> isolated test environment -> outcome record
 ```
 
-```text
-Systems trace (execution-grounded evaluation)
-sample n programs → latency: n decodes / memory: n KV caches / compute: n·|program|·N / communication: none / failure: timeout, non-termination
-execute tests in sandbox → latency: test runtime, unbounded without timeout / memory: sandbox / compute: CPU / communication: result bits / failure: flaky tests, environment drift
-estimate pass@k via Eq. 4.8 → latency: negligible / failure: k > n undefined; c = n gives 1
-```
+Reserved markers must be atomic IDs in the selected tokenizer. Confirm tokenizer normalization and leading-space behavior for each segment; decoded-string equality alone does not establish equality of token IDs or cache state. At inference the generated span must stop under the model's trained EOT convention or an explicit budget. Stopping because generated text happens to match the suffix can truncate a valid middle and is not an equivalent termination rule (DERIVED).
 
-> **Warning.** The official HumanEval harness (`main` branch, commit not pinned) states: "This program exists to run untrusted model-generated code. Users are strongly encouraged not to do so outside of a robust security sandbox", and ships with the execution call commented out so that the reader must enable it deliberately (OFFICIAL-DOCUMENTATION · R4.30, accessed 2026-09-20). An execution-grounded target therefore carries a security boundary that a text target does not; sandboxing cost and timeout policy are part of the metric's definition.
+The official HumanEval repository describes the security boundary for executing generated code ([R4.30](references.md#r430), README, OFFICIAL-DOCUMENTATION). The evaluation environment must bound time, memory, process access, and external effects and record runtime/library versions. No generated code was executed for this chapter. To compare models, hold tests and extraction rules fixed; to compare samplers, hold the checkpoint fixed and record the complete sampling policy.
 
-The inference-side cost of SPM versus PSM is a cache-invalidation pattern, developed in [§42.3](../../../vol-02-execution-and-optimization/part-07-inference-algorithms-distillation-and-compression/ch42-prefill-decode-kv-state-and-inference-resource-models/42-3-cache-organization.md): under PSM, each keystroke appended to the prefix changes tokens *before* the suffix and forces re-prefill of the suffix; under SPM only the tail changes (DERIVED from Eq. 4.7 and the cache definition).
+The decode cost for n candidates is not necessarily n simultaneous KV caches: sequential and batched evaluation have different peak memory and scheduling. Report sample count, concurrency, generated-length distribution, accelerator/runtime configuration, and CPU test execution separately before making a throughput comparison (DERIVED).
 
 ## Experimental design
 
-### Experiment 4.3 — FIM rate versus left-to-right loss and infilling loss at fixed token budget
+### Reported experiments
 
-- **Hypothesis:** at a fixed token budget, increasing the FIM rate from 0 to 0.5 leaves the left-to-right held-out NLL within seed variance while reducing infilling NLL on held-out middle spans (the FIM-for-free property of R4.5).
-- **Setup:** §3.5 reference model on a code corpus; rates {0, 0.25, 0.5, 0.9}; context-level transform.
-- **Independent variables:** FIM rate; loss on all sections vs middle-only (Algorithm 4.3 line 6).
-- **Controlled variables:** tokenizer with reserved sentinels, seeds, token budget, schedule.
-- **Dataset/workload:** a permissively licensed code corpus with per-file provenance (§7); held-out files split at character level.
-- **Hardware:** one accelerator.
-- **Metrics:** left-to-right NLL (nats/token) on untransformed held-out files; infilling NLL on the middle segment of transformed held-out files; both with the same tokenizer.
-- **Baselines:** rate 0.
-- **Expected result:** left-to-right NLL flat across rates within seed variance; infilling NLL decreasing with rate; middle-only loss reduces the number of gradient-bearing tokens by 1 − ρ.
-- **Ablation:** document-level vs context-level transform.
-- **Interpretation:** whether the FIM-for-free property holds outside the R4.5 setting.
-- **Threats to validity:** the two NLLs are measured on different position sets and are not compared with each other; only across rates.
+The FIM study separates transformation-rate, format, application-stage, and span-selection interventions. Its rate study trains matched-scale models for a stated token budget and compares autoregressive held-out loss with infilling and code-generation evaluations. Its format study trains pure PSM, pure SPM, and joint mixtures, then evaluates both formats. Its context-versus-document study changes whether transformation occurs before or after packing/chunking ([R4.5](references.md#r45), section 4.2-4.5, Tables 1-2 and corresponding figures, PAPER-REPORTED).
 
-Proposal only; no run was executed.
+These are distinct protocols. Table 1 uses temperature 0.2 and 100 samples per task; context-level comparisons accompanying Figure 7 use 200 samples per task. The study reports deterioration at a fully transformed rate in its ordinary autoregressive loss comparison. Thus its favorable compatibility finding has a measured regime and is not a theorem of distribution preservation.
+
+Code Llama's infilling evaluation distinguishes single-line, multiline, and random-span problems, decoding policy, and PSM/SPM format; Appendix E identifies the split-subtoken mismatch for its SPM recipe (R4.12 section 3.2 and Appendix E, PAPER-REPORTED). HumanEval supplies the per-problem pass@k estimator and demonstrates that text-overlap metrics do not identify execution outcomes (R4.10 section 3). None of these results licenses transferring a pass rate to a new test harness without matching its environment and prompt/decoding protocol.
 
 ## Observations
 
-**What the paper claims.** R4.5 claims FIM-for-free under a 50% transform rate with loss on all sections, prefers character-level uniform splits, and reports context-level FIM outperforming document-level FIM; it motivates SPM by KV-cache reuse (PAPER-REPORTED · R4.5). R4.12 reports a 0.9 transform rate split evenly between PSM and SPM, and the prefix–middle concatenation before tokenisation in SPM (PAPER-REPORTED · R4.12). R4.9 reports causal masking with spans moved to the end (PAPER-REPORTED · R4.9). R4.10 reports that BLEU does not separate functionally correct from incorrect programs (PAPER-REPORTED · R4.10).
+**What the paper claims.** FIM reports infilling gains while preserving ordinary autoregressive performance in its studied mixtures; it also reports effects of format, span boundaries, and transformation stage (PAPER-REPORTED: R4.5 section 4).
 
-**What the evidence shows.** FIM-for-free is measured *by perplexity* in R4.5; R4.12's adoption of the recipe at a different rate is consistent with it but is not a controlled reproduction. The BLEU–correctness gap of R4.10 is a within-paper measurement with a clear mechanism (textual variance of equivalent programs) and has not, to the book's knowledge, been contradicted.
+**What the evidence shows.** Compatibility depends on transformation rate and task format. Code Llama's SPM boundary issue shows why a segment-order description alone is insufficient to reproduce an infilling distribution (R4.12 Appendix E).
 
-**What we infer.** Because the FIM transform changes only the data, its ledger row is the causal row with a different sequence-construction field; any claim that FIM "changes the objective" is a category error (DERIVED). We infer, marked ASSUMED, that loss-on-all-sections is what makes FIM cheap in gradient-bearing tokens (ρ = 1), and that middle-only variants trade that for a cleaner target; no source compares the two at scale.
+**What we infer.** Tokenization, sentinel placement, scoring masks, and packing stage are methodological variables. Execution metrics additionally depend on a verifier and a candidate distribution; neither is specified by the language-model objective alone (DERIVED).
 
-**What remains unknown.** Whether contemporary released code models apply loss to all sections is NOT-DISCLOSED for every model the book inspected. The interaction between FIM sentinels and chat serialisation (§10.4–10.5) is UNVERIFIED.
+**What remains unknown.** An undocumented model's FIM mask or sampler is NOT-DISCLOSED. The cited tests do not establish semantic correctness on all program inputs, robustness to arbitrary structured formats, or measured latency for a new editor workload.
 
 ## Failure modes
 
-> **Failure mode — Sentinel fragmentation.** *Symptom:* infilling quality collapses after a tokenizer change or migration. *Cause:* ⟨PRE⟩/⟨SUF⟩/⟨MID⟩ no longer single ids and are encoded as text. *Detection:* `Enc("<PRE>")` returns more than one id. *Mitigation:* reserve sentinels as special tokens; test in the §10.6 migration suite.
+> **Failure mode — Sentinel fragmentation.** *Symptom:* the transformed format no longer matches training. *Cause:* reserved sentinels encode as ordinary multi-token text. *Detection:* verify exact single IDs and round-trip construction. *Mitigation:* preserve the model/tokenizer sentinel contract (DERIVED).
 
-> **Failure mode — Split-subtoken boundary.** *Symptom:* the model produces a spurious leading space or a mangled identifier at the prefix/middle junction. *Cause:* the character-level split lands inside a token; Enc(prefix) ∘ Enc(middle) ≠ Enc(prefix ∘ middle). *Detection:* compare token sequences of the joined and separately encoded segments. *Mitigation:* R4.12's concatenate-then-encode for SPM; token-boundary-aware splitting (which R4.5 reports as less robust).
+> **Failure mode — Split-subtoken mismatch.** *Symptom:* an infill starts from a partial-token prompt unlike training. *Cause:* different joint/separate encoding at the prefix-middle boundary. *Detection:* compare compatible PSM/SPM training and evaluation token sequences. *Mitigation:* use the source's boundary protocol; no universal token-boundary remedy is implied (R4.12 AppendixE, PAPER-REPORTED).
 
-> **Failure mode — Non-terminating middle.** *Symptom:* infilling generation never emits ⟨EOT⟩ and overruns into a regenerated suffix. *Cause:* insufficient ⟨EOT⟩ supervision or a suffix that the model has learned to reproduce. *Detection:* rate of outputs exceeding a length cap. *Mitigation:* stop on ⟨EOT⟩ and on suffix-match; length cap; verify the EOT token is in the loss.
+> **Failure mode — Nonterminating middle.** *Symptom:* the EOT stop condition is not met within budget. *Cause:* multiple possible modeling/format errors; length alone does not identify one. *Detection:* record EOT emission and budget termination separately. *Mitigation:* preserve trained EOT semantics and impose a declared budget; suffix-text matching is not equivalent (DERIVED).
 
-> **Failure mode — Test-suite leakage.** *Symptom:* pass@k rises while held-out execution on fresh problems does not. *Cause:* evaluation problems or their tests present in training data. *Detection:* contamination audit (§8, §61.4). *Mitigation:* held-out problem sets with post-cutoff creation dates.
+> **Failure mode — Verifier leakage or incompleteness.** *Symptom:* apparent test success fails on independent cases. *Cause:* contaminated tasks, weak tests, or extraction/environment drift. *Detection:* audit overlaps and independent held-out tests. *Mitigation:* freeze the harness and report its scope; post-cutoff dates alone do not prove absence of leakage (DERIVED).
 
 ## Siblings
 
-**Causal LM** — [04-1-autoregressive-modeling.md](04-1-autoregressive-modeling.md)
-Why it exists: the base objective. What assumption changed here: the document may be reordered before it is scored. What objective changed: none. What problem it solved: none of the infilling ones. What new failure mode it introduced: none of the sentinel ones. Changed primitive: identity map on documents → FIM transform.
+Ordinary causal completion preserves document order. PSM/SPM infilling transforms that order and conditions the missing span on both sides under a declared sentinel format. Encoder-decoder span corruption instead presents a corrupted bidirectional source and generates sentinel-delimited missing spans. Its target/input ratio can be below or above one depending on corruption and sentinel counts, and its encoder/cross-attention costs remain distinct [§4.2](04-2-alternative-objectives.md).
 
-**Span corruption (encoder–decoder)** — [04-2-alternative-objectives.md](04-2-alternative-objectives.md)
-Why it exists: bidirectional context with short targets. What assumption changed: a separate encoder may read the whole document. What objective changed: sentinel-delimited targets with ρ < 1. What problem it solved: infilling with full bidirectional visibility. What new failure mode it introduced: two stacks, cross-attention cost, no single-stack streaming. Changed primitive: rearrangement → corruption plus encoder.
+Multi-token prediction adds future-offset losses to shared representations rather than rearranging the document. Its auxiliary heads change training work and gradient weights, while a later draft/verification procedure determines any inference benefit [§4.4](04-4-auxiliary-prediction.md). Neither multiple target heads nor syntax-aware spans alone establishes execution correctness.
 
-**Multi-token prediction** — [04-4-auxiliary-prediction.md](04-4-auxiliary-prediction.md)
-Why it exists: denser supervision per position. What assumption changed: positions beyond t+1 may be targets of an auxiliary head. What objective changed: an added term. What problem it solved: additional training signal and draft heads. What new failure mode it introduced: head cost and loss weighting. Changed primitive: one output head → several.
+
 
 ## Extensions
 
-For agents, tool-call arguments and structured outputs are serialised text whose grammar is enforced at decode time rather than by the objective, developed in [§37.4](../../../vol-02-execution-and-optimization/part-07-inference-algorithms-distillation-and-compression/ch37-decoding-constrained-generation-and-speculative-execution/37-4-structured-generation.md); execution-grounded targets become rewards in the verifiable-reward setting of Part VI (forward pointer; the reward setting is defined there, not here). For long context, context-level FIM interacts with packing: the more documents per context, the larger the effective transform rate (PAPER-REPORTED · R4.5). For AST-serialised data the split must respect node boundaries or the middle is syntactically meaningless — a proposal (ASSUMED).
+### Improvements
+
+Context-level FIM addresses loss of complete infilling examples during document packing, and joint PSM/SPM training supplies both inference formats in the source study (R4.5 section 3.1-3.2 and section 4.3-4.4, PAPER-REPORTED). These changes modify data construction rather than the cross-entropy operator.
+
+Character-level boundaries expose partial-token infills; joint encoding in Code Llama's SPM recipe instead avoids such splits at one boundary and creates a corresponding evaluation constraint (R4.12 section 2.3 and Appendix E, PAPER-REPORTED). The improvement has a trade-off, which must stay visible in the ledger.
+
+Execution-grounded feedback can be used for data filtering or later optimization, but the objective then depends on how verification outcomes enter training. That methodological transition is taught in the post-training chapters; a test pass rate by itself does not change a pretraining loss.
 
 ## Limitations
 
-FIM is valid when the deployment supplies a suffix and the tokenizer preserves sentinels; it is falsified as a design if infilling NLL does not fall with transform rate in Experiment 4.3. Execution grounding is valid where a trustworthy executor exists; where tests are weak, pass@k measures test weakness. Decision consequence: record the sentinel ids, the transform rate, the split granularity, and the loss-section choice as ledger fields, because none is recoverable from a checkpoint.
+Infilling likelihood is conditional on a particular transformed format and tokenizer. Increasing transformation rate need not monotonically improve infilling loss, and the cited FIM compatibility result is not distribution invariance. The execution estimator is meaningful only for its declared candidate distribution and test environment; weak tests limit the property being measured.
+
+The chapter does not execute code or measure editing latency. Several released systems do not disclose their complete FIM scoring masks; those gaps remain NOT-DISCLOSED rather than being filled by another model's recipe.
 
 ## Reproducibility
 
-Versions: R4.5 arXiv 2207.14255 (ar5iv rendering accessed 2026-09-20); R4.9, R4.10, R4.11, R4.12 arXiv abs/ar5iv pages accessed 2026-09-20. Artifacts: ledger rows `fim_psm`, `fim_spm`, `causal_masking` in [verification.md](verification.md). Configuration: rate, split granularity, sentinel ids, loss-section choice, document- vs context-level. Metrics: left-to-right NLL and infilling NLL, reported separately; pass@k with n and k stated. Unresolved: exact SPM sentinel layout (UNVERIFIED); loss-section choices of released models (NOT-DISCLOSED).
+Preserve tokenizer/checkpoint, exact sentinels, split distribution, segment encoding rules, transformation rate and stage, post-transform length policy, target mask, and stop policy. Evaluation records additionally require sample count, temperature and truncation, candidate extraction, test suite revision, environment, and resource limits. Keep all outcomes for unbiased pass@k accounting; silently discarding failed parses or timeouts changes the sample distribution. No model or execution harness was run for this chapter; proposed fixture checks remain in [verification.md](verification.md).
 
 ## References
 

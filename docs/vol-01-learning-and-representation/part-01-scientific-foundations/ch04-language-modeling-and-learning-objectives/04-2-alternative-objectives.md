@@ -26,9 +26,9 @@ implementations: [impl.hugging-face-transformers, impl.pytorch]
 benchmarks: []
 datasets: []
 status: {maturity: established, disputed: false}
-evidence_summary: {labels_used: [PAPER-REPORTED, OFFICIAL-DOCUMENTATION, MATHEMATICALLY-DERIVED, DERIVED, ASSUMED, NOT-DISCLOSED, UNVERIFIED], empirically_observed: false}
+evidence_summary: {labels_used: [PAPER-REPORTED, OFFICIAL-DOCUMENTATION, MATHEMATICALLY-DERIVED, DERIVED, NOT-DISCLOSED, UNVERIFIED], empirically_observed: false}
 word_count_target: 1050
-updated_at: 2026-09-20
+updated_at: 2026-10-08
 editorial_status: manuscript_draft
 ---
 
@@ -36,15 +36,21 @@ editorial_status: manuscript_draft
 
 ## Scope
 
-Objective: specify masked language modeling, span corruption, sequence denoising, prefix language modeling, and encoder–decoder objectives as ledger rows that differ from the causal LM in *visibility* (which positions a prediction may attend to), *target set* (which positions are predicted), and *target-length ratio*. Baseline: the causal row of §4.1. Success: for each family the reader can write the corrupted input, the target sequence, the loss mask, and the attention mask for the hand-audited sequence in [verification.md](verification.md), and can state its cost relative to the causal row. Boundaries: architectural consequences (encoder stacks, cross-attention layout) belong to §13; objective *selection* for a training run belongs to [§19.1](../../part-04-training-science-and-adaptation/ch19-pretraining-objectives-and-the-full-training-loop/19-1-objective-selection.md).
+Masked, span-corruption, sequence-denoising, and prefix objectives alter the conditioning information, sampled corruption, scored positions, and normalization relative to ordered next-token prediction. Encoder-decoder denotes an architecture rather than a unique objective: T5 reconstructs removed spans, whereas BART reconstructs the original sequence from a corrupted input. Their target counts and cross-attention workloads therefore cannot be recovered from a masking percentage alone. The comparison here fixes each construction, its loss-bearing targets, its attention visibility, and the reported experimental protocol before considering the resulting costs. (PAPER-REPORTED; P02 sections3.1-3.3; R4.1 section3.1; R4.3 sections2-3; R4.4 section3.)
+
+Boundaries: architectural consequences (encoder stacks, cross-attention layout) belong to §13; objective *selection* for a training run belongs to [§19.1](../../part-04-training-science-and-adaptation/ch19-pretraining-objectives-and-the-full-training-loop/19-1-objective-selection.md).
 
 ## Why this exists
 
-What failed before was the identification of "language model" with a left-to-right decoder. Encoder representations for classification and retrieval were trained by reconstruction of masked positions, not by ordered likelihood, and the two were conflated as "pretraining". The bottleneck was that these objectives have no shared scalar: a masked-LM loss is a mean over roughly 15% of positions under bidirectional visibility; a causal loss is a mean over all positions under causal visibility; they do not sit on one axis (MATHEMATICALLY-DERIVED from the differing denominators and conditioning sets). The constraint that became dominant is cost per useful gradient: reconstruction objectives receive gradient at only the corrupted positions, which motivated span corruption with short targets in P02 and, later, mixtures of denoisers. What changed is that visibility and target set became explicit dials.
+A causal objective restricts each prediction to a left context. Representation learning and conditional generation also use observations on both sides of a missing region or a complete source sequence. The methodological question is which information is visible, which original tokens are predicted, and whether predictions form an ordered conditional distribution. BERT, T5, BART, and UniLM implement different answers, rather than interchangeable names for bidirectional training (PAPER-REPORTED: R4.1 section 3.1; P02 section 3; R4.3 section 2; R4.8 section 2).
+
+A comparison must separate architecture from corruption. A bidirectional encoder with selected-position predictions, a decoder-only prefix model, and an encoder-decoder reconstruction model differ in conditional access, target count, parameter allocation, and attention work. Equal clean-token budgets do not imply equal training FLOPs.
 
 ## Intuition
 
-Physically, every objective in this section pays the same backbone cost per input token but differs in (a) how many positions receive gradient and (b) whether a second stack of parameters and a cross-attention path exist. Denoising with a separate decoder pays backbone cost on the encoder side for *all* input tokens and decoder cost only for the short target — this asymmetry is the resource argument for encoder–decoder span corruption (DERIVED). Heuristically, one might say bidirectional models "understand" and causal models "generate"; the resource view is that bidirectional visibility forbids exact sequential sampling, nothing more.
+Corruption constructs a conditional prediction task. Masking an isolated token allows both neighboring regions to inform its reconstruction. Replacing a span by one sentinel removes its internal token count from the encoder sequence and makes the decoder generate that span autoregressively. Full-document denoising additionally scores uncorrupted content during reconstruction. A prefix model exposes the known prefix bidirectionally but scores the continuation causally (DERIVED from Eq. 4.3-4.5).
+
+The target-length ratio counts direct prediction positions. It does not count all positions that receive gradient: an unscored context token can influence a scored prediction through attention. It also does not convert encoder work into decoder work, since those stacks have different sequence lengths and attention interfaces.
 
 ## Formulation
 
@@ -76,7 +82,7 @@ $$
 $$
 \rho_{\text{causal}} = 1,\quad \rho_{\text{MLM}} = \tfrac{|M|}{T},\quad \rho_{\text{span}} = \tfrac{|y|}{|\tilde{x}|},\quad \rho_{\text{prefix}} = \tfrac{T-P}{T}
 $$
-*(Eq. 4.6)* where symbols are as above; ρ multiplies the decoder-side FLOPs per input token for encoder–decoder rows and the gradient-bearing fraction for single-stack rows.
+*(Eq. 4.6)* where symbols are as above; ρ converts a declared per-decoder-position cost to a per-encoder-input-position accounting for encoder–decoder rows; for single-stack rows it counts directly scored positions, not all positions receiving gradients.
 
 ```figure
 id: fig-4.9
@@ -120,14 +126,26 @@ spec:
     - { symbol: rm, label: "ρ_MLM = |M|/T at the same rate", formula: "n/T", format: fixed3 }
 states:
   - { anchor: formulation, label: "15%, μ = 3 (P02 setting)", variables: { T: 512, r: 0.15, mu: 3 }, highlight: [rs, Y, X], note: "At P02's 15% rate with mean span 3 the decoder scores 104 target tokens for 461 encoder tokens: ρ_span ≈ 0.23 against ρ = 1 for the causal row. T = 512 is illustrative." }
-  - { anchor: mechanism, label: "r ≈ 50% (UL2 X-denoiser rate)", variables: { T: 512, r: 0.5, mu: 3 }, highlight: [rs, Y], note: "At the X-denoiser's ~50% masking, with μ held at 3, the target (342) outgrows the encoder input (341): the decoder side now costs as much as the encoder." }
+  - { anchor: mechanism, label: "r ≈ 50% (UL2 X-denoiser rate)", variables: { T: 512, r: 0.5, mu: 3 }, highlight: [rs, Y], note: "At the X-denoiser's ~50% masking, with μ held at 3, the target (342) outgrows the encoder input (341): the decoder target length exceeds the encoder input length; equal lengths do not imply equal FLOPs." }
   - { anchor: algorithm, label: "the 12-token audit", variables: { T: 12, r: 0.25, mu: 2 }, highlight: [n, K, X, Y, rs], note: "Algorithm 4.2 on the verification sequence: 3 tokens in 2 spans leave |x̃| = 11 and |y| = 6, so ρ = 6/11, exactly the §2.1 row." }
-  - { anchor: experimental-design, label: "Exp. 4.2 MLM arm", variables: { T: 512, r: 0.15, mu: 3 }, highlight: [rm], note: "Experiment 4.2's MLM arm, |M| = 0.15T: 15% of positions bear gradient at unchanged backbone FLOPs per input token." }
+  - { anchor: experimental-design, label: "Exp. 4.2 MLM arm", variables: { T: 512, r: 0.15, mu: 3 }, highlight: [rm], note: "The selected-position MLM row, |M| = 0.15T: 15% of positions carry direct prediction losses; context positions can still receive gradients." }
 ```
 
 ## Mechanism
 
-**Masked LM.** BERT states "we mask 15% of all WordPiece tokens in each sequence at random" and, of those, replaces 80% with [MASK], 10% with a random token, and 10% unchanged, because otherwise "we are creating a mismatch between pre-training and fine-tuning, since the [MASK] token does not appear during fine-tuning"; and "we only predict the masked words rather than reconstructing the entire input" (PAPER-REPORTED · R4.1 §3.1). The mask is therefore a *loss* mask and an *input corruption* together; visibility is full. Consequence: no ordered product exists, so Eq. N.1 is not defined for the trained model; the objective is a pseudo-likelihood, and "perplexity" of an MLM is not the perplexity of §4.6 (MATHEMATICALLY-DERIVED).
+### Methodology
+
+For each example, retain the clean token sequence, sampled corruption decisions, corrupted input, ordered target, attention visibility, and target mask. This record is necessary to distinguish a token selected for prediction from a token actually replaced by a mask symbol. In BERT's recipe, selected positions may be replaced, randomized, or retained; every selected position remains a supervised prediction ([R4.1](references.md#r41), section 3.1, PAPER-REPORTED).
+
+Equation 4.3 averages conditional log scores over the selected set M. It is not an autoregressive factorization of the clean sequence. A general corruption mixture is also not identical to leave-one-out pseudolikelihood: the conditioning can contain several corrupted positions and, for unchanged selected tokens, the token itself. The loss alone need not specify compatible conditionals of one normalized joint distribution. This does not prove that no joint model or sampling procedure can ever be associated with a masked model; it limits what follows from the stated objective (MATHEMATICALLY-DERIVED).
+
+For T5-style span corruption, sort disjoint spans by position, replace each span with its own sentinel, and concatenate sentinel-span blocks into the target, with a final sentinel. A corrupted token appears in the target and not in the encoder input; an uncorrupted token remains in the encoder input. Sentinels occur in both. With n corrupted tokens and K spans, encoder length is T-n+K and target length is n+K+1 before any separately specified EOS handling. Teacher forcing applies to this target, so generation remains autoregressive within the decoder ([P02](references.md#p02), section 3.1.4 and section 3.3.4, PAPER-REPORTED; lengths DERIVED).
+
+BART reconstructs the full clean sequence after noising rather than only removed spans; consequently its target length is T, while its corrupted input length depends on the noise operator ([R4.3](references.md#r43), section 2). Prefix modeling leaves the sequence intact, permits prefix-to-prefix bidirectional attention, excludes prefix-to-continuation access, and scores only continuation targets. UniLM changes admissible self-attention connections to train several conditioning patterns in one shared network ([R4.8](references.md#r48), section 2, PAPER-REPORTED).
+
+The parameter and compute boundary matters. An encoder-decoder may allocate distinct or shared parameters to its stacks; it is not necessarily twice the parameters of a particular decoder baseline. Per decoder layer, dense cross-attention QK and AV products cost approximately 4T_enc d_model FLOPs per decoder position. The encoder-side K/V projections cost 4T_enc d_model^2 per layer, shared over decoder positions; decoder Q and output projections are additional. Decoder self-attention, feed-forward work, embeddings, and output projection must also be counted (MATHEMATICALLY-DERIVED from the matrix shapes). At inference, fixed encoder K/V can be cached independently of the decoder self-attention cache.
+
+UL2's mixture selects denoising regimes with different corruption extents and ordering, exposes the regime through mode tokens, and trains the corresponding conditional task ([R4.4](references.md#r44), section 3, PAPER-REPORTED). The regime probability weights an expectation over objectives. If regime losses are each token means, their mixing coefficients weight regime means; concatenating targets and using one global mean instead weights regimes additionally by target count. The two estimators need not agree (MATHEMATICALLY-DERIVED).
 
 ```figure
 id: fig-4.10
@@ -199,8 +217,6 @@ spec:
   legend: "all 144 pairs admitted; loss only on rows t ∈ M = {4, 5, 11} (1-based), |M|/T = 3/12"
 ```
 
-**Span corruption.** P02's baseline "randomly samples and then drops out 15% of tokens in the input sequence. All consecutive spans of dropped-out tokens are replaced by a single sentinel token", with the target being "all of the dropped-out spans of tokens, delimited by the same sentinel tokens used in the input sequence plus a final sentinel token to mark the end of the target sequence" (PAPER-REPORTED · P02 §3.1.4). Its span-length study then "corrupts contiguous, randomly-spaced spans of tokens", compares "average span lengths of 2, 3, 5 and 10", and reports that "using an average span length of 3 slightly (but significantly) outperforms the i.i.d. objective on most non-translation benchmarks" while the "span-corruption objective also provides some speedup during training compared to the i.i.d. noise approach because span corruption produces shorter sequences on average" (PAPER-REPORTED · P02 §3.3.4). Across objectives, the report states that "denoising objectives outperformed language modeling and deshuffling for pre-training", and across architectures that "the encoder-decoder architecture with the denoising objective performed best" and "the shared parameter encoder-decoder outperforms the decoder-only prefix LM" (PAPER-REPORTED · P02 §3.3, §3.2). The book does not generalise these findings beyond the P02 setting (its scale, C4, and its downstream suite).
-
 ```figure
 id: fig-4.11
 kind: chart
@@ -240,12 +256,6 @@ spec:
     - { x: 5, label: "μ = 5: ρ = 0.205" }
     - { x: 10, label: "μ = 10: ρ = 0.191, 1.03 tokens per token" }
 ```
-
-**Denoising (BART-style).** A full-sequence reconstruction: R4.3 describes "corrupting text with an arbitrary noising function" and "learning a model to reconstruct the original text", with the best-performing noising combining sentence permutation ("randomly shuffling the order of the original sentences") and text infilling ("spans of text are replaced with a single mask token") (PAPER-REPORTED · R4.3 abstract). The decoder reproduces the *entire* clean document, so ρ ≈ 1 on the decoder side rather than the short-target ρ of span corruption; decoder FLOPs scale with T rather than with |y| (DERIVED).
-
-**Mixture of denoisers.** UL2 proposes "Mixture-of-Denoisers (MoD), a pre-training objective that combines diverse pre-training paradigms together": an R-denoiser with "a range of 2 to 5 tokens as the span length, which masks about 15% of input tokens", an S-denoiser that "observe[s] a strict sequential order when framing the inputs-to-targets task, i.e., prefix language modeling", and an X-denoiser in which "approximately 50% of the input sequence is masked"; a paradigm token from {[R], [S], [X]} is prepended so that "downstream fine-tuning is associated with specific pre-training schemes" (PAPER-REPORTED · R4.4 abstract, §3). In ledger terms, MoD is a per-example switch among three rows with the row identity exposed as a token. Whether the mixture's reported gains hold at other scales is UNVERIFIED here.
-
-**Prefix LM.** Visibility over the prefix is bidirectional, loss over the continuation only; UniLM trains "three types of language modeling tasks: unidirectional, bidirectional, and sequence-to-sequence prediction" in one network by "utilizing specific self-attention masks to control what context the prediction conditions on" (PAPER-REPORTED · R4.8 abstract), and the prefix LM is a comparison arm in P02. Its distinctive cost is that ρ < 1 while backbone FLOPs are unchanged; at fixed compute it therefore receives fewer gradient-bearing tokens than the causal row (DERIVED).
 
 ```figure
 id: fig-4.12
@@ -356,24 +366,29 @@ states:
   - { anchor: failure-modes, label: "fallback at T = 32K", variables: { T: 32768, P: 16384 }, highlight: ["dense [T, T] mask, BF16"], note: "Block-mask fallback: the dense mask reaches 2 GiB per copy at T = 32768, 16 times the 8K value, which is the T² memory growth the failure mode names." }
 ```
 
-**Encoder–decoder cross-attention cost.** For a decoder of L_dec layers attending to an encoder output of length T_enc, each decoder position performs cross-attention with 2·T_enc·d_model FLOPs per layer for QK and AV products plus the K/V projections of the encoder output, which are shared across decoder positions and cost 4·T_enc·d_model² per layer (DERIVED · P01 layout). The encoder K/V for cross-attention are computed once per sequence and cached at inference; the decoder's own self-attention KV cache is separate (DERIVED).
-
 ## Algorithm
 
 ```text
-Algorithm 4.2 — Span corruption (P02 layout)
-INPUT   x ∈ ℕ^T, corruption rate r ∈ (0,1), mean span length μ, sentinel ids s_1…s_K+1
-OUTPUT  x̃ (encoder input), y (decoder target), m ∈ {1}^{|y|}
-STATE   span set S = {(start_k, len_k)}; sentinel counter k
-INVARIANT  spans are disjoint and non-adjacent; |y| = Σ len_k + K + 1; every token of x is in exactly one of x̃ or y (excluding sentinels)
-1  n_corrupt ← round(r · T);  K ← max(1, round(n_corrupt / μ))
-2  S ← sample K disjoint, non-adjacent spans with total length n_corrupt
-3  x̃ ← x with each span_k replaced by s_k (in order of position)
-4  y  ← s_1 ∘ span_1 ∘ s_2 ∘ span_2 ∘ … ∘ s_K ∘ span_K ∘ s_{K+1}
-5  m  ← 1 for all positions of y                   # loss on every target token
-6  return x̃, y, m                                    # terminates; no state carried across examples
+Algorithm 4.2 — Span transformation with explicit sampling contract
+INPUT clean ids x[0:T], corruption count n, ordered span lengths and clean-gap lengths,
+      distinct sentinel ids s_1...s_(K+1), decoder-start/EOS policy
+PRECONDITIONS T>=2; 1<=n<T; 1<=K<=min(n,T-n+1);
+              K positive span lengths sum to n; internal clean gaps are positive;
+              all clean gaps sum to T-n; enough sentinel ids are reserved
+OUTPUT x_tilde, decoder input, y, target mask, and corruption metadata
+1 Form K disjoint non-adjacent spans S from the supplied gap/span segmentation
+2 Scan x once; copy clean gaps to x_tilde and replace span k by sentinel s_k
+3 Append s_k followed by span k's original ids to y, in increasing k
+4 Append final sentinel s_(K+1) to y; apply declared EOS policy separately
+5 Decoder input -> decoder-start token followed by y[:-1]; targets -> y
+6 Score every nonpadding target, requiring a positive target count
+INVARIANTS |x_tilde|=T-n+K; |y|=n+K+1 before EOS;
+           every original token occurs once in either x_tilde or y
 ```
-Complexity: O(T) per example; the resulting decoder cost per example is O(|y|·N_dec + |y|·T̃·d_model·L_dec) for the cross-attention term. Implementation link: Hugging Face Transformers' T5 tokenizer reserves `extra_ids` (default 100) "for use as sentinels", its model documentation gives the canonical example input `"The <extra_id_0> walks in <extra_id_1> park"` with target `"<extra_id_0> cute dog <extra_id_1> the <extra_id_2>"`, creates decoder inputs with `_shift_right` (teacher forcing), and ignores labels set to −100 in the loss (OFFICIAL-DOCUMENTATION · Transformers v5.17.0 T5 model page [R4.28], accessed 2026-09-20). The sampling of span positions inside any particular data collator was not inspected and is UNVERIFIED here.
+
+The transformation is O(T) time and O(T+K) output storage. Sampling is an explicit input contract: the paper specifies its corruption regime, but this algorithm does not pretend that every collator uses the same integer rounding or segmentation distribution. A chosen rate/mean must yield feasible counts before constructing spans. Empty or nearly full corruption cannot be handled by blindly setting K=max(1,round(n/mu)). A constructive sampler can draw positive compositions for span lengths and internal gaps; its distribution must be documented if exact reproduction is required (DERIVED).
+
+The inspected Hugging Face T5 page describes sentinel extra IDs and shifted decoder labels ([R4.28](references.md#r428), official model documentation, unpinned surface inspected 2026-10-07). It does not establish the span sampler of an uninspected training pipeline.
 
 ```figure
 id: fig-4.14
@@ -430,77 +445,72 @@ spec:
 ## Implementation
 
 ```text
-Tensor trace (encoder–decoder span corruption)
-[B, T̃] x̃ → encoder (bidirectional) → [B, T̃, D] enc
-[B, |y|] y_shifted → decoder self-attn (causal) + cross-attn over enc → [B, |y|, D] → W_out → [B, |y|, V] → CE over all |y| positions
+span row: x_tilde[B,T_enc] -> bidirectional encoder -> memory[B,T_enc,d_model]
+          shifted y[B,T_dec] -> causal decoder + cross-attention(memory)
+          -> logits[B,T_dec,V] -> target loss
+prefix row: shifted constructed sequence[B,T] -> prefix/causal block visibility
+            -> hidden[B,T,d_model] -> scored continuation positions -> target loss
 ```
 
-```text
-Tensor trace (prefix LM, single stack)
-[B, T] x → block mask: prefix bidirectional / rest causal → [B, T, D] → W_out → [B, T, V] → CE with m_t = 1[t > P]
-```
+Prefix visibility can be represented by a predicate rather than a materialized T-by-T array. A dense additive mask uses O(T^2) storage per copy; a compatible attention backend may avoid that allocation. This is an implementation capability to verify against the selected backend and revision, not a property guaranteed by the words FlashAttention or block mask. Also check padding, document segmentation, and whether an API's causal shortcut would override the intended prefix region (DERIVED).
 
-Memory: the prefix-LM block mask is a [T, T] pattern that FlashAttention-style kernels support only if the kernel exposes a custom or block-diagonal mask; falling back to a dense additive mask costs O(T²) bytes (DERIVED; kernel support is version-specific and UNVERIFIED). For encoder–decoder training, activation memory holds both stacks; parameter memory holds two stacks plus cross-attention projections, which is the parameter cost of the row.
+Selected-position output projection can reduce MLM head work by gathering selected hidden states before the vocabulary projection. It does not remove context positions from encoder computation or their gradients. Encoder-decoder target shortening can reduce decoder work, but total time includes encoder execution, cross-attention, packing, and kernel utilization. Latency, throughput, energy, and monetary improvements for the reconstructed rows are UNVERIFIED without measurements; the source studies' settings bound their own findings.
 
 ## Experimental design
 
-### Experiment 4.2 — Target-length ratio at matched backbone compute
+### Reported experiments
 
-- **Hypothesis:** at matched backbone FLOPs, single-stack rows with smaller ρ (prefix LM, MLM) reach a higher held-out causal NLL on the continuation slice than the causal row, because fewer tokens bear gradient.
-- **Setup:** §3.5 reference model; three runs (causal, prefix with P = T/2, MLM with |M| = 0.15T) at equal input-token budget.
-- **Independent variables:** objective row.
-- **Controlled variables:** data, seeds, tokenizer, batch tokens, schedule.
-- **Dataset/workload:** a public text corpus; evaluation on held-out continuations with prefix length P.
-- **Hardware:** one accelerator.
-- **Metrics:** continuation NLL per token (nats), gradient-bearing tokens per step.
-- **Baselines:** causal row.
-- **Expected result:** ordering by ρ on continuation NLL; MLM evaluated only on masked-position pseudo-NLL, reported separately because it is not comparable.
-- **Ablation:** prefix row with P = 0 (should coincide with causal).
-- **Interpretation:** separates the gradient-count effect from the visibility effect.
-- **Threats to validity:** the MLM arm has no causal NLL at all; only the prefix/causal comparison is on one axis.
+T5 separates architecture comparisons (section 3.2) from objective studies (section 3.3). The latter compare reconstruction variants, corruption rates, and mean span lengths under the paper's baseline pretraining/fine-tuning regime and downstream suite, which includes GLUE, SuperGLUE, SQuAD, summarization, and translation. Tables 4-7 provide the relevant comparisons: rate variants include 10%, 15%, 25%, and 50%; the span study compares mean lengths 2, 3, 5, and 10 at the stated corruption regime ([P02](references.md#p02), PAPER-REPORTED). Read these tables with the baseline budget and repetition procedure in section 3.1, rather than assigning the final large-model training budget in section 3.7 to every ablation.
 
-Proposal only; no run was executed.
+The causal intervention in the span study is corruption structure, while architecture and downstream evaluation are held to its baseline. Its outcome measures are fine-tuned task metrics and the source's training-efficiency discussion. Target length supplies an explanatory cost mechanism; it is not itself a device throughput measurement. The architecture study has a different intervention and cannot be combined with the objective study as though one table isolated both variables.
+
+BART evaluates noising alternatives before reporting task results (R4.3 sections 3-5). UL2 evaluates mixtures and downstream behavior (R4.4 experiments); its mixtures also introduce mode conditioning. Neither paper establishes that one corruption operator dominates across all parameter counts, corpora, modalities, or deployment objectives. The book's proposed mask fixture remains in [verification.md](verification.md).
 
 ## Observations
 
-**What the paper claims.** P02 reports that span corruption with average span length 3 "slightly (but significantly)" outperforms i.i.d. corruption on most non-translation benchmarks while producing shorter sequences, that denoising objectives outperform language modeling, and that the encoder–decoder with denoising performs best among its architectures (PAPER-REPORTED · P02 §3.2–3.3). BERT reports its 15% / 80-10-10 corruption rule and masked-position-only loss (PAPER-REPORTED · R4.1). UL2 reports that its mixture of denoisers with paradigm tokens improves over single objectives in its setting (PAPER-REPORTED · R4.4).
+**What the paper claims.** T5 reports favorable results for denoising and its encoder-decoder baseline; its span-length study reports a modest advantage for mean span length 3 on most nontranslation tasks and a shorter-sequence efficiency benefit (PAPER-REPORTED: P02 section 3.2-3.3.4).
 
-**What the evidence shows.** The P02 comparisons are controlled within one codebase and one data source, which is stronger than cross-paper comparison; they are, however, at a scale and on a downstream suite that later decoder-only reports do not replicate, and the book knows of no matched-budget independent reproduction at foundation-model scale — UNVERIFIED.
+**What the evidence shows.** The comparisons are conditional on the source's corpus, architecture allocation, training budget, tuning, and task suite. They distinguish full reconstruction from removed-token reconstruction and show that corruption extent and span structure are experimental variables. They do not prove that shorter targets are always better.
 
-**What we infer.** The durable content is the ledger, not the ranking: visibility, target set, and ρ are independent dials, and ρ directly sets decoder-side cost (DERIVED). We infer, marked ASSUMED, that the decoder-only convergence of later systems reflects inference-side simplicity (one stack, one KV cache) at least as much as objective quality; this is a systems inference, not a reproduced finding.
+**What we infer.** Equal numbers of clean tokens, scored targets, and FLOPs are different controls. A fair objective comparison must name which is fixed and account for the remaining quantities. Context tokens can receive gradient even when their own positions have no direct loss (MATHEMATICALLY-DERIVED).
 
-**What remains unknown.** Production corruption rates and span lengths of any named contemporary model are NOT-DISCLOSED. Whether prefix visibility helps at scale when post-training follows is UNVERIFIED.
+**What remains unknown.** Exact behavior of an uninspected collator, custom-mask kernel, or named production trainer is UNVERIFIED. Published findings here do not settle the optimal corruption mixture for another scale or task distribution.
 
 ## Failure modes
 
-> **Failure mode — Sentinel leakage.** *Symptom:* the model emits sentinel ids in downstream generation. *Cause:* sentinel tokens present in the vocabulary and in targets but never suppressed at inference. *Detection:* count sentinel ids in sampled outputs. *Mitigation:* logit masking at inference; a sentinel-free fine-tuning stage.
+> **Failure mode — Incorrect selected-target accounting.** *Symptom:* the loss count differs from sampled prediction positions. *Cause:* treating unchanged/randomly replaced selected tokens as unscored. *Detection:* compare corruption metadata with target masks. *Mitigation:* score the selected set independently of replacement type (R4.1 section3.1, PAPER-REPORTED).
 
-> **Failure mode — [MASK] distribution shift.** *Symptom:* encoder quality drops on unmasked inputs. *Cause:* 100% [MASK] replacement so the encoder never sees clean tokens at masked positions. *Detection:* compare masked-position accuracy with and without the 80-10-10 rule. *Mitigation:* the R4.1 replacement mixture.
+> **Failure mode — Sentinel or segment mismatch.** *Symptom:* reconstruction omits or duplicates original tokens. *Cause:* overlapping spans, inconsistent sentinel order, or EOS counted twice. *Detection:* reconstruct clean IDs from encoder and target segments. *Mitigation:* validate disjoint spans, sentinel capacity, and final-sentinel/EOS policy (DERIVED).
 
-> **Failure mode — Block-mask fallback.** *Symptom:* prefix-LM training memory grows as T². *Cause:* dense additive mask because the attention kernel lacks block-mask support. *Detection:* activation memory versus T. *Mitigation:* kernel with block-diagonal mask support; or split the sequence into encoder-like and causal parts.
+> **Failure mode — Visibility fallback.** *Symptom:* prefix targets see future continuation or dense mask storage dominates. *Cause:* substituting a generic causal flag or dense mask for the declared predicate. *Detection:* inspect admissible pairs and backend allocations. *Mitigation:* use a verified compatible backend and retain a small visibility fixture (DERIVED).
 
 ## Siblings
 
-**Causal LM** — [04-1-autoregressive-modeling.md](04-1-autoregressive-modeling.md)
-Why it exists: exact ordered likelihood and sequential sampling. What assumption changed (relative to this section): none of x_{>t} is visible. What objective changed: all positions are targets, ρ = 1. What problem it solved: one stack, one sampler. What new failure mode it introduced: no bidirectional encoder representations. Changed primitive: bidirectional/block mask → causal mask.
+Causal likelihood scores ordered conditionals under earlier-token visibility. Masked reconstruction scores selected corrupted-position conditionals; encoder-decoder denoising scores an ordered target given a corrupted source; prefix modeling scores the continuation given a bidirectionally represented prefix. The direct target count, processed source count, and architecture determine different costs even when all implementations call cross-entropy.
 
-**Fill-in-the-middle** — [04-3-code-and-structured-sequences.md](04-3-code-and-structured-sequences.md)
-Why it exists: suffix conditioning without an encoder. What assumption changed: the document may be reordered. What objective changed: causal loss on a rearranged sequence; no encoder. What problem it solved: infilling in decoder-only models. What new failure mode it introduced: sentinel handling at inference. Changed primitive: corruption function → reordering function.
+Fill-in-the-middle supplies right context through serialization instead of a separate bidirectional source encoder [§4.3](04-3-code-and-structured-sequences.md). Contrastive alignment instead normalizes match scores over examples in a candidate set, so candidate count changes its probability space rather than its token target length [§4.5](04-5-conditional-and-multimodal-learning.md). A shared loss primitive does not make these estimands interchangeable.
 
-**Contrastive alignment** — [04-5-conditional-and-multimodal-learning.md](04-5-conditional-and-multimodal-learning.md)
-Why it exists: pair-level supervision across modalities. What assumption changed: no token targets at all. What objective changed: per-position CE → pairwise InfoNCE over a batch. What problem it solved: alignment of separately encoded modalities. What new failure mode it introduced: batch size enters the objective. Changed primitive: output head over V → similarity matrix over the batch.
+
 
 ## Extensions
 
-For multimodality, masked prediction over image patches and latent prediction are developed in [§18.4](../../part-03-model-architectures-and-state/ch18-multimodal-architectural-primitives/18-4-learning-objectives.md) and [§59.2](../../../vol-03-grounded-and-interactive-intelligence/part-10-multimodal-world-and-embodied-models/ch59-predictive-representations-jepa-and-world-models/59-2-predictive-learning.md); the ledger fields are identical with "token" replaced by "patch" or "latent". For discrete diffusion and masked generation of text and images, developed in [§58.2](../../../vol-03-grounded-and-interactive-intelligence/part-10-multimodal-world-and-embodied-models/ch58-generative-multimodal-models-and-alternative-generation-paths/58-2-objectives.md), the MLM row is iterated with a schedule of mask rates (forward pointer; ASSUMED mapping).
+### Improvements
+
+Span corruption improves target economy relative to reconstructing every clean token: one sentinel represents a removed region in the input and only removed regions are decoded. The benefit is conditional on span count and the full architecture cost, not merely on the corruption percentage (DERIVED; P02 section 3.3.4).
+
+BART expands the noising family to transformations such as infilling and sentence permutation while reconstructing the full document (R4.3 sections 2-3, PAPER-REPORTED). UL2 then combines denoising regimes to train several conditioning demands in one model (R4.4 section 3, PAPER-REPORTED). These are documented methodological changes with different target/visibility contracts; a mixture's reported gain does not make every constituent independently superior.
+
+Prefix modeling offers bidirectional processing of known conditioning in a shared stack. Encoder-decoder processing instead stores an independently encoded source with cross-attention access. Choosing between them requires a comparison of parameter allocation, target lengths, supported masks, source reuse, and the intended generation interface; architectural labels alone do not determine efficiency.
 
 ## Limitations
 
-These rows are valid where the deployment task matches the visibility pattern: encoders for classification and retrieval, encoder–decoders for conditional generation with fully known inputs, prefix LMs where the prefix is known in full. They are falsified as choices when the deployment requires streaming generation conditioned on partial inputs, where only the causal row applies without re-encoding. Decision consequence: choose visibility from the inference contract, then record ρ and the parameter cost in the ledger.
+The losses train conditionals selected by corruption, not a universal representation of task utility. MLM scoring does not directly define the autoregressive perplexity of section 4.6. Denoising generation is sequential in its decoder despite bidirectional encoding. Streaming encoder-decoder systems are possible when their visibility and chunking protocol is specified; causality of the decoder alone does not establish streaming behavior for an entire multimodal system.
+
+The target-length calculations omit padding, packing losses, extra task/EOS tokens, and backend effects unless expressly included. A reported training speedup belongs to its source configuration. No throughput or end-to-end resource measurement was made for this chapter.
 
 ## Reproducibility
 
-Versions: P02 arXiv 1910.10683 (ar5iv rendering accessed 2026-09-20); R4.1, R4.3, R4.4, R4.8 arXiv abs/ar5iv pages accessed 2026-09-20; Transformers v5.17.0 T5 documentation [R4.28]. Artifacts: ledger rows `mlm`, `span_corruption`, `denoising_bart`, `prefix_lm`, `enc_dec_supervised` in [verification.md](verification.md). Configurations: corruption rate, mean span, sentinel ids, P. Metrics: nats per target token, with the target set stated. Unresolved: span-sampling implementation details in current collators (UNVERIFIED); production settings (NOT-DISCLOSED).
+Retain clean/corrupted sequences, sampled spans and gaps, exact sentinel IDs, final-sentinel/EOS rules, decoder-start convention, attention visibility, target mask, mixture choice and probability, loss denominator, architecture sharing, and source/target length distributions. Verify source and target reconstruction before using downstream task scores as evidence about the objective. Source locators and access dates appear in [references.md](references.md); the toy fixture is an unexecuted verification proposal.
 
 ## References
 

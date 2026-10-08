@@ -27,8 +27,8 @@ benchmarks: []
 datasets: []
 status: {maturity: established, disputed: false}
 evidence_summary: {labels_used: [OFFICIAL-DOCUMENTATION, MATHEMATICALLY-DERIVED, DERIVED, PAPER-REPORTED, NOT-DISCLOSED], empirically_observed: false}
-word_count_target: 1100
-updated_at: 2026-09-20
+word_count_target: 2200
+updated_at: 2026-10-07
 editorial_status: manuscript_draft
 ---
 
@@ -36,31 +36,36 @@ editorial_status: manuscript_draft
 
 ## Scope
 
-Objective: turn the reverse-mode calculus of [§2.4](../ch02-mathematical-and-statistical-foundations/02-4-differential-calculus.md) into the four contracts a training program must honor — what the forward pass saves and how much memory that costs, what happens when a saved tensor is mutated, how gradients are accumulated and clipped across micro-batches, and how the analytic gradient is checked against FP64 finite differences. Baseline: an untested backward pass. Success criterion: the skeleton's gradient passes the FP64 check under the tolerance derived in Eq. 3.14 on ordinary and extreme inputs. Boundaries: the mathematics of VJPs and the chain rule are owned by §2.4; graph capture and compilation by [§28.1](../../../vol-02-execution-and-optimization/part-05-hardware-kernels-and-distributed-execution/ch28-frameworks-graph-compilers-and-runtime-integration/28-1-framework-semantics.md); activation checkpointing as a memory-management policy at scale by [§30.2](../../../vol-02-execution-and-optimization/part-05-hardware-kernels-and-distributed-execution/ch30-large-training-runs-reliability-monitoring-and-recovery/30-2-memory-management.md).
+[DERIVED] This section connects the calculus of [§2.4](../ch02-mathematical-and-statistical-foundations/02-4-differential-calculus.md) to execution: reverse traversal of an acyclic graph, lifetime of saved values, mutation detection, token-weighted accumulation, clipping, and derivative verification. A symbolic derivative is insufficient when the program differentiates a wrongly masked objective, changes an intermediate before backward, or normalizes micro-batches inconsistently. Distributed accumulation and checkpoint placement at scale remain in Chapters 19 and 30.
 
 ## Why this exists
 
-What failed: hand-written backward passes were wrong in ways that only appeared as slower convergence; the first defense, comparing to finite differences, was itself done in FP32 where the difference quotient has at best five correct digits [MATHEMATICALLY-DERIVED — Eq. 3.14]. Bottleneck: for a Transformer the forward pass's saved intermediates, not the parameters, dominate device memory at long sequence length, because every attention and MLP block retains tensors proportional to B·T·d_model and, unfused, to B·H·T² [DERIVED — activation accounting in [§5.6](../ch05-minimal-transformer-and-execution-trace/05-6-reference-accounting.md)]. Dominant constraint: memory forces micro-batching, and micro-batching forces a gradient-accumulation contract whose normalization must match the loss definition of Eq. N.2. What changed: the framework makes the tape, the saved tensors, and the mutation check explicit objects, so each contract can be tested.
+[MATHEMATICALLY-DERIVED] Reverse mode composes local vector–Jacobian products. Correctness requires both correct local derivatives and accumulation of contributions from every outgoing edge. Weight sharing and residual connections make the second premise essential: treating a graph as a chain can discard a contribution even when every operator's derivative is correct.
+
+[OFFICIAL-DOCUMENTATION] PyTorch records operations dynamically and retains operator-dependent values for backward. Its documentation describes saved-tensor version checks and accumulation into leaf gradient fields. These mechanisms do not verify the intended objective. Masking an invalid division after computing it, for example, does not remove that division from the differentiation graph. [R3.31](references.md).
 
 ## Intuition
 
-Physically, reverse mode is a second traversal of the same computation in the opposite direction; every node that needs its input to compute its local VJP pins that input in memory until the traversal reaches it. Memory is therefore proportional to the *depth* of the live path, and recomputation trades FLOPs for that memory. Accumulation is an ordinary sum and inherits the summation error of Eq. 3.9. Clipping is a projection onto a ball in gradient space; it changes the direction only when the ball is exceeded, never otherwise.
+[MATHEMATICALLY-DERIVED] An intermediate's cotangent sums sensitivities arriving through all consumers. Reverse traversal waits until these contributions are complete before applying its local derivative. Saved values supply the arguments at which that derivative is evaluated. Recomputing them is valid only when it reproduces the required values and state; changed randomness or mutable state can change the derivative.
 
 ## Formulation
 
-For a loss ℒ(θ) computed through intermediates y_k = f_k(y_{k−1}), reverse mode propagates cotangents
+[MATHEMATICALLY-DERIVED] For an acyclic graph with node $y_j=f_j((y_i)_{i\in\mathrm{pred}(j)})$, initialize the scalar loss cotangent to one and all others to zero. Each edge contributes
 
 $$
-\bar{y}_{k-1} = J_{f_k}(y_{k-1})^{\top}\, \bar{y}_k, \qquad \bar{\theta} = \sum_k \Big(\tfrac{\partial f_k}{\partial \theta}\Big)^{\top} \bar{y}_k
+\bar y_i\mathrel{+}=\left(\frac{\partial f_j}{\partial y_i}\right)^{\!\top}\bar y_j,
+\qquad i\in\mathrm{pred}(j).
 $$
-*(Eq. 3.11)* where J is the Jacobian, ȳ_k = ∂ℒ/∂y_k, and each factor is a VJP that needs some subset of (y_{k−1}, y_k, θ) — the *saved tensors*.
+*(Eq. 3.11)* Addition applies to intermediate nodes and parameter leaves. For $y=x^2+x$, the paths contribute $2x$ and $1$; overwriting gives an incorrect derivative.
 
-Gradient accumulation over K micro-batches with valid-token counts n_1..n_K for the token-mean loss of Eq. N.2:
+[MATHEMATICALLY-DERIVED] Let $s_k$ be the summed valid-token loss in micro-batch $k$, and $n_k$ its valid count. For $N=\sum_k n_k>0$,
 
 $$
-\nabla_\theta \mathcal{L} = \frac{\sum_{k=1}^{K} n_k \nabla_\theta \bar{\ell}_k}{\sum_{k=1}^{K} n_k}, \qquad \bar{\ell}_k = \frac{1}{n_k}\sum_{t \in k} m_t\, \ell_t
+\nabla_\theta\mathcal L=\frac1N\sum_k\nabla_\theta s_k
+=\sum_{k:n_k>0}\frac{n_k}{N}\nabla_\theta\bar\ell_k,
+\qquad \bar\ell_k=s_k/n_k.
 $$
-*(Eq. 3.12)* where ℓ̄_k is the per-micro-batch token mean; summing K equal-weighted micro-batch means is correct only if all n_k are equal, a point developed in [§19.2](../../part-04-training-science-and-adaptation/ch19-pretraining-objectives-and-the-full-training-loop/19-2-batch-semantics.md).
+*(Eq. 3.12)* Empty micro-batches contribute zero without evaluating their undefined means. An empty effective batch is rejected. Equal weighting of means implements this objective only when counts agree.
 
 ```figure
 id: fig-3.13
@@ -70,8 +75,7 @@ caption: >-
   Eq. 3.12 with two micro-batches and one scalar gradient component. With
   1000 and 250 valid tokens, averaging the two micro-batch means gives the
   short micro-batch's tokens 2.5 times their share. The accumulated gradient
-  is off by 0.3 on a correct value of 1.2. Nothing diverges, which is why the
-  failure mode shows up only as a mis-scaled learning rate. Set n₂ = n₁ and the
+  is off by 0.3 on a correct value of 1.2. Nothing diverges, which can change the objective without a non-finite loss. Set n₂ = n₁ and the
   two agree. Illustrative values, not a named model.
 placement: rail
 anchor: formulation
@@ -104,39 +108,40 @@ spec:
     - { label: "nearly empty micro-batch, n₂ = 10", values: { n2: 10 } }
 ```
 
-Global-norm clipping with threshold c:
+[MATHEMATICALLY-DERIVED] For finite concatenated gradient $g$ and $c>0$, projection onto a Euclidean ball is
 
 $$
-g \leftarrow g \cdot \min\Big(1, \frac{c}{\|g\|_2 + \eta}\Big), \qquad \|g\|_2 = \Big(\sum_{p} \|g_p\|_2^2\Big)^{1/2}
+\operatorname{clip}_c(g)=\begin{cases}g,&\|g\|_2\le c,\\ c g/\|g\|_2,&\|g\|_2>c.\end{cases}
 $$
-*(Eq. 3.13)* where the norm is over all parameter gradients concatenated and η is a small constant against division by zero.
+*(Eq. 3.13)* This preserves every nonzero gradient's direction, including when clipped. Componentwise clipping generally does not. A denominator epsilon changes the exact projection. Neither formula supplies a recovery policy for non-finite gradients.
 
-Central finite difference in FP64 with step h for a scalar function f and unit direction v:
+[MATHEMATICALLY-DERIVED] Define $\phi(t)=f(\theta+tv)$, $\|v\|_2=1$, and suppose its third derivative has magnitude at most $M_3$ on $[-h,h]$. If computed endpoint values have absolute errors $E_+,E_-$, then
 
 $$
-\hat{d} = \frac{f(\theta + h v) - f(\theta - h v)}{2h}, \qquad |\hat{d} - \nabla f \cdot v| \le \frac{h^2}{6}\|f'''\| + \frac{u_{64}\,|f|}{h}
+\left|\frac{\widehat\phi(h)-\widehat\phi(-h)}{2h}-\nabla f(\theta)^\top v\right|
+\le \frac{M_3h^2}{6}+\frac{E_++E_-}{2h}+E_{\mathrm{quot}}.
 $$
-*(Eq. 3.14)* where the first term is truncation and the second is rounding; the bound is minimized at h ≈ (3 u_64 |f| / ‖f'''‖)^{1/3}, which for O(1) quantities is ≈ 10^−5 and gives an error ≈ 10^−10 [MATHEMATICALLY-DERIVED].
+*(Eq. 3.14)* The last term covers subtraction/division and argument-formation errors not included in $E_\pm$. Replacing the evaluation term by $u|f|/h$ requires a bound on the whole function evaluation; FP64 storage alone supplies no such bound. Balancing $E/h$ against truncation yields $h=(3E/M_3)^{1/3}$, conditional on known $E,M_3$.
 
 ```figure
 id: fig-3.14
 kind: calculator
-title: Finite-difference error budget, FP64 against FP32
+title: Conditional finite-difference model, FP64 and FP32
 caption: >-
-  Eq. 3.14, live. Truncation h²‖f‴‖/6 falls with h while rounding u·|f|/h
+  Eq. 3.14 with the additional model E = u|f| and bounded third derivative, live. Truncation h²‖f‴‖/6 falls with h while rounding u·|f|/h
   rises, so each format has an optimal step h*. With O(1) quantities FP64
   balances near h ≈ 10⁻⁵ at about 10^−10.6. Keep h = 10⁻⁵ and switch to FP32
   and the rounding term alone is ≈ 6e−3. At FP32's own optimum h* ≈ 5.6e−3
-  the bound is still ≈ 1.6e−5, about six decades worse than FP64. Outputs are
+  the conditional model is still ≈ 1.6e−5, about six decades worse than FP64. Outputs are
   log₁₀ because the FP64 terms are below the display's resolution.
 placement: rail
 anchor: formulation
 evidence: MATHEMATICALLY-DERIVED
 source: "DERIVED:eq-3.14"
 alt: >-
-  Calculator for Eq. 3.14 with step h, stored mantissa bits p (52 for FP64,
+  Calculator for Eq. 3.14 with the additional model E = u|f| and bounded third derivative with step h, stored mantissa bits p (52 for FP64,
   23 for FP32), ‖f‴‖ and |f|. At h = 1e−5 in FP64 with both norms 1: log₁₀
-  of truncation is −10.78, log₁₀ of rounding −10.95, and log₁₀ of the bound
+  of truncation is −10.78, log₁₀ of rounding −10.95, and log₁₀ of the conditional model
   −10.56. The optimal step h* is 6.9e−6 with a bound of 10^−10.62 there. In
   FP32 at h = 1e−5 the rounding term is 10^−2.22 (≈ 6e−3) and dominates. The
   FP32 optimum is h* ≈ 5.6e−3 with a bound of 10^−4.80 (≈ 1.6e−5).
@@ -152,31 +157,18 @@ spec:
   outputs:
     - { symbol: Lt, label: "log₁₀ truncation, h²‖f‴‖/6", formula: "log10(h^2*f3/6)", format: fixed2 }
     - { symbol: Lr, label: "log₁₀ rounding, u·|f|/h", formula: "log10(2^-(p+1)*F/h)", format: fixed2 }
-    - { symbol: Lb, label: "log₁₀ bound, Eq. 3.14", formula: "log10(h^2*f3/6 + 2^-(p+1)*F/h)", format: fixed2, emphasis: true }
+    - { symbol: Lb, label: "conditional error model", formula: "log10(h^2*f3/6 + 2^-(p+1)*F/h)", format: fixed2, emphasis: true }
     - { symbol: hs, label: "optimal step h*", formula: "(3*2^-(p+1)*F/f3)^(1/3)", format: raw }
-    - { symbol: Ls, label: "log₁₀ bound at h*", formula: "log10(hs^2*f3/6 + 2^-(p+1)*F/hs)", format: fixed2 }
-states:
-  - { anchor: formulation, label: "FP64 · h = 10⁻⁵", variables: { p: 52, h: 0.00001 }, highlight: [Lt, Lr, Lb], note: "FP64 at h = 1e−5: truncation ≈ 1.7e−11 and rounding ≈ 1.1e−11 balance. The bound is 10^−10.6 and h* ≈ 6.9e−6." }
-  - { anchor: experimental-design, label: "FP32 ablation · h = 10⁻⁵", variables: { p: 23, h: 0.00001 }, highlight: [Lr, Lb], note: "Experiment 3.3's ablation. At the same h in FP32 the rounding term u₃₂/h ≈ 6e−3 swamps everything, so the check stops being informative." }
-  - { anchor: observations, label: "FP32 at its own h*", variables: { p: 23, h: 0.0056 }, highlight: [hs, Ls], note: "Even at FP32's optimum h* ≈ 5.6e−3 the bound is ≈ 1.6e−5, about five digits and six decades worse than FP64. At h = 1e−5, the ≈ 1e−3 of the text, a 0.1 % defect is invisible." }
-  - { anchor: failure-modes, label: "FP64 against a 0.1 % defect", variables: { p: 52, h: 0.00001 }, highlight: [Lb], note: "A 0.1 % normalization error (10⁻³ relative) sits about 7.5 decades above the FP64 bound. Algorithm 3.7 on an unequal-n_k fixture sees it." }
+    - { symbol: Ls, label: "log10 conditional model at h*", formula: "log10(hs^2*f3/6 + 2^-(p+1)*F/hs)", format: fixed2 }
 ```
-
-> **Definition — Saved tensor.** An intermediate value retained by the forward pass because a VJP in Eq. 3.11 requires it; the set of saved tensors is the activation memory of the backward pass.
-
-> **Definition — Version counter.** A per-tensor integer incremented on every in-place modification; autograd records it when a tensor is saved and compares it when the tensor is read in backward.
-
-> **Definition — Gradient accumulation (micro-batch).** Summing gradients of K micro-batch losses, weighted as in Eq. 3.12, before a single optimizer step.
-
-> **Definition — Global-norm gradient clipping.** The rescaling of Eq. 3.13 applied with one factor to all gradients.
-
-> **Definition — Finite-difference gradient check.** Comparison of the analytic gradient with the FP64 estimate of Eq. 3.14 under the tolerance derived from its error bound.
 
 ## Mechanism
 
-Graph construction and saved tensors. PyTorch records the graph dynamically: each tensor produced by a differentiable operation holds a `grad_fn` node that is "an entry point into this graph"; for built-in operations "tensors are automatically saved as needed", and custom functions save with `save_for_backward()` and read with `saved_tensors` [OFFICIAL-DOCUMENTATION — PyTorch 2.14 *Autograd mechanics*, R3.11, accessed 2026-09-20]. Which tensors are saved is operator-specific: a matmul y = xW saves x and W; an elementwise GELU saves its input; softmax saves its output. Activation memory is therefore the sum over live nodes of the saved-tensor bytes, and it is why the MLP intermediate [B, T, d_ff] and, when unfused, the [B, H, T, T] probabilities dominate.
+### Methodology
 
-In-place operations and version counters. "Every tensor keeps a version counter, that is incremented every time it is marked dirty in any operation. When a Function saves any tensors for backward, a version counter of their containing Tensor is saved as well"; on access in backward "it is checked, and if it is greater than the saved value an error is raised" [OFFICIAL-DOCUMENTATION — same page]. The consequence for the skeleton is a rule: an in-place update (`add_`, `mul_`, masked fills) is legal only on tensors no VJP needs, and the check makes violations loud rather than silent.
+[MATHEMATICALLY-DERIVED] Reverse mode records dependencies and values needed by local derivatives, then visits nodes in reverse topological order. For $Y=XW$, the derivatives are $\bar X=\bar YW^\top$, $\bar W=X^\top\bar Y$. Saving or reconstructing $X,W$ is sufficient. A fused operator can use a different saved representation for the same derivative. Tensor sizes, branching, aliasing, and overlapping lifetimes determine peak activation memory; graph depth alone does not.
+
+[OFFICIAL-DOCUMENTATION] Saved tensors in PyTorch carry version information. An incompatible in-place modification detected when backward accesses the saved value raises an error. Saved-tensor hooks may change the stored representation, so lossy packing becomes part of the numerical program. These checks address supported mutation semantics, rather than proving custom backward code correct. [R3.31](references.md).
 
 ```figure
 id: fig-3.15
@@ -241,13 +233,15 @@ spec:
     - { id: bwd, label: "backward: reverse order, Algorithm 3.5" }
 ```
 
-Recomputation. `torch.utils.checkpoint` "trades compute for memory" by recomputing a segment's forward during backward instead of saving its intermediates; the documentation recommends `use_reentrant=False`, and by default "includes logic to juggle the RNG state such that checkpointed passes making use of RNG (through dropout for example) have deterministic output as compared to non-checkpointed passes" [OFFICIAL-DOCUMENTATION — PyTorch 2.14 `torch.utils.checkpoint`, R3.11]. JAX exposes the same trade under `jax.checkpoint` / `jax.remat`, where "only the input ... is stored on the forward pass" and residuals are recomputed, with policies selecting which primitives may save [OFFICIAL-DOCUMENTATION — JAX gradient-checkpointing page, R3.16]. P13 reports recomputing all RMSNorm outputs and MLA up-projections during backward for memory [PAPER-REPORTED]. The policy question of *what* to recompute at scale is owned by §30.2.
+[MATHEMATICALLY-DERIVED] A chain of $L$ equal-size activation states can retain $k$ boundaries and reconstruct $L/k$ states per segment. Activation storage is proportional to $k+L/k$, minimized near $\sqrt L$. This excludes parameters, optimizer states, and workspaces. One extra forward-equivalent traversal gives compute multiplier $(2F+B)/(F+B)$, equal to $4/3$ only if backward cost $B=2F$.
 
-Accumulation and clipping. Leaf tensors with `requires_grad=True` "will have gradients accumulated into their .grad fields" across successive `backward()` calls, so Eq. 3.12 is implemented by scaling each micro-batch loss by n_k/Σn_k before its backward, or equivalently by dividing by K when the n_k are equal [OFFICIAL-DOCUMENTATION — Autograd mechanics]. `torch.nn.utils.clip_grad_norm_` computes the norm "as if the norms of the individual gradients were concatenated into a single vector", modifies gradients in place, and returns the total norm; `error_if_nonfinite` defaults to `False`, so a NaN norm silently produces NaN gradients unless the caller checks the returned value [OFFICIAL-DOCUMENTATION — PyTorch 2.14 reference page, R3.11]. Clipping precedes the optimizer step and, under FP16 loss scaling, follows unscaling ([§3.4](03-4-mixed-precision-execution.md)).
+[PAPER-REPORTED] Chen et al. implement segmented recomputation and a graph planner, using a budget heuristic for unequal operations. Their reported static feature-map memory excludes parameters and temporary convolution workspaces; runtime total memory is measured separately. The sublinear claim concerns this explicit allocation boundary. [R3.24, §§4–5](references.md).
 
-Gradient checking. `torch.autograd.gradcheck` compares analytic gradients to "small finite differences" with defaults `eps=1e-06`, `atol=1e-05`, `rtol=0.001`, and "the default values are designed for input of double precision"; the check "will likely fail if input is of less precision" [OFFICIAL-DOCUMENTATION — same root]. JAX's `jax.test_util.check_grads` performs the analogous finite-difference check to a chosen order [OFFICIAL-DOCUMENTATION — JAX automatic-differentiation page, R3.16]. The skeleton uses its own Algorithm 3.7 so that the tolerance is derived from Eq. 3.14 and reported, not inherited.
+[OFFICIAL-DOCUMENTATION] PyTorch recommends non-reentrant checkpointing and describes RNG preservation and its device limitations. JAX rematerialization policies select which residuals are retained. A function that changes global state or introduces an unanticipated device requires additional care: replaying code need not reproduce its original execution state. [R3.39, R3.49](references.md).
 
-Cost line: saved-tensor memory ≈ Σ_live bytes(saved) — for one pre-norm block with unfused attention roughly B·T·(≈ 10 d_model + 2 d_ff)·b + B·H·T²·b bytes [DERIVED; exact multiplier is operator-set-specific and given in §5.6]; recomputation adds one extra forward of the segment (≈ +1/3 of step FLOPs if every block is recomputed); accumulation costs one read-modify-write of the gradient buffer per micro-batch; clipping costs one reduction over all gradients plus one scaling pass; the FP64 check costs 2 forward passes per probed direction.
+[MATHEMATICALLY-DERIVED] Accumulation precedes clipping because projection is nonlinear: clipping a sum differs from summing clipped gradients. FP16 gradients must also be unscaled first; otherwise the threshold is interpreted in scaled units. Componentwise finiteness and norm finiteness are distinct checks because squaring finite gradients can overflow the accumulator.
+
+[DERIVED] For $P$ gradient elements, accumulation and clipping entail $O(P)$ traffic; clipping adds a reduction and scaling pass. Directional finite differences need two forwards per direction and one analytic backward. Coordinatewise Jacobian reconstruction scales with input-coordinate count. These counts do not determine latency or energy without a concrete kernel and measurement boundary.
 
 ```figure
 id: fig-3.16
@@ -295,96 +289,99 @@ spec:
 
 ## Algorithm
 
-```text
-Algorithm 3.5 — Reverse-mode backward over a tape with saved-tensor version checks
-INPUT   tape of nodes (f_k, saved_k, version_k) in forward order; ȳ_K = 1 (dℒ/dℒ)
-OUTPUT  ∂ℒ/∂θ_p accumulated into grad[p] for each leaf p
-STATE   cotangent map ȳ; grad buffers (FP32 for master weights, §3.4)
-INVARIANT before processing node k, ȳ_k is complete (all consumers of y_k processed)
-1  for k = K down to 1:
-2      for each tensor s in saved_k: assert version(s) == version_k[s]   # in-place check
-3      (ȳ_{k−1}, ∂θ_k) ← VJP_k(saved_k, ȳ_k)
-4      for each leaf p touched by ∂θ_k: grad[p] ← grad[p] + ∂θ_k[p]     # accumulate
-5      release saved_k
-6  TERMINATION: K nodes; each node visited once (topological order)
-```
-
-Complexity: ≈ 2× the forward FLOPs for matmul-dominated graphs (one VJP for the input, one for the weight); memory peaks at the largest live set of saved tensors.
+[DERIVED] The reverse traversal requires contributions to every intermediate, not only leaves. Storage release also respects asynchronous consumers when kernels run on multiple streams.
 
 ```text
-Algorithm 3.6 — Micro-batched step with accumulation, global-norm clipping, and finiteness gate
-INPUT   micro-batches b_1..b_K with valid-token counts n_k; clip threshold c; optimizer
-OUTPUT  one parameter update, or a skipped step
-STATE   grad buffers zeroed; N = Σ n_k
-INVARIANT after line 4 for all k, grad = Σ_k (n_k/N) ∇ℓ̄_k = ∇ℒ (Eq. 3.12)
-1  zero grads
-2  for k = 1..K:
-3      loss_k ← token-mean loss on b_k (FP32 reduction, §3.2)
-4      backward( loss_k · n_k / N )          # under loss scaling, multiply by S first (§3.4)
-5  (unscale if S ≠ 1)
-6  total ← ‖grad‖_2 over all parameters (FP32)
-7  if not isfinite(total): skip step; record; (reduce S if scaling) ; return
-8  grad ← grad · min(1, c / (total + η))
-9  optimizer.step(); log total
-10 TERMINATION: K backward passes and one step
+Algorithm 3.5 — Reverse traversal of an acyclic graph
+INPUT  acyclic graph, scalar loss, saved values and parameter leaves
+OUTPUT  parameter cotangents or mutation error
+STATE  cotangent map initialized to zero except loss=1
+INVARIANT  all consumers contribute before their input node is processed
+1. cotangent[loss] = 1; all other cotangents = 0
+2. for node in reverse_topological_order(graph):
+3.     verify_versions(node.saved_values)
+4.     contributions = local_vjp(node.saved_values, cotangent[node.output])
+5.     for (input, contribution) in contributions:
+6.         cotangent[input] += contribution
+7.     release_saved_values_after_last_use(node)
+8. return cotangent[parameter_leaves]
+TERMINATION: finite input graph, tensor or declared loop sets exhausted.
+COMPLEXITY: one reverse traversal; VJP cost plus live saved values and cotangents
 ```
 
-Complexity: K forward+backward passes; one extra global reduction. The skip in line 7 is the same policy dynamic loss scaling uses ([§3.4](03-4-mixed-precision-execution.md)).
+[DERIVED] The effective-batch step preserves token weighting and performs one update. Optimizer moments and update counters advance only when that update is accepted; a skip still consumes data unless the surrounding algorithm explicitly replays it.
 
 ```text
-Algorithm 3.7 — FP64 finite-difference gradient check
-INPUT   model f in FP64 copy; parameters θ (FP64); fixture batch; step h = 1e-5; R random unit directions v_r
-OUTPUT  pass/fail with max observed |d̂_r − g·v_r|
-STATE   analytic gradient g from Algorithm 3.5 run in FP64
-INVARIANT the same fixture, mask, and deterministic settings are used for every evaluation
-1  g ← analytic gradient of ℒ at θ (FP64, deterministic kernels)
-2  for r = 1..R:
-3      d̂_r ← ( ℒ(θ + h v_r) − ℒ(θ − h v_r) ) / (2h)
-4      err_r ← |d̂_r − g·v_r| ;  tol_r ← atol + rtol·|g·v_r|   with atol, rtol from verification.md
-5      if err_r > tol_r: fail (report r, err_r, tol_r)
-6  pass
-7  TERMINATION: 2R + 1 forward evaluations
+Algorithm 3.6 — Token-normalized accumulation
+INPUT  finite list of micro-batches, valid counts, fixed scale and optimizer
+OUTPUT  one accepted update or explicit rejection
+STATE  gradient buffers, N, scale and optimizer counters
+INVARIANT  accumulated gradient equals token-weighted partial objective before clipping
+1. validate N = sum(valid_token_counts) > 0; clear gradients
+2. for each nonempty micro_batch:
+3.     loss = summed_valid_token_loss(micro_batch) / N
+4.     backward(loss * fixed_loss_scale)
+5. unscale_once_after_all_micro_batches()
+6. reject_if_any_gradient_nonfinite()
+7. compute_global_norm_in_declared_accumulator(); reject_if_nonfinite()
+8. apply_one_global_clipping_factor()
+9. perform_one_optimizer_update(); advance_accepted_update_counter()
+TERMINATION: finite input graph, tensor or declared loop sets exhausted.
+COMPLEXITY: K forward/backward passes and O(P) gradient reduction/scaling
 ```
 
-Complexity: O(R) forward passes; directional probes rather than the full Jacobian keep R ≪ |θ|.
+[DERIVED] Derivative checks inspect a range of representable perturbations. Parameters and RNG state are restored between evaluations; dropout is disabled or an identical realization is replayed.
+
+```text
+Algorithm 3.7 — Directional derivative diagnostic
+INPUT  FP64-preserving function, stored theta, finite direction and step sets
+OUTPUT  directional derivative diagnostic records
+STATE  restorable parameters and execution/RNG state
+INVARIANT  each endpoint evaluation starts from the same declared state
+1. compute g = grad(f)(theta) through an FP64-preserving forward path
+2. for each stored unit direction v:
+3.     for each declared step h:
+4.         evaluate f(theta+h*v), f(theta-h*v) from identical state
+5.         record central_difference, dot(g,v), absolute_error
+6.         record whether perturbed arguments differ from theta
+7. inspect the truncation-to-rounding curve; compare justified bounds
+TERMINATION: finite input graph, tensor or declared loop sets exhausted.
+COMPLEXITY: two forward evaluations per direction/step and one analytic backward
+```
 
 ## Implementation
 
-Framework: PyTorch (Model / autograd framework layer) executes Algorithm 3.5 eagerly; JAX composes `jax.vjp` / `jax.grad` over pure functions, where arrays are immutable so the version-counter problem does not arise by construction and the corresponding failure mode becomes an unintended recompute [OFFICIAL-DOCUMENTATION — R3.11, R3.16]. Kernels: VJPs of matmuls are themselves matmuls dispatched to NVIDIA cuBLAS / cuBLASLt with the accumulation-type caveats of [§3.2](03-2-stable-primitives.md); fused attention (FlashAttention, P19) recomputes the probabilities in backward from the saved [B, H, T] statistics rather than saving [B, H, T, T]. Memory: `saved_tensors_hooks` allow packing saved tensors to a narrower dtype or to host memory, which is a precision decision and belongs in the manifest. Deployment: none; this is a training-time contract.
+[OFFICIAL-DOCUMENTATION] PyTorch's gradcheck note reconstructs analytical and finite-difference Jacobians and describes faster directional checks. The JAX cookbook explains JVP/VJP composition and numerical comparisons. These tools have smoothness, dtype, and aliasing requirements; they do not establish that a caller intended the objective it supplied. [R3.36, R3.46](references.md).
 
-> **Implementation note [impl.pytorch · docs 2.14, accessed 2026-09-20; execution UNVERIFIED].** The skeleton uses `set_to_none`-style zeroing before each optimizer step, non-reentrant checkpointing when enabled, and inspects the value returned by `clip_grad_norm_` for finiteness rather than relying on `error_if_nonfinite`.
+[DERIVED] A missing gradient differs from a numerical zero: the former may expose a disconnected parameter, the latter may be correct. Connectivity therefore needs its own declared expected set. An FP64 check must preserve FP64 through attention, normalization, and loss; a hidden `.float()` invalidates the reference even if all parameters were converted with `.double()`.
 
 ## Experimental design
 
-Proposed: Experiment 3.3 in [verification.md](verification.md) runs Algorithm 3.7 on the skeleton with R = 64 directions on ordinary and extreme fixtures; an ablation replaces FP64 with FP32 to demonstrate that the same check becomes uninformative (error floor ≈ u_32/h ≈ 6e−3); a second ablation deliberately mutates a saved tensor in place and expects the version-counter error. Seeds and deterministic settings per [§3.6](03-6-reproducibility-limits.md).
+### Reported experiments
+
+[PAPER-REPORTED] Chen et al. compare allocation strategies on MXNet and a Titan X. Their ResNet experiments use batch 32 and images $(3,224,224)$; the reported 1000-layer configuration uses less than 7 GB. Separate LSTM graph experiments provide a second workload. The static-allocation and total-runtime traces are distinct measurements. [R3.24, §5, Figs.5–6](references.md).
+
+[PAPER-REPORTED] Pascanu et al. compare SGD, norm-clipped SGD, and clipping plus a separate vanishing-gradient regularizer on music prediction and character-level Penn Treebank. Next-character test bits per character are respectively 1.50, 1.42, and 1.41. The final improvement cannot be attributed to clipping alone. [R3.22, §4.2, Table 2](references.md).
 
 ## Observations
 
-**What the paper claims.** The PyTorch documentation states the version-counter guarantee: "if you're using in-place functions and not seeing any errors, you can be sure that the computed gradients are correct" [OFFICIAL-DOCUMENTATION — R3.11]. P13 reports recomputation of RMSNorm and MLA up-projection as a memory measure with "minor overhead" [PAPER-REPORTED].
+**What the paper claims.** [PAPER-REPORTED] The recomputation study reports sublinear feature-map memory under its allocation boundary; the recurrent study distinguishes norm clipping from its additional regularizer. Neither reports validation of the manuscript reference program. [R3.24 section 5; R3.22 section 4.2](references.md).
 
-**What the evidence shows.** The correctness of reverse mode is a theorem given correct local VJPs (R3.18, R3.19); what a program can verify empirically is only that *its* composition matches finite differences on *its* fixtures. The checkpointing overhead reported by P13 is not quantified in the report and is not transferable.
+**What the evidence shows.** [DERIVED] Those source experiments support workload-specific memory and optimization claims. The reported memory trend is not a universal square-root total-memory law, and this revision supplies no independent replication.
 
-**What we infer.** Because Eq. 3.14 gives ≈ 10^−10 accuracy in FP64 but ≈ 10^−3 in FP32, an FP32 gradient check cannot distinguish a correct backward from one with a 0.1% systematic error — the size of error a wrong normalization in Eq. 3.12 produces at K ≈ 10^3 tokens per micro-batch; FP64 is therefore not optional [DERIVED].
+**What we infer.** [MATHEMATICALLY-DERIVED] Finite differences test the executed function. A wrong causal mask can have a correct derivative, so target alignment, causality and token weighting require separate semantic checks.
 
-**What remains unknown.** The exact saved-tensor set of fused kernels (which intermediates a vendor attention or MLP kernel retains) is NOT-DISCLOSED except where the kernel's source is inspected, which this edition did not do.
+**What remains unknown.** [UNVERIFIED] Complete function-evaluation budgets, the listing's runtime behavior and closed-kernel saved-state sets are not established here. Derivative-sweep and replay results await execution.
 
 ## Failure modes
 
-> **Failure mode — Mis-normalized accumulation.** *Symptom:* loss curve identical in shape but learning rate effectively scaled by K or by n_k variation. *Cause:* summing micro-batch means with unequal n_k. *Detection:* Algorithm 3.7 on a two-micro-batch fixture with unequal masks. *Mitigation:* Eq. 3.12 weights.
+[DERIVED] Lost graph contributions change gradients without necessarily producing non-finite values. Mutation can produce an explicit version error. Equal weighting of unequal micro-batches changes the objective. Clipping before accumulation applies different factors to contributions. No single loss-curve diagnostic distinguishes all these failures.
 
-> **Failure mode — In-place mutation of a saved tensor.** *Symptom:* `RuntimeError` naming the modified variable, or in frameworks without the check, silently wrong gradients. *Cause:* `x.add_()` after x was saved. *Detection:* version counters. *Mitigation:* out-of-place ops on any tensor consumed by a VJP.
-
-> **Failure mode — Clipping a non-finite norm.** *Symptom:* all gradients NaN after clipping; parameters NaN after step. *Cause:* c/(NaN + η) = NaN broadcast to every gradient. *Detection:* check the returned norm. *Mitigation:* gate in Algorithm 3.6 line 7.
-
-> **Failure mode — Activation OOM at long T.** *Symptom:* out-of-memory in backward, not forward. *Cause:* saved tensors proportional to T (or T²) exceed capacity while forward peak was lower. *Detection:* memory trace by phase. *Mitigation:* recomputation, fused attention, smaller micro-batch with Eq. 3.12.
+[MATHEMATICALLY-DERIVED] A numerical mismatch can indicate an incorrect VJP, a non-smooth point, rounded-away perturbations, uncontrolled randomness, or cancellation in evaluation. Decreasing the step eventually amplifies evaluation error. Passing finitely many directional probes does not prove the whole Jacobian correct; an error may lie in an unprobed direction.
 
 ## Siblings
 
-**Forward-mode AD (JVP)** — [§2.4](../ch02-mathematical-and-statistical-foundations/02-4-differential-calculus.md). Why it exists: derivatives of many outputs w.r.t. few inputs. What assumption changed: propagate tangents alongside values, saving nothing. What problem it solved: no activation memory. What new failure mode it introduced: cost proportional to the number of inputs, i.e. |θ| passes for a full gradient. Changed primitive: VJP → JVP.
-
-**Reverse-mode AD (VJP)** — this section. Why it exists: one output (the loss), millions of inputs. What assumption changed: the forward can be retained. What problem it solved: one backward pass for the whole gradient. What new failure mode it introduced: saved-tensor memory and mutation hazards. Changed primitive: JVP → VJP with a tape.
-
-**Recomputation (activation checkpointing)** — this section for the mechanism; policy in [§30.2](../../../vol-02-execution-and-optimization/part-05-hardware-kernels-and-distributed-execution/ch30-large-training-runs-reliability-monitoring-and-recovery/30-2-memory-management.md). Why it exists: saved tensors exceed capacity. What assumption changed: FLOPs are cheaper than bytes. What problem it solved: memory proportional to √L or to the checkpoint interval. What new failure mode it introduced: RNG-state divergence between the two forwards, and extra compute. Changed primitive: save → recompute.
+[DERIVED] Forward mode propagates input directions; reverse mode propagates output cotangents. Recomputation changes retention and replay, not the intended derivative. Componentwise clipping changes coordinates independently; global clipping applies one scalar. These distinctions separate differentiation modes, memory policies, and optimization safeguards.
 
 ```figure
 id: fig-3.17
@@ -430,20 +427,22 @@ spec:
     - { dimension: "new failure mode", values: { fwd: "cost ∝ number of inputs", rev: "saved-tensor memory; in-place mutation hazards", ckpt: "RNG-state divergence between the two forwards; extra compute" } }
 ```
 
-**Value clipping vs global-norm clipping** — this section. Why value clipping exists: per-element bounds. What assumption changed: direction may be altered. What problem it solved: none that norm clipping does not. What new failure mode it introduced: biased gradient direction. Changed primitive: elementwise clamp → uniform rescale.
-
 ## Extensions
 
-For RL post-training the accumulation of Eq. 3.12 must weight by sequences or tokens consistently with the estimator of Eq. N.6 ([§34](../../../vol-02-execution-and-optimization/part-06-post-training-and-reinforcement-learning/ch34-policy-gradients-ppo-and-rlhf/README.md), forward reference). For multimodal inputs, saved tensors of vision encoders add a second memory term with its own T. For agents, gradients through tool outputs are stopped by construction (proposal).
+### Improvements
+
+[OFFICIAL-DOCUMENTATION] Selective rematerialization refines segment checkpointing by retaining expensive residuals and replaying cheaper operations. Non-reentrant execution also changes early stopping of replay and supported transformations. These are version-dependent execution improvements, with no unconditional training-time reduction. [R3.39, R3.49](references.md).
+
+[DERIVED] Fusion can reduce saved state while preserving the VJP. FlashAttention's canonical treatment in Chapter 20 explains tiled recomputation; here it establishes that storing the unfused quadratic attention-probability matrix is not unavoidable. [P19](references.md).
 
 ## Limitations
 
-The contracts assume a single device; with sharded parameters the norm in Eq. 3.13 requires a collective, developed in [§29.1](../../../vol-02-execution-and-optimization/part-05-hardware-kernels-and-distributed-execution/ch29-parallelism-collectives-and-distributed-optimization/29-1-data-state-parallelism.md). Falsification: Algorithm 3.7 failing on an ordinary fixture after the reference primitives pass Experiment 3.2 isolates the defect to the composition or to a custom VJP. Decision consequence: no custom operator enters the skeleton without its own FP64 check.
+[NOT-DISCLOSED] A high-level operator contract does not establish the saved tensors or arithmetic schedule of every closed vendor kernel. Their exact memory and numerical behavior require the concrete implementation or measurement. This revision does not claim an executable training validation or repository audit.
 
 ## Reproducibility
 
-Framework version, deterministic-algorithm setting, and checkpointing mode are recorded in the manifest ([§3.6](03-6-reproducibility-limits.md)); the FP64 check requires FP64 kernels on the device, which for some accelerators means running the check on CPU. Unresolved: fused-kernel saved sets (NOT-DISCLOSED).
+[DERIVED] A derivative comparison needs identical objective, masks, parameters, dtype-preserving evaluation, perturbations, randomness, and backend choices. A checkpoint comparison additionally needs identical replay state. Proposed chapter checks and unresolved coverage are recorded in [verification.md](verification.md), separately from the source experiments above.
 
 ## References
 
-P13, P19; R3.11, R3.16, R3.18, R3.19, R3.22, R3.24.
+[DERIVED] Primary locators: [R3.18, R3.22, R3.24, P19; official documentation R3.31/R3.36/R3.39 and R3.46/R3.49](references.md). The ledger records actual inspection dates and differentiates documentation semantics from executable validation.

@@ -28,8 +28,8 @@ benchmarks: []
 datasets: []
 status: {maturity: active, disputed: false}
 evidence_summary: {labels_used: [PAPER-REPORTED, OFFICIAL-DOCUMENTATION, MATHEMATICALLY-DERIVED, DERIVED, NOT-DISCLOSED, UNVERIFIED], empirically_observed: false}
-word_count_target: 1150
-updated_at: 2026-09-20
+word_count_target: 2500
+updated_at: 2026-10-07
 editorial_status: manuscript_draft
 ---
 
@@ -37,24 +37,27 @@ editorial_status: manuscript_draft
 
 ## Scope
 
-Objective: separate the three dtype decisions of a training step — storage, compute, accumulation — and specify the two mechanisms that make narrow storage survivable: scaling (loss scaling for FP16; per-tensor or per-block scale factors for FP8/FP4) and FP32 master weights with a stated optimizer-state precision. Baseline: FP32 everywhere. Success criterion: the reader can write the byte budget of any precision recipe and state which of its terms are load-bearing. Boundaries: optimizer-state cost as a design variable is owned by [§20.1](../../part-04-training-science-and-adaptation/ch20-optimization-schedules-and-training-stability/20-1-optimizer-mechanics.md); sharding of those states by [§29.1](../../../vol-02-execution-and-optimization/part-05-hardware-kernels-and-distributed-execution/ch29-parallelism-collectives-and-distributed-optimization/29-1-data-state-parallelism.md); quantization of weights, activations, and cache for inference by [§40.2](../../../vol-02-execution-and-optimization/part-07-inference-algorithms-distillation-and-compression/ch40-quantization-from-numerical-model-to-deployable-artifact/40-2-quantization-targets.md).
+[DERIVED] A precision recipe assigns representations to operands, accumulators, saved activations, gradients, persistent parameters, optimizer states, and scales. This section explains the resulting state transitions, loss scaling, FP32 update storage, FP8 current and delayed scaling, block scaling, and the documented progression to FP4 training. It distinguishes numerical mechanisms from hardware throughput claims. Optimizer algorithms and distributed state placement remain canonical in Chapters 20 and 29; inference quantization remains in Chapter 40.
 
 ## Why this exists
 
-What failed: FP16 training diverged or stalled because gradients fell into the underflow region of Table 3.1 and because parameter updates smaller than u·|w| were rounded away [PAPER-REPORTED — R3.3 identifies both, proposes loss scaling and an FP32 master copy]. Bottleneck: tensor-core GEMM throughput and HBM traffic favor 16-bit and, later, 8-bit operands, so keeping everything in FP32 wastes the accelerator [KNOWN — R3.2 motivation]. Dominant constraint: the update Δw = −lr·(adaptive step) is typically 10^−3 to 10^−5 relative to |w|, below BF16's u = 2^−8, so *storage* of the master parameter, not of the GEMM operand, decides whether learning happens at all [MATHEMATICALLY-DERIVED — Eq. 3.17]. What changed: recipes assign a dtype per role (operand, activation cache, gradient, master weight, first moment, second moment) and a scale per tensor or block.
+[PAPER-REPORTED] Mixed Precision Training identifies gradient underflow and ineffective small parameter updates as separate failure mechanisms, addressed with loss scaling and FP32 update storage. Its narrow operands and wider accumulators establish a role-based recipe, rather than a claim that every intermediate can safely be FP16. [R3.3, §3](references.md).
+
+[MATHEMATICALLY-DERIVED] A wider accumulator cannot recover information already lost when an operand was quantized. Conversely, accurate operands do not prevent a small optimizer increment from rounding away in a narrow persistent parameter. The two errors occur at different state boundaries and need different controls. BF16's exponent width reduces FP16-style range failures but its coarser significand can increase operand error or lost updates.
 
 ## Intuition
 
-Physically there are three distinct places a bit budget is spent: the bytes moved through HBM and the tensor cores (storage/compute dtype), the width of the register holding partial sums (accumulation dtype), and the width of the value that must absorb a tiny increment every step (master/optimizer dtype). The first buys throughput; the second buys the bound of Eq. 3.9; the third buys the ability to learn. Loss scaling is a change of units: multiply the loss by S so that gradients are S times larger, land inside the representable range, then divide S out before the update. FP8 scaling generalizes this to a per-tensor (or per-block) unit chosen from the tensor's own maximum.
+[MATHEMATICALLY-DERIVED] Loss scaling changes the units of backward quantities before they enter narrow representations. Quantization scaling changes the units of a tensor before encoding its individual elements. Persistent FP32 parameters retain increments across steps even when a derived narrow operand remains unchanged for several steps. These mechanisms interact but are not substitutes: a tensor scale does not increase the accumulator's significand, and a loss scale does not enlarge the forward pass's exponent range.
 
 ## Formulation
 
-Loss scaling with factor S:
+[MATHEMATICALLY-DERIVED] For a constant positive scale $S$, exact differentiation gives
 
 $$
-\nabla_\theta (S\,\mathcal{L}) = S\,\nabla_\theta \mathcal{L}, \qquad g = \frac{1}{S}\,\mathrm{fl}_{16}\big(S\,\nabla_\theta \mathcal{L}\big)
+\nabla_\theta(S\mathcal L)=S\nabla_\theta\mathcal L,
+\qquad \widehat g=\widehat{\nabla(S\mathcal L)}/S.
 $$
-*(Eq. 3.15)* where fl_16 is the FP16 rounding of the backward pass; S is chosen so that S·|g| stays below x_max(FP16) = 65504 for the largest gradient and above x_min^sub = 2^−24 for the smallest one that matters.
+*(Eq. 3.15)* The hat covers the entire rounded backward computation; replacing it by a single terminal FP16 rounding would hide intermediate underflow and overflow. The same $S$ must apply to every accumulated micro-batch before unscaling. Scaling cannot restore values lost before the multiplication by $S$.
 
 ```figure
 id: fig-3.18
@@ -102,71 +105,63 @@ states:
   - { anchor: siblings, label: "|g|max = 1", variables: { gmax: 1, x: 2000 }, highlight: [saw, ceil], note: "With |g|max = 1 the ceiling 65504 sits below the default init 2^16. Step 0 overflows, S settles at 2^15, and one step in every 2000 is skipped. BF16 needs no S at all." }
 ```
 
-Per-tensor FP8 scale from the absolute maximum:
+[MATHEMATICALLY-DERIVED] For finite tensor $x$, let $a=\max|x_i|$ and $M$ be the largest finite element-format value. A basic encode/decode pair is
 
 $$
-s = \frac{x_{\max}^{\text{FP8}}}{\mathrm{amax}(x)}, \qquad q = \mathrm{fl}_{8}(s\,x), \qquad x \approx q / s
+s_{\rm enc}=M/a,\qquad q_i=Q(s_{\rm enc}x_i),\qquad
+\widehat x_i=q_i/s_{\rm enc}\quad(a>0).
 $$
-*(Eq. 3.16)* where x_max^FP8 = 448 for E4M3, 57344 for E5M2; "current" scaling computes amax from the tensor being quantized, "delayed" scaling predicts it from a history of previous amax values [OFFICIAL-DOCUMENTATION — Transformer Engine FP8 current-scaling and delayed-scaling pages, R3.12]. Block scaling applies Eq. 3.16 per block of n_b elements with s stored as E8M0 (MXFP8, n_b = 32) or E4M3 (NVFP4, n_b = 16) [OFFICIAL-DOCUMENTATION — R3.12, TE 2.13/2.14 pages, accessed 2026-09-20].
+*(Eq. 3.16)* For an all-zero block, choose a finite positive scale and encode zeros. For a non-finite maximum, reject or follow an explicitly documented propagation rule; computing $M/\infty$ and multiplying by infinity is not a valid recovery mechanism. Real recipes can add margins, power-of-two constraints, clipping, or rounded scale storage.
 
-BF16 update-loss threshold: for a parameter w stored in BF16, the update Δ is lost entirely when
+[MATHEMATICALLY-DERIVED] Let $w^-<w<w^+$ be the adjacent finite representable values around stored parameter $w$. Round-to-nearest returns $w$ after update $\Delta$ precisely in the open interval
 
 $$
-|\Delta| < u_{\text{bf16}}\,|w| = 2^{-8}|w| \approx 0.0039\,|w|
+-\frac{w-w^-}{2}<\Delta<\frac{w^+-w}{2},
 $$
-*(Eq. 3.17)* where the rounding of w + Δ returns w. For |w| ≈ 0.02 (a typical initialization scale) and an Adam-normalized step of size lr ≈ 10^−4, the ratio is 5 × 10^−3 < 2^−8 only barely, and for larger |w| or smaller lr the update vanishes [MATHEMATICALLY-DERIVED].
+*(Eq. 3.17)* with endpoint ties determined by the rounding rule. The interval is direction-dependent at binade boundaries. For BF16 $w=1$, the positive half-spacing is $2^{-8}$, but the negative half-spacing is $2^{-9}$. Thus $|\Delta|<u|w|$ is not a universal necessary-and-sufficient lost-update criterion. FP32 reduces this interval; it does not eliminate lost updates for arbitrarily small increments.
 
 ```figure
 id: fig-3.19
 kind: calculator
-title: Does a BF16-stored parameter absorb this update?
+title: Directional BF16 midpoint boundaries at w = 1
 caption: >-
-  Eq. 3.17 next to the exact round-to-nearest test. The update survives if
-  it reaches half the local spacing, u·2^⌊log₂|w|⌋. That threshold equals
-  u·|w| only when |w| is a power of two and is up to 2× smaller otherwise.
-  At the example above (|w| = 0.02, Δ = 10⁻⁴) the ratio is 0.5 %, just above
-  2^−8 ≈ 0.39 %. The update is kept but rounded up by 22 %. At Δ = 10⁻⁵, or
-  at |w| = 0.5, it is lost entirely. An FP32 master makes the rounding error
-  negligible. Ties round up here, not to even.
+  At the exactly representable BF16 value w=1, the upward neighbor is
+  1+2^-7 and the downward neighbor is 1-2^-8. The two half-spacings differ.
+  For an update magnitude d, a positive margin means the update lies inside
+  that directional unchanged-value interval. Endpoint ties require the
+  nearest-even parity rule; no floating-point update simulator is implied.
 placement: rail
 anchor: formulation
 evidence: MATHEMATICALLY-DERIVED
 source: ["DERIVED:eq-3.17", "DERIVED:eq-3.2"]
 alt: >-
-  Calculator for Eq. 3.17 with stored value |w|, update |Δ| and stored
-  mantissa bits p. At |w| = 0.02, Δ = 1e−4 and p = 7 (BF16): the Eq. 3.17
-  threshold u·|w| is 7.81e−5. The exact round-to-nearest threshold, half the
-  local spacing, is 2^−14 ≈ 6.10e−5. The relative update is 0.5 %, the stored
-  increment after rounding is 2^−13 ≈ 1.22e−4, and the rounding error in the
-  update is +22.1 %. Preset Δ = 1e−5: stored increment 0, error −100 %
-  (lost). Preset |w| = 0.5: lost. Preset FP32 master (p = 23): stored
-  increment ≈ 1e−4, error about −0.0002 %.
+  BF16 at w1 has positive half-spacing2^-8 and negative half-spacing2^-9.
+  An update magnitude0.003 lies below the positive threshold and above the
+  negative threshold. Equal magnitudes in opposite directions therefore
+  need not have the same unchanged-update outcome.
 spec:
-  tex: >-
-    |\Delta| < u_{\text{bf16}}\,|w| = 2^{-8}|w|\qquad\text{exact: } |\Delta| < u\,2^{\lfloor\log_2|w|\rfloor}
+  tex: '-(w-w^-)/2 < \Delta < (w^+-w)/2'
   equation: "3.17"
   inputs:
-    - { symbol: w, label: "stored parameter |w|", default: 0.02, min: 0.001, max: 10, scale: log10, format: raw }
-    - { symbol: d, label: "update |Δ|", default: 0.0001, min: 0.0000001, max: 0.01, scale: log10, format: raw }
-    - { symbol: p, label: "stored mantissa bits p", default: 7, min: 7, max: 23, options: [7, 10, 23], format: integer }
+    - { symbol: d, label: "update magnitude d", default: 0.003, min: 0.0001, max: 0.01, scale: log10, format: raw }
   outputs:
-    - { symbol: th, label: "Eq. 3.17 threshold u·|w|", formula: "2^-(p+1)*w", format: raw }
-    - { symbol: hs, label: "exact RN threshold, half the local spacing", formula: "2^(floor(log2(w)) - p - 1)", format: raw }
-    - { symbol: r, label: "relative update |Δ|/|w|", formula: "d/w", format: percent }
-    - { symbol: st, label: "stored increment after RN", formula: "2^(floor(log2(w)) - p)*round(d/2^(floor(log2(w)) - p))", format: raw }
-    - { symbol: e, label: "RN error in the update, (stored − Δ)/Δ", formula: "(st - d)/d", format: percent, emphasis: true }
+    - { symbol: hp, label: "positive half-spacing", formula: "2^-8", format: raw }
+    - { symbol: hn, label: "negative half-spacing", formula: "2^-9", format: raw }
+    - { symbol: mp, label: "positive unchanged-interval margin", formula: "2^-8-d", format: raw }
+    - { symbol: mn, label: "negative unchanged-interval margin", formula: "2^-9-d", format: raw, emphasis: true }
   presets:
-    - { label: "Δ = 10⁻⁵", values: { d: 0.00001 } }
-    - { label: "|w| = 0.5", values: { w: 0.5 } }
-    - { label: "FP32 master, p = 23", values: { p: 23 } }
+    - { label: "magnitude0.001", values: { d: 0.001 } }
+    - { label: "magnitude0.003", values: { d: 0.003 } }
+    - { label: "magnitude0.005", values: { d: 0.005 } }
 ```
 
-Bytes per parameter for a mixed-precision AdamW recipe (before sharding):
+[DERIVED] Parameter-state accounting must name every retained copy:
 
 $$
-b_{\text{total}} = b_{\text{param}} + b_{\text{grad}} + b_{\text{master}} + b_{m} + b_{v}
+M_{\rm state}=P(b_{\rm persistent}+b_g+b_m+b_v)
++\sum_jP_jb_{{\rm operand},j}+M_{\rm scales}+M_{\rm auxiliary}.
 $$
-*(Eq. 3.18)* where the classic FP16/FP32 recipe gives 2 + 2 + 4 + 4 + 4 = 16 bytes per parameter [PAPER-REPORTED — P18 uses this accounting], a BF16-moment recipe with FP32 master and gradient (P13) gives 1 (FP8 operand copy) + 4 + 4 + 2 + 2 = 13, and a pure-FP32 baseline gives 4 + 4 + 0 + 4 + 4 = 16 with no separate master.
+*(Eq. 3.18)* If the persistent parameter itself is FP32, it is the update storage and no additional FP32 master is counted. The classic FP16 parameter/gradient plus FP32 master/moments layout has $2+2+4+4+4=16$ bytes per parameter, before activations and workspaces. An FP32 parameter/gradient/moment layout also has 16 bytes, but different copies and traffic. Temporary autocast operands are not necessarily persistent copies.
 
 ```figure
 id: fig-3.20
@@ -178,11 +173,11 @@ caption: >-
   16 B/param (74.5 GiB). FP16 storage with an FP32 master saves nothing in
   state; its savings are in activations and GEMM bandwidth. Keeping a
   separate BF16 operand copy (18 B, 83.8 GiB) crosses the 80 GiB line.
-  P13's BF16 moments and FP8 copy (13 B, 60.5 GiB) bring it back under. The
+  A hypothetical one-byte operand with BF16 moments gives13B/parameter before scale, copy and exemption overhead. The
   80 GiB line is an illustrative budget, not a product specification.
 placement: inline
 evidence: DERIVED
-source: ["DERIVED:eq-3.18", P18, P13]
+source: ["DERIVED:eq-3.18", P18]
 alt: >-
   Four stacked bars of training-state bytes for 5e9 parameters against an
   illustrative 80 GiB budget line. FP32 everywhere, 16 bytes per parameter
@@ -190,7 +185,7 @@ alt: >-
   the P18 accounting, 16 bytes (FP16 weights 2, FP16 gradients 2, FP32
   master 4, m 4, v 4): 74.5 GiB. BF16 operand copy kept with FP32 gradients,
   master and moments, 18 bytes (2 + 4 + 4 + 4 + 4): 83.8 GiB, over the line.
-  P13-style, 13 bytes (FP8 operand copy 1, FP32 gradients 4, FP32 master 4,
+  Hypothetical FP8/BF16-state, 13 bytes (FP8 operand copy 1, FP32 gradients 4, FP32 master 4,
   BF16 m 2, BF16 v 2): 60.5 GiB.
 spec:
   format: bytes
@@ -216,7 +211,7 @@ spec:
         - { label: "FP32 master, 4 B", kind: memory, formula: "4*N" }
         - { label: "Adam m, FP32, 4 B", kind: memory, formula: "4*N" }
         - { label: "Adam v, FP32, 4 B", kind: memory, formula: "4*N" }
-    - label: "P13-style, 13 B/param"
+    - label: "Hypothetical FP8/BF16-state, 13 B/param"
       segments:
         - { label: "FP8 operand copy, 1 B", kind: tensor, formula: "1*N" }
         - { label: "FP32 gradients, 4 B", kind: tensor, formula: "4*N" }
@@ -226,21 +221,25 @@ spec:
   budget: { label: "illustrative 80 GiB budget, not a product spec", formula: "80*2^30" }
 ```
 
-> **Definition — Master weights.** An FP32 copy of the parameters that receives the optimizer update; the narrow-format copy used as a GEMM operand is derived from it each step.
-
-> **Definition — Loss scaling (static / dynamic).** Multiplication of the loss by S before backward and division of gradients by S before the update; static keeps S fixed, dynamic grows S on a run of finite steps and halves it on a non-finite step.
-
-> **Definition — Delayed scaling / block scaling (FP8).** Delayed scaling sets a tensor's scale from a history of prior amax values so that quantization needs one read; block scaling sets one scale per fixed block from that block's current amax.
-
 ## Mechanism
 
-**FP16 with loss scaling and master weights** (R3.3, PAPER-REPORTED). Weights, activations, and gradients are stored in FP16; the master copy is FP32 and "accumulates the gradients after each optimizer step"; loss scaling shifts the gradient histogram into range; arithmetic accumulates in FP32. Dynamic scaling as documented for PyTorch's `GradScaler` starts at `init_scale=65536.0`, multiplies by `growth_factor=2.0` after `growth_interval=2000` consecutive finite steps, and multiplies by `backoff_factor=0.5` when a non-finite gradient is found, skipping that step [OFFICIAL-DOCUMENTATION — PyTorch 2.14 AMP page, R3.11]. Gradients must be unscaled before clipping so that the threshold c of Eq. 3.13 is applied in true units.
+### Methodology
 
-**BF16 without loss scaling** (R3.4, PAPER-REPORTED). BF16 shares FP32's exponent range, so gradients do not underflow at ordinary magnitudes and the authors report training "with no changes to hyper-parameters". The precise state consequence: (i) no S is needed; (ii) the seven-bit mantissa makes each operand rounding 8× coarser than FP16 (u = 2^−8 vs 2^−11), so Eq. 3.9's bound per reduction is 8× larger unless accumulation is FP32; (iii) by Eq. 3.17 a BF16-stored parameter cannot absorb typical updates, so either an FP32 master copy (4 extra bytes per parameter) or a compensated update (Kahan-style residual, +2 bytes) is required; (iv) BF16 optimizer moments lose the same relative resolution, which P13 reports as acceptable for AdamW's first and second moments while keeping master weights and gradients in FP32 [PAPER-REPORTED — P13 §3.3.3]. PyTorch documents BF16 autocast as usable without `GradScaler` [OFFICIAL-DOCUMENTATION — R3.11].
+[OFFICIAL-DOCUMENTATION] PyTorch autocast chooses eligible operations' execution dtypes; it does not cast the whole model or promise that every reduction is FP32. In-place operations and operations with explicit output storage follow separate eligibility rules. Its AMP examples keep ordinary parameters in their original dtype and use a scaler when appropriate. Therefore modern AMP with FP32 parameters need not maintain the classic separate FP16-parameter/FP32-master pair. [R3.32/R3.34](references.md).
 
-**FP8 with per-tensor scaling** (R3.2; Transformer Engine). Operands of the three GEMMs (forward, activation-gradient, weight-gradient) are cast to FP8 with a scale from Eq. 3.16; outputs are produced in BF16 or FP32; the recommended pairing is E4M3 forward and E5M2 for gradients [PAPER-REPORTED — R3.2 §3]. Delayed scaling estimates the scale from an amax history so that quantization needs a single tensor read; current scaling reads the tensor twice (amax, then cast) and is documented as "a significant overhead compared to other recipes" [OFFICIAL-DOCUMENTATION — TE current-scaling page, R3.12]. In distributed settings the amax must be synchronized before quantizing gathered tensors [OFFICIAL-DOCUMENTATION — same page].
+[MATHEMATICALLY-DERIVED] Dynamic scaling is a state machine over $S$, a successful-update count, and the optimizer state. Non-finite scaled gradients cause an update skip and scale backoff. Finite gradients permit unscaling and clipping, followed by an update and eventual scale growth. If gradient components span more range than the format can represent simultaneously, no single scalar makes every component representable. A finite gradient check also does not prove accuracy: small gradients can have rounded to zero without creating NaNs or infinities.
 
-**FP8 with block scaling** (P13; MX, R3.5; Transformer Engine). P13 uses E4M3 for all tensors, scales activations per 1×128 tile and weights per 128×128 block, computes scales online, and promotes tensor-core partial sums to FP32 every N_C = 128 elements because the target device's FP8 accumulation "is limited to retaining around 14 bits"; the report's preliminary test measured a maximum relative error of nearly 2% for a K = 4096 GEMM without promotion [PAPER-REPORTED — P13 §3.3.2]. MXFP8 uses blocks of 32 consecutive values with an E8M0 (power-of-two) scale computed from the block amax against 448; because scales are one-dimensional, the row-wise and column-wise quantized tensors "are numerically different — one cannot derive one from the other" [OFFICIAL-DOCUMENTATION — TE 2.13 MXFP8 page, R3.12]. NVFP4 uses one E4M3 scale per block of 16 (2D 16×16 blocks for weights) [OFFICIAL-DOCUMENTATION — TE 2.14 FP8/FP4 primer and docs listing, R3.12]; a further FP32 per-tensor scale is described in some materials but is not asserted here [UNVERIFIED].
+[OFFICIAL-DOCUMENTATION] PyTorch documents default scaler values $S_0=65536$, growth factor 2, backoff factor 0.5, and growth interval 2000. It explicitly allows scales below one; a BF16-pretrained model converted to FP16 can overflow because FP16's range is smaller. Unscaling happens once per optimizer after accumulation, and scale updates occur at effective-batch boundaries. These are the inspected 2.14 documentation semantics, not a tested runtime configuration. [R3.32/R3.34](references.md).
+
+[MATHEMATICALLY-DERIVED] BF16 has FP32's exponent-bit count but not its exact finite maximum or significand precision. Using it without a loss scaler removes scaler state and passes; it does not prove the absence of underflow, overflow, non-finite norms, or ineffective increments. Wider parameter and optimizer representations remain separate choices whose suitability depends on the observed update and state distributions.
+
+[OFFICIAL-DOCUMENTATION] Transformer Engine current scaling obtains a maximum from the tensor being quantized. Delayed scaling uses retained maximum history and records the new maximum during quantization, reducing the need for a separate full-tensor maximum pass. The inspected delayed recipe uses a direct ratio to its selected history statistic, with an optional margin; it is not universally a power-of-two scale. Staleness can expose new outliers to saturation. [R3.43/d](references.md).
+
+[MATHEMATICALLY-DERIVED] Block scaling limits one outlier's influence to its block, at the cost of scale bytes, scale computation, and layout constraints. If blocks follow rows, quantizing $W$ and quantizing $W^\top$ generally produce different reconstructed matrices: transpose changes the elements sharing a scale. Keeping distinct row/column copies or using square scaling blocks resolves different implementation needs, with different error and memory costs.
+
+[PAPER-REPORTED] The MX method uses blocks of 32 elements and an E8M0 shared scale. Its reference conversion chooses a block exponent from the maximum exponent and element-format range, with explicit clamping. Its implementation studies quantized dot-product inputs while retaining wider vector operations and update storage; the paper does not specify a unique physical tensor layout. [R3.5, §§2–4, Algorithm 1](references.md).
+
+[PAPER-REPORTED] DeepSeek-V3 quantizes inputs of the three Linear GEMMs to E4M3, retaining higher precision for sensitive operations. It uses $1\times128$ activation and $128\times128$ weight scaling, with periodic FP32 promotion of partial sums at interval 128. FP32 master parameters and gradients coexist with BF16 optimizer moments. This is a specific implementation recipe, not an all-tensor E4M3 system. [P13, §3.3](references.md).
 
 ```figure
 id: fig-3.21
@@ -269,7 +268,7 @@ context:
   measurementBoundary: "relative training-loss error vs BF16; GEMM max relative error at K = 4096 without promotion"
 alt: >-
   Instrument panel of the DeepSeek-V3 FP8 training recipe as reported in P13.
-  Element format E4M3 on all tensors. Activations scaled per 1 × 128 tile
+  Element format E4M3 on Linear GEMM inputs. Activations scaled per 1 × 128 tile
   and weights per 128 × 128 block, both online. Tensor-core partial sums
   promoted to FP32 every N_C = 128 elements, because FP8 GEMM accumulation
   retains about 14 bits. Maximum relative error near 2 % for a K = 4096 GEMM
@@ -281,7 +280,7 @@ alt: >-
 spec:
   header: "DEEPSEEK-V3 FP8 RECIPE · P13 §3.3"
   rows:
-    - { key: "element format", value: "E4M3 on all tensors" }
+    - { key: "element format", value: "E4M3 on Linear GEMM inputs" }
     - { key: "activation scaling", value: "1 × 128 tiles, online" }
     - { key: "weight scaling", value: "128 × 128 blocks, online" }
     - { key: "FP32 promotion interval", value: "N_C = 128 elements" }
@@ -301,29 +300,32 @@ spec:
       - { label: "BF16 AdamW v 2 B", weight: 2 }
 ```
 
-**Optimizer-state precision.** Under Eq. 3.18 the two Adam moments are half of the 16-byte budget; storing them in BF16 (P13) or in block-wise quantized 8-bit form (R3.23) reduces M_opt of Eq. N.5 at the cost of moment resolution; the design space is developed in §20.1 and its sharding in §29.1.
-
-Cost line (per parameter, unsharded): FP32 baseline 16 B; FP16+master+Adam 16 B (no memory saving in state, saving is in activations and bandwidth); BF16 operand + FP32 master + FP32 moments 18 B if a separate BF16 copy is kept, 16 B if the operand is cast on the fly; P13-style 13 B; per-tensor FP8 adds one FP32 scale and an amax history per tensor (negligible); block scaling adds 8/32 = 0.25 bit/element (MXFP8) or 8/16 = 0.5 bit/element (NVFP4) plus the transposed copy where needed [MATHEMATICALLY-DERIVED accounting; per-recipe totals DERIVED]. Compute: current scaling costs one extra read per quantized tensor; P13's promotion reduces the tensor-core issue rate and is overlapped by warp specialization [PAPER-REPORTED].
+[DERIVED] With one 8-bit scale per 32 FP8 elements, scale overhead is 0.25 bits per element. One 8-bit scale per 16 FP4 elements adds 0.5 bits, yielding 4.5 bits before tensor-level scales, alignment, metadata, and alternate copies. NVFP4 also includes an FP32 tensor scale, verified in the current official format description. The illustrative 13-byte state row in Fig.3.20 combines hypothetical one-byte operand, four-byte gradient/master, and two-byte moments; it is not DeepSeek-V3's measured total allocation. [R3.41](references.md).
 
 ## Algorithm
 
-```text
-Algorithm 3.8 — Dynamic loss-scaling step (FP16 operands, FP32 master weights)
-INPUT   micro-batches; scale S (init 2^16); growth factor 2; backoff 0.5; growth interval G
-OUTPUT  updated master weights or a skipped step; updated S
-STATE   finite-step counter n_ok; FP32 master θ_32; FP16 operand θ_16 = fl16(θ_32)
-INVARIANT gradients are unscaled (divided by S) before clipping and stepping
-1  loss ← forward(θ_16) in FP16 with FP32 reductions (§3.2)
-2  backward(S · loss)                         # gradients g_16 ≈ S·∇ℒ in FP16
-3  g_32 ← FP32(g_16) / S                       # unscale into FP32
-4  if any non-finite in g_32: S ← S · 0.5; n_ok ← 0; skip step; return
-5  clip g_32 by Eq. 3.13; θ_32 ← optimizer(θ_32, g_32)
-6  θ_16 ← fl16(θ_32)
-7  n_ok ← n_ok + 1; if n_ok = G: S ← S · 2; n_ok ← 0
-8  TERMINATION: one step
-```
+[DERIVED] The update ordering below exposes which state changes on a skip. Extra checks introduced by a surrounding optimizer must also leave parameters and moments unchanged when rejecting the update.
 
-Complexity: one extra elementwise pass for unscaling and one for the cast in line 6; the skip in line 4 loses one micro-step of data.
+```text
+Algorithm 3.8 — Scaled effective-batch update
+INPUT  effective batch, scaler state, clipping threshold and optimizer
+OUTPUT  accepted/skipped update and updated scaler state
+STATE  fixed S, gradients, parameters, moments and growth counter
+INVARIANT  S is unchanged across all accumulated micro-batches
+1. clear gradients; hold scale S constant
+2. for micro_batch:
+3.     backward(S * summed_valid_loss / effective_valid_count)
+4. unscale gradients once
+5. if any gradient is nonfinite:
+6.     skip optimizer update; back off S; reset growth counter
+7. else:
+8.     check finite global norm; clip in unscaled units
+9.     update persistent parameters and moments once
+10.     advance accepted-update counter and scaler growth state
+11. clear or discard accumulated gradients before the next effective batch
+TERMINATION: finite input graph, tensor or declared loop sets exhausted.
+COMPLEXITY: one effective-batch forward/backward plus O(P) unscale/clip/update work
+```
 
 ```figure
 id: fig-3.22
@@ -386,84 +388,73 @@ spec:
     - { id: f32, label: "FP32 state" }
 ```
 
-```text
-Algorithm 3.9 — Delayed per-tensor FP8 scaling (concept)
-INPUT   tensor x_t at step t; amax history A of length H; FP8 max M (448 or 57344); margin μ ≥ 0
-OUTPUT  q_t = fl8(s_t · x_t), scale s_t, updated history
-STATE   A = [amax_{t−1}, …, amax_{t−H}]
-INVARIANT s_t depends only on past amax values; amax_t is recorded after quantization
-1  â ← reduce(A)                              # "max" over the history or "most recent"
-2  s_t ← 2^{ floor(log2(M / â)) − μ }          # power-of-two scale with safety margin
-3  q_t ← fl8(saturate(s_t · x_t))              # one read of x_t
-4  amax_t ← max|x_t| (computed during the same pass); push amax_t into A, drop oldest
-5  return q_t, s_t
-6  TERMINATION: one pass
-```
-
-Complexity: one read of x_t; the price is staleness: if amax_t > â·2^μ, values saturate at line 3. The reduction choice in line 1 and the margin are recipe options documented for Transformer Engine's `DelayedScaling`; the exact formula of the shipped implementation should be read from the pinned release [OFFICIAL-DOCUMENTATION for the concept, R3.12; formula details UNVERIFIED].
+[DERIVED] This abstract delayed-scaling algorithm uses the inspected direct-ratio semantics. Exact history rotation, initial-scale behavior, and distributed reduction remain recipe/version fields.
 
 ```text
-Algorithm 3.10 — Block scaling to an MX-style block (after R3.5, Alg. 1)
-INPUT   block V_1..V_k (k = 32 for MX); element format with max-exponent e_max_elem
-OUTPUT  shared scale X (E8M0), elements P_1..P_k
-1  shared_exp ← floor(log2(max_i |V_i|)) − e_max_elem
-2  X ← 2^shared_exp
-3  for i = 1..k: P_i ← quantize_to_element_format(V_i / X), clamping normal values to the element max
-4  return X, {P_i}
-5  TERMINATION: k steps
+Algorithm 3.9 — Delayed tensor scaling
+INPUT  tensor x, previous maximum history, format maximum M and margin
+OUTPUT  codes, inverse scale and updated history
+STATE  history and finite initialized scale
+INVARIANT  current encoding scale depends on selected prior history
+1. a_hat = selected_statistic(previous_amax_history)
+2. s = M / (a_hat * 2**margin), if a_hat is finite and positive
+3. otherwise retain the documented finite initialization/fallback scale
+4. (q, a_current) = quantize_and_measure_amax(x, s)
+5. rotate/update history with a_current
+6. return q, inverse(s), updated_history
+TERMINATION: finite input graph, tensor or declared loop sets exhausted.
+COMPLEXITY: one quantization/maximum pass plus history reduction; kernel fusion matters
 ```
 
-Complexity: one amax per block and one division per element; R3.5 notes that the specification allows other implementation-defined conversion recipes [PAPER-REPORTED].
+[PAPER-REPORTED] Algorithm 3.10 follows the reference MX exponent-selection construction. A zero block is handled separately; non-finite input behavior and exceptional scales follow the normative conversion contract rather than a guessed clipping rule. [R3.5, Algorithm 1; R3.6, §6.3](references.md).
+
+```text
+Algorithm 3.10 — Reference MX-style finite block conversion
+INPUT  finite block, element exponent limit and shared-scale representation
+OUTPUT  encoded scale and quantized elements
+STATE  shared exponent and output block
+INVARIANT  all elements share the returned decode scale
+1. if all block elements are zero: return zero elements and finite unit scale
+2. e_shared = floor(log2(max(abs(block)))) - e_max_element
+3. bound e_shared to the scale representation's allowed range
+4. scale = 2**e_shared
+5. elements = round_and_clamp(block / scale, selected_element_format)
+6. return encoded_scale, elements
+TERMINATION: finite input graph, tensor or declared loop sets exhausted.
+COMPLEXITY: O(block size) work plus one maximum reduction
+```
 
 ## Implementation
 
-Framework: PyTorch's `torch.autocast` chooses the compute dtype per op (GEMMs in FP16/BF16, reductions in FP32) and `torch.amp.GradScaler` implements Algorithm 3.8 for FP16 [OFFICIAL-DOCUMENTATION — R3.11]. Kernels: FP8 and FP4 GEMMs with scaled operands run through NVIDIA Transformer Engine layers (`DelayedScaling`, `Float8CurrentScaling`, `MXFP8BlockScaling`, `NVFP4BlockScaling` recipe classes) over NVIDIA cuBLAS / cuBLASLt with a compute type of at least FP32 for the accumulator where the device supports it [OFFICIAL-DOCUMENTATION — R3.12, R3.13]. TorchAO offers float8 training for `torch.nn.Linear` with `tensorwise`, `rowwise`, and `rowwise_with_gw_hp` recipes via `Float8LinearConfig.from_recipe_name()` and `convert_to_float8_training()`, and lists MXFP8 training as a prototype [OFFICIAL-DOCUMENTATION — TorchAO training docs, R3.14, accessed 2026-09-20]. Memory: the FP8 activation cache for the weight-gradient GEMM halves activation bytes relative to BF16 (P13 stores Linear inputs in FP8 for backward, with a custom E5M6 format for the inputs of the Linear after attention and power-of-two scales there [PAPER-REPORTED]). Communication: FP8 dispatch of MoE activations before up-projections is reported by P13 as a bandwidth measure; the general treatment is in §29.5. Deployment: the storage recipe chosen here fixes which tensors §40.2 can quantize without a second calibration.
+[OFFICIAL-DOCUMENTATION] The inspected Transformer Engine 2.20.2 surfaces distinguish per-tensor FP8, MXFP8, and NVFP4 recipes and their hardware restrictions. TorchAO's unpinned training documentation distinguishes established float8 Linear conversion from prototype workflows, exposing tensorwise, rowwise, and high-precision-weight-gradient recipe variants. These are implementation choices, not interchangeable format names. [R3.41–R3.45, R3.14](references.md).
 
-```text
-Systems trace (single device, one Linear layer, BF16-operand recipe)
-stage                 → latency          / memory                           / compute        / communication / failure
-cast master→operand   → 1 pass over W    / +2 B/param operand copy          / elementwise    / none          / none
-GEMM forward          → tensor-core bound/ activations saved in BF16        / 2·M·N·K FLOPs  / none          / overflow if FP16
-GEMM backward (2×)    → tensor-core bound/ grads in BF16 then FP32          / 4·M·N·K FLOPs  / none          / underflow if FP16, no S
-unscale + clip        → 2 passes over g  / FP32 gradient buffer 4 B/param   / elementwise    / none          / NaN norm
-optimizer step        → 1 pass over θ_32 / master 4 B + m 4 B + v 4 B       / elementwise    / none          / lost update if BF16 master
-```
+[DERIVED] Scaling costs depend on fusion. A separate current-maximum pass reads the tensor before quantization; a fused delayed pass can record the next maximum while producing current codes. Requantizing a transposed operand adds conversion and possibly storage. Communication is zero in this section's single-device boundary; distributed maximum synchronization, compressed dispatch, and gradient collectives require their own Chapter 29 accounting. Source hardware peaks do not establish application latency, energy, or monetary cost.
 
 ## Experimental design
 
-Proposed: Experiment 3.4 (in [verification.md](verification.md)) trains the skeleton on the tiny-batch fixture under four recipes — FP32; FP16 + dynamic S + FP32 master; BF16 + FP32 master; BF16 with BF16 master (no master) — with identical seeds and deterministic kernels, and reports (a) the FP64-referenced gradient error before the first step, (b) the fraction of parameter elements whose update rounds to zero on step 1 (predicted by Eq. 3.17), and (c) loss after a fixed number of steps. Expected: recipe (d) shows a nonzero lost-update fraction that recipes (a)–(c) do not. This is a proposal; no runs were performed.
+### Reported experiments
+
+[PAPER-REPORTED] Mixed Precision Training reports task-dependent necessity of scaling. Its VOC detection comparison gives SSD 76.9 mAP in FP32, divergence without scaling, and 77.1 with scale 8; Faster R-CNN has different sensitivity. The large language-model experiment uses a two-layer 8192-unit LSTM, 1024-dimensional projections, sampled softmax, and scale128; the unscaled run diverges after approximately 300,000 iterations. These are accuracy/convergence studies, not end-to-end Tensor Core speed measurements. [R3.3, §4](references.md).
+
+[PAPER-REPORTED] DeepSeek-V3's two-scale validation uses 16B and 230B MoE configurations trained for approximately 1.33T and 0.9T tokens, reporting relative loss differences below 0.25%. A separate activation-gradient scaling ablation diverges around 300B tokens for the 16B configuration when a coarse block scheme replaces the chosen treatment. The negative result constrains generalization of the successful recipe. [P13, AppendixB](references.md).
 
 ## Observations
 
-**What the paper claims.** R3.3 reports that FP16 with master weights and loss scaling matched FP32 accuracy across the tasks tested and reduced memory "by nearly 2x". R3.4 reports BF16 matches FP32 in the same number of iterations without hyperparameter changes. P13 reports FP8 relative loss error consistently below 0.25% versus BF16 on two model scales (similar to DeepSeek-V2-Lite and DeepSeek-V2) trained for approximately 1 trillion tokens. TorchAO documents a 25.03% (tensorwise) and 10.05% (rowwise) throughput gain for Llama3-8b on an 8-GPU H100 node and 1.5× at 512-GPU / 405B scale [all PAPER-REPORTED or OFFICIAL-DOCUMENTATION; the speedups carry their stated model/hardware context and are not transferable].
+**What the paper claims.** [PAPER-REPORTED] The FP16 and fine-grained FP8 studies report successful selected recipes alongside failing nearby scaling choices. Their protocols above delimit that evidence. [R3.3 section 4; P13 AppendixB](references.md).
 
-**What the evidence shows.** The underflow and update-loss mechanisms are theorems of the format tables. The claim that a given recipe "matches" a baseline is workload-specific, reported by its authors, and — for FP8 — depends on a scaling recipe that the papers themselves say was tuned (P13 Appendix B.2 on block-scaled activations destabilizing training).
+**What the evidence shows.** [DERIVED] These comparisons support role-specific precision and long-horizon scrutiny. They do not establish equal final quality under arbitrary scales or a universal ordering of 2026 FP4 recipes. The source results were not independently reproduced here.
 
-**What we infer.** Under Eq. 3.18, FP16/BF16 mixed precision does not reduce per-parameter state at all when an FP32 master and FP32 moments are kept; its memory benefit is in activations and its speed benefit in GEMMs. Any recipe that claims to cut state must say which of the five terms it narrows [DERIVED].
+**What we infer.** [MATHEMATICALLY-DERIVED] Wider accumulation cannot restore already erased operands, and wider persistent storage addresses a separate local increment interval. A headline bit width therefore determines neither the complete error budget nor retained-state memory.
 
-**What remains unknown.** The full per-layer precision map of any production model beyond what its report lists is NOT-DISCLOSED. Whether BF16 moments are adequate outside the P13 setting is UNVERIFIED. The exact delayed-scaling formula and margin default in a given Transformer Engine release are to be read from that release [UNVERIFIED here].
+**What remains unknown.** [UNVERIFIED] Exact application allocations, native-kernel reproduction and production corner paths remain unchecked. Missing production precision maps are not inferred from the published successful recipe.
 
 ## Failure modes
 
-> **Failure mode — Loss-scale collapse.** *Symptom:* S halves repeatedly, most steps skipped. *Cause:* a genuine divergence (inf gradients regardless of S) rather than overflow of the scaled gradient. *Detection:* non-finite gradients persist at S = 1. *Mitigation:* treat as instability ([§20.5](../../part-04-training-science-and-adaptation/ch20-optimization-schedules-and-training-stability/20-5-recovery-interventions.md)), not as a scaling problem.
-
-> **Failure mode — Clipping before unscaling.** *Symptom:* effective clip threshold is c/S; training crawls. *Cause:* Eq. 3.13 applied to S·g. *Detection:* logged norms ≈ S × expected. *Mitigation:* Algorithm 3.8 line order.
-
-> **Failure mode — Lost updates in BF16 storage.** *Symptom:* parameters with large magnitude stop changing; loss plateaus early. *Cause:* Eq. 3.17. *Detection:* fraction of elements with θ_{t+1} = θ_t despite nonzero gradient. *Mitigation:* FP32 master weights or compensated summation.
-
-> **Failure mode — Stale FP8 scale.** *Symptom:* saturation (values at ±448) in one tensor after a distribution shift. *Cause:* delayed amax history lags. *Detection:* per-tensor saturation counters. *Mitigation:* current or block scaling; margin μ.
+[DERIVED] Repeated scale backoff may indicate either scaled-gradient overflow or genuine forward instability; observing non-finites at scale one does not distinguish them universally. A stale FP8 maximum can saturate a sudden outlier. BF16 persistent updates can fall inside Eq.3.17's interval. Coarse block scales can erase smaller channels. Incorrect transposed-copy reuse changes the matrix in backward. Diagnostics therefore record saturation, zeroing, scale history, finite status, and actual neighboring representable parameter values separately.
 
 ## Siblings
 
-**FP16 + loss scaling + FP32 master** — this section. Why it exists: FP16's five-bit exponent. What assumption changed: gradients can be rescaled by a scalar. What objective changed: none (S cancels). What problem it solved: gradient underflow. What new failure mode it introduced: overflow of S·g, skipped steps. Changed primitive: backward(ℒ) → backward(S·ℒ) + unscale.
-
-**BF16 (no loss scaling) + FP32 master** — this section. Why it exists: FP32's exponent range in 16 bits. What assumption changed: 7 mantissa bits suffice for operands if accumulation is FP32. What problem it solved: no S, no skipped steps. What new failure mode it introduced: coarser operands; lost updates without a master copy. Changed primitive: exponent 5 → 8 bits.
-
-**FP8 delayed (per-tensor) scaling** — this section; execution in Transformer Engine. Why it exists: one read per quantization. What assumption changed: amax changes slowly step to step. What problem it solved: bandwidth of the amax pass. What new failure mode it introduced: stale scale, saturation. Changed primitive: current amax → historical amax.
-
-**FP8 current (per-tensor) scaling** — this section. Why it exists: exact amax. What assumption changed: two reads are affordable. What new failure mode it introduced: extra read; amax synchronization in distributed gathers. Changed primitive: history → current.
-
-**FP8/FP4 block scaling (MXFP8, NVFP4, P13 tiles)** — this section. Why it exists: per-tensor scales are set by outliers. What assumption changed: a block of 16–128 values shares range. What problem it solved: outlier dominance; enables E4M3 everywhere (P13). What new failure mode it introduced: non-transposable quantized tensors, scale metadata, kernel requirements. Changed primitive: one scale per tensor → one per block.
+[DERIVED] FP16 loss scaling addresses backward range. FP8 tensor scaling addresses encoded operand range. Block scaling localizes that range allocation. Wider master storage addresses update retention. Quantized optimizer states address persistent memory, with a separate error path. These interventions can coexist; their byte and error budgets cannot be inferred from the model's headline precision.
 
 ```figure
 id: fig-3.23
@@ -514,20 +505,24 @@ spec:
     - { dimension: "device requirement", values: { del: "not stated here", cur: "not stated here", mx: "Blackwell-class (TE docs)", nv: "Blackwell-class (TE docs)", p13: "the report's target device" } }
 ```
 
-**8-bit optimizer states** — [§20.1](../../part-04-training-science-and-adaptation/ch20-optimization-schedules-and-training-stability/20-1-optimizer-mechanics.md) (R3.23). Why it exists: moments are half the state. Changed primitive: FP32 moment → block-quantized moment.
-
 ## Extensions
 
-Adaptation with adapters ([§23](../../part-04-training-science-and-adaptation/ch23-parameter-efficient-adaptation-and-model-composition/README.md), forward) keeps only adapter master weights in FP32 and the frozen base in a narrow format, which is a different budget under Eq. 3.18. Long context shifts the memory term from state to activations, favoring the FP8 activation cache of P13. For inference, only b_param survives, which is why §40.2's targets differ from training's (proposal-level statements).
+### Improvements
+
+[PAPER-REPORTED] NVIDIA's 2025 NVFP4 study combines FP4 elements, local E4M3 scales, a global FP32 scale, weight scaling over $16\times16$ tiles, stochastic gradient rounding, and size 16 randomized Hadamard transforms for weight-gradient operands. Sensitive layers and FP32 optimizer/update states remain wider. Its 12B hybrid model trains for 10T tokens against FP8; removing each component harms convergence, and quantizing every Linear layer diverges. The MMLU-Pro scores are 62.58 versus 62.62, while task-specific results vary. [R3.27, §§3–4, AppendixE](references.md).
+
+[PAPER-REPORTED] QuartetII (January 2026) addresses gradient-estimation bias with MS-EDEN. In rotated coordinates it rescales reconstruction by $\|x\|^2/\langle x,\widehat x\rangle$, applying the correction through shared scales and stochastic scale rounding. It requires compatible weight requantization; isolated activation-gradient and weight-gradient ablations distinguish this from independently unbiased scalar rounding. Experiments cover C4 scaling studies and Nanochat pretraining, with a reported 15–25% reduction in the validation loss gap to BF16. Kernel speedups and full-training throughput have separate measurement boundaries. [R3.28, §§3,6–7](references.md).
+
+[PAPER-REPORTED] Full-Stack FP4 (July 2026) extends the scope to projections, optimizer states, and selected attention paths. Its second-moment pipeline quantizes a centered, rotated square-root state and reconstructs before squaring. Sensitive attention products remain BF16. The 3B/64B-token study reports a 1.47% loss gap to BF16 Root+AdamW, using fake quantization on 8 A800 80 GB GPUs. This supports a simulated numerical recipe; it does not measure native FP4 throughput on Blackwell. Its code release is prospective. [R3.29, §§3–4, AppendixH](references.md).
 
 ## Limitations
 
-Eq. 3.17 uses the initialization scale as a proxy; trained parameter magnitudes vary by layer. The FP8 recipes are documented for specific device generations (MXFP8 and NVFP4 require Blackwell-class hardware per Transformer Engine docs [OFFICIAL-DOCUMENTATION — R3.12]) and do not run elsewhere. Falsification: a BF16-master run matching the FP32-master run on Experiment 3.4 would contradict Eq. 3.17 at that learning-rate/magnitude regime. Decision consequence: choose the master/moment precision by Eq. 3.17 and Eq. 3.18, then the operand format by the device.
+[UNVERIFIED] This revision does not independently reproduce those convergence or speed measurements. The2026 FP4 papers are versioned preprints with finite workload coverage; no universal recipe ordering follows from their different models, token budgets, baselines, and execution modes. Scale-zero boundaries and exact kernels also require executable review before adoption.
 
 ## Reproducibility
 
-Record: autocast dtype, reduced-precision-reduction flags, GradScaler parameters (or none), FP8 recipe class and its options, amax history length, block sizes, and the Transformer Engine / TorchAO release. Unresolved: delayed-scaling formula defaults (UNVERIFIED), production precision maps (NOT-DISCLOSED).
+[DERIVED] A reproducible recipe records the precision of every state role, scale direction and representation, block axes, conversion order, rounding/saturation mode, history updates, accumulation schedule, skip semantics, and retained copies. The proposed comparisons in [verification.md](verification.md) isolate these choices instead of assuming a narrow-format name specifies them.
 
 ## References
 
-P13, P18; R3.2, R3.3, R3.4, R3.5, R3.11, R3.12, R3.13, R3.14, R3.23.
+[DERIVED] Methods and actual experiment locators are recorded under [R3.2–6, R3.32/R3.34, R3.41–R3.45, R3.14, R3.27–29, P13, P18](references.md).

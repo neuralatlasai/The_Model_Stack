@@ -7,10 +7,17 @@ import assert from 'node:assert/strict';
 import { describe, it } from 'node:test';
 import vm from 'node:vm';
 import { STORAGE_KEYS } from '@atlas/core';
+import { initDepth } from '../../client/depth.ts';
+import { Controller } from '../../client/lifecycle.ts';
+import type { PageContext } from '../../client/page.ts';
+import { createStore } from '../../client/storage.ts';
 import { bootstrapScript } from '../bootstrap.ts';
 
 class FakeRoot {
   readonly attributes = new Map<string, string>();
+  getAttribute(name: string): string | null {
+    return this.attributes.get(name) ?? null;
+  }
   setAttribute(name: string, value: string): void {
     this.attributes.set(name, value);
   }
@@ -98,6 +105,47 @@ describe('inline bootstrap', () => {
     assert.equal(h.root.attributes.get('data-depth'), 'technical');
   });
 
+  it('shows complete manuscripts at implementation depth despite stored and URL preferences', () => {
+    for (const storedDepth of ['overview', 'technical', 'research']) {
+      for (const storedValue of [storedDepth, JSON.stringify(storedDepth)]) {
+        for (const urlDepth of ['', '?depth=overview', '?depth=technical', '?depth=research']) {
+          const stored = { [STORAGE_KEYS.depth]: storedValue };
+          const h = harness(`https://atlas.example/ch05/${urlDepth}`, stored);
+          h.root.setAttribute('data-reading-mode', 'complete');
+          h.run();
+          assert.equal(h.root.attributes.get('data-depth'), 'implementation');
+          assert.equal(stored[STORAGE_KEYS.depth], storedValue);
+        }
+      }
+    }
+  });
+
+  it('shows complete manuscripts when storage is blocked', () => {
+    const h = harness('https://atlas.example/ch05/?depth=overview', {}, { storageThrows: true });
+    h.root.setAttribute('data-reading-mode', 'complete');
+    h.run();
+    assert.equal(h.root.attributes.get('data-depth'), 'implementation');
+  });
+
+  it('uses the incoming reading mode on swaps and restores ordinary atlas preferences afterward', () => {
+    const stored = { [STORAGE_KEYS.depth]: '"overview"' };
+    const h = harness('https://atlas.example/graph/', stored);
+    h.run();
+    assert.equal(h.root.attributes.get('data-depth'), 'overview');
+    const swap = h.listeners.get('astro:before-swap')?.[0];
+    assert.ok(swap);
+    const article = new FakeRoot();
+    article.setAttribute('data-reading-mode', 'complete');
+    swap({ newDocument: { documentElement: article }, to: new URL('https://atlas.example/ch05/?depth=overview') });
+    assert.equal(article.attributes.get('data-depth'), 'implementation');
+    const atlas = new FakeRoot();
+    swap({ newDocument: { documentElement: atlas }, to: new URL('https://atlas.example/graph/') });
+    assert.equal(atlas.attributes.get('data-depth'), 'overview');
+    swap({ newDocument: { documentElement: atlas }, to: new URL('https://atlas.example/graph/?depth=research') });
+    assert.equal(atlas.attributes.get('data-depth'), 'research');
+    assert.equal(stored[STORAGE_KEYS.depth], '"overview"');
+  });
+
   it('re-applies state to the incoming document on ClientRouter swaps, registering once', () => {
     const h = harness('https://atlas.example/', { [STORAGE_KEYS.theme]: '"dark"' });
     h.run();
@@ -105,12 +153,142 @@ describe('inline bootstrap', () => {
     const handlers = h.listeners.get('astro:before-swap') ?? [];
     assert.equal(handlers.length, 1);
     const incoming = new FakeRoot();
-    handlers[0]?.({ newDocument: { documentElement: incoming }, to: new URL('https://atlas.example/ch05/?depth=overview') });
+    handlers[0]?.({
+      newDocument: { documentElement: incoming },
+      to: new URL('https://atlas.example/ch05/?depth=overview'),
+    });
     assert.equal(incoming.attributes.get('data-theme'), 'dark');
     assert.equal(incoming.attributes.get('data-depth'), 'overview');
   });
 
   it('contains no markup that could end its script element', () => {
     assert.equal(/<\/script/iu.test(bootstrapScript()), false);
+  });
+});
+
+class FakeDepthControl extends FakeRoot {
+  closest(selector: string): FakeDepthControl | null {
+    return selector.includes('data-action') ? this : null;
+  }
+}
+
+interface ClientHarness {
+  readonly ctx: PageContext;
+  readonly root: FakeRoot;
+  readonly stored: Map<string, string>;
+  readonly location: { href: string };
+  clickDepth: () => boolean;
+}
+
+/** Run the real controller with bounded DOM doubles and restore all globals. */
+function withClientDepth(complete: boolean, run: (h: ClientHarness) => void): void {
+  const root = new FakeRoot();
+  root.setAttribute('data-depth', 'overview');
+  if (complete) root.setAttribute('data-reading-mode', 'complete');
+  const control = new FakeDepthControl();
+  control.setAttribute('data-action', 'set-depth');
+  control.setAttribute('data-depth-option', 'overview');
+  const listeners = new Map<string, ((event: unknown) => void)[]>();
+  const doc = {
+    documentElement: root,
+    querySelectorAll: () => [control],
+    addEventListener: (type: string, listener: (event: unknown) => void): void => {
+      listeners.set(type, [...(listeners.get(type) ?? []), listener]);
+    },
+    dispatchEvent: (): boolean => true,
+  };
+  const stored = new Map<string, string>([[STORAGE_KEYS.depth, '"research"']]);
+  const store = createStore({
+    getItem: (key) => stored.get(key) ?? null,
+    setItem: (key, value) => {
+      stored.set(key, value);
+    },
+    removeItem: (key) => {
+      stored.delete(key);
+    },
+  });
+  const location = { href: 'https://atlas.example/page/?depth=overview#mechanism' };
+  const history = {
+    state: {},
+    replaceState: (_state: unknown, _unused: string, href: string): void => {
+      location.href = href;
+    },
+  };
+  const globals = { location, history, Element: FakeDepthControl, HTMLButtonElement: FakeDepthControl };
+  const original = new Map(Object.keys(globals).map((key) => [key, Object.getOwnPropertyDescriptor(globalThis, key)]));
+  for (const [key, value] of Object.entries(globals))
+    Object.defineProperty(globalThis, key, { configurable: true, value });
+  const ctl = new Controller();
+  const ctx: PageContext = {
+    doc: doc as unknown as Document,
+    ctl,
+    store,
+    base: '/',
+    article: null,
+    nodeId: null,
+    announce: () => undefined,
+    state: { activeAnchor: null, activeRole: null, progress: 0, depth: 'overview' },
+    actions: {},
+  };
+  try {
+    initDepth(ctx);
+    run({
+      ctx,
+      root,
+      stored,
+      location,
+      clickDepth: (): boolean => {
+        let prevented = false;
+        const event = {
+          target: control,
+          button: 0,
+          metaKey: false,
+          ctrlKey: false,
+          shiftKey: false,
+          preventDefault: (): void => {
+            prevented = true;
+          },
+        };
+        for (const listener of listeners.get('click') ?? []) listener(event);
+        return prevented;
+      },
+    });
+  } finally {
+    ctl.dispose();
+    for (const [key, descriptor] of original) {
+      if (descriptor === undefined) Reflect.deleteProperty(globalThis, key);
+      else Object.defineProperty(globalThis, key, descriptor);
+    }
+  }
+}
+
+describe('complete-reading depth controller', () => {
+  it('ignores a legacy URL and control without changing stored preferences or exposing palette depth actions', () => {
+    withClientDepth(true, ({ ctx, root, stored, location, clickDepth }) => {
+      assert.equal(ctx.state.depth, 'implementation');
+      assert.equal(root.getAttribute('data-depth'), 'implementation');
+      assert.equal(ctx.actions.setDepth, undefined);
+      assert.equal(stored.get(STORAGE_KEYS.depth), '"research"');
+      assert.equal(location.href, 'https://atlas.example/page/#mechanism');
+      assert.equal(clickDepth(), true);
+      assert.equal(root.getAttribute('data-depth'), 'implementation');
+      assert.equal(stored.get(STORAGE_KEYS.depth), '"research"');
+      assert.equal(ctx.actions.linkTo?.('algorithm'), 'https://atlas.example/page/#algorithm');
+    });
+  });
+
+  it('preserves URL, persistence, controls, and palette actions on ordinary atlas pages', () => {
+    withClientDepth(false, ({ ctx, root, stored, location, clickDepth }) => {
+      assert.equal(ctx.state.depth, 'overview');
+      assert.equal(stored.get(STORAGE_KEYS.depth), '"overview"');
+      assert.ok(ctx.actions.setDepth);
+      ctx.actions.setDepth('technical');
+      assert.equal(root.getAttribute('data-depth'), 'technical');
+      assert.equal(stored.get(STORAGE_KEYS.depth), '"technical"');
+      assert.equal(new URL(location.href).searchParams.get('depth'), 'technical');
+      assert.equal(clickDepth(), true);
+      assert.equal(ctx.state.depth, 'overview');
+      assert.equal(stored.get(STORAGE_KEYS.depth), '"overview"');
+    });
   });
 });

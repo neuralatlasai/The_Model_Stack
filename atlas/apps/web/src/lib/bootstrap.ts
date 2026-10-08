@@ -26,7 +26,10 @@ const BODY = `
     var value = read(c.themeKey);
     return value === 'light' || value === 'dark' ? value : null;
   }
-  function depth(href) {
+  function depth(root, href) {
+    // Complete manuscripts always expose every region without changing the
+    // reader's stored depth preference for other atlas routes.
+    if (root.getAttribute('data-reading-mode') === 'complete') return 'implementation';
     var fromUrl = null;
     try { fromUrl = new URL(href).searchParams.get('depth'); } catch (badUrl) { fromUrl = null; }
     if (fromUrl !== null && c.depths.indexOf(fromUrl) !== -1) return fromUrl;
@@ -39,7 +42,7 @@ const BODY = `
   function apply(root, href) {
     var selected = theme();
     if (selected === null) root.removeAttribute(c.themeAttr); else root.setAttribute(c.themeAttr, selected);
-    root.setAttribute(c.depthAttr, depth(href));
+    root.setAttribute(c.depthAttr, depth(root, href));
     root.setAttribute('data-gl', GL);
   }
   apply(document.documentElement, window.location.href);

@@ -36,7 +36,7 @@ evidence_summary:
   labels_used: [MATHEMATICALLY-DERIVED, PAPER-REPORTED, ASSUMED, KNOWN, DERIVED, UNVERIFIED, NOT-DISCLOSED]
   empirically_observed: false
 word_count_target: 1700
-updated_at: 2026-09-20
+updated_at: 2026-10-07
 editorial_status: manuscript_draft
 ---
 
@@ -44,17 +44,15 @@ editorial_status: manuscript_draft
 
 ## Scope
 
-Objective: turn an application request into a specification whose every field is measurable. Baseline: the informal brief ("a helpful assistant for our documents"), against which nothing can be rejected. Success: a specification naming task distribution, intended users, capabilities, acceptable errors, operating conditions, and success criteria with estimators and thresholds, so that a later measurement can reject it. Boundaries: statistical machinery is owned by [§2.5](../ch02-mathematical-and-statistical-foundations/02-5-statistical-inference.md) and [§2.6](../ch02-mathematical-and-statistical-foundations/02-6-optimization-language.md); benchmark construction by [§6.1](../ch06-experimental-design-and-evaluation-before-optimization/06-1-evaluation-units.md).
+A system specification binds a task population, intended users, capability claims, acceptable errors, operating conditions, and acceptance criteria to an explicit design problem. The comparison is between a finite set of candidate model/retrieval/serving designs under the same declared envelope. Error-rate and resource constraints are evaluated with stated estimators and measurement boundaries; missing evidence leaves feasibility unresolved. Statistical inference is developed in §§2.5–2.6 and benchmark construction in Chapter 6.
 
 ## Why this exists
 
-Projects optimized a proxy (a public benchmark, a preference win-rate) never shown to be the quantity users pay for, and found the mismatch after the training budget was spent. A large run is not repeatable at will, so the specification is the only cheap place to be wrong. Quality, latency, memory, and cost are coupled through the same decision variables (model size, precision, context length, retrieval), so a specification naming one and omitting the others is either unsatisfiable or unfalsifiable. HELM made explicit that a single scenario–metric pair is not an evaluation and that accuracy, calibration, robustness, fairness, bias, toxicity, and efficiency trade off (PAPER-REPORTED · P50); this section extends that discipline to the whole specification.
+PAPER-REPORTED · [P50, §§2–4](https://arxiv.org/pdf/2211.09110): HELM distinguishes the space of tasks and domains from the desiderata measured on them, then identifies the portion its benchmark actually covers. Its seven metric families do not imply that every metric is meaningful on every task, or that one aggregate score measures application suitability. PAPER-REPORTED · [R1.17, §§4.3–4.4](https://arxiv.org/html/2108.07258v3): the foundation-model report additionally treats adaptation resources and access requirements as part of evaluation. DERIVED: a system specification must therefore bind an outcome to a population, an adaptation procedure, and an operating envelope before comparing candidate designs. A low validation loss alone does not supply those bindings.
 
 ## Intuition
 
-Every field is a claim about how a bounded resource is spent to reduce a bounded error. A latency bound is a bound on memory traffic per token at a given batch; an accuracy threshold at fixed context length bounds how much conditioning can be consumed per request; a cost ceiling divides the remaining budget between parameters, tokens, and replicas. The specification is a budget allocation with an acceptance test.
-
-Heuristically, it is the job description the model is hired against: useful for enumerating fields, useless for setting thresholds, which come from the error-severity table and the ledger.
+DERIVED: the same design variables enter several constraints. Increasing retained context changes both the information available to the model and the state allocated by a conventional attention cache. Increasing batch size changes weight reuse and the number of concurrent sequences. These couplings require joint accounting; they do not establish that any particular request is bandwidth-bound or that added context improves accuracy. Those are separate measurements. The specification records the quantities and rejection rules needed to distinguish the possibilities.
 
 ## Formulation
 
@@ -114,7 +112,7 @@ alt: >-
   throughput ≥ λ_max requests per second; cost per accepted task ≤ κ. The
   operating conditions Ω feed the latency, memory and throughput rows; the
   ledger bounds of §1.5 feed the memory and cost rows. All five rows lead to
-  the branch "feasible point exists?". Yes leads to committing a training
+  a branch on whether a necessary resource condition rejects a candidate. Missing evidence cannot commit a training
   budget; no leads to relaxing the least-severe constraint once, which
   returns to the design space (Algorithm 1.1 line 9).
 spec:
@@ -130,7 +128,7 @@ spec:
     - { id: mem, kind: memory, label: "M_params + M_KV + M_runtime ≤ M_cap", sub: "per replica, Eq. N.5 and N.8" }
     - { id: thr, kind: metric, label: "throughput(ψ; Ω) ≥ λ_max", sub: "requests/s at peak arrival" }
     - { id: cost, kind: metric, label: "cost per accepted task ≤ κ", sub: "notation §2.10" }
-    - { id: feas, kind: branch, label: "feasible point exists?", sub: "on ledger bounds, before any run" }
+    - { id: feas, kind: branch, label: "candidate passes necessary resource checks?", sub: "passing bounds leaves achieved feasibility unresolved" }
     - { id: commit, kind: state, label: "commit the training budget" }
     - { id: relax, kind: feedback, label: "relax the least-severe constraint once, record it" }
   edges:
@@ -159,7 +157,7 @@ spec:
 
 > **Assumption.** Q(ψ) is estimated on a finite held-out sample of independent draws from 𝒟_task · *sensitivity:* dependent units (several items per document or user) understate interval width and let a design pass by chance; [§6.4](../ch06-experimental-design-and-evaluation-before-optimization/06-4-measurement-uncertainty.md) owns the correction.
 
-> **Claim [MATHEMATICALLY-DERIVED · DERIVED:eq-1.2].** Eq. 1.2 has no feasible point when its constraints are jointly inconsistent over Ψ; an infeasible specification cannot be fixed by training, so feasibility is checked on the ledger of [§1.5](01-5-resource-accounting.md) before any run.
+> **Claim [MATHEMATICALLY-DERIVED · DERIVED:eq-1.2].** Eq. 1.2 has no feasible point when its constraints are jointly inconsistent over Ψ; no candidate in Ψ satisfies jointly inconsistent constraints. Necessary resource conditions can reject candidates before training; they cannot certify all statistical or achieved-execution criteria.
 
 The gate has a sample-size cost that follows from its estimators. For a rate estimated on n independent units, the normal-approximation half-width at critical value z is δ = z·sqrt(Q̂(1−Q̂)/n), which is largest at Q̂ = 1/2, so
 
@@ -215,7 +213,7 @@ spec:
     - { symbol: r3, label: "−ln α, the 3.0 of ε_upper ≈ 3.0/n", formula: "-ln(alpha)", format: fixed2 }
 ```
 
-> **Claim [MATHEMATICALLY-DERIVED · DERIVED:eq-1.9].** With z = 1.96 and δ = 0.02, the first bound gives n ≥ 2,401 independent units. With α = 0.05 the second gives ε_upper ≈ 3.0/n, so certifying a severe error class at ε_k ≤ 10⁻³ needs about 3,000 violation-free independent units. A threshold tighter than the affordable n cannot be tested; the specification must therefore state n beside every threshold. These are properties of the estimators, not measurements.
+> **Claim [MATHEMATICALLY-DERIVED · DERIVED:eq-1.9].** With z = 1.96 and δ = 0.02, the first bound gives n ≥ 2,401 independent units. With α = 0.05 the second gives ε_upper ≈ 3.0/n, so a one-sided upper confidence limit no larger than 10⁻³ needs at least 2,995 violation-free independent units under this fixed-sample model. A threshold tighter than the affordable n cannot be tested; the specification must therefore state n beside every threshold. These are properties of the estimators, not measurements.
 
 ```figure
 id: fig-1.6
@@ -256,13 +254,21 @@ spec:
 
 ## Mechanism
 
-The mechanism is the ordered translation of a request into the fields of Eq. 1.2; the order prevents unfalsifiable fields.
+### Methodology
+
+DERIVED: Eqs. 1.1–1.2 are the book's explicit system-design formulation, not an equation attributed to HELM. Begin with the target population and unit of sampling: a document, conversation, user, or independently generated problem. Specify the reference information available to the evaluator, who may judge an answer, and which user permissions enter acceptance. A finite pilot sample supplies observations from that population; it does not make the population distribution known. Preserve selection probabilities and grouping identifiers when the sample is stratified or contains several observations from one source.
+
+DERIVED: define capabilities as testable claims on that population, then separate incorrect answers, unsupported statements, permission violations, abstentions, and timeouts where the application requires these distinctions. The rate denominator matters: an error rate conditional on answered requests can improve simply by abstaining more. Eq. 1.1 instead permits an acceptance function that counts abstention or service failure according to the declared task. Error classes may overlap; their rates need not sum to one. Severity and tolerated error are policy inputs, not quantities inferred from a paper's benchmark score.
+
+MATHEMATICALLY-DERIVED: an empirical mean estimates Q only for the sampled population and sampling procedure. For independent Bernoulli acceptance indicators the variance is Q(1−Q)/n; this gives the planning approximation in Eq. 1.9. The zero-event expression is an exact one-sided inversion under a fixed-sample, independent, constant-probability Bernoulli model. Repeatedly checking the interval and stopping when it passes changes the procedure; neither equation establishes coverage for optional stopping, clustered observations, or simultaneous certification of several error classes. A normal interval is also unreliable near zero or one. The owning statistical chapter supplies appropriate intervals and multiplicity control.
+
+DERIVED: finally enumerate a finite candidate set, attach each candidate's ledger, and distinguish three outcomes. A necessary resource bound can rule a design out; passing a lower latency bound cannot certify achieved latency. A candidate is supported only by sufficient measurements under the declared envelope. Missing measurements make feasibility unresolved. Algorithm 1.1 is an executable editorial procedure for constructing this record; it cannot solve an unrestricted mixed discrete and continuous optimization problem from configuration files.
 
 | Step | Field | Source of value | Label on the field |
 |---|---|---|---|
-| 1 | Task distribution | population definition and sampling procedure; pilot sample T_0 | KNOWN once T_0 exists; ASSUMED before |
+| 1 | Task distribution | population definition and sampling procedure; pilot sample T_0 | population and procedure specified; sampled distribution remains estimated |
 | 2 | Intended users | segments in u with request mix and permissions | ASSUMED (product input) |
-| 3 | Capabilities | enumerated claims bound to benchmark records | KNOWN per record |
+| 3 | Capabilities | enumerated claims bound to benchmark records | claim and protocol specified; validity depends on supporting evidence |
 | 4 | Acceptable errors | severity table: class → harm → ε_k | ASSUMED with sensitivity |
 | 5 | Operating conditions | Ω from load logs or a declared envelope | KNOWN (logs) or ASSUMED |
 | 6 | Success criteria | metric, estimator, threshold, confidence, evaluator | ASSUMED threshold; MATHEMATICALLY-DERIVED estimator |
@@ -318,7 +324,7 @@ spec:
       - { marker: hollow, label: "ASSUMED or per ledger entry", value: "fields 2, 4, 6, 7" }
 ```
 
-Cost line: engineering time plus a pilot sample; gate cost = n of Eq. 1.9 × per-request inference FLOPs ([Eq. 1.5](01-5-resource-accounting.md)) plus judging cost per unit; latency, energy, and money of the gate are UNVERIFIED until a load test is run; no training FLOPs. Its failure cost is the whole downstream budget.
+Cost line: engineering time plus a pilot sample; gate cost = n of Eq. 1.9 × per-request inference FLOPs ([Eq. 1.5](01-5-resource-accounting.md)) plus judging cost per unit; latency, energy, and money of the gate are UNVERIFIED until a load test is run; no training FLOPs. An incorrect specification can invalidate downstream measurements; that opportunity cost is not quantified here.
 
 ## Algorithm
 
@@ -335,71 +341,49 @@ INVARIANT  every field of σ carries an evidence label and a source
  5. set Ω from Ω_0: input-length quantiles, arrival envelope, concurrency, hardware class, precision
  6. for each success criterion: fix (metric, estimator, threshold, confidence procedure, evaluator)
  7. Ledger := Algorithm 1.5 over candidate designs Ψ
- 8. feasible := ∃ ψ ∈ Ψ satisfying Eq. 1.2 on Ledger bounds
- 9. if not feasible: relax the least-severe constraint once, record it, go to 7
+ 8. classify finite candidates as rejected, supported, or unresolved using necessary bounds and available measurements
+ 9. if all candidates rejected: return an infeasibility record for Ψ; record possible requirement revisions separately
 10. Reject := the measurements of verification.md that would reject σ
 11. return σ
-TERMINATION  step 9 relaxes each constraint at most once per severity level
+TERMINATION  finite candidate and field lists; unresolved candidates remain unresolved
 ```
 
 ```figure
 id: fig-1.8
 kind: diagram
-title: Specification construction with bounded relaxation, Algorithm 1.1
+title: Specification construction with three evidence outcomes
 caption: >-
-  Steps 1–6 turn the request into fields and never loop. Only steps 7–9 can
-  repeat, and that loop runs through the ledger, not through training. Each
-  constraint is relaxed at most once per severity level (the termination
-  clause), so an infeasible specification either becomes feasible with a
-  written relaxation or stops here, before any budget is committed.
+  Bounds and measurements classify candidates as rejected, supported, or
+  unresolved. Requirements are never relaxed automatically by the procedure.
 placement: inline
-evidence: DERIVED
+evidence: ASSUMED
 source: "DERIVED:alg-1.1"
 alt: >-
-  Top-to-bottom flow of Algorithm 1.1. Inputs: request R, load logs or
-  envelope Ω_0, harm ledger H and budget κ. Step 1 defines population P,
-  sampling procedure S and pilot T_0, fixing 𝒟_task as (P, S, split id). Step
-  2 enumerates user segments with request mix and permissions. Step 3 binds
-  each capability claim to a benchmark record or marks it UNVERIFIED and
-  drops it. Step 4 sets severity and tolerated rate per error class. Step 5
-  sets Ω from Ω_0. Step 6 fixes metric, estimator, threshold, confidence
-  procedure and evaluator per criterion. Step 7 builds the ledger with
-  Algorithm 1.5 over candidate designs. Step 8 branches on whether some
-  design satisfies Eq. 1.2. If not, step 9 relaxes the least-severe
-  constraint once, records it and returns to step 7. If so, step 10 attaches
-  the rejection measurements of verification.md and σ is returned with every
-  field labeled and sourced.
+  Define population, users, capabilities, errors, workload, and criteria;
+  build candidate ledgers; attach rejection measurements; classify finite
+  candidates using available evidence; return the specification and gaps.
 spec:
   direction: TB
   nodes:
-    - { id: req, kind: dependency, label: "request R · load logs Ω_0 · harm ledger H · budget κ" }
-    - { id: s1, kind: process, label: "1 · population P, sampling S, pilot T_0", sub: "𝒟_task := (P, S, split id)" }
-    - { id: s2, kind: process, label: "2 · user segments U, request mix, permissions" }
-    - { id: s3, kind: process, label: "3 · bind each capability to a benchmark record", sub: "unbound → UNVERIFIED, dropped" }
-    - { id: s4, kind: process, label: "4 · severity s_k and tolerated rate ε_k per class" }
-    - { id: s5, kind: process, label: "5 · Ω from Ω_0", sub: "length quantiles · arrivals · concurrency · hardware" }
-    - { id: s6, kind: process, label: "6 · metric, estimator, threshold, confidence, evaluator" }
-    - { id: s7, kind: process, label: "7 · Ledger := Algorithm 1.5 over Ψ" }
-    - { id: s8, kind: branch, label: "8 · ∃ ψ ∈ Ψ satisfying Eq. 1.2?" }
-    - { id: s9, kind: feedback, label: "9 · relax the least-severe constraint once, record it" }
-    - { id: s10, kind: process, label: "10 · Reject := measurements of verification.md" }
-    - { id: out, kind: objective, label: "σ returned", sub: "every field labeled and sourced" }
+    - { id: request, kind: objective, label: "application and operating envelope" }
+    - { id: fields, kind: process, label: "define population, users, capabilities, errors, criteria" }
+    - { id: ledger, kind: metric, label: "candidate ledgers and measurement boundaries" }
+    - { id: reject, kind: process, label: "attach rejection and uncertainty procedures" }
+    - { id: classify, kind: branch, label: "classify each finite candidate" }
+    - { id: no, kind: state, label: "rejected by necessary condition or measurement" }
+    - { id: yes, kind: state, label: "supported within tested scope" }
+    - { id: gap, kind: state, label: "unresolved; missing evidence recorded" }
   edges:
-    - { from: req, to: s1 }
-    - { from: s1, to: s2 }
-    - { from: s2, to: s3 }
-    - { from: s3, to: s4 }
-    - { from: s4, to: s5 }
-    - { from: s5, to: s6 }
-    - { from: s6, to: s7 }
-    - { from: s7, to: s8 }
-    - { from: s8, to: s10, kind: emphasis, label: "feasible" }
-    - { from: s8, to: s9, label: "infeasible" }
-    - { from: s9, to: s7, kind: feedback, label: "go to 7" }
-    - { from: s10, to: out }
+    - { from: request, to: fields }
+    - { from: fields, to: ledger }
+    - { from: ledger, to: reject }
+    - { from: reject, to: classify }
+    - { from: classify, to: no }
+    - { from: classify, to: yes, kind: emphasis }
+    - { from: classify, to: gap }
 ```
 
-Complexity: linear in fields and constraints; the pilot sample dominates. Implementation link: the artifact record in the [chapter README](README.md).
+Complexity: O(F + K·J) for F specification fields, K finite candidates, and J constraints, after pilot statistics are available; obtaining measurements has its own cost. Implementation link: the artifact record in the [chapter README](README.md).
 
 ## Implementation
 
@@ -407,15 +391,19 @@ No tensors or kernels: the implementation is a versioned file beside the benchma
 
 ## Experimental design
 
-Proposal: validate the specification before training by measuring an existing model under Ω on the held-out split of T_0. Baselines: retrieval-only and a smaller general model, anchoring the threshold to what is cheaply attainable. Ablations: context-length and retrieval policy with the model fixed. Budget: inference only. Seeds: decoding and evaluation-order seeds recorded. Evaluator independence: acceptance judged by a procedure that produced no training data. Uncertainty: bootstrap over independent units. Full protocol: [Experiment 1.1](verification.md).
+### Reported experiments
+
+PAPER-REPORTED · [P50, §7, Table 7; §8.1, Figs. 24–25](https://arxiv.org/pdf/2211.09110): HELM evaluates 30 models on 16 core scenarios, using scenario-specific metrics from seven families. For many scenarios it fixes five in-context examples within a run and repeats the experiment with three sampled example sets; its reported adaptation table caps evaluation at 1,000 instances for the illustrated scenarios. These repetitions vary demonstration selection rather than training seed. The study compares calibration and accuracy within the same scenario and adaptation setting. Its scenario-dependent relationship is the relevant observation; heterogeneous metrics cannot be read as interchangeable measures of Q.
+
+PAPER-REPORTED · [P21, §§3.2–3.6, Appendix A, Table 6](https://arxiv.org/pdf/2203.02155): InstructGPT uses screened labelers and prompts from early Playground usage plus labeler-written tasks; it excludes production-API customer data, deduplicates common prefixes, caps prompts per user, and separates users across splits. The prompt distribution is predominantly English. Held-out prompts and a held-out labeler group test preference generalization, with comparisons against GPT-3 and supervised-only models. This population and evaluator definition constrains the reported preference result. It does not measure all intended users or all operating conditions. The book's application-specific pilot is a separate, unexecuted [verification proposal](verification.md#experiment-11--rejection-test-of-a-proposed-design).
 
 ## Observations
 
-**What the paper claims.** HELM reports seven metrics on each of 16 core scenarios for 30 models and states that "metrics beyond accuracy don't fall to the wayside" and "trade-offs are clearly exposed" (PAPER-REPORTED · P50, abstract v2, accessed 2026-09-20). InstructGPT reports that labelers preferred outputs of its 1.3B model to those of the 175B GPT-3 on its prompt distribution, with "minimal performance regressions on public NLP datasets" (PAPER-REPORTED · P21).
+**What the paper claims.** PAPER-REPORTED · P50, §8.1: the accuracy–calibration relationship differs between HellaSwag and OpenBookQA under the tested adaptation procedures. PAPER-REPORTED · P21, §4.1 and Fig. 1: labelers prefer the 1.3B instruction-tuned policy to the 175B GPT-3 baseline on the study's prompt distribution. These are different evaluation axes.
 
-**What the evidence shows.** Both results rest on the authors' own scenario sets, labeler pools, and prompt distributions; neither is reproduced here. The InstructGPT preference is evidence that the task distribution, not size, orders models on that distribution.
+**What the evidence shows.** PAPER-REPORTED: the published comparisons support task- and evaluator-conditioned statements. The InstructGPT comparison changes training route and parameter count together; it does not isolate the effect of size. Neither study has been independently reproduced for this chapter.
 
-**What we infer.** DERIVED: a single-metric specification cannot detect the trade-offs HELM measured, so Eq. 1.2 carries at least one error-class constraint per severity level. ASSUMED: thresholds are product inputs with sensitivity notes.
+**What we infer.** DERIVED: a criterion that records accuracy alone cannot detect a calibration change unless calibration is separately measured. This explains the distinct constraint fields of Eq. 1.2; the tolerated rates still require explicit application decisions.
 
 **What remains unknown.** Whether a specification written before training predicts post-deployment acceptance within useful tolerance is UNVERIFIED; no public calibration study is cited. Real request distributions of named products are NOT-DISCLOSED.
 
@@ -425,7 +413,7 @@ Proposal: validate the specification before training by measuring an existing mo
 
 > **Failure mode — unbounded envelope.** *Symptom:* p95 latency passes the load test and fails in production. *Cause:* Ω omitted the context-length tail or arrival bursts. *Detection:* measured input-length quantiles exceed declared ones. *Mitigation:* derive Ω from logs with stated quantiles.
 
-> **Failure mode — infeasible specification.** *Symptom:* every candidate violates some constraint. *Cause:* constraints set without the ledger. *Detection:* Algorithm 1.1 line 8. *Mitigation:* documented relaxation by severity.
+> **Failure mode — infeasible specification.** *Symptom:* every candidate violates some constraint. *Cause:* constraints set without the ledger. *Detection:* Algorithm 1.1 line 8. *Mitigation:* documented review of the candidate space and requirement choices.
 
 ## Siblings
 
@@ -483,11 +471,13 @@ spec:
 
 ## Extensions
 
-Domain adaptation narrows 𝒟_task and adds domain error classes. Long context puts the input-length distribution into M_KV, coupling quality and memory. Multimodality makes c and y* typed tuples with per-modality evaluators. Agents make acceptance trajectory-level with irreversible actions in the error ledger ([§63.1](../../../vol-03-grounded-and-interactive-intelligence/part-11-evaluation-interpretability-and-deployment-assurance/ch63-agent-retrieval-multimodal-and-system-reliability-evaluation/63-1-interactive-benchmarks.md)). Embodiment replaces p95 latency with hard deadlines. Proposals only.
+### Improvements
+
+PAPER-REPORTED · [R1.3, §4 and Fig. 1](https://arxiv.org/pdf/1810.03993): model cards add intended uses, evaluation factors, metrics, training/evaluation data, quantitative analysis, and caveats to model reporting. PAPER-REPORTED · P50, §§2–4: HELM makes scenario coverage and multi-metric evaluation explicit rather than presenting a benchmark score without its selection structure. These are documented improvements to reporting and evaluation methodology; neither paper isolates a causal improvement in deployment outcomes from adopting its documentation template. DERIVED: Eq. 1.2 combines those reporting commitments with resource feasibility, but its effectiveness as a project-management intervention remains untested. Extensions to agent trajectories and embodied deadlines require their owning chapters' task-specific acceptance units.
 
 ## Limitations
 
-Valid regime: applications whose acceptance can be judged per unit at tolerable cost. Falsification: if the pilot estimate of Q(ψ) and deployed acceptance differ beyond interval width for well-sampled 𝒟_task, the sampling procedure is wrong. Decision consequence: no training budget is committed before Algorithm 1.1 returns feasible.
+DERIVED: the formulation applies when acceptance and constraints can be operationalized for a defined unit. A discrepancy between pilot and deployment may arise from sampling error, population shift, evaluator drift, or a changed artifact; it does not identify a sampling error by itself. Necessary resource bounds screen candidates, while unresolved quality or tail-latency evidence prevents a claim of demonstrated feasibility. For K constraints, K individually valid intervals do not automatically provide the same joint confidence level; the acceptance protocol must state its simultaneous decision rule.
 
 ## Reproducibility
 
@@ -495,4 +485,4 @@ Artifacts: specification file, pilot sample id, severity table. Metric definitio
 
 ## References
 
-P21, P50; R1.3, R1.4; [notation](../../../front-matter/notation.md) Eq. N.5, N.8, §2.10.
+P21, P50; R1.3, R1.4, R1.17; inspected revisions and exact locators in [references.md](references.md). [Notation](../../../front-matter/notation.md) Eq. N.5, N.8, §2.10.

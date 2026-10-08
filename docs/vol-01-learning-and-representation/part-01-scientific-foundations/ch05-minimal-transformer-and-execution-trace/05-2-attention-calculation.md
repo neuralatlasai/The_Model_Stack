@@ -37,7 +37,7 @@ evidence_summary:
   labels_used: [MATHEMATICALLY-DERIVED, PAPER-REPORTED, OFFICIAL-DOCUMENTATION, ASSUMED, NOT-DISCLOSED, UNVERIFIED]
   empirically_observed: false
 word_count_target: 1050
-updated_at: 2026-09-20
+updated_at: 2026-10-08
 editorial_status: manuscript_draft
 ---
 
@@ -45,47 +45,49 @@ editorial_status: manuscript_draft
 
 ## Scope
 
-Objective: expand the four attention lines of the §5.1 trace — projections, scaled dot products, masking and softmax, head combination and output projection — into equations with shapes, and cost each line in parameters, FLOPs and bytes. Baseline: Eq. (1) of P01. Success criterion: the reader can state, for any (B, H, T, Dh), which attention tensor is largest and whether it must exist at all. Boundaries: head-sharing variants (MQA, GQA) belong to [§14.1](../../part-03-model-architectures-and-state/ch14-attention-architectures-and-cache-representations/14-1-mha-mqa-and-gqa.md); latent compression to [§14.2](../../part-03-model-architectures-and-state/ch14-attention-architectures-and-cache-representations/14-2-latent-attention.md); the tiled, non-materialising execution of P19 to [§27.1](../../../vol-02-execution-and-optimization/part-05-hardware-kernels-and-distributed-execution/ch27-attention-latent-attention-and-expert-kernels/27-1-io-aware-attention.md). None of those mechanisms is explained here.
+Scaled dot-product attention computes a mask-restricted, normalized weighted combination of value vectors. The query/key projections determine scores, the mask determines which conditional dependencies are permitted, and the value/output projections determine the result's representation. Multi-head attention partitions projected channels into independently normalized groups before combining their outputs. The calculation below includes the forward function, its derivatives, exact dense and causal arithmetic counts, materialized tensor sizes, and the difference between a logical score matrix and an allocated one. (PAPER-REPORTED: P01 section 3.2; MATHEMATICALLY-DERIVED: Eq. 5.4-5.8 and derivatives.)
 
 ## Why this exists
 
-What failed before attention was the fixed-size bottleneck between positions: a recurrent state of D numbers had to summarise an arbitrarily long prefix. Attention replaces the summary with a data-dependent weighted sum over all prefix positions, at the price of computing T weights per query position. PAPER-REPORTED (P01, Table 1): per-layer complexity O(n²·d) with O(1) sequential operations, versus O(n·d²) and O(n) for recurrence. The bottleneck that this introduced is the object those weights live in — an attention score matrix of T² entries per head — and the dominant constraint at long T is its bytes, not its FLOPs. What changed in later solutions (Chapter 14 and Chapter 27) is either the number of keys each query sees or whether the matrix is ever written to memory; the definition below is what they preserve or approximate.
+An attention branch provides input-dependent interaction between positions without a recurrent state transition along the training sequence. This interaction is nonlinear even before a feed-forward activation is added: Q and K depend on the input, their product is bilinear, and softmax changes the normalized weights. Describing attention as only a linear map would therefore give an incorrect account of the Transformer's representational function. For fixed probabilities P, the map V to PV is linear; that restricted statement does not make the complete attention branch linear. (MATHEMATICALLY-DERIVED.)
+
+The computation also separates architectural dependence from execution. A dense causal mask defines all allowed past-position pairs. Evaluating that function by first producing a full T-by-T score array is one implementation; a tiled exact implementation can process blocks and combine normalization statistics without storing the full array in HBM. Both retain the arithmetic dependence on the number of allowed query-key pairs. A memory reduction is not evidence of linear-time full attention. (PAPER-REPORTED: P19 section 3/Theorems1-2.)
 
 ## Intuition
 
-Physically, attention is two batched matrix multiplications with a row-wise softmax between them. The first multiplies a `[T, Dh]` query block by a `[Dh, T]` key block, producing T² numbers from 2·T·Dh inputs; the second multiplies the T² probabilities by a `[T, Dh]` value block, producing T·Dh outputs. Arithmetic intensity therefore falls as Dh shrinks relative to T: each of the T² scores costs 2·Dh FLOPs to produce and 2 bytes to store in BF16, so at Dh = 64 the score matrix is 128 FLOPs per stored byte pair — well below the ratio at which an accelerator is compute-bound ([§25.3](../../../vol-02-execution-and-optimization/part-05-hardware-kernels-and-distributed-execution/ch25-accelerators-memory-hierarchy-and-performance-models/25-3-roofline-reasoning.md)). MATHEMATICALLY-DERIVED from the shapes.
+For one query row i, the allowed logits are normalized by their shared partition function. Adding a common finite constant to all allowed logits changes neither their probabilities nor the attention output. Multiplying the logits by a scalar generally does change the probabilities: it changes their relative differences and therefore the distribution's concentration. A mask operates before normalization; deleting a forbidden value after an unmasked softmax would leave its probability mass in the denominator and would not compute the intended conditional distribution. (MATHEMATICALLY-DERIVED.)
 
-Heuristically, a query "looks up" the keys it matches; this is a reading aid and no claim about what the learned keys encode.
+The usual inverse-square-root head scaling follows a stated source model for initialization: independent, centered unit-variance query and key components give a dot product with variance d_h. Dividing by sqrt(d_h) then gives unit variance. Learned queries and keys need not satisfy those premises after training, and a particular logit distribution or training outcome cannot be inferred from the scaling constant alone. (PAPER-REPORTED: P01 section 3.2.1 footnote; MATHEMATICALLY-DERIVED: variance sum.)
 
 ## Formulation
 
-Input `n ∈ ℝ^{B×T×D}` (the normalised residual stream). Parameters per block: `W_Q, W_K, W_V, W_O ∈ ℝ^{D×D}`, with `D = H·Dh` and H = H_q = H_kv in the reference form. The additive causal mask `M ∈ ℝ^{T×T}` has `M_{ij} = 0` for `j ≤ i` and `−∞` otherwise. Local symbol: `S` is the score tensor in this section only (the global S of [notation.md](../../../front-matter/notation.md) is reserved for inference sequence length and is not used here).
-
-> **Definition — scaled dot-product attention.** For one head, `Attn(Q, K, V; M) = softmax(QKᵀ/√Dh + M)·V`, the softmax taken over the key axis, with an additive mask M.
-
-> **Definition — attention score matrix.** The `[B, H, T, T]` tensor `S = QKᵀ/√Dh` before masking and softmax; it is the only tensor in the reference forward pass whose size is quadratic in T.
-
-> **Definition — multi-head attention (reference form).** H independent scaled dot-product attentions over per-head slices of Q, K, V, whose `[B, H, T, Dh]` outputs are merged to `[B, T, D]` and projected by W_O. Head-sharing forms (H_kv < H_q) are owned by §14.1.
+Let n have shape `[B, T, d]`; take H heads of width d_h with `d=H*d_h`. In the equal-query/KV-head reference, each of W_Q, W_K, W_V, W_O has shape `[d, d]`. Head splitting transforms `[B, T, d]` to `[B, H, T, d_h]` by a declared channel ordering. It is a layout operation, not additional model arithmetic. The symbols V and P in equations below denote value vectors and attention probabilities locally; vocabulary size is used only in the output-head discussion.
 
 $$
-Q = n\,W_Q,\quad K = n\,W_K,\quad V = n\,W_V \;\in\; \mathbb{R}^{B\times T\times D},\qquad\text{reshaped to } [B, H, T, D_h]
+Q=nW_Q,\quad K=nW_K,\quad V=nW_V,\qquad Q,K,V\mapsto\mathbb R^{B\times H\times T\times d_h}.
 $$
-*(Eq. 5.4)* where the reshape splits D into H contiguous slices of Dh; no arithmetic.
+*(Eq. 5.4)*
 
 $$
-S_{b,h} = \frac{Q_{b,h}\,K_{b,h}^{\top}}{\sqrt{D_h}} + M \;\in\; \mathbb{R}^{T\times T}
+S_{b,h,i,j}=\frac{Q_{b,h,i,:}K_{b,h,j,:}^{\top}}{\sqrt{d_h}}+M_{b,i,j}.
 $$
-*(Eq. 5.5)* where the mask is broadcast over b and h; `−∞` entries produce exactly zero probability after softmax.
+*(Eq. 5.5)* Here M is 0 for an allowed pair and negative infinity for a forbidden pair. A batch-specific mask can combine causality, padding, and document boundaries. For ordinary unpadded self-attention, a pair is allowed exactly when j is no greater than i.
 
 $$
-P_{b,h} = \mathrm{softmax}_{\text{rows}}(S_{b,h}),\qquad C_{b,h} = P_{b,h}\,V_{b,h} \;\in\; \mathbb{R}^{T\times D_h}
+P_{b,h,i,j}=\frac{\exp(S_{b,h,i,j}-m_{b,h,i})}{\sum_{k\in\mathcal A_{b,i}}\exp(S_{b,h,i,k}-m_{b,h,i})},\quad
+C_{b,h}=P_{b,h}V_{b,h},\quad m_{b,h,i}=\max_{j\in\mathcal A_{b,i}}S_{b,h,i,j}.
 $$
-*(Eq. 5.6)* where the softmax is computed with the max-subtracted form of [§3.2](../ch03-numerical-computation-and-trustworthy-training/03-2-stable-primitives.md).
+*(Eq. 5.6)* This definition requires a nonempty allowed set and finite allowed scores. Forbidden positions have probability0. A fully masked row does not define a categorical distribution; returning zero for it is an explicit extension of the operator, not a consequence of this quotient.
 
 $$
-a = \mathrm{merge}(C)\,W_O \;\in\; \mathbb{R}^{B\times T\times D}
+a=\operatorname{merge}(C)W_O\in\mathbb R^{B\times T\times d}.
 $$
-*(Eq. 5.7)* where merge is the inverse of the reshape in Eq. 5.4 (transpose to `[B, T, H, Dh]`, then view as `[B, T, D]`).
+*(Eq. 5.7)* Merge restores the declared head/channel ordering.
+
+$$
+M_{\mathrm{one\ score\ copy}}=BH T^2 b_s\quad\text{bytes}.
+$$
+*(Eq. 5.8)* The dtype-specific b_s need not equal the residual or cache element size. One array's size is distinct from peak live memory, allocator reserve, or HBM traffic. (MATHEMATICALLY-DERIVED.)
 
 ```figure
 id: fig-5.7
@@ -122,11 +124,6 @@ spec:
     - { shape: "[B, T, D]", label: "merge(C)", op: "transpose + merge, no arithmetic" }
     - { shape: "[B, T, D]", label: "a, attention output", op: "· W_O, Eq. 5.7", cost: "2·D² FLOPs/token · D² params" }
 ```
-
-$$
-M_{\text{scores}} = B\,H\,T^{2}\,b \;\text{bytes per layer, per materialised copy}
-$$
-*(Eq. 5.8)* where b is bytes per value; a materialised implementation holds S and P, and training retains P for the backward pass.
 
 ```figure
 id: fig-5.8
@@ -169,11 +166,26 @@ spec:
     - { label: "B = 1, H = 32, T = 8192", values: { B: 1, H: 32, T: 8192 } }
 ```
 
-> **Assumption.** The scale is exactly `1/√Dh` · *sensitivity:* PAPER-REPORTED (P01, §3.2.1, footnote): if the components of q and k are independent with mean 0 and variance 1, the dot product has variance Dh, so the scale restores unit variance at initialisation; a learned or larger scale changes the softmax temperature and is a design change owned by [§13.2](../../part-03-model-architectures-and-state/ch13-dense-transformer-design-and-parameter-allocation/13-2-width-depth-and-heads.md).
-
 ## Mechanism
 
-Eq. 5.4 is three GEMMs (or one packed `[D, 3D]` GEMM) costing `3·2·D²` FLOPs per token and `3·D²` parameters. Eq. 5.5 is a batched GEMM over B·H problems of size `[T, Dh] × [Dh, T]`, costing `2·T·Dh` FLOPs per query per head, i.e. `2·T·D` per token summed over heads; Eq. 5.6's second GEMM costs the same again, so the two score-dependent matmuls cost `4·T·D` FLOPs per token per layer under a full mask. Under the causal mask, half the entries of S are `−∞` and contribute nothing to the output; an implementation that skips them halves this term, an implementation that computes and then masks them does not. MATHEMATICALLY-DERIVED. Eq. 5.7 costs `2·D²` per token and `D²` parameters. The per-block attention totals are therefore `4·D²` parameters and `8·D² + 4·T·D` FLOPs per token (full mask), and the ratio of the score term to the projection term is `T/(2D)`: for T = 1024 and D = 768 the score matmuls are two thirds of the projection FLOPs; for T = 8192 they exceed them fivefold. MATHEMATICALLY-DERIVED.
+### Methodology
+
+The three input projections cost6d^2 multiply-add FLOPs per token and contain3d^2 parameters; the output projection contributes2d^2 FLOPs and d^2 parameters. With dense square QK-transpose and PV products, each product costs2BH*T^2*d_h FLOPs, giving4B*T^2*d for the pair. The per-token attention total is therefore8d^2+4Td, excluding scale, mask, probability normalization, and dropout. These excluded operators still execute and can matter for runtime. The exact scalar multiply/add count2mnp-mp differs from the conventional2mnp GEMM reporting convention; this chapter consistently uses the latter. (MATHEMATICALLY-DERIVED.)
+
+A causal sequence has T(T+1)/2 allowed pairs per head. If an implementation skips precisely the forbidden work, the two attention products average2(T+1)d FLOPs per token, rather than 4Td. A dense product followed by masking still executes the dense product. Tile boundaries can introduce padding or partially masked blocks, so a real kernel's issued instructions need not equal the allowed-pair ideal. Softmax and masking operate on O(BHT^2) entries in the materialized path; their omission from a matmul table does not make them free.
+
+For the dense reference, the ratio of score-product work to projection work is T/(2d). With d=768 it is 2/3 at T=1024 and 16/3 at T=8192. This is an arithmetic ratio, not a measured runtime ratio. The size of one score array relative to one residual array is T/d_h when element sizes agree: at d_h=64 it is 16 for T=1024 and 128 for T=8192. Neither ratio by itself identifies the device's first capacity limit or the performance bottleneck; saved activations across layers, logits, weight storage, workspaces, and bandwidth must also be counted.
+
+The backward computation makes the nonlinearity explicit. For one head let G be the upstream derivative with respect to C, with mask and scale held fixed. Differentiate C=PV to obtain `dV=P^T G` and `dP=G V^T`. The softmax vector-Jacobian product is
+
+$$
+\bar S=P\odot\left(\bar P-\operatorname{rowsum}(P\odot\bar P)\right),\qquad
+\bar Q=\bar S K/\sqrt{d_h},\qquad
+\bar K=\bar S^{\top}Q/\sqrt{d_h}.
+$$
+Bars denote cotangents, and the row sum is broadcast along the key axis. Every row of barS sums to0 because adding a common score offset leaves softmax unchanged. For forbidden entries P=0, so their score derivatives vanish. This does not imply that an input token with no direct prediction loss receives no gradient: it can contribute keys or values to later supervised queries. The projection derivatives then use the ordinary dense-layer rule, accumulating contributions from Q, K, and V into the shared input. (MATHEMATICALLY-DERIVED.)
+
+A materialized backward can retain P along with Q, K, V and necessary projection inputs. P19 instead recomputes tiled probabilities from stored normalization statistics and applies the same mathematical derivatives. Its online-normalization state combines a running maximum, rescaled denominator, and weighted numerator; changing the maximum requires rescaling both accumulated quantities. Omitting that rescaling would combine blocks normalized on incompatible scales. The complete IO-aware kernel and proof belong to27.1, while this section defines the function they must preserve. (PAPER-REPORTED: P19 section 3 and AppendixB.)
 
 ```figure
 id: fig-5.9
@@ -211,19 +223,16 @@ spec:
     - { x: 8192, label: "T/(2D) = 16/3" }
 ```
 
-The bytes tell a different story. The projections produce three `[B, T, D]` tensors — `3·B·T·D·b` bytes. The score matrix is `B·H·T²·b` bytes (Eq. 5.8), and its ratio to one `[B, T, D]` tensor is `H·T/D = T/Dh`: at Dh = 64 the score matrix is 16 times a `[B, T, D]` tensor when T = 1024, and 128 times when T = 8192. This is the quantity that P19 avoids materialising. PAPER-REPORTED (P19, abstract): the algorithm uses tiling to reduce HBM reads and writes and requires fewer HBM accesses than standard attention, computing exact attention. The mechanism (online softmax, tiling, recomputation) is developed in §27.1; here only the consequence is used — the `[B, H, T, T]` line can be removed from the memory trace without changing the function computed.
-
 ```figure
 id: fig-5.10
 kind: chart
 title: Score-matrix bytes against the linear attention tensors
 caption: >-
-  The vertical gap between the emphasised line and the lowest line is T/Dh:
-  16 at T = 1024, 128 at T = 8192. The peak of Algorithm 5.2 is the S-and-P
-  line plus the Q, K, V, C line, and S and P overtake Q, K, V, C at
-  T = 2·Dh = 128, so at any practical T the materialised path's memory is
-  set by the quadratic line alone. Reference configuration, illustrative, not
-  a named model.
+  The score-to-residual allocation ratio is T/d_h:16 at T=1024,128 at
+  T=8192. S-plus-P counts two copies, and Q/K/V/C four residual-sized tensors.
+  Their sum is a partial inventory only if their lifetimes overlap; it omits
+  inputs, outputs, mask, softmax temporaries, backward state, and workspace.
+  It does not determine the complete measured peak of Algorithm 5.2.
 placement: inline
 evidence: MATHEMATICALLY-DERIVED
 source: "DERIVED:eq-5.8"
@@ -249,19 +258,15 @@ spec:
     - { x: 8192, label: "S = 128 × one [B, T, D]" }
 ```
 
-<details><summary>Derivation of the causal-mask halving</summary>
-For query position i, the mask admits keys j ≤ i, i.e. i+1 keys. Summing over i = 0…T−1 gives T(T+1)/2 admitted pairs against T² total, so the admitted fraction is (T+1)/(2T) → 1/2. Per-token FLOPs for the two score matmuls are then `2·(T+1)·D` on average instead of `4·T·D`. MATHEMATICALLY-DERIVED.
-</details>
-
 ```figure
 id: fig-5.11
 kind: matrix
 title: Causal mask at T = 8
 caption: >-
-  Row i is a query, column j a key; filled cells are the pairs the mask
-  admits, j ≤ i. The highlighted row 5 sees i + 1 = 6 keys. Summing the rows
-  gives T(T+1)/2 = 36 of 64 pairs, the fraction (T+1)/(2T) = 9/16 that tends
-  to one half as T grows, which is the saving a mask-skipping kernel can claim.
+  Row i admits key j when j<=i. At T=8 there are 36 allowed pairs out of 64,
+  a fraction9/16. This counts useful causal pairs; a dense product followed
+  by masking still computes64, and tiled execution may compute boundary
+  entries. Pair counts do not establish a measured speedup.
 placement: inline
 evidence: MATHEMATICALLY-DERIVED
 source: "DERIVED:eq-5.5"
@@ -292,75 +297,75 @@ spec:
 ## Algorithm
 
 ```text
-Algorithm 5.2 — Causal multi-head attention (materialised reference form)
-INPUT   n : [B, T, D]; W_Q, W_K, W_V, W_O : [D, D]; H with D mod H = 0
-OUTPUT  a : [B, T, D]
-STATE   Q, K, V : [B, H, T, Dh]; S, P : [B, H, T, T]
-INVARIANT rows of P sum to 1 (within fp tolerance) and P[..., i, j] = 0 for j > i
-1.  Q, K, V ← split_heads(n·W_Q), split_heads(n·W_K), split_heads(n·W_V)   # Eq. 5.4
-2.  S ← Q · Kᵀ / √Dh                                                       # [B, H, T, T]
-3.  S ← S + M                                                              # M[i, j] = −∞ for j > i
-4.  P ← softmax(S − rowmax(S)) along the last axis                         # §3.2 stable form
-5.  C ← P · V                                                              # [B, H, T, Dh]
-6.  a ← merge_heads(C) · W_O                                               # Eq. 5.7
-7.  return a
-TERMINATION: straight-line code; no loops.
+Algorithm 5.2 - Materialized causal multi-head attention
+INPUT: n[B,T,d]; W_Q,W_K,W_V,W_O[d,d]; H with d divisible by H; allowed[B,T,T]
+OUTPUT: a[B,T,d]
+STATE: Q,K,V[B,H,T,d_h]; S,P[B,H,T,T]; C[B,H,T,d_h]
+INVARIANT: every scored query has a nonempty allowed set; forbidden probabilities are zero
+1. Project n into Q,K,V, then split channels into H declared heads.
+2. Compute S = Q K^T / sqrt(d_h) in the declared numerical policy.
+3. Replace forbidden scores by negative infinity; reject unsupported empty rows.
+4. Compute stable softmax over allowed keys using a finite row maximum.
+5. Compute C = P V; transpose and merge the heads in the original channel order.
+6. Return a = merge(C) W_O.
+TERMINATION: a finite straight-line calculation.
 ```
 
-Complexity: `8·D² + 4·T·D` FLOPs per token; peak memory `2·B·H·T²·b` (S and P) plus `4·B·T·D·b` (Q, K, V, C). Implementation: `reference_transformer.py` in [verification.md](verification.md); the fused path replaces lines 2–5 by one call.
+The dense arithmetic is O(B*T*d^2+B*T^2*d); explicit score/probability storage is O(B*H*T^2). The algorithm specifies its rejection of unsupported empty rows. A backend that defines their output as zero must state and test that extension separately. Dropout is disabled here, so normalized rows sum to1 within numerical tolerance. Applying dropout to P changes that per-realization row-sum property. (MATHEMATICALLY-DERIVED.)
 
 ## Implementation
 
-Tensors → operators: lines 2–5 map to `torch.nn.functional.scaled_dot_product_attention(query, key, value, attn_mask=None, dropout_p=0.0, is_causal=False, scale=None, enable_gqa=False)`. OFFICIAL-DOCUMENTATION (R5.13, PyTorch 2.14.0, accessed 2026-09-20): the documentation lists three fused implementations — FlashAttention-2, memory-efficient attention, and a PyTorch C++ implementation — states that the PyTorch implementation is used for other cases, and states that an error is thrown if both `attn_mask` and `is_causal` are set. The reference model therefore passes `is_causal=True` and no explicit mask on the prefill path, and an explicit mask only where a padding mask must be combined (§5.5). Kernels: the FlashAttention path is at the *Kernels / numerics / collectives* layer; OFFICIAL-DOCUMENTATION (R5.15, FlashAttention repository README, accessed 2026-09-20): FlashAttention-2 supports fp16 and bf16, all head dimensions up to 256, and aligns the causal mask to the bottom-right corner of the attention matrix when query and key lengths differ — the convention that makes cached decode (§5.5) a special case of the same kernel. Memory: which backend is selected for a given shape and dtype is decided at run time by the framework and is not asserted here (UNVERIFIED for any specific configuration until traced). Communication: none on one device; head-sharded tensor parallelism partitions the H axis of Eq. 5.4 ([§29.2](../../../vol-02-execution-and-optimization/part-05-hardware-kernels-and-distributed-execution/ch29-parallelism-collectives-and-distributed-optimization/29-2-tensor-and-pipeline-parallelism.md)). Deployment: inference engines replace K and V by paged buffers ([§42.3](../../../vol-02-execution-and-optimization/part-07-inference-algorithms-distillation-and-compression/ch42-prefill-decode-kv-state-and-inference-resource-models/42-3-cache-organization.md)).
+The inspected PyTorch 2.14 SDPA documentation lists three supported implementations: FlashAttention-2, memory-efficient attention, and the PyTorch C++ mathematical implementation. The C++ path is one of the three, rather than a fourth implementation after three fused kernels. Dispatch depends on input constraints. The interface's Boolean attention mask uses True for an allowed entry; `MultiheadAttention` uses True for a masked-out entry. Copying a Boolean mask between those APIs without changing its meaning can invert visibility. (OFFICIAL-DOCUMENTATION: R5.13 Notes.)
 
-> **Implementation note [impl.pytorch · 2.14.0 documentation, execution UNVERIFIED].** The documented reference computation in R5.13 scales by `1/√E` where E is the last dimension of the query, applies the mask additively, applies softmax and dropout, then multiplies by value — the same order as Algorithm 5.2. A user-supplied `scale` overrides the default.
+Non-square causality needs special care. PyTorch's documented `is_causal=True` alignment is upper-left for non-square attention; a cached chunk with T_q new positions after an old prefix instead needs `j <= old_length+i`. R5.20 constructs the lower-right triangular bias with diagonal offset `T_k-T_q`. With a single new query and only valid past/current keys, every stored key is allowed, so no causal mask is necessary. Padding and document masks still apply where relevant. FlashAttention's inspected README documents its own lower-right alignment; a Boolean `causal` argument must therefore be interpreted through the selected API rather than assumed universal. (OFFICIAL-DOCUMENTATION: R5.13; R5.15; R5.20.)
+
+SDPA applies dropout according to the supplied `dropout_p`; a caller must pass0 during deterministic evaluation instead of assuming that `model.eval()` changes a functional argument. Its documented reference path also rejects simultaneous explicit `attn_mask` and `is_causal`; combine the intended causal, padding, and document policy into one explicit mask when needed. The softmax reduction policy and QK accumulation policy are separate: subtracting a row maximum cannot repair a score that already overflowed to infinity.
+
+Memory accounting distinguishes simultaneous S/P copies, saved tensors, allocator buffers, and temporary kernel workspace. A single-copy bound is not a peak-memory guarantee. Device traffic also depends on tiling and reuse; dividing FLOPs by the size of one output tensor is not a roofline arithmetic-intensity estimate for the complete operator. No latency or bandwidth result is claimed without a concrete trace.
 
 ## Experimental design
 
-Proposal. Compare Algorithm 5.2 against the fused call on the verification fixture in FP32 and BF16, reporting the maximum absolute difference of `a` per position; then repeat with the query length set to 1 and K, V of length T to check the bottom-right mask alignment. Expected: FP32 differences at the level of reduction-order noise; BF16 differences bounded as in [verification.md](verification.md). Rejection: any position with a non-zero probability on a future key.
+### Reported experiments
+
+P01 section 6.2 changes the head configuration within its translation model and evaluates source-defined perplexity and BLEU. It distinguishes the complete model's reported outcome from the simplified equal-width arithmetic account. Changing the number of heads while fixing total projected width changes normalization groups and head dimensions even when projection parameters remain fixed. (PAPER-REPORTED: P01 Table 3.)
+
+P19 section 4 evaluates kernel execution and end-to-end training in its stated hardware and model settings. The mechanism being tested is an IO-aware exact evaluation, whereas task outcomes and runtime measurements depend on the complete configuration. Its asymptotic IO analysis and empirical speedups are separate evidence: the former follows a memory model and size regime; the latter is measured for specific implementations. This chapter does not transplant a speedup into an unmeasured reference. (PAPER-REPORTED: P19 sections 3-4.)
 
 ## Observations
 
-**What the paper claims.** PAPER-REPORTED (P01, §3.2.2): multi-head attention with h = 8 heads and d_k = d_v = d_model/h = 64 has total computational cost similar to single-head attention with full dimensionality, and the authors report that the base model uses these values. PAPER-REPORTED (P19, abstract): FlashAttention computes exact attention with fewer HBM accesses than the standard implementation and is optimal for a range of SRAM sizes.
+**What the paper claims.** P01 defines scaled multi-head attention; P19 gives an exact tiled implementation with lower HBM traffic in its analyzed regime. PyTorch documents API-specific masking, dropout, and dispatch semantics. (PAPER-REPORTED; OFFICIAL-DOCUMENTATION.)
 
-**What the evidence shows.** The equal-cost claim of P01 is a direct consequence of `H·Dh = D` in Eq. 5.4–5.7 and needs no measurement; the IO-optimality claim of P19 is an asymptotic statement whose realised speedups are hardware- and shape-specific and are treated as versioned measurements in §27.2, not as constants.
+**What the evidence shows.** Full attention retains quadratic allowed-pair arithmetic even when the score array is not materialized in HBM. Equal projected width can preserve projection parameter counts while changing the learned function through different heads and normalization groups. (MATHEMATICALLY-DERIVED.)
 
-**What we infer.** DERIVED: for the reference model, the attention block's parameter count is independent of T while its FLOPs and bytes both grow with T, and the bytes grow faster (T² against T); hence memory, not arithmetic, is the first resource exhausted as context grows, which is why §5.5's cache and §27's kernels target bytes.
+**What we infer.** Correctness checks must cover probabilities, output values, derivatives, masks, and cached-position alignment. Equal tensor shapes or equal parameter totals cannot establish these properties. (MATHEMATICALLY-DERIVED.)
 
-**What remains unknown.** NOT-DISCLOSED: whether a given production model uses biases, a non-default scale, or a packed QKV layout is absent from most public reports; UNVERIFIED: the backend actually dispatched for the reference configuration on a named accelerator.
+**What remains unknown.** The selected backend, measured traffic, numerical error, and latency for the chapter's reference have not been executed or measured. Unsupported backend shapes and empty-row behavior require a version-specific check. (UNVERIFIED.)
 
 ## Failure modes
 
-> **Failure mode — future leakage.** *Symptom:* training loss falls implausibly fast; generation degrades sharply from the first sampled token. *Cause:* mask applied after softmax, wrong orientation (`triu` versus `tril`), or `is_causal` combined with an explicit mask that is not causal. *Detection:* assert `P[..., i, j] = 0` for `j > i` on the fixture. *Mitigation:* additive `−∞` mask before softmax; single source of truth for the mask.
+An inverted or post-softmax mask can preserve plausible output shapes while changing the conditional model. A deterministic future-perturbation test and an explicit probability inspection distinguish visibility errors from ordinary training variation. In cached chunks, an upper-left mask can ignore valid prefix keys; inspect the allowed absolute index pairs before comparing final logits.
 
-> **Failure mode — softmax overflow in low precision.** *Symptom:* NaN in P at a few rows. *Cause:* exponentiating unshifted scores in FP16 or BF16. *Detection:* compare against the FP32 stable form of §3.2. *Mitigation:* max-subtraction; FP32 accumulation of the row sum.
+A fully masked row can yield an undefined normalization or backend-specific extension. Validate which queries are scored and ensure that each has a valid key; explicitly define ignored-row outputs when padding creates empty rows. Logit overflow before normalization is a separate numerical failure from exponent overflow after normalization, and needs a compatible accumulation policy.
 
-> **Failure mode — score matrix out of memory.** *Symptom:* allocation failure at line 2 of Algorithm 5.2 as T grows, while weights fit comfortably. *Cause:* Eq. 5.8. *Detection:* the trace shows `[B, H, T, T]` at BF16 exceeding free memory. *Mitigation:* fused non-materialising attention (§27.1); smaller B; sequence parallelism ([§29.3](../../../vol-02-execution-and-optimization/part-05-hardware-kernels-and-distributed-execution/ch29-parallelism-collectives-and-distributed-optimization/29-3-sequence-and-context-parallelism.md)).
+A head/channel permutation error changes the function while preserving all dimensions. Intermediate comparison of projected and merged tensors localizes it. An out-of-memory event in an explicit score allocation is explained by Eq. 5.8, but replacing the kernel does not guarantee the entire model fits: retained FFN tensors, logits, and optimizer state can remain limiting. These are analytical failure mechanisms and proposed diagnostics, not measurements from an executed reference.
 
 ## Siblings
 
-**MQA / GQA** — [§14.1](../../part-03-model-architectures-and-state/ch14-attention-architectures-and-cache-representations/14-1-mha-mqa-and-gqa.md)
-Why it exists: PAPER-REPORTED (R5.6, abstract): incremental inference is slow because of the memory-bandwidth cost of repeatedly loading the keys and values tensors. What assumption changed: query heads may share K and V heads. What objective changed: none. What problem it solved: K, V bytes per token fall by H_q/H_kv. What new failure mode it introduced: reduced K, V capacity at H_kv = 1. Changed primitive: per-head W_K, W_V → shared.
+Shared-key/value attention changes the number and width of K/V projections and cache entries while retaining query heads. Latent attention introduces a compressed state and a different projection decomposition. Sparse or sliding attention changes the allowed-pair set and therefore the conditional dependencies. Their scientific treatments are in 14.1-14.3; a changed state representation or mask must be specified before importing the formulas above.
 
-**Latent (MLA-style) attention** — [§14.2](../../part-03-model-architectures-and-state/ch14-attention-architectures-and-cache-representations/14-2-latent-attention.md)
-Why it exists: cache bytes at long context. What assumption changed: K and V are reconstructed from a low-dimensional latent. What objective changed: none. What problem it solved: cache stores the latent, not K and V. What new failure mode it introduced: implementation-dependent cache layout. Changed primitive: `[B, H, T, Dh]` K, V → latent `[B, T, d_c]`.
-
-**Sparse / sliding-window attention** — [§14.3](../../part-03-model-architectures-and-state/ch14-attention-architectures-and-cache-representations/14-3-sparse-and-local-attention.md)
-Why it exists: the T² term. What assumption changed: each query sees a subset of keys. What objective changed: none. What problem it solved: score bytes and FLOPs become O(T·w). What new failure mode it introduced: coverage gaps for distant evidence. Changed primitive: full causal mask → banded or block mask.
-
-**Exact IO-aware execution (FlashAttention)** — [§27.1](../../../vol-02-execution-and-optimization/part-05-hardware-kernels-and-distributed-execution/ch27-attention-latent-attention-and-expert-kernels/27-1-io-aware-attention.md)
-Why it exists: Eq. 5.8. What assumption changed: none about the function; the assumption that S must be materialised is dropped. What objective changed: none. What problem it solved: O(T²) bytes → O(T) bytes in HBM. What new failure mode it introduced: shape, dtype and hardware support constraints. Changed primitive: two GEMMs with a stored P → one tiled kernel with recomputation.
+Exact IO-aware execution preserves the defined dense attention function in real arithmetic while changing tiling, saved state, and recomputation. It belongs to27.1. Floating-point output differences still depend on reduction order and numerical policy. An execution optimization and a changed attention architecture therefore require different equivalence criteria. (PAPER-REPORTED: P19 section 3.)
 
 ```figure
 id: fig-5.12
 kind: compare
 title: Attention siblings as differentials of the reference trace
 caption: >-
-  Each column changes one line of Algorithm 5.2. Head sharing and latent
-  caches shrink the per-token K, V row and leave the score tensor alone;
-  sparse masks shrink the score tensor and its FLOPs; the IO-aware kernel
-  removes the score tensor from memory while computing the identical
-  function. Only the last column is the same model.
+  Shared-KV heads alter projections and cache dimensions while leaving the
+  number of materialized query-head scores unchanged. Local masking reduces
+  work/storage only with execution exploiting sparsity. P19 changes exact
+  attention execution, with possible rounding differences. A latent cache
+  may include positional state beyond its compressed content vector.
+  These alternatives have source-specific layouts and quality evidence.
 placement: wide
 evidence: MATHEMATICALLY-DERIVED
 source: ["DERIVED:eq-5.8", R5.6, P19]
@@ -368,9 +373,9 @@ alt: >-
   Comparison of five attention forms on K, V bytes per token per layer and
   score bytes per layer at fixed D, H_q and T. Reference MHA: 2·H·Dh·b and
   B·H·T²·b. MQA and GQA: 2·H_kv·Dh·b, a reduction by H_q/H_kv, with scores
-  unchanged. Latent, MLA-style: the cache stores a d_c-wide latent per token,
+  unchanged. Latent, MLA-style: the cache stores a compressed content plus any required positional state per token,
   layout implementation-dependent, scores unchanged if materialised. Sparse or
-  sliding-window: K, V row unchanged, scores and score FLOPs become O(T·w).
+  sliding-window: K, V row unchanged, stored/computed pairs become O(T*w) only with sparse execution.
   IO-aware exact execution (FlashAttention): K, V unchanged, no [B, H, T, T]
   tensor in HBM, O(T) bytes, identical function. The rows also list the
   changed primitive, the function computed and the new failure mode.
@@ -386,25 +391,29 @@ spec:
     - { id: io, label: "IO-aware exact (FlashAttention)", node: ms.section.27.1 }
   rows:
     - { dimension: "changed primitive", values: { mha: "per-head W_K, W_V; full causal mask", gqa: "W_K, W_V shared across query heads", mla: "K, V [B, H, T, Dh] → latent [B, T, d_c]", sparse: "full causal mask → banded or block mask", io: "two GEMMs + stored P → one tiled kernel with recomputation" } }
-    - { dimension: "K, V bytes per token per layer", values: { mha: "2·H·Dh·b", gqa: "2·H_kv·Dh·b, ÷ H_q/H_kv", mla: "d_c·b latent; layout implementation-dependent", sparse: "2·H·Dh·b, unchanged", io: "2·H·Dh·b, unchanged" } }
-    - { dimension: "score bytes per layer", values: { mha: "B·H·T²·b (Eq. 5.8)", gqa: "B·H_q·T²·b, unchanged", mla: "B·H·T²·b if materialised, unchanged", sparse: "O(T·w) per head", io: "no [B, H, T, T] in HBM; O(T) bytes" } }
-    - { dimension: "score FLOPs per token per layer", values: { mha: "4·T·D, full mask", gqa: "4·T·D, unchanged", mla: "not derived here (§14.2)", sparse: "O(w·D)", io: "4·T·D forward, plus recomputation in backward" } }
-    - { dimension: "function computed", values: { mha: "reference", gqa: "a different model (shared K, V)", mla: "a different model (latent K, V)", sparse: "a different model (subset of keys)", io: "identical (exact attention, P19)" } }
+    - { dimension: "K, V bytes per token per layer", values: { mha: "2·H·Dh·b", gqa: "2·H_kv·Dh·b, ÷ H_q/H_kv", mla: "compressed content plus positional state; layout-specific", sparse: "2·H·Dh·b, unchanged", io: "2·H·Dh·b, unchanged" } }
+    - { dimension: "score bytes per layer", values: { mha: "B·H·T²·b (Eq. 5.8)", gqa: "B·H_q·T²·b, unchanged", mla: "B·H·T²·b if materialised, unchanged", sparse: "O(T*w) per head only with sparse storage", io: "no [B, H, T, T] in HBM; O(T) bytes" } }
+    - { dimension: "score FLOPs per token per layer", values: { mha: "4·T·D, full mask", gqa: "4·T·D, unchanged", mla: "not derived here (§14.2)", sparse: "O(w*D) with sparse execution", io: "4·T·D forward, plus recomputation in backward" } }
+    - { dimension: "function computed", values: { mha: "reference", gqa: "a different model (shared K, V)", mla: "a different model (latent K, V)", sparse: "a different model (subset of keys)", io: "same real-arithmetic attention; rounding may differ" } }
     - { dimension: "new failure mode", values: { mha: "score OOM as T grows", gqa: "reduced K, V capacity at H_kv = 1", mla: "implementation-dependent cache layout", sparse: "coverage gaps for distant evidence", io: "shape, dtype and hardware support limits" } }
 ```
 
 ## Extensions
 
-Long context changes only T in Eq. 5.5–5.8. Multimodal inputs add tokens with the same Q, K, V lines; cross-attention ([§14.4](../../part-03-model-architectures-and-state/ch14-attention-architectures-and-cache-representations/14-4-cross-attention.md)) draws K and V from another sequence and is a shape change, `[B, T_kv, D]`, not an equation change. Positions: RoPE rotates Q and K after Eq. 5.4 and before Eq. 5.5, adding no parameters (§15.1). These are proposals for the reader's configuration.
+### Improvements
+
+For cross-attention, Q has T_q positions and K/V have T_k positions, so the score shape becomes `[B, H, T_q, T_k]` and the two products cost4B*T_q*T_k*d when projected widths agree. The projections can also use different source and target widths. The positional and masking contract must be re-established; a causal self-attention triangle is not a generic cross-attention mask. (MATHEMATICALLY-DERIVED.)
+
+Packed QKV projections and fused attention are compatible when their channel ordering, mask, scale, and numerical policies agree. Neither eliminates the need to compare gradients for training use. P19's improvement concerns HBM movement and saved state under a particular memory model, rather than an unconditional improvement for every device, sequence length, or dtype. (PAPER-REPORTED: P19 sections 3-4.)
 
 ## Limitations
 
-The materialised form is the numerical reference, not the execution target: it is what fused kernels are checked against ([§26.6](../../../vol-02-execution-and-optimization/part-05-hardware-kernels-and-distributed-execution/ch26-kernel-programming-and-numerical-equivalence/26-6-correctness-under-optimization.md)). The FLOP counts assume dense GEMMs and exclude softmax, mask and reshape costs, which are O(T²) in operations but not in multiply-adds. The falsification condition is that a fused implementation disagrees with Algorithm 5.2 beyond the tolerance of [verification.md](verification.md) on an in-support shape.
+The formulas assume equal query/KV head counts, equal query/key head widths, and dense projections without biases. The materialized reference excludes attention dropout and rejects unsupported empty rows. Its leading GEMM counts omit scalar/reduction work and backend padding; its byte formulas describe explicitly named arrays rather than measured peak allocation. The inverse-square-root scaling argument uses a stated initialization distribution and does not describe every learned logit distribution.
 
 ## Reproducibility
 
-Reference: Algorithm 5.2 as implemented in [verification.md](verification.md); API pinned to the PyTorch 2.14.0 documentation (R5.13), execution UNVERIFIED; FlashAttention constraints from R5.15 as of 2026-09-20. Unresolved: backend dispatch per shape.
+Record head ordering, projection shapes, masks in absolute indices, scale, dtype and accumulation policy, dropout, position IDs, and the selected backend. Compare a deterministic reference forward and backward over square, padded, and cached non-square cases. Proposed numerical checks remain in [verification.md](verification.md); no external attention implementation has been executed for this revision. Exact inspected source versions and locators are in [references.md](references.md).
 
 ## References
 
-P01 · P19 · R5.6 · R5.13 · R5.15 · [references.md](references.md)
+P01 ? P19 ? R5.6 ? R5.13 ? R5.15 ? R5.20 ? [references.md](references.md)

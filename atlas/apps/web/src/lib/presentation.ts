@@ -12,7 +12,26 @@
  * rail number regions identically (ordinals follow display order, not the
  * role's position in the contract).
  */
-import type { OutlineEntry, Region, RegionRole, ResearchDocument } from '@atlas/core';
+import {
+  REGION_ROLE_LABELS,
+  type OutlineEntry,
+  type Region,
+  type RegionRole,
+  type ResearchDocument,
+} from '@atlas/core';
+
+/** Public reading labels; source roles and stable fragments remain unchanged. */
+const ARTICLE_SECTION_TITLES: Readonly<Partial<Record<RegionRole, string>>> = {
+  scope: 'Problem and scope',
+  why: 'Research context',
+  intuition: 'Conceptual structure',
+  formulation: 'Mathematical formulation',
+  mechanism: 'Methodology and mechanism',
+  'experimental-design': 'Experimental design and evidence',
+  observations: 'Results and analysis',
+  siblings: 'Related approaches',
+  extensions: 'Extensions and improvements',
+};
 
 /** Reading order for chapter pages; roles not listed keep their relative order after these. */
 const CHAPTER_READING_ORDER: readonly RegionRole[] = [
@@ -47,14 +66,24 @@ function rank(role: RegionRole, order: readonly RegionRole[]): number {
 
 export function presentDocument(doc: ResearchDocument): Presentation {
   const isChapter = doc.meta.entityType === 'chapter';
-  const indexed = doc.regions.map((region, index) => ({ region, index }));
+  const indexed = doc.regions.map((source, index) => {
+    const title =
+      doc.meta.entityType === 'section' && source.title === REGION_ROLE_LABELS[source.role]
+        ? (ARTICLE_SECTION_TITLES[source.role] ?? source.title)
+        : source.title;
+    return { region: title === source.title ? source : { ...source, title }, index };
+  });
 
   const main = isChapter
     ? indexed
         .filter(({ region }) => !APPARATUS_ROLES.has(region.role))
-        .sort((a, b) => rank(a.region.role, CHAPTER_READING_ORDER) - rank(b.region.role, CHAPTER_READING_ORDER) || a.index - b.index)
+        .sort(
+          (a, b) =>
+            rank(a.region.role, CHAPTER_READING_ORDER) - rank(b.region.role, CHAPTER_READING_ORDER) ||
+            a.index - b.index,
+        )
         .map(({ region }) => region)
-    : doc.regions;
+    : indexed.map(({ region }) => region);
   const apparatus = isChapter ? doc.regions.filter((region) => APPARATUS_ROLES.has(region.role)) : [];
 
   const ordinals = new Map<string, string>();
@@ -64,7 +93,10 @@ export function presentDocument(doc: ResearchDocument): Presentation {
 
   const byAnchor = new Map(doc.outline.map((entry) => [entry.anchor, entry]));
   const outline = [...main, ...apparatus]
-    .map((region) => byAnchor.get(region.anchor))
+    .map((region) => {
+      const entry = byAnchor.get(region.anchor);
+      return entry === undefined ? undefined : { ...entry, title: region.title };
+    })
     .filter((entry): entry is OutlineEntry => entry !== undefined);
 
   return { main, apparatus, ordinals, outline };

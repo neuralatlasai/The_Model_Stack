@@ -31,7 +31,7 @@ datasets: []
 status: {maturity: established, disputed: false}
 evidence_summary: {labels_used: [MATHEMATICALLY-DERIVED, DERIVED, ASSUMED, PAPER-REPORTED, OFFICIAL-DOCUMENTATION, NOT-DISCLOSED, UNVERIFIED], empirically_observed: false}
 word_count_target: 2300
-updated_at: 2026-09-20
+updated_at: 2026-10-08
 editorial_status: manuscript_draft
 ---
 
@@ -39,15 +39,21 @@ editorial_status: manuscript_draft
 
 ## Scope
 
-Objective: specify how arms of an experiment are constructed so that a difference is attributable — baselines, ablations, factorial designs, paired prompts, fixed budgets, and interaction effects — and work through DataComp-LM (P07) as a published controlled data comparison, stating only what the paper reports. Baseline: the one-factor-at-a-time comparison against a baseline copied from another paper. Success: given a claimed improvement the reader can name the resource that was matched, the factors that were crossed, and the interactions that remain unestimated. Boundaries: the statistics of the resulting differences are in [§6.4](06-4-measurement-uncertainty.md); compute-optimal allocation in [§21.2](../../part-04-training-science-and-adaptation/ch21-scaling-laws-and-compute-allocation/21-2-compute-optimal-design.md); pilot sweeps in [§21.5](../../part-04-training-science-and-adaptation/ch21-scaling-laws-and-compute-allocation/21-5-pilot-methodology.md); filter interactions inside a data pipeline in [§8.6](../../part-02-data-and-representation-engineering/ch08-cleaning-deduplication-privacy-filtering-and-contamination/08-6-filter-interactions.md); preference-objective comparisons in [§33.6](../../../vol-02-execution-and-optimization/part-06-post-training-and-reinforcement-learning/ch33-direct-preference-optimization-and-related-objectives/33-6-controlled-comparison.md).
+A controlled comparison assigns an intervention to a specified experimental unit and measures a prespecified response under documented controls. For language-model research, that intervention might be a data filter, architecture component, loss term, optimisation rule, or inference scaffold. Its interpretation depends on the baseline, tuning procedure, training and evaluation budgets, replication, and any interaction with the surrounding system.
+
+This section derives full-factorial contrasts and their uncertainty under explicit run-noise assumptions, distinguishes conditional ablation effects from marginal effects, and defines resource-matched comparisons. DataComp-LM supplies a concrete fixed-recipe data comparison; FineWeb supplies a replicated ablation protocol; compute-optimal training supplies a different question about allocation within a budget ([P06, P07, P09](references.md), PAPER-REPORTED).
 
 ## Why this exists
 
-What failed before is the comparison in which the proposed arm and the baseline arm differ in more than the proposal. The new method is tuned and the baseline is quoted from its original paper; the new data is trained for more tokens; the new tokenizer changes both tokens and FLOPs per byte; the new filter costs accelerator-days that the baseline never received. Dodge et al. report cases where a different computational investment "would have reversed published conclusions" about which model is better (PAPER-REPORTED · R6.24). The bottleneck is that a training run is the experimental replicate and is expensive, so designs drift toward few cells and single seeds, where main effects and interactions are inseparable. The constraint that became dominant is the [resource ledger](../ch01-foundation-model-lifecycle/01-5-resource-accounting.md): every arm has a ledger row, and a comparison is controlled exactly when the rows agree on the matched resource. What changed is that published designs now fix the recipe and vary one declared object — P07 states, "To isolate the effect of dataset interventions, we fix a training recipe at each scale" (PAPER-REPORTED · P07 §3.4) — and that this structure can be specified, and audited, before any run.
+An improvement over a published number can combine a new method with more tuning, a changed tokenizer, a different prompt, or more consumed data. A baseline rerun under the candidate's evaluation procedure removes some of those differences, but cannot remove unrecorded treatment changes. Equal tuning effort and explicit budget definitions therefore belong to the comparison, rather than to an appendix added after a favourable result.
+
+Interactions also constrain attribution. Removing a component from a completed system measures its contribution at the remaining components' current settings. Adding it to a minimal baseline measures its contribution at other settings. The contrasts agree only under restrictions on interactions. DataComp-LM's stated limits on joint ablation and run-to-run exploration illustrate why a broad empirical pipeline is not automatically a factorial causal decomposition ([P07](references.md), Section 6, PAPER-REPORTED).
 
 ## Intuition
 
-Physically, an arm is a pipeline that converts resources (tokens, FLOPs, accelerator-hours, tuning runs) into a checkpoint and then into a score. Two arms are comparable when they drew the same resources and differ only where declared. One-factor-at-a-time designs walk along the edges of a star centred on the baseline: each factor is varied with all others at baseline level, so the response at the corners — both factors changed together — is never observed. A factorial design occupies the corners of the cube; every run informs every effect. Heuristically, researchers describe this as "checking that the gains stack"; the measurable content is the interaction coefficient.
+For two binary interventions, the four cell means define two conditional effects for each intervention. Their difference measures interaction. Observing only the baseline and the full system identifies the combined change, while observing three cells still leaves one unrestricted cell mean unknown. Replication reduces uncertainty in the observed cells; it does not supply the missing intervention.
+
+Budget matching is equally conditional. A filter can improve quality at fixed training FLOPs while adding curation work. A larger model can improve quality at fixed tokens while consuming more FLOPs. These are valid claims at their named boundaries. A total-resource claim requires accounting for the omitted stages and a separate comparison in which the cheaper method receives a prespecified additional allocation.
 
 ## Formulation
 
@@ -485,23 +491,9 @@ Proposal only; no run was executed.
 
 ## Siblings
 
-**One-factor-at-a-time ablation** — this file
-Why it exists: fewest runs. What assumption changed: interactions are zero. What problem it solved: cost. New failure mode: interaction read as main effect. Changed primitive: cube → star.
+One-factor-at-a-time designs estimate conditional effects around an anchor configuration. They can screen factors cheaply, but cannot identify unrestricted interactions without additional cells. A full binary factorial identifies all cell means; a fractional factorial trades that coverage for a known alias structure. Treating aliased coefficients as individual effects requires restrictions that should be stated before observing the response.
 
-**Fractional factorial and screening designs** — this file
-Why it exists: 2^k is unaffordable for k > 4 at training-run cost. What assumption changed: named high-order interactions are zero. What problem it solved: screening many factors. New failure mode: aliased effects misattributed. Changed primitive: full crossing → registered fraction.
-
-**Iso-FLOP sweeps** — [§21.2 Compute-optimal design](../../part-04-training-science-and-adaptation/ch21-scaling-laws-and-compute-allocation/21-2-compute-optimal-design.md)
-Why it exists: choose N and D under one C. What assumption changed: the factor is the allocation, the budget is fixed. What objective changed: loss at fixed C. What problem it solved: confounding of size with compute. New failure mode: fitted-form extrapolation. Changed primitive: discrete arms → a curve per budget.
-
-**Fixed-recipe competitions (DCLM-style)** — [§9.2 Quality and diversity](../../part-02-data-and-representation-engineering/ch09-data-mixtures-curricula-and-sample-efficiency/09-2-quality-and-diversity.md)
-Why it exists: many groups, one question. What assumption changed: the organiser fixes everything except the dataset. What problem it solved: cross-group comparability. New failure mode: the fixed recipe may favour some datasets (recipe × data interaction unestimated). Changed primitive: per-paper recipe → shared recipe.
-
-**Controlled preference-objective comparison** — [§33.6 Controlled comparison](../../../vol-02-execution-and-optimization/part-06-post-training-and-reinforcement-learning/ch33-direct-preference-optimization-and-related-objectives/33-6-controlled-comparison.md)
-Why it exists: objective variants are compared on different data and references. What assumption changed: data, reference policy, and budget are matched. What objective changed: the factor *is* the objective. New failure mode: judge dependence. Changed primitive: checkpoint arms → objective arms.
-
-**Online A/B tests** — [§47.3 Release control](../../../vol-02-execution-and-optimization/part-08-inference-engines-and-production-serving/ch47-observability-deployment-changes-and-incident-recovery/47-3-release-control.md)
-Why it exists: offline items miss deployment behaviour. What assumption changed: users are randomised, not items. New failure mode: interference and novelty effects. Changed primitive: item pairing → user randomisation.
+An iso-FLOP sweep varies parameter and token allocation within each compute budget, as in [21.2](../../part-04-training-science-and-adaptation/ch21-scaling-laws-and-compute-allocation/21-2-compute-optimal-design.md). A fixed-recipe data competition holds an organiser's model and recipe fixed while varying data selection. The former studies allocation; the latter estimates data effects conditional on that recipe. Neither establishes recipe-independent superiority. Online randomised deployment studies additionally require an assignment unit, interference model, and time boundary; item pairing alone does not supply those conditions.
 
 ## Extensions
 

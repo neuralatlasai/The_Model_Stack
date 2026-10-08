@@ -36,7 +36,7 @@ evidence_summary:
   labels_used: [MATHEMATICALLY-DERIVED, PAPER-REPORTED, OFFICIAL-DOCUMENTATION, ASSUMED, DERIVED, NOT-DISCLOSED]
   empirically_observed: false
 word_count_target: 1000
-updated_at: 2026-09-20
+updated_at: 2026-10-08
 editorial_status: manuscript_draft
 ---
 
@@ -44,58 +44,81 @@ editorial_status: manuscript_draft
 
 ## Scope
 
-Objective: tabulate, for one concrete configuration, the parameters by component, the activation shapes and bytes, the major FLOPs per token in forward and training, and a first memory trace covering weights, activations and cache. Baseline: the accounting conventions of P08 §2.1 and the CS336 handout's FLOPs rule (R5.11). Success criterion: every number in the tables is reproducible from the shapes of §5.1–§5.5 by hand. Boundaries: the configuration is illustrative and ASSUMED; the general parameter/FLOP model across architecture families is Chapter 13's artifact; training-memory totals with optimiser state are Eq. N.5 (Chapters 29–30); KV accounting at serving scale is Eq. N.8 (Chapter 42).
+Parameter count, arithmetic, resident storage, retained activations, and memory traffic measure different properties of an execution. This section derives each from the decoder trace in 5.1, with an explicit distinction between a dense matrix's unique parameters and the number of times it is applied. It then evaluates one declared configuration, including weight sharing, causal work, the last-row vocabulary projection during prefill, and the lifetime of cached tokens. The calculation is analytical; it is neither an undisclosed production configuration nor an accelerator benchmark. (MATHEMATICALLY-DERIVED: Eq. 5.22-5.25; PAPER-REPORTED context: P08 section 2.1/Table 1; P19 section 3.)
+
+Architecture allocation across families is developed in Chapter 13, sharded training state in Chapters 29-30, and serving capacity in Chapter 42. The present calculation provides the component identities those treatments require; substituting a reported model's dimensions also requires substituting its actual biases, normalization, positional mechanism, head sharing, and FFN variant.
 
 ## Why this exists
 
-What failed before was cost reasoning by parameter count alone: two models with equal N can differ several-fold in activation memory (by T and F), in cache bytes (by H_kv), and in attention FLOPs (by T), so "N" is not a cost. The bottleneck is that the terms grow at different rates — weights O(1) in T, cache O(T), scores O(T²) — and any single constant hides the crossover. The dominant constraint depends on the mode: activations in training, cache bytes in decode. What changed is the practice of writing the trace down with its three growth regimes separated; the tables below are that practice applied once, so later chapters can apply it by difference.
+A tied vocabulary matrix is stored once but participates in both input lookup and output projection. Those operations have different arithmetic: lookup selects rows, whereas a full vocabulary head multiplies every output channel. Counting every stored scalar as a dense multiply therefore overcounts learned positions and input-only embeddings, while omitting the head from a non-embedding compute convention can undercount a small decoder with a large vocabulary.
+
+Sequence-dependent work creates another distinction. Full attention computes a number of token pairs quadratic in sequence length; the cache stores a number of vectors linear in consumed tokens. A non-materializing attention kernel can remove quadratic intermediate storage while retaining quadratic full-attention arithmetic. P08 uses an explicitly approximate non-embedding compute convention for scaling fits; P19 studies the input/output traffic of exact attention. Neither convention supplies a universal latency or peak-memory measurement for an arbitrary implementation. (PAPER-REPORTED: P08 Table 1/section 2.1; P19 Theorems1-2.)
 
 ## Intuition
 
-Physically, weights are read once per token in decode and once per batch in training; activations are written and read once per block per token; the cache is written once per token and read once per subsequent token. Multiply each by its byte count and the traffic picture follows. Heuristically, "parameters ≈ cost" holds only in the regime P08 identifies — `d_model ≫ n_ctx/12` — and the tables show where the reference configuration sits relative to that boundary.
+For an [m, n] by [n, p] dense product, this chapter counts one multiplication and one addition per accumulation, giving 2mnp leading FLOPs. This convention omits the missing first addition in a literal dot product, as well as bias, activation, normalization, and reduction operations unless separately listed. A forward product and its two required input/weight gradient products have the same leading matrix arithmetic; this is the origin of the three-times-forward training approximation, rather than a statement about physical memory reads.
+
+Storage follows unique live allocations, not FLOPs. A tensor contributes its element count times its actual storage bytes while it remains live; views do not create another copy. Traffic additionally depends on cache residency, reuse across a batch, fusion, layout conversions, and recomputation. The ideal decode read estimate below is a declared one-read model. It cannot establish bandwidth saturation without a device, kernel, batch, and timing protocol.
 
 ## Formulation
 
-Configuration (ASSUMED, illustrative; not a specification for any named model):
+The analytical decoder has L=12 blocks, residual width d=768, H_q=H_kv=12, head width d_h=64, a bias-free two-matrix GELU FFN of width F=3072, vocabulary V=32000, and a learned absolute-position table of length T_max=1024. Each block has two d-element RMSNorm gains and there is one final gain. The training tensor example uses B=8 and T=1024. Weight, ordinary activation, and cache storage are BF16 (two bytes), while the separately listed logits are FP32 (four bytes). These are inputs to a calculation, not source-reported hyperparameters of a named model. A parameter-matched SwiGLU uses F_g=2048, with a different nonlinear graph and potentially different saved tensors (5.3).
 
-| Symbol | Value | Note |
-|---|---|---|
-| L | 12 | blocks |
-| D = d_model | 768 | residual width |
-| H = H_q = H_kv | 12 | heads; Dh = 64 |
-| F = d_ff | 3072 | GELU two-matrix form (SwiGLU: F_g = 2048, same N) |
-| V | 32,000 | vocabulary |
-| T_max | 1024 | learned position table |
-| B, T | 8, 1024 | training microbatch used in the activation table |
-| b | 2 | BF16 storage for weights, activations and cache |
+Let N_resident count unique parameter scalars, N_block-mat count only block projection matrices, and N_dense include the block matrices plus one full vocabulary projection:
 
-The depth and width coincide with the smallest configuration of the GPT-2 report — PAPER-REPORTED (R5.2, Table 2): 117M parameters, 12 layers, d_model 768 — but that model has V = 50,257, tied embeddings and LayerNorm, so its count differs from the table below.
+$$
+N_{\rm resident}=Vd+T_{\max}d+L(4d^2+2dF+2d)+d+[Vd]_{\rm untied}.
+$$
+*(Eq. 5.22)*
+
+Thus N_block-mat=L(4d^2+2dF)=84,934,656 and N_dense=N_block-mat+dV=109,510,656. These counts deliberately differ: an untied input embedding adds storage without adding a dense input projection; a tied head still incurs its projection FLOPs. RMSNorm gains and learned positions contribute to N_resident but not to N_dense.
+
+For a forward pass that evaluates the vocabulary head at every position,
+
+$$
+C_{\rm fwd/token}=2L(4d^2+2dF)+2dV+4LTd
+                 =2N_{\rm dense}+4LTd.
+$$
+*(Eq. 5.23; dense attention products before masking.)*
+
+If the implementation skips all forbidden causal pairs, summing t valid keys for queries t=1,..., T replaces 4LTd by 2L(T+1)d. Actual tiled kernels can compute padded or boundary-tile entries, so the triangular count is ideal useful arithmetic, not an exact hardware instruction count. The leading training estimate is
+
+$$
+C_{\rm train/token}\approx3C_{\rm fwd/token}.
+$$
+*(Eq. 5.24)*
+
+This requires both cotangents for each counted matrix product and excludes optimizer updates, elementwise work, padding, communication, and recomputation. Checkpointing adds the forward operators actually recomputed, rather than a universal percentage.
+
+For a specified saved-tensor schedule with distinct allocations, one useful inventory is
+
+$$
+M_{\rm saved/block}=BTb(\alpha d+\beta F)+BH T^2b\gamma.
+$$
+*(Eq. 5.25; a conditional inventory, not a universal autograd formula.)*
+
+Here alpha, beta, and gamma count distinct simultaneously retained tensors of the indicated shapes. The example below declares eight residual-sized tensors, two FFN-sized tensors, and one probability tensor. A fused kernel has its own saved inputs/statistics and recomputation schedule; setting gamma=0 illustrates removal of that probability allocation, but does not specify its complete peak.
 
 ```figure
 id: fig-5.27
 kind: stat-panel
 title: Reference configuration and its headline totals
 caption: >-
-  The configuration is ASSUMED and illustrative, not a named model; every
-  total below it is a formula over the configuration rows. Note the last two
-  rows: a single sequence's cache reaches the size of the tied weights at
-  about 6k tokens, and one forward token costs 257 MFLOP of which the head
-  alone is almost a fifth.
+  The analytical reference has 110316288 tied or134892288 untied unique
+  parameters. N_dense=109510656 counts matrices used by dense projections,
+  not all resident storage. Cache growth is 36 KiB per consumed token. The
+  ideal dense-matrix/cache read crossing lies beyond T_max=1024 and cannot
+  be executed without changing the positional specification.
 placement: rail
 anchor: formulation
 evidence: MATHEMATICALLY-DERIVED
 source: ["DERIVED:eq-5.21", "DERIVED:eq-5.22", "DERIVED:eq-5.23"]
 alt: >-
-  Instrument panel for the chapter's illustrative reference configuration,
-  not a named model: L = 12, D = 768, H = 12, Dh = 64, F = 3072 (SwiGLU
-  F_g = 2048), V = 32,000, T_max = 1024, training B × T = 8 × 1024, BF16.
-  Parameters tied 110,316,288; untied 134,892,288; non-embedding N in the P08
-  convention 84,953,856. Tied BF16 weights about 210 MiB. KV cache 36 KiB per
-  token. A single sequence's cache equals the tied weights at about 5,985
-  tokens. Forward FLOPs per token at T = 1024 under a full mask about
-  257 MFLOP. A block glyph splits the untied parameters into token embedding
-  (24.6 M), position table (0.8 M), the 12 blocks (85.0 M) and the untied head
-  (24.6 M).
+  Analytical dimensions L=12, d=768, H=12, F=3072, V=32000, T_max=1024.
+  Unique tied parameters110316288; untied134892288. Dense projection
+  matrix count109510656. Tied BF16 storage210.4116 MiB. Cache growth
+  36 KiB per consumed token. Dense forward at T=1024 costs256770048
+  leading FLOPs per token, with all head rows evaluated.
 spec:
   header: "REFERENCE CONFIG · BF16 · ILLUSTRATIVE"
   variables: { L: 12, D: 768, H: 12, F: 3072, V: 32000, Tmax: 1024, T: 1024, b: 2 }
@@ -107,10 +130,10 @@ spec:
     - { key: "training B × T", value: "8 × 1024" }
     - { key: "params, tied (Eq. 5.22)", formula: "V*D + Tmax*D + L*(4*D^2 + 2*D*F + 2*D) + D", format: integer }
     - { key: "params, untied", formula: "V*D + Tmax*D + L*(4*D^2 + 2*D*F + 2*D) + D + D*V", format: integer }
-    - { key: "non-embedding N (P08)", formula: "L*(4*D^2 + 2*D*F + 2*D) + D", format: integer }
+    - { key: "N_dense: projection matrices plus head", formula: "L*(4*D^2 + 2*D*F) + D*V", format: integer }
     - { key: "weights, tied, BF16", formula: "(V*D + Tmax*D + L*(4*D^2 + 2*D*F + 2*D) + D)*b", format: bytes }
     - { key: "KV cache per token (Eq. 5.21)", formula: "2*L*H*(D/H)*b", format: bytes }
-    - { key: "cache = tied weights at s", formula: "(V*D + Tmax*D + L*(4*D^2 + 2*D*F + 2*D) + D)*b/(2*L*D*b)", format: tokens }
+    - { key: "ideal read crossing; beyond T_max", formula: "(L*(4*D^2 + 2*D*F) + D*V)/(2*L*D)", format: tokens }
     - { key: "fwd FLOPs/token, T = 1024", formula: "2*L*(4*D^2 + 2*D*F) + 2*D*V + 4*L*T*D", format: flops, note: "full mask, Eq. 5.23" }
   glyph:
     type: blocks
@@ -121,34 +144,25 @@ spec:
       - { label: "untied head W_out", weight: 24576000 }
 ```
 
-$$
-N = VD + T_{\max}D + L\,(4D^{2} + 2DF + 2D) + D + [\,DV\,]_{\text{untied}}
-$$
-*(Eq. 5.22)* where the bracket is present only for an untied head; norm gains are counted; no biases.
-
 ```figure
 id: fig-5.28
 kind: calculator
 title: Parameter count by component
 caption: >-
-  The defaults reproduce the untied total of the parameter table,
-  134,892,288; the tied preset gives 110,316,288. Watch the embedding-plus-head
-  share: 36% untied and 22% tied at V = 32,000, because V/D is large at this
-  width. Raise D and the share falls; raise V and it climbs, which is why
-  vocabulary size is a compute decision. Illustrative configuration, not a
-  named model.
+  Unique parameter totals include learned positions and gain-only norms.
+  Tying removes a second vocabulary allocation but retains head arithmetic.
+  Vocabulary/head share is 36.4% untied or22.3% tied at these dimensions.
+  The separate N_dense output excludes input-only embeddings, positions,
+  and gains; it is not P08's non-embedding parameter convention.
 placement: rail
 anchor: formulation
 evidence: MATHEMATICALLY-DERIVED
 source: "DERIVED:eq-5.22"
 alt: >-
-  Calculator for Eq. 5.22 over blocks L, width D, FFN width F, vocabulary V,
-  position-table length T_max and an untied-head switch. At the defaults
-  (L = 12, D = 768, F = 3072, V = 32,000, T_max = 1024, untied) the blocks hold
-  84,953,088 parameters, the total is 134,892,288, non-embedding N is
-  84,953,856, the embedding and head are 36.4% of the total, and the BF16
-  weights occupy about 257 MiB. With the head tied the total is 110,316,288,
-  the embedding share 22.3%, and the weights about 210 MiB.
+  Eq. 5.22 parameter calculator. Defaults give 134892288 untied or110316288
+  tied unique scalars. Block parameters including gains are 84953088.
+  Dense projection matrices plus head contain109510656 scalars. BF16
+  resident storage is 257.2866 MiB untied or210.4116 MiB tied.
 spec:
   tex: >-
     N = VD + T_{\max}D + L\,(4D^{2} + 2DF + 2D) + D + [\,DV\,]_{\text{untied}}
@@ -163,76 +177,78 @@ spec:
   outputs:
     - { symbol: Nb, label: "all blocks, L·(4D² + 2DF + 2D)", formula: "L*(4*D^2 + 2*D*F + 2*D)", format: integer }
     - { symbol: N, label: "total parameters", formula: "V*D + Tmax*D + Nb + D + u*D*V", format: integer, emphasis: true }
-    - { symbol: Nne, label: "non-embedding N, P08 convention", formula: "Nb + D", format: integer }
+    - { symbol: Nne, label: "N_dense: matrices plus head", formula: "L*(4*D^2 + 2*D*F) + D*V", format: integer }
     - { symbol: E, label: "embedding + head share", formula: "V*D*(1 + u)/N", format: percent }
     - { symbol: W, label: "weights in BF16", formula: "2*N", format: bytes }
   presets:
     - { label: "tied head", values: { u: 0 } }
 ```
 
-$$
-\text{FLOPs}_{\text{fwd/token}} = \underbrace{2L(4D^{2} + 2DF)}_{2N_{\text{blocks}}} + 2DV + \underbrace{4LTD}_{\text{scores, full mask}}
-$$
-*(Eq. 5.23)* where the first term is the weight-GEMM term, the second the head, the third the two score matmuls of §5.2 per token; under a causal mask that skips masked work the third term averages `2L(T+1)D`.
-
-$$
-\text{FLOPs}_{\text{train/token}} \approx 3\times\text{FLOPs}_{\text{fwd/token}} = 6N_{\text{blocks}} + 6DV + 12LTD
-$$
-*(Eq. 5.24)* where the factor 3 is Eq. 5.19; with full activation recomputation add one more forward: `8N_blocks + …`.
-
-$$
-M_{\text{act/block}} = B\,T\,b\,\big(\alpha D + \beta F\big) + B\,H\,T^{2}\,b\,\gamma
-$$
-*(Eq. 5.25)* where α, β, γ count retained tensors of each shape; for the reference block without recomputation and with materialised attention, α = 8 (n, Q, K, V, C, a-input, n_ffn, f-input), β = 2 (u, v), γ = 1 (P); with a non-materialising kernel γ = 0.
-
-> **Definition — 2N-per-token rule.** The approximation `FLOPs_fwd/token ≈ 2N` (and `6N` for training) obtained from Eq. 5.23–5.24 by dropping the score term and counting the head inside N; valid when `4LTD ≪ 2N`, i.e. `T ≪ N/(2LD)`.
-
 ## Mechanism
 
-**Parameters.** Evaluating Eq. 5.22:
+### Methodology
 
-| Component | Tensor(s) | Shape | Parameters |
-|---|---|---|---|
-| Token embedding | E | [32,000, 768] | 24,576,000 |
-| Position table | P | [1024, 768] | 786,432 |
-| Attention (per block) | W_Q, W_K, W_V, W_O | 4 × [768, 768] | 2,359,296 |
-| FFN (per block) | W_1, W_2 | [768, 3072], [3072, 768] | 4,718,592 |
-| Norms (per block) | γ_att, γ_ffn | 2 × [768] | 1,536 |
-| Per block total | | | 7,079,424 |
-| All blocks (L = 12) | | | 84,953,088 |
-| Final norm | γ_L | [768] | 768 |
-| Output head (untied) | W_out | [768, 32,000] | 24,576,000 |
-| **Total, tied** | | | **110,316,288** |
-| **Total, untied** | | | **134,892,288** |
+Count unique parameter storage first, and then count each operator application. The reference gives the following exact integers; the gain-only RMSNorm and absence of projection biases are part of the specification.
 
-MATHEMATICALLY-DERIVED. The embedding and head are 22% (tied) or 36% (untied) of the total; non-embedding parameters (P08's N) are 84,953,856 including the final norm. The SwiGLU switch (F_g = 2048, three matrices) leaves every row unchanged (§5.3).
+| Component | Shape or count | Parameters |
+|---|---|---:|
+| Token embedding E | [32000,768] | 24,576,000 |
+| Learned positions | [1024,768] | 786,432 |
+| Attention matrices per block | four [768,768] matrices | 2,359,296 |
+| FFN matrices per block | [768,3072] and [3072,768] | 4,718,592 |
+| RMSNorm gains per block | two [768] vectors | 1,536 |
+| All twelve blocks, including gains | 12 times 7,079,424 | 84,953,088 |
+| Final gain | [768] | 768 |
+| Additional head when untied | [768,32000] | 24,576,000 |
+| **Unique parameters, tied** | Eq. 5.22 | **110,316,288** |
+| **Unique parameters, untied** | Eq. 5.22 | **134,892,288** |
 
-**FLOPs per token.** Evaluating Eq. 5.23:
+Tied BF16 parameter storage is 220,632,576 bytes, or 210.4116 MiB; untied storage is 257.2866 MiB. The tied embedding/head allocation is about22.3% of parameters, and the two untied allocations together are about36.4%. Increasing width also changes block matrices quadratically, so a vocabulary-share comparison must declare which dimensions remain fixed. Matching SwiGLU projection parameters does not establish matching activation storage or latency.
 
-| Term | Expression | Value (FLOPs/token) |
-|---|---|---|
-| Attention projections | 2·L·4D² | 56,623,104 |
-| FFN GEMMs | 2·L·2DF | 113,246,208 |
-| Weight-GEMM subtotal | 2·N_blocks | 169,869,312 |
-| Output head | 2·D·V | 49,152,000 |
-| Score matmuls, full mask, T = 1024 | 4·L·T·D | 37,748,736 |
-| Score matmuls, causal average | 2·L·(T+1)·D | 18,892,800 |
-| Forward total (full mask) | | 256,770,048 |
-| Training total (×3, full mask) | | 770,310,144 |
+| Forward term, per token | Leading FLOPs |
+|---|---:|
+| All attention projections | 56,623,104 |
+| All FFN projections | 113,246,208 |
+| Full vocabulary head | 49,152,000 |
+| Attention pair products, dense T=1024 | 37,748,736 |
+| Attention pair products, ideal causal T=1024 | 18,892,800 |
+| **Dense forward total** | **256,770,048** |
+| **Ideal causal forward total** | **237,914,112** |
+| Dense leading training estimate, times three | 770,310,144 |
 
-MATHEMATICALLY-DERIVED. The score term is 22% of the weight-GEMM term at T = 1024 under a full mask and 11% under a causal kernel that skips masked work; the head is 29% — large because V/D is large at this width. The 2N rule with N = 110.3M (tied) gives 220.6 MFLOPs; the full-mask forward total exceeds it by 16% and the causal-average total by 7.8% (the 2N-rule residual, measured relative to 2N as Algorithm 5.7 defines it); PAPER-REPORTED (P08, §2.1): the paper's `C_forward ≈ 2N + 2·n_layer·n_ctx·d_attn` counts non-embedding N and a single context-dependent term, and states that for `d_model > n_ctx/12` the context-dependent cost is a relatively small fraction, adopting `C ≈ 6N` per training token. The reference configuration has D = 768 against `n_ctx/12 = 85`, well inside that regime. This chapter's score term `4LTD` counts both the QKᵀ and the PV matmul and is therefore twice P08's `2·n_layer·n_ctx·d_attn`; the difference is an accounting convention, not a disagreement about the arithmetic. DERIVED.
+The head is smaller than both the combined FFN projections and the combined attention projections in this configuration. The dense pair term is about17.2% of 2N_dense; relative to all block projection work alone it is about22.2%. A ratio must name its denominator. Comparing the dense total with 2N_resident mixes storage and operator conventions; the cleaner residual is (C_fwd-2N_dense)/(2N_dense).
+
+### Tensor storage and lifetime
+
+At B=8, T=1024, one BF16 [B, T, d] allocation is 12 MiB; Q, K, V together occupy36 MiB and the merged context another12 MiB if separately stored. One [B, H, T, T] allocation is 192 MiB. A materialized implementation can temporarily hold scores and probabilities simultaneously, giving384 MiB for those two allocations alone. Each [B, T, F] BF16 FFN allocation is 48 MiB. FP32 [B, T, V] logits contain262,144,000 elements and occupy1000 MiB.
+
+An explicitly chosen saved inventory is h_prev, n_att, Q, K, V, C, h_mid, n_ffn (eight residual-sized allocations), plus FFN preactivation u and activated v (two FFN-sized allocations), plus attention probabilities P. If all are distinct and retained across the forward pass, Eq. 5.25 gives 384 MiB per block and 4.5 GiB across twelve blocks. Removing P from this inventory leaves192 MiB per block and 2.25 GiB across blocks, before kernel statistics, final-normalization/head state, backward temporaries, weights, optimizer state, and allocator reserve. This subtraction is an inventory identity; it is not a prediction that an executed fused implementation halves total training peak. Actual autograd saves, aliasing, fusion, and scheduling must be inspected.
+
+At T=8192 the same hypothetical inventory's P allocations alone would total 144 GiB. That length exceeds the declared learned position table. The calculation is a storage sensitivity study for a reconfigured model, not an executable long-context setting of this reference.
+
+### Prefill and decode
+
+For one S=1024-token prompt, last-row-only head evaluation gives 193,341,554,688 leading FLOPs under ideal causal skipping; evaluating all prompt heads gives 243,624,050,688. These follow the separate prefill formula in 5.5, not 2N_resident times S. At B=1 the cached K/V for this consumed prompt is 36 MiB. Each additional consumed token adds36,864 bytes across layers, because 2L H_kv d_h b_kv=36 KiB.
+
+A one-query decode step with s valid keys performs approximately 2N_dense+4Lsd leading FLOPs. Under an ideal one-read traffic model its large matrix/cache reads are N_dense b_w+2Lsd b_kv; input embedding gathers, gains, activations, output writes, and workspaces remain additional. With both storages two bytes, those two terms become equal at s=N_dense/(2Ld)=5941.333... . This lies beyond T_max=1024, so the crossing is counterfactual for the stated model. It also depends on batch reuse and memory hierarchy; it cannot establish a measured latency bottleneck. Comparing cache allocation with *resident* parameter allocation gives a different crossing, which is not a per-step traffic calculation.
+
+For G>0 sampled tokens in the standard loop, the prompt is consumed once and the first G-1 sampled tokens are consumed by subsequent forward calls. The final sampled token need not be added to the cache, so its logical length is S+G-1, unless the implementation explicitly performs another consume operation. With G=0 there need be no prefill. Capacity counts consumed positions and must respect position-table bounds.
+
+### Training state
+
+A declared mixed-precision state with BF16 working parameters (2 bytes), BF16 gradients (2), an FP32 master copy (4), and two FP32 Adam moments (8) totals16 bytes per unique parameter. The BF16 working copy is already included. FP32 gradients instead make that total 18 bytes; all-FP32 parameters/gradients/moments total 16 bytes without an additional master copy. These are alternative storage specifications, not universally required framework layouts. Sharding, flattened buffers, gradient accumulation, and allocator behavior require further terms; Chapter 29 develops their distribution.
 
 ```figure
 id: fig-5.29
 kind: calculator
 title: Forward and training FLOPs per token
 caption: >-
-  The defaults reproduce the FLOP table row by row: 169,869,312 for the weight
-  GEMMs, 49,152,000 for the head, 37,748,736 for the scores, 256,770,048
-  forward and 770,310,144 training. The last output is the ratio the 2N rule
-  ignores, 22% here. The T = 8192 preset pushes it past 100%, and the causal
-  preset halves it. Executes Eq. 5.23 and Eq. 5.24; illustrative
-  configuration, not a named model.
+  Dense all-row-head forward gives 256770048 leading FLOPs per token; the
+  three-times-forward training approximation gives 770310144 before omitted
+  operators and recomputation. Ideal triangular pair work gives 237914112
+  forward. The displayed pair/block-projection ratio is 22.2%, which differs
+  from the17.2% residual relative to2*N_dense. Long-length presets require
+  a changed positional specification.
 placement: rail
 anchor: mechanism
 evidence: MATHEMATICALLY-DERIVED
@@ -272,77 +288,56 @@ spec:
 ```figure
 id: fig-5.30
 kind: chart
-title: Error of the 2N rule against sequence length
+title: Pair-work residual relative to dense matrix arithmetic
 caption: >-
-  The residual of Algorithm 5.7, (forward − 2N)/2N with the tied N, is 16% at
-  T = 1024 under a full mask and 7.8% under a causal-skipping kernel. The
-  score term equals the weight-GEMM term at T = 4608, and by T = 8192 the
-  rule undercounts by 136%. Use 2N only well to the left of the crossing.
-  Illustrative configuration, not a named model.
+  The residual is attention pair work divided by 2*N_dense, with the
+  vocabulary head included in that dense-matrix count. At T=1024 it is 17.2%
+  for dense products or8.63% for ideal triangular work. The dense pair term
+  equals block projection work at T=4608; that is a different denominator.
+  Lengths above 1024 are sensitivity calculations, not supported runs of the
+  reference learned-position model.
 placement: inline
 evidence: MATHEMATICALLY-DERIVED
 source: ["DERIVED:eq-5.23", "DERIVED:alg-5.7"]
 alt: >-
-  Log–log line chart of the 2N-rule residual, (forward FLOPs per token − 2N)
-  divided by 2N with N = 110,316,288, against sequence length T from 128 to
-  16,384, for L = 12, D = 768, F = 3072, V = 32,000. Under a full mask the
-  residual is 1.4% at T = 128, 16.4% at T = 1024, 136% at T = 8192 and 273% at
-  T = 16,384. With causal skipping it is 0.35% at T = 128, 7.8% at T = 1024
-  and about 68% at T = 8192. The score term equals the weight-GEMM term at
-  T = 4608.
+  Analytical pair-work residual versus sequence length, using
+  N_dense=109510656. At T=128,1024,8192,16384 dense residuals are
+  2.15%,17.24%,137.88%,275.76%; ideal causal residuals are 1.09%,8.63%,
+  68.95%,137.89%. The position specification only supports1024 tokens.
 spec:
   type: line
   x: { label: "sequence length T", scale: log2, format: tokens, domain: [128, 16384] }
-  y: { label: "(forward FLOPs − 2N) / 2N", scale: log10, format: percent }
-  variables: { L: 12, D: 768, F: 3072, V: 32000, N: 110316288 }
+  y: { label: "pair work / (2*N_dense)", scale: log10, format: percent }
+  variables: { L: 12, D: 768, F: 3072, V: 32000, N: 109510656 }
   series:
     - { id: full, label: "full mask, 4·L·T·D", formula: "(2*L*(4*D^2 + 2*D*F) + 2*D*V + 4*L*x*D - 2*N)/(2*N)", sample: { from: 128, to: 16384, count: 8 }, emphasis: true }
     - { id: causal, label: "causal skipping, 2·L·(T+1)·D", formula: "(2*L*(4*D^2 + 2*D*F) + 2*D*V + 2*L*(x + 1)*D - 2*N)/(2*N)", sample: { from: 128, to: 16384, count: 8 } }
   annotations:
-    - { x: 1024, label: "+16% full · +7.8% causal" }
+    - { x: 1024, label: "17.2% dense;8.63% ideal causal" }
     - { x: 4608, label: "score term = weight-GEMM term" }
-    - { x: 8192, label: "+136%, full mask" }
+    - { x: 8192, label: "137.9% dense;sensitivity beyond T_max" }
 ```
-
-**Activation shapes and bytes** (B = 8, T = 1024, BF16; one block; materialised attention; no recomputation):
-
-| Tensor | Shape | Elements | Bytes |
-|---|---|---|---|
-| Residual stream / any [B, T, D] | [8, 1024, 768] | 6,291,456 | 12 MiB |
-| Q, K, V, C (4 tensors) | 4 × [8, 12, 1024, 64] | 25,165,824 | 48 MiB |
-| Scores S / probabilities P (each) | [8, 12, 1024, 1024] | 100,663,296 | 192 MiB |
-| FFN hidden u, v (each) | [8, 1024, 3072] | 25,165,824 | 48 MiB |
-| Retained per block (α = 8, β = 2, γ = 1) | | | 96 + 96 + 192 = 384 MiB |
-| Retained, all 12 blocks | | | 4.5 GiB |
-| Retained, all blocks, γ = 0 (fused attention) | | | 2.25 GiB |
-| Logits [B, T, V] in FP32 for the loss | [8, 1024, 32,000] | 262,144,000 | 1000 MiB |
-
-MATHEMATICALLY-DERIVED. The single P tensor per block is half of the retained set at this T; at T = 8192 it would be 12 GiB per block against 1.5 GiB for the rest, which is the quantitative content of "attention memory is the O(T²) term". The FP32 logits tensor is larger than all weights combined — a well-known reason to fuse the head with the loss or to chunk it over T.
 
 ```figure
 id: fig-5.31
 kind: memory-stack
-title: Retained training activations, materialised and fused attention
+title: Conditional saved inventory with and without probabilities
 caption: >-
-  Eq. 5.25 summed over 12 blocks at B = 8, plus the FP32 logits. At
-  T = 1024 the P segment alone is half of the retained blocks, 2.25 of
-  4.5 GiB. At T = 8192 it is 144 GiB, the segment that carries the bar across
-  the hairline; removing it with a non-materialising kernel (γ = 0) brings the
-  bar back under. Gradients and optimiser state (Eq. N.5) are not included. The
-  80 GiB line is an illustrative budget, not a product specification, and the
-  configuration is illustrative, not a named model.
+  Eq. 5.25 inventories eight residual-sized, two FFN-sized, and optionally
+  one probability allocation per block, plus FP32 logits. Removing P subtracts
+  2.25 GiB at T=1024; it does not specify a fused kernel's complete saved
+  state or guarantee halving peak. Weights, gradients, optimizer, workspace,
+  and reserve are omitted. T=8192 exceeds this model's position table; the
+  80 GiB line is an analytical budget, not a measured fit.
 placement: inline
 evidence: MATHEMATICALLY-DERIVED
 source: "DERIVED:eq-5.25"
 alt: >-
-  Four stacked bars of retained training activations for all 12 blocks at
-  B = 8, D = 768, F = 3072, H = 12, V = 32,000 and 2 bytes per value, with
-  FP32 logits added. T = 1024 with materialised attention: eight [B, T, D]
-  tensors per block 1.125 GiB, two [B, T, F] tensors per block 1.125 GiB,
-  probabilities P 2.25 GiB, FP32 logits about 0.98 GiB. T = 1024 fused
-  (γ = 0): the same without P. T = 8192 materialised: 9 GiB, 9 GiB, 144 GiB
-  for P and about 7.8 GiB of logits, far above an illustrative 80 GiB budget
-  line. T = 8192 fused: about 25.8 GiB, under the line.
+  Conditional saved-allocation bars at B=8 over 12 blocks. T=1024:
+  residual-sized inventory1.125 GiB, FFN inventory1.125 GiB, P2.25 GiB,
+  and FP32 logits1000 MiB. Removing P leaves the other declared terms,
+  not an observed fused peak. At counterfactual T=8192, P alone is 144 GiB.
+  Additional live allocations determine actual device capacity.
 spec:
   format: bytes
   variables: { L: 12, B: 8, D: 768, F: 3072, H: 12, V: 32000, b: 2, T1: 1024, T2: 8192, alpha: 8, beta: 2 }
@@ -353,7 +348,7 @@ spec:
         - { label: "β = 2 [B, T, F] per block", kind: tensor, formula: "L*beta*B*T1*F*b" }
         - { label: "P [B, H, T, T] per block", kind: tensor, formula: "L*B*H*T1^2*b" }
         - { label: "FP32 logits [B, T, V], once", kind: tensor, formula: "B*T1*V*4" }
-    - label: "T = 1024, fused (γ = 0)"
+    - label: "T = 1024, P removed;other kernel state omitted"
       segments:
         - { label: "α = 8 [B, T, D] per block", kind: tensor, formula: "L*alpha*B*T1*D*b" }
         - { label: "β = 2 [B, T, F] per block", kind: tensor, formula: "L*beta*B*T1*F*b" }
@@ -364,7 +359,7 @@ spec:
         - { label: "β = 2 [B, T, F] per block", kind: tensor, formula: "L*beta*B*T2*F*b" }
         - { label: "P [B, H, T, T] per block", kind: tensor, formula: "L*B*H*T2^2*b" }
         - { label: "FP32 logits [B, T, V], once", kind: tensor, formula: "B*T2*V*4" }
-    - label: "T = 8192, fused (γ = 0)"
+    - label: "T = 8192, P removed;sensitivity only"
       segments:
         - { label: "α = 8 [B, T, D] per block", kind: tensor, formula: "L*alpha*B*T2*D*b" }
         - { label: "β = 2 [B, T, F] per block", kind: tensor, formula: "L*beta*B*T2*F*b" }
@@ -372,87 +367,88 @@ spec:
   budget: { label: "illustrative 80 GiB device, not a product spec", formula: "80*2^30" }
 ```
 
-**First memory trace** (single sequence, BF16, inference):
-
-```text
-Systems trace — reference model, inference, one sequence
-stage        → latency        / memory                              / compute            / communication / failure
-weights      → read per step  / 210.4 MiB tied · 257.3 MiB untied   / —                  / none          / OOM at load
-prefill S=1024 → one pass     / cache written 36 MiB; peak act ~ P   / 2N·S + 2L·S²·D     / none          / score OOM at large S
-cache/token  → —              / 36,864 B = 36 KiB (Eq. 5.21)        / —                  / none          / indexing error
-decode step s → bandwidth-bound / reads weights + 36 KiB·s          / 2N + 4·L·s·D       / none          / position offset
-```
-
-MATHEMATICALLY-DERIVED: tied weights 110,316,288 × 2 B = 220,632,576 B = 210.4 MiB; cache 2·12·12·64·2 = 36,864 B per token; at s = 1024, 37,748,736 B = 36 MiB. The cache reaches the size of the tied weights at s ≈ 5,985 tokens — the crossover at which a decode step reads more cache than weights. Training memory adds gradients, optimiser state and the activations above; with an FP32 master copy and two FP32 Adam moments the per-parameter state is 16 bytes plus the BF16 working copy, but that sum is Eq. N.5's subject and is not totalled here (ASSUMED constants; [§29.1](../../../vol-02-execution-and-optimization/part-05-hardware-kernels-and-distributed-execution/ch29-parallelism-collectives-and-distributed-optimization/29-1-data-state-parallelism.md), [§30.2](../../../vol-02-execution-and-optimization/part-05-hardware-kernels-and-distributed-execution/ch30-large-training-runs-reliability-monitoring-and-recovery/30-2-memory-management.md)).
-
 ## Algorithm
 
 ```text
-Algorithm 5.7 — Trace-driven accounting
-INPUT   configuration (L, D, H, F, V, T_max, tied); mode ∈ {train, prefill, decode}; B, T (or s); b, b_w
-OUTPUT  tables: parameters by component; FLOPs per token; bytes by tensor
-INVARIANT every FLOP entry corresponds to one matmul line of the §5.1 trace with cost 2·m·n·p (R5.11 rule)
-1.  for each trace line with a weight: params ← product of weight shape; flops ← 2 × params per token
-2.  for each batched matmul without a weight (scores, PV): flops ← 2·T·Dh per head per token; × H × L
-3.  for each retained tensor in the mode: bytes ← product of shape × b
-4.  if mode == decode: bytes_read ← N·b_w + 2·L·s·H·Dh·b; flops ← 2N + 4·L·s·D
-5.  sum by component; report the 2N-rule residual = (total − 2N)/2N
-TERMINATION: finite line list.
+Algorithm 5.7 - Trace-driven accounting with storage identity
+INPUT: finite operator trace; unique allocation/alias map; tensor shapes and dtypes;
+       parameter sharing; mode; B,T or consumed length s; head evaluation rows
+OUTPUT: component parameters, leading FLOPs, allocation inventory, declared traffic estimate
+INVARIANT: a parameter allocation is counted once; every operator application is counted;
+           tensor bytes use actual dtype and unique live storage
+1 Enumerate unique parameter allocations and sum products of their dimensions.
+2 For each dense [m,n] x [n,p] operator application, add 2*m*n*p leading FLOPs.
+3 Count attention pair products under the declared dense, triangular, or tiled work convention.
+4 Count vocabulary projection only for the rows actually evaluated.
+5 List saved and temporary allocations with their live intervals, aliases, and bytes.
+6 Compute peak allocated bytes as the maximum sum of unique live allocations over time.
+7 For decode, separately declare matrix reuse and cache-read assumptions before estimating traffic.
+8 Report omissions and the residual against 2*N_dense, with its precise denominator.
+TERMINATION: each finite trace entry and allocation event is visited once.
 ```
 
-Complexity: O(number of trace lines). Implementation: `accounting.py`, producing `accounting.csv` ([verification.md](verification.md)).
+Parameter and FLOP summation are O(K) for K trace entries. If live intervals are not already ordered, sorting A allocation/free events costs O(A log A); a sweep then finds the peak in O(A). Summing every tensor size without lifetimes is an inventory bound, not that peak computation. The chapter contains no executed model accounting script or generated profiler CSV; [verification.md](verification.md) records the analytical checks and the separate unexecuted implementation proposal.
 
 ## Implementation
 
-Tensors → operators: parameter counts come from `sum(p.numel() for p in model.parameters())` and must equal Eq. 5.22 — the artifact asserts this. FLOPs are counted from shapes, not from a profiler; a profiler's count is a measurement of what a kernel did (including padding and recomputation) and belongs to [§26.3](../../../vol-02-execution-and-optimization/part-05-hardware-kernels-and-distributed-execution/ch26-kernel-programming-and-numerical-equivalence/26-3-core-operators.md). Framework: PyTorch. Kernels: the bytes table assumes materialised attention; with a fused kernel γ = 0 and the P row disappears from retained memory while its recomputation adds to backward FLOPs (§27.1). Memory: allocator reserve and fragmentation are additional and NOT-DISCLOSED for any given runtime until measured ([§42.2](../../../vol-02-execution-and-optimization/part-07-inference-algorithms-distillation-and-compression/ch42-prefill-decode-kv-state-and-inference-resource-models/42-2-state-accounting.md)). Communication: none. Deployment: the same tables with H_kv < H, paged cache, and quantised weights are Chapter 42's estimator.
+Sharing must survive model construction and loading: two names referring to the same parameter allocation are one resident weight, while a copied tensor is a second allocation. Parameter enumeration and storage-identity inspection should agree with the declared sharing policy. Views can have different shapes and strides while sharing the same underlying storage; counting both as independently allocated bytes is incorrect.
 
-> **Implementation note [impl.pytorch · 2.14.0 documentation, execution UNVERIFIED].** Tied embeddings are implemented by assigning `head.weight = embedding.weight`; `parameters()` then yields the shared tensor once, so the count is the tied row of the table.
+A profiler may report useful mathematical operations, dispatched kernel operations, or selected operator estimates. Its number is interpretable only with the tool's convention. Causal tiles, padding, tensor-core instructions, backward recomputation, and excluded elementwise operations can create legitimate differences from Eq. 5.23. A residual is not automatically allocator overhead, which is a memory concept.
+
+Memory verification must record synchronized peak *allocated* and *reserved* device bytes separately, the warmup/reset interval, optimizer creation and step state, gradient accumulation, cached tensors, and external library allocations. Device peak capacity and a saved-tensor inventory are different quantities. The head can dominate a small model's intermediate allocation when all FP32 logits are materialized; chunking or fusing loss evaluation changes live intervals and backward requirements, not vocabulary projection arithmetic by itself. No such runtime measurement has been performed here.
 
 ## Experimental design
 
-Proposal. Run Algorithm 5.7 on the reference configuration and compare against (i) `numel()` for parameters (exact match required), (ii) a profiler's GEMM FLOP count for one forward pass (expected to match Eq. 5.23 within the element-wise term and any padding), (iii) peak allocated bytes for one training step with and without a fused attention kernel (expected difference ≈ 192 MiB × L at B = 8, T = 1024). Any residual is the runtime's overhead and is reported, not absorbed.
+### Reported experiments
+
+P08 fits language-model loss against model/data/compute scale using its non-embedding convention. Its Table 1 omits normalization, nonlinearities, biases, and other subleading terms, and section 2.1 explicitly drops the context-dependent term in the regime studied. The default training protocol uses WebText2, a1024-token context, and 512 sequences per batch; the paper separately varies architecture, data, and training conditions. Those experiments support the source's scaling analysis, not an exact throughput prediction for the present mixed configuration. (PAPER-REPORTED: P08 sections 2.1-2.3.)
+
+P19 compares exact-attention implementations and accounts for HBM traffic, tiled execution, and backward recomputation. Its memory savings concern attention intermediates and its timings are tied to the stated hardware/shapes. They do not measure this chapter's end-to-end peak. (PAPER-REPORTED: P19 sections 3-4.)
+
+The proposed local verification first matches unique parameter counts exactly, then compares trace-level matrix arithmetic under the same head/mask policy. Peak-memory experiments must isolate materialized attention, fused attention, and checkpointing while recording each implementation's saved allocations. An anticipated 192 MiB probability allocation per block is an item to inspect, not a guaranteed difference between complete measured peaks. Results remain UNVERIFIED until executed with a pinned model/runtime and recorded device.
 
 ## Observations
 
-**What the paper claims.** PAPER-REPORTED (P08, §2.1 and Table 1): non-embedding parameters `N ≈ 12·n_layer·d_model²` with the standard `d_attn = d_ff/4 = d_model`, forward compute `2N + 2·n_layer·n_ctx·d_attn` per token, and `C ≈ 6N` per training token with the backward pass approximated as twice the forward. OFFICIAL-DOCUMENTATION (R5.11, §3.5): the CS336 handout states the `2mnp` FLOPs rule for an `[m, n] × [n, p]` product and poses the accounting exercise for a GPT-2 XL-shaped configuration (V = 50,257, context 1,024, 48 layers, d_model 1,600, 25 heads, d_ff 4,288). PAPER-REPORTED (P01, Table 3): 65 × 10⁶ parameters for the base model.
+**What the paper claims.** P08 defines approximate non-embedding forward/training compute for its scaling study. P19 evaluates exact attention with reduced HBM traffic and non-materialized pairwise intermediates. These are different resource claims with specified boundaries. (PAPER-REPORTED.)
 
-**What the evidence shows.** The identities are arithmetic; the 12·L·D² form reproduces this chapter's `4D² + 2DF = 12D²` per block at F = 4D exactly. The regime condition `d_model ≫ n_ctx/12` is P08's stated modelling choice and its empirical adequacy for their fits is their claim; at T = 8192 with D = 768 the score term would exceed the weight term and the 2N rule would fail by more than 100%, which the reader can verify from Eq. 5.23.
+**What the evidence shows.** Eq. 5.22 gives 110,316,288 tied parameters for the declared reference. Its dense all-row-head forward has 256,770,048 leading FLOPs per token at T=1024, while ideal triangular work gives 237,914,112. The values are mathematical consequences of the configuration and counting convention, not model runs. (MATHEMATICALLY-DERIVED.)
 
-**What we infer.** DERIVED: (1) for the reference configuration the head is the single largest per-token FLOP item after the FFN, so vocabulary size is a compute decision ([§10.3](../../part-02-data-and-representation-engineering/ch10-tokenization-serialization-and-interface-correctness/10-3-vocabulary-economics.md)); (2) the score tensor dominates training memory already at T = 1024, so a non-materialising attention kernel halves retained activations before any recomputation policy; (3) cache bytes overtake weight bytes at s ≈ 6k tokens, so decode cost at long context is set by L·H_kv·Dh, not by N.
+**What we infer.** Weight tying changes unique storage without removing output-head arithmetic. Non-materializing attention changes the saved-allocation schedule without making full attention linear in arithmetic. A larger vocabulary can affect both storage and head cost, and consumed context affects cache and pair work differently. None of these identities fixes the measured dominant latency component. (MATHEMATICALLY-DERIVED.)
 
-**What remains unknown.** NOT-DISCLOSED: runtime workspace and allocator overheads; UNVERIFIED: the profiler-measured FLOPs and peak bytes of the artifact on any accelerator.
+**What remains unknown.** No accelerator timing, dispatched kernel trace, measured peak allocation, optimizer state layout, training quality, or long-context validity has been established for the analytical reference. The source reports do not disclose those quantities for this constructed configuration. (UNVERIFIED; NOT-DISCLOSED.)
 
 ## Failure modes
 
-> **Failure mode — 2N applied outside its regime.** *Symptom:* measured training throughput far below the MFU implied by 6N. *Cause:* score term ignored at long T. *Detection:* compute `4LTD/(2N)`; if it is not ≪ 1, the rule is invalid. *Mitigation:* use Eq. 5.23 in full.
+A storage count can double-count a tied head, while a FLOP count can accidentally remove its projection because the head has no additional unique parameters. Compare unique allocation count and operator applications separately. Counting all resident parameters as multiply-used matrices also misclassifies learned positions, gains, and an untied input-only embedding.
 
-> **Failure mode — embedding double-count.** *Symptom:* tied model reports the untied count. *Cause:* counting E and W_out separately when they alias. *Detection:* `numel()` over `parameters()` versus a manual sum. *Mitigation:* Algorithm 5.7 line 1 with aliasing respected.
+A causal mask does not guarantee triangular hardware work. A dense matmul followed by masking still computes the full matrix. Likewise, choosing a fused kernel does not determine the complete saved-tensor set or optimizer peak. Inspect dispatch and live allocations before attributing a numerical discrepancy to a single missing term.
 
-> **Failure mode — unit confusion.** *Symptom:* memory estimates off by 7%. *Cause:* MiB versus MB. *Detection:* state units (this chapter uses binary units per [notation.md](../../../front-matter/notation.md)). *Mitigation:* carry bytes, convert once.
+Cache length can be off by one when sampled and consumed tokens are conflated; prefill can be overcounted when a full vocabulary projection is charged for every prompt position despite evaluating only the last row. Record actual forward inputs and head rows. A proposed cache/weight crossing beyond the position table is not a supported run configuration.
+
+Binary and decimal units must also remain explicit: MiB means2^20 bytes, MB means10^6 bytes. Carry integer bytes through calculations and convert at presentation; their relative difference is about4.86%, rather than a universal7% discrepancy.
 
 ## Siblings
 
-**Parameter/FLOP model across dense families** — [§13.2](../../part-03-model-architectures-and-state/ch13-dense-transformer-design-and-parameter-allocation/13-2-width-depth-and-heads.md)
-Why it exists: choosing (L, D, H, F) jointly. What assumption changed: the configuration is a variable, not a constant. What objective changed: quality per FLOP. What problem it solved: allocation. What new failure mode it introduced: matched-N comparisons that are not matched-cost. Changed primitive: one table → a function of the configuration.
+Dense architecture allocation in Chapter 13 turns the present constants into variables and compares depth, width, head dimensions, FFN size, and vocabulary under a stated resource budget. Equal resident parameters alone do not imply equal arithmetic, cache, or saved activations.
 
-**Training-memory accounting (Eq. N.5)** — [§29.1](../../../vol-02-execution-and-optimization/part-05-hardware-kernels-and-distributed-execution/ch29-parallelism-collectives-and-distributed-optimization/29-1-data-state-parallelism.md)
-Why it exists: optimiser state and sharding. What assumption changed: multiple devices, several dtypes per term. What objective changed: fit and throughput. What problem it solved: per-term sharding factors. What new failure mode it introduced: communication buffers. Changed primitive: single-device sum → sharded sum.
-
-**Inference state accounting (Eq. N.8)** — [§42.2](../../../vol-02-execution-and-optimization/part-07-inference-algorithms-distillation-and-compression/ch42-prefill-decode-kv-state-and-inference-resource-models/42-2-state-accounting.md)
-Why it exists: many sequences, paged cache, reserve. What assumption changed: B sequences of unequal length. What objective changed: capacity. What problem it solved: predicting admissible concurrency. What new failure mode it introduced: fragmentation. Changed primitive: per-token increment → allocator-level totals.
+Training-state distribution in Chapter 29 separates parameters, gradients, master copies, moments, and communication buffers before applying sharding factors. Serving state in 42.2 instead accounts for unequal consumed lengths, KV-head sharing, page allocation, prefix sharing, and reserve. Both require unique storage and lifetime accounting; they cannot be obtained by multiplying this single-sequence cache count by an arbitrary concurrency constant.
 
 ## Extensions
 
-Domain adaptation: unchanged. Long context: re-evaluate Eq. 5.23 and Eq. 5.25 at the target T; the tables do not extrapolate. Multimodal: add encoder tables with their own D. MoE: replace the FFN row by E experts with an activated count ([§16.4](../../part-03-model-architectures-and-state/ch16-mixture-of-experts-architectures/16-4-capacity-and-execution.md)). Proposals only.
+### Improvements
+
+The exact-attention improvement in P19 targets memory traffic through tiling, online normalization, and backward recomputation. Its benefit must be evaluated against the memory hierarchy and shapes in its execution regime. Activation checkpointing changes which forward tensors persist and which operators repeat; a selective checkpoint can save a different amount from a whole-block checkpoint.
+
+Grouped/multi-query attention replaces KV projection/cache dimensions by H_kv*d_h while preserving the query-head count, requiring fresh parameter and FLOP rows. Quantization changes parameter/cache bytes and introduces scales, packing, and possibly dequantization work; dividing all totals by a bit-width ratio omits these terms. MoE requires both resident expert parameters and routed execution counts. These are changes to the trace specification, not constant-factor guarantees about latency.
 
 ## Limitations
 
-Valid for the stated configuration and conventions (no biases, materialised attention unless stated, BF16). The FLOP counts omit norms, softmax, activations and reductions, which are O(T²) in operations for the softmax and can matter in kernel time even when they do not in FLOPs. Falsification: a `numel()` mismatch with the tied or untied row falsifies the trace, not the arithmetic.
+The exact parameter identities apply to the specified bias-free RMSNorm/learned-position decoder. The leading FLOPs omit softmax, normalization, activations, embedding gathers, reductions, optimizer updates, communication, and implementation padding unless separately stated. Their asymptotic or small scalar count does not prove negligible elapsed time. The saved-tensor table is a conditional allocation inventory rather than an observed autograd schedule. Sensitivity calculations beyond T_max require a changed positional specification before execution; they do not demonstrate extrapolation quality.
 
 ## Reproducibility
 
-`accounting.py` and `accounting.csv` in [verification.md](verification.md); configuration table above; all values are exact integers or binary-unit conversions of them. Unresolved: runtime overheads.
+The analytical inputs are the complete configuration, sharing/alias map, mode, number of head rows, attention-pair convention, dtype of each allocation, and FLOP convention. The integer identities and unit conversions can be reproduced independently without an accelerator. [verification.md](verification.md) distinguishes the executed arithmetic checks from the unexecuted reference-model and profiling proposals. A future runtime record must add repository revision, framework/backend, accelerator, allocation timeline, warmup/synchronization, and profiler counting semantics.
 
 ## References
 
-P01 · P08 · R5.2 · R5.11 · [notation.md](../../../front-matter/notation.md) · [references.md](references.md)
+P08 section 2.1/Table 1 (source compute convention); P19 sections 3-4 (exact-attention IO and saved intermediates); R5.6 (incremental decoding and shared-key attention); [notation.md](../../../front-matter/notation.md); [references.md](references.md).

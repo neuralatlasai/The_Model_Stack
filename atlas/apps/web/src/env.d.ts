@@ -17,5 +17,7 @@ declare const __ATLAS_BUNDLE_DIR__: string | undefined;
 declare namespace App {
   interface Locals {
     equationRunners?: ReadonlyMap<string, string>;
+    /** Render authored derivations and proofs expanded on complete manuscript pages. */
+    completeReading?: boolean;
   }
 }

@@ -26,8 +26,8 @@ benchmarks: []
 datasets: []
 status: {maturity: established, disputed: false}
 evidence_summary: {labels_used: [DERIVED, OFFICIAL-DOCUMENTATION, MATHEMATICALLY-DERIVED, KNOWN, UNVERIFIED], empirically_observed: false}
-word_count_target: 1050
-updated_at: 2026-09-20
+word_count_target: 2500
+updated_at: 2026-10-07
 editorial_status: manuscript_draft
 ---
 
@@ -35,78 +35,66 @@ editorial_status: manuscript_draft
 
 ## Scope
 
-Objective: fix the contracts that make a single-device training skeleton *testable* — tensor shape contracts, the three masks (causal, padding, loss), the initialization scale, deterministic fixtures with stored expected outputs, and the tiny-batch overfitting test — and give a reference-level PyTorch skeleton that the verification protocol runs. Baseline: an ad-hoc script that trains but cannot be checked. Success criterion: the skeleton passes Experiments 3.1–3.5 of [verification.md](verification.md). Boundaries: the model architecture is a stub here and is developed in [Chapter 05](../ch05-minimal-transformer-and-execution-trace/README.md); objective semantics (which tokens are targets) in [§4.1](../ch04-language-modeling-and-learning-objectives/04-1-autoregressive-modeling.md); sequence packing and its masks in [§12.4](../../part-02-data-and-representation-engineering/ch12-scalable-data-infrastructure-and-reproducible-ingestion/12-4-packing-and-masks.md); the full training loop and its state in [Chapter 19](../../part-04-training-science-and-adaptation/ch19-pretraining-objectives-and-the-full-training-loop/README.md).
+[DERIVED] The reference program joins the chapter's contracts in a single-device causal training path that actually consumes its attention mask. It includes target shifting, separate attention and supervision masks, defined empty-row behavior, dtype-preserving normalization and loss, gradient connectivity checks, and an update rejection gate. Chapter 05 owns the full Transformer architecture; this smaller program exposes numerical and objective boundaries without claiming production performance or executed verification.
 
 ## Why this exists
 
-What failed: mask bugs — attending to the future, attending to padding, or averaging the loss over padded positions — produce models that train smoothly to a wrong objective and are discovered only at evaluation [KNOWN — the course sequence of CS336 Assignment 1 is built around implementing and testing exactly these pieces from scratch, R3.15]. Bottleneck: shape errors surface as broadcasting successes rather than failures, because [B, T, 1] broadcasts against [B, 1, T] silently. Dominant constraint: a test needs a fixed input and a fixed expected output, which the framework's RNG stream does not provide across versions ([§3.6](03-6-reproducibility-limits.md)). What changed: fixtures are stored artifacts; masks are Boolean tensors with declared semantics; and the first test is whether the skeleton can memorize a handful of sequences.
+[MATHEMATICALLY-DERIVED] A model can reduce its loss while using future tokens, supervising padding, or dividing by the wrong count. Autograd then computes a correct derivative of the wrong objective. A token-only model cannot expose attention-mask defects because its outputs never depend on the mask. Consequently the reference must contain an actual cross-position computation and must expose its inputs, masks, and loss denominator explicitly.
 
 ## Intuition
 
-Physically, a training skeleton is a contract between three tensors — token ids [B, T], a Boolean attention mask [B, 1, T, T] (or its factored form), and a loss mask [B, T] — and the parameter tensors whose shapes are fixed by d_model, d_ff, H, and V. Every downstream failure is a violation of one of these contracts. The tiny-batch test is the cheapest possible end-to-end check: a model with far more parameters than the fixture has tokens must drive the token-mean loss toward zero; if it cannot, the gradient, the mask, or the optimizer is wrong, and it is wrong before scale adds cost.
+[DERIVED] Each contract has a visible consumer. Token validity controls which keys attention may read. Causality controls which positions may communicate. Transition validity controls which next-token predictions receive supervision. The loss counts valid transitions, not padded array elements. FP64 checking traverses the same operations while preserving FP64 throughout; it is not a separate model with different masking semantics.
 
 ## Formulation
 
-Shapes (axis names per notation.md): ids ∈ ℤ^{[B,T]}; embeddings [B, T, D]; attention scores per head [B, H, T, T]; logits [B, T, V]; targets ids shifted by one, [B, T].
+[MATHEMATICALLY-DERIVED] From stored tokens $u\in\{0,\ldots,V-1\}^{B\times(T+1)}$ and validity $k$, define
+
+$$
+x_{b,t}=u_{b,t},\quad y_{b,t}=u_{b,t+1},\quad
+m_{b,t}=k_{b,t}\land k_{b,t+1},\quad0\le t<T.
+$$
+*(Eq. 3.19)* A sequence with $r$ contiguous real tokens supplies $r-1$ transitions. Packed documents additionally require an explicit same-document boundary term; validity alone cannot supply it. The reference below expects a single document per row or a caller-provided transition mask.
+
+[MATHEMATICALLY-DERIVED] Query $i$ admits key $j$ when
+
+$$
+A_{b,i,j}=\mathbf1[j\le i]\,k_{b,j},\qquad
+\mathcal L=\frac{\sum_{b,t:m_{b,t}=1}-\log p_\theta(y_{b,t}\mid x_{b,\le t})}{N},
+\quad N=\sum_{b,t}m_{b,t}>0.
+$$
+*(Eq. 3.20)* Padded query outputs are explicitly zeroed and never supervised. A row with no admissible keys receives zero attention output by an explicit branch before any undefined softmax occurs. This zero extension is a program contract; it is not softmax of an empty set.
 
 ```figure
 id: fig-3.24
 kind: stat-panel
-title: The skeleton contract at an illustrative fixture
+title: Explicit causal-reference shape and state accounting
 caption: >-
-  One fixture, costed contract by contract as the section builds it. The
-  shapes are illustrative (B = 4, T = 64, V = 2048, D = 256), chosen so the
-  ModelStub has about 10⁶ parameters, the size the cost line assumes. They
-  are not taken from any named model. Watch the parameters-per-token row. The
-  tiny-batch test is meaningful only while it is in the thousands. Watch the
-  mask row too. It is the one tensor that grows with T².
+  Shapes are illustrative, not source experiment settings. The parameter
+  formula includes untied token/head weights, positional embeddings and
+  attention/feed-forward projections. It excludes optimizer state and
+  activations. Parameter count alone does not guarantee memorability.
 placement: rail
 anchor: formulation
 evidence: DERIVED
 source: ["DERIVED:eq-3.19", "DERIVED:eq-3.20", "DERIVED:alg-3.12"]
 alt: >-
-  Instrument panel for an illustrative fixture with B = 4, T = 64, V = 2048
-  and D = 256. Token ids [B, T] in int64 take 2 KiB. The fixture holds 256
-  tokens. The Boolean attention mask [B, 1, T, T] takes 16 KiB. The ModelStub
-  has 2·V·D + D = 1,048,832 parameters, and its FP64 snapshot at 8 bytes per
-  parameter is 8 MiB. There are 4,097 parameters per fixture token. FP64
-  logits y64 [B, T, V] take 4 MiB. The loss of a uniform prediction is
-  ln V ≈ 7.62 nats. The acceptance floor ℓ_min is 0.01 nats within 300 steps.
-  At T = 4096 the mask grows to 64 MiB.
+  At B4,T64,V2048,D256,Tmax64, parameters total1851392. Their FP64
+  snapshot is 14.125MiB. The Boolean attention mask is 16KiB and FP64 logits
+  are 4MiB. These quantities are derived allocations, not measured peaks.
 spec:
-  header: "SKELETON CONTRACT · ILLUSTRATIVE FIXTURE"
-  variables: { B: 4, T: 64, V: 2048, D: 256 }
+  header: "CAUSAL REFERENCE - ILLUSTRATIVE ACCOUNTING"
+  variables: { B: 4, T: 64, V: 2048, D: 256, Tmax: 64 }
   rows:
-    - { key: "ids [B, T], int64", formula: "8*B*T", format: bytes }
-    - { key: "fixture tokens, B·T", formula: "B*T", format: tokens }
-    - { key: "attention mask [B, 1, T, T], bool", formula: "B*T^2", format: bytes }
-    - { key: "ModelStub params, 2·V·D + D", formula: "2*V*D + D", format: params }
-    - { key: "θ64 snapshot, 8 B/param", formula: "8*(2*V*D + D)", format: bytes }
-    - { key: "params per fixture token", formula: "(2*V*D + D)/(B*T)", format: ratio }
-    - { key: "FP64 logits y64 [B, T, V]", formula: "8*B*T*V", format: bytes }
-    - { key: "uniform-prediction loss, ln V", formula: "ln(V)", format: fixed2, note: "nats" }
-    - { key: "T9 floor ℓ_min", value: "0.01 nats" }
-    - { key: "T9 N_steps", value: "300" }
-states:
-  - { anchor: formulation, label: "shapes and masks", highlight: ["ids [B, T], int64", "attention mask [B, 1, T, T], bool"], note: "Eq. 3.19–3.20 at the fixture's shapes: ids [4, 64] and a [4, 1, 64, 64] Boolean mask of 16 KiB. The shapes are illustrative, not a named model." }
-  - { anchor: mechanism, label: "stored fixture", highlight: ["θ64 snapshot, 8 B/param", "FP64 logits y64 [B, T, V]"], note: "The fixture stores FP64 parameters (8 B each, about 8 MiB for about 10⁶ parameters) and FP64 logits. A change in the framework's RNG stream cannot invalidate it." }
-  - { anchor: algorithm, label: "tiny-batch test", highlight: ["params per fixture token", "uniform-prediction loss, ln V", "T9 floor ℓ_min"], note: "Algorithm 3.12 needs far more parameters than tokens, here 4,097 per token. The loss must fall from the order of ln V ≈ 7.62 nats to 0.01 within 300 steps." }
-  - { anchor: implementation, label: "T = 4096", variables: { T: 4096 }, highlight: ["attention mask [B, 1, T, T], bool"], note: "The same mask at T = 4096 is 64 MiB for B = 4 (B·T² bytes). It is the first tensor to remove once Chapter 05's attention takes a causal flag and lengths." }
+    - { key: "ids [B,T], int64", formula: "8*B*T", format: bytes }
+    - { key: "input positions", formula: "B*T", format: tokens }
+    - { key: "attention mask [B,T,T], bool", formula: "B*T^2", format: bytes }
+    - { key: "parameters, 2VD+TmaxD+12D^2", formula: "2*V*D+Tmax*D+12*D^2", format: params }
+    - { key: "FP64 parameter snapshot", formula: "8*(2*V*D+Tmax*D+12*D^2)", format: bytes }
+    - { key: "parameters per input position", formula: "(2*V*D+Tmax*D+12*D^2)/(B*T)", format: ratio }
+    - { key: "FP64 logits [B,T,V]", formula: "8*B*T*V", format: bytes }
+    - { key: "uniform-prediction loss, nats", formula: "ln(V)", format: fixed2 }
+    - { key: "overfit gate", value: "proposed separately; unexecuted" }
 ```
-
-Causal mask:
-
-$$
-C_{ij} = \mathbb{1}[\, j \le i \,], \qquad i, j \in \{1,\dots,T\}
-$$
-*(Eq. 3.19)* where C is [T, T], broadcast over B and H; masked scores are set to −∞ before Eq. 3.7 so that they receive exactly zero probability.
-
-Combined attention mask with padding (key mask k ∈ {0,1}^{[B,T]}, 1 = real token) and loss mask:
-
-$$
-A_{b,i,j} = C_{ij}\, k_{b,j}, \qquad m_{b,t} = k_{b,t+1}\cdot \mathbb{1}[\text{target}_{b,t}\ \text{is supervised}]
-$$
-*(Eq. 3.20)* where A is [B, 1, T, T] and m_{b,t} is the target mask of Eq. N.2 for the prediction made at position t of the token at t+1; a query row whose keys are all masked must be defined to output zero (Algorithm 3.2) and must have m = 0.
 
 ```figure
 id: fig-3.25
@@ -158,24 +146,25 @@ spec:
   legend: "A = C·k admits 30 of 64 pairs; faint = padded query, excluded by m = 0"
 ```
 
-Initialization scale for a linear map from d_in to d_out with weights W drawn i.i.d. with variance σ_W²:
+[MATHEMATICALLY-DERIVED] For independent zero-mean weights $W_{ij}$, independent of input $x$, with variance $\sigma_W^2$, cross-weight terms vanish and
 
 $$
-\mathrm{Var}[(Wx)_i] = d_{\text{in}}\,\sigma_W^2\,\mathrm{Var}[x_j] \quad\Rightarrow\quad \sigma_W^2 = \frac{1}{d_{\text{in}}}\ \text{preserves variance}
+\operatorname{Var}\left[\sum_{j=1}^{d}W_{ij}x_j\right]
+=\sigma_W^2\sum_{j=1}^{d}\mathbb E[x_j^2]
+=d\sigma_W^2v_x
 $$
-*(Eq. 3.21)* where x has i.i.d. entries; residual-branch scaling with depth is owned by [§5.4](../ch05-minimal-transformer-and-execution-trace/05-4-residual-organization.md). The skeleton uses σ_W = d_in^{−1/2}, truncated to ±3σ, for all projections, and zeros for biases and normalization offsets [ASSUMED — a design input; sensitivity: too-large σ produces logits of magnitude ≫ 1 at step 0 and exercises the overflow paths of §3.2].
+*(Eq. 3.21)* when inputs have zero mean and common variance $v_x$. This is conditional variance propagation, not a theorem that every initialized logit has bounded magnitude. Truncating a sampled distribution changes its actual variance unless compensated. The fixture therefore stores realized parameters rather than relying on an initialization name.
 
 ```figure
 id: fig-3.26
 kind: calculator
 title: Initialization scale and the overflow headroom it leaves
 caption: >-
-  Eq. 3.21 with the skeleton's choice σ_W = d_in^−1/2 and a gain g on top.
+  Eq. 3.21 with the illustrative conditional choice σ_W = d_in^−1/2 and a gain g on top.
   At g = 1 the output variance equals the input variance for every fan-in,
-  so the head's logits start with unit spread. That leaves ln 65504 ≈ 11.09
+  under the stated zero-mean independent-weight premises. That leaves ln 65504 ≈ 11.09
   standard deviations before an unshifted FP16 exponential overflows. At
-  g = 4 the headroom falls to 2.8 standard deviations, and step 0 already
-  depends on the max-subtracted softmax of §3.2. Changing d_in moves σ_W but
+  g = 4 the headroom falls to 2.8 standard deviations, and step 0 requires the max-subtracted softmax of §3.2. Changing d_in moves σ_W but
   not the output variance.
 placement: rail
 anchor: formulation
@@ -206,52 +195,17 @@ spec:
     - { label: "d_in = 4096", values: { d: 4096 } }
 ```
 
-> **Definition — Deterministic fixture.** A stored (input, expected output) pair — token ids, masks, parameter snapshot, and FP64 forward/gradient values — produced once under a recorded seed and reused across versions without regenerating from the framework RNG.
-
-> **Definition — Tiny-batch overfitting test.** Training the skeleton on a fixed fixture of a few sequences until the token-mean loss falls below a declared floor, as a necessary condition for correctness of gradient, masks, and optimizer.
-
 ## Mechanism
 
-Shape contracts are enforced at module boundaries with assertions on `tensor.shape` and `tensor.dtype`; a reference-level skeleton asserts rather than reshapes, so that a silent broadcast becomes a loud failure [DERIVED]. The causal mask is a constant [T, T] Boolean built once; the padding key-mask is per batch; the two are combined by logical AND (Eq. 3.20). Masked positions are filled with the most negative finite value of the compute dtype rather than −∞ when a fully masked row is possible, so that exp(z − m) yields a finite (uniform) row instead of NaN; that row is then zeroed by the loss mask. The loss uses the reduction of [§3.2](03-2-stable-primitives.md): log-softmax in FP32, gather of the target, masked sum divided by Σm (Eq. N.2), never `mean()` over all positions.
+### Methodology
 
-Fixtures: Algorithm 3.11 draws ids and masks from a seeded generator *once*, computes FP64 forward values and gradients with the FP64 twin of the model, and stores everything; every later run compares against the stored values with the tolerances of verification.md. Because the fixture is stored, a framework RNG change cannot invalidate it; only a change in the model definition does, which is the intended sensitivity.
+[DERIVED] The numerical path first validates discrete dimensions and ranges, shifts tokens once, and forms the transition mask. The model computes embeddings, causal attention, a residual feed-forward path, and vocabulary logits. Statistics, attention scores, softmax, and loss use FP64 when the input is FP64 and FP32 otherwise. Linear operations can follow an external autocast context; this leaves sensitive reductions explicitly wider. The identical model state and discrete tensors define the high-precision and candidate evaluations.
 
-The tiny-batch test (Algorithm 3.12) is a necessary, not sufficient, condition: it detects a wrong sign, a wrong mask, a detached graph, a mis-normalized loss, and a broken optimizer, but not a subtly wrong VJP that still descends. It complements, and does not replace, the FP64 check of [§3.3](03-3-automatic-differentiation.md).
+[OFFICIAL-DOCUMENTATION] PyTorch cross-entropy accepts unnormalized logits and integer class targets, with explicit sum/mean/no-reduction choices. SDPA uses Boolean true for an allowed attention pair, while other attention APIs can use the opposite convention. Its dropout probability must be set explicitly to zero during evaluation, and fused implementations can have different numerical results. The transparent implementation below makes these choices explicit before a later fused substitution. [R3.37/R3.38](references.md).
 
-Cost line: fixtures cost one FP64 forward+backward on a tiny model (seconds on CPU) and O(|θ|·8) bytes of storage for the FP64 parameter snapshot; the tiny-batch test costs a few hundred steps on a model of ≈ 10^6 parameters — negligible against any real run and therefore mandatory before one [DERIVED].
+[MATHEMATICALLY-DERIVED] Replacing every masked score by a finite minimum would give a uniform distribution on an entirely masked row. Replacing them by negative infinity and calling softmax directly would evaluate infinity minus infinity. Instead, construct a finite placeholder score row for empty rows, evaluate a finite softmax, and zero that row's probabilities. This keeps both the selected forward result and the recorded derivative finite.
 
-## Algorithm
-
-```text
-Algorithm 3.11 — Deterministic fixture construction
-INPUT   seed; shapes (B, T, V, D, ...); model definition f; padding fraction p
-OUTPUT  fixture directory: ids.pt, key_mask.pt, loss_mask.pt, theta64.pt, y64.pt, grad64.pt, meta.json
-STATE   generator g seeded with seed (CPU); FP64 model f64 with parameters theta64
-INVARIANT every stored tensor is produced by f64 on CPU with deterministic settings
-1  g ← Generator(seed); ids ← randint(V, [B, T], g); lengths ← T − floor(p·T·u), u ~ U[0,1]^B
-2  key_mask[b, t] ← (t < lengths[b]); loss_mask ← key_mask shifted per Eq. 3.20
-3  theta64 ← initialize f64 by Eq. 3.21 using g; store theta64
-4  y64 ← f64(ids, key_mask) logits; loss64 ← masked token-mean CE
-5  grad64 ← ∂loss64/∂theta64 (Algorithm 3.5 in FP64)
-6  write ids, key_mask, loss_mask, theta64, y64, loss64, grad64, and meta (seed, shapes, versions)
-7  TERMINATION: one forward and one backward
-```
-
-```text
-Algorithm 3.12 — Tiny-batch overfitting test
-INPUT   fixture (ids, masks); model f in the target precision recipe; optimizer; N_steps; floor ℓ_min
-OUTPUT  pass if loss_N ≤ ℓ_min; the loss trace
-STATE   parameters initialized from theta64 cast to the recipe's storage dtype
-INVARIANT the same batch is used at every step; deterministic settings on
-1  for s = 1..N_steps:
-2      loss_s ← masked token-mean CE(f(ids, key_mask), targets)   # FP32 reduction
-3      backward; clip by Eq. 3.13; step   (Algorithm 3.6 with K = 1)
-4      assert isfinite(loss_s)
-5  pass iff loss_N ≤ ℓ_min  (e.g. ℓ_min = 0.01 nats for a memorizable fixture)
-6  TERMINATION: N_steps
-```
-
-Complexity: N_steps forward+backward on a fixture whose token count is far below the parameter count; the floor ℓ_min is a declared acceptance value, not a claim about any model.
+[DERIVED] A saved fixture must include realized parameters, token IDs, validity, transition supervision, and output metadata. Hashes detect accidental changes; they do not prove the fixture's correctness. The analytic FP64 gradient and a finite-difference comparison provide different checks, and causal/padding invariances provide semantic checks independent of either derivative route.
 
 ```figure
 id: fig-3.27
@@ -260,9 +214,7 @@ title: Fixture once, checks every run
 caption: >-
   The left group runs once, under a recorded seed, on CPU in FP64. The right
   group runs on every change. The only thing that crosses between them is
-  the stored, hashed fixture, the emphasised edge into the comparison. That
-  is why a framework RNG change cannot invalidate a test and a model change
-  must. The tiny-batch test and the FD check read the same fixture but catch
+  the stored, hashed fixture, the emphasised edge into the comparison. Fixture hashes separate changed inputs from changed execution; a changed expectation requires independent review. The tiny-batch test and the FD check read the same fixture but catch
   different defects: a descending but wrong VJP passes the first and fails
   the second.
 placement: inline
@@ -278,8 +230,7 @@ alt: >-
   stream is used by the generator only once. Every run (Algorithm 3.12 and
   checks): the skeleton under a precision recipe is compared with the stored
   fixture on forward values and gradients (T4, T6, emphasised). The FD check
-  of Algorithm 3.7 (T5) and the tiny-batch overfit test (T9: 0.01 nats in 300
-  steps) read the fixture. Seeded mutations from Experiment 3.5 are applied
+  of Algorithm 3.7 (T5) and the tiny-batch overfit test (unexecuted acceptance protocol in verification.md) read the fixture. Seeded mutations from Experiment 3.5 are applied
   to the skeleton.
 spec:
   direction: LR
@@ -295,7 +246,7 @@ spec:
     - { id: sk, kind: model, label: "skeleton under a recipe", sub: "FP32 · FP16 + S · BF16 (+ master)", group: every }
     - { id: cmp, kind: metric, label: "forward and gradient vs FP64", sub: "T4, T6", group: every }
     - { id: fd, kind: metric, label: "finite-difference check", sub: "T5, Algorithm 3.7", group: every }
-    - { id: tb, kind: metric, label: "tiny-batch overfit", sub: "T9: 0.01 nats in 300 steps", group: every }
+    - { id: tb, kind: metric, label: "tiny-batch overfit", sub: "unexecuted verification protocol", group: every }
     - { id: mut, kind: branch, label: "seeded mutations", sub: "triu, no padding term, mean(), …", group: every }
   edges:
     - { from: seed, to: gen }
@@ -319,171 +270,249 @@ spec:
     - { id: every, label: "every run, Algorithm 3.12 and checks" }
 ```
 
-## Implementation
+## Algorithm
 
-```python
-# Reference-level PyTorch skeleton. Written against the PyTorch 2.14 documented API
-# (docs accessed 2026-09-20). Execution UNVERIFIED in this edition. Not tuned; not fast.
-import json, math, torch, torch.nn as nn, torch.nn.functional as F
+[DERIVED] Algorithm 3.11 describes fixture materialization as a reproducibility mechanism. Its original experiment choices, acceptance values, and mutation studies are confined to [verification.md](verification.md).
 
-def set_deterministic(seed: int) -> None:
-    torch.manual_seed(seed)                       # seeds CPU and CUDA generators (docs: Reproducibility)
-    torch.use_deterministic_algorithms(True)      # error on known-nondeterministic ops
-    torch.backends.cudnn.benchmark = False
-    torch.backends.cuda.matmul.allow_bf16_reduced_precision_reduction = False   # default is True (docs: CUDA semantics)
-    torch.backends.cuda.matmul.allow_fp16_reduced_precision_reduction = False
-
-def causal_mask(T: int, device) -> torch.Tensor:                 # [1, 1, T, T] bool, True = attend
-    return torch.tril(torch.ones(T, T, dtype=torch.bool, device=device))[None, None]
-
-def attention_mask(key_mask: torch.Tensor) -> torch.Tensor:     # key_mask [B, T] bool -> [B, 1, T, T]
-    B, T = key_mask.shape
-    return causal_mask(T, key_mask.device) & key_mask[:, None, None, :]
-
-def shift_targets(ids: torch.Tensor, key_mask: torch.Tensor, ignore: int = -100):
-    tgt = ids[:, 1:].clone(); tgt[~key_mask[:, 1:]] = ignore     # loss mask m_t via ignore index (Eq. 3.20)
-    return ids[:, :-1], tgt
-
-def masked_token_mean_ce(logits: torch.Tensor, tgt: torch.Tensor, ignore: int = -100) -> torch.Tensor:
-    logp = F.log_softmax(logits.float(), dim=-1)                 # FP32 max-subtracted LSE (Eq. 3.6-3.7)
-    m = (tgt != ignore); safe_tgt = tgt.masked_fill(~m, 0)
-    nll = -logp.gather(-1, safe_tgt[..., None]).squeeze(-1)      # [B, T]
-    return (nll * m).sum() / m.sum().clamp_min(1)                # Eq. N.2: mean over supervised tokens
-
-class ModelStub(nn.Module):
-    """Placeholder for the Chapter 05 Transformer; keeps the shape/mask contract."""
-    def __init__(self, V: int, D: int):
-        super().__init__()
-        self.emb = nn.Embedding(V, D); self.norm = nn.RMSNorm(D); self.head = nn.Linear(D, V, bias=False)
-        for p in (self.emb.weight, self.head.weight):
-            nn.init.trunc_normal_(p, std=D ** -0.5, a=-3 * D ** -0.5, b=3 * D ** -0.5)   # Eq. 3.21
-    def forward(self, ids: torch.Tensor, key_mask: torch.Tensor) -> torch.Tensor:
-        B, T = ids.shape; assert key_mask.shape == (B, T) and key_mask.dtype == torch.bool
-        x = self.emb(ids)                                          # [B, T, D]
-        _ = attention_mask(key_mask)                               # [B, 1, T, T]; consumed by Chapter 05 attention
-        return self.head(self.norm(x.float()).to(x.dtype))        # [B, T, V]; normalization stats in FP32
-
-def train_step(model, opt, ids, key_mask, *, clip: float, scaler=None, autocast_dtype=None) -> float:
-    inp, tgt = shift_targets(ids, key_mask)
-    opt.zero_grad(set_to_none=True)
-    ctx = torch.autocast("cuda", dtype=autocast_dtype) if autocast_dtype else torch.autocast("cuda", enabled=False)
-    with ctx:
-        loss = masked_token_mean_ce(model(inp, key_mask[:, :-1]), tgt)
-    if scaler is not None:                                          # FP16 recipe: Algorithm 3.8
-        scaler.scale(loss).backward(); scaler.unscale_(opt)
-    else:                                                           # BF16 or FP32 recipe
-        loss.backward()
-    total = torch.nn.utils.clip_grad_norm_(model.parameters(), clip)  # Eq. 3.13; returns total norm
-    if not torch.isfinite(total):                                   # finiteness gate (Algorithm 3.6 line 7)
-        opt.zero_grad(set_to_none=True)
-        if scaler is not None: scaler.update()                      # backoff
-        return float("nan")
-    if scaler is not None: scaler.step(opt); scaler.update()
-    else: opt.step()
-    return loss.item()
-
-def overfit_tiny_batch(fixture_dir: str, steps: int = 300, floor: float = 1e-2, device="cuda") -> bool:
-    set_deterministic(0)
-    ids = torch.load(f"{fixture_dir}/ids.pt").to(device); km = torch.load(f"{fixture_dir}/key_mask.pt").to(device)
-    meta = json.load(open(f"{fixture_dir}/meta.json"))
-    model = ModelStub(meta["V"], meta["D"]).to(device)
-    model.load_state_dict({k: v.to(torch.float32) for k, v in torch.load(f"{fixture_dir}/theta64.pt").items()})
-    opt = torch.optim.AdamW(model.parameters(), lr=1e-3, weight_decay=0.0)
-    last = math.inf
-    for _ in range(steps):
-        last = train_step(model, opt, ids, km, clip=1.0)
-        assert math.isfinite(last)
-    return last <= floor
+```text
+Algorithm 3.11 — Materialize an explicit reference fixture
+INPUT  bounded tokens, masks, realized parameter state and environment
+OUTPUT  stored reference tensors, flags and hashes
+STATE  exact input/model state and FP64-preserving execution
+INVARIANT  reference and candidate share objective and discrete inputs
+1. validate token ranges, validity, document boundaries, and T+1 shift length
+2. store exact initial parameters and discrete input/mask tensors
+3. run the FP64-preserving forward/loss path with fixed execution state
+4. store logits, scalar loss, parameter gradients, and finite/connectivity flags
+5. record tensor hashes, shapes, objective semantics, and environment manifest
+6. never regenerate a changed expected result merely to make a check pass
+TERMINATION: finite input graph, tensor or declared loop sets exhausted.
+COMPLEXITY: one reference forward/backward plus tensor storage and hashing
 ```
 
-Framework placement: Model / autograd framework layer (PyTorch). Kernels: `F.log_softmax` in FP32 dispatches to a fused max-subtracted kernel; `nn.RMSNorm` computes statistics in the input dtype unless the input is upcast, hence the explicit `.float()` [OFFICIAL-DOCUMENTATION for the API surface, R3.11; the upcast is the book's rule from §3.2]. Memory: the [B, 1, T, T] Boolean mask costs B·T² bytes and is the first tensor to remove when the Chapter 05 attention adopts a fused kernel that takes the causal flag and lengths instead. Deployment: none.
+[DERIVED] Algorithm 3.12 defines one unscaled reference update. FP16 scaling inserts the state machine of §3.4 around backward and preserves the same mask and normalization contracts. Rejection occurs before the optimizer mutates its parameters or moments.
+
+```text
+Algorithm 3.12 — Reference single-device update
+INPUT  bounded reference model, valid batch, optimizer and clip threshold
+OUTPUT  accepted/rejected status and diagnostic
+STATE  gradients and persistent optimizer/update state
+INVARIANT  rejection gates run before optimizer mutation
+1. clear gradients; evaluate defined causal forward and valid-token mean loss
+2. reject nonfinite loss; backward
+3. check expected gradient connectivity and elementwise finiteness
+4. compute and check the global norm; apply global clipping
+5. perform one optimizer update and advance its accepted-update counter
+6. return accepted/rejected status and the diagnostic that selected it
+TERMINATION: finite input graph, tensor or declared loop sets exhausted.
+COMPLEXITY: one forward/backward plus O(P) checking, norm, clipping and update
+```
+
+## Implementation
+
+[DERIVED] This manuscript listing specifies the reference path. Constructor defaults are not an experimental initialization protocol: load the stored fixture state before comparison. Bounds on $T,V,D$ and allocation capacity are caller preconditions; materializing $T^2$ scores is reserved for bounded reference workloads. The code has not been executed in this revision.
+
+```python
+from dataclasses import dataclass
+import math
+import torch
+from torch import Tensor, nn
+from torch.nn import functional as F
+
+
+def wide(x: Tensor) -> Tensor:
+    # Preserve the FP64 reference; widen narrow execution values to FP32.
+    return x if x.dtype == torch.float64 else x.float()
+
+
+def rms(x: Tensor, eps: float) -> Tensor:
+    z = wide(x)
+    return (z * torch.rsqrt(z.square().mean(-1, keepdim=True) + eps)).to(x.dtype)
+
+
+class ReferenceCausalModel(nn.Module):
+    def __init__(self, vocab: int, width: int, max_positions: int) -> None:
+        super().__init__()
+        if min(vocab, width, max_positions) <= 0:
+            raise ValueError("model dimensions must be positive")
+        self.vocab, self.max_positions = vocab, max_positions
+        self.token = nn.Embedding(vocab, width)
+        self.position = nn.Embedding(max_positions, width)
+        self.qkv = nn.Linear(width, 3 * width, bias=False)
+        self.proj = nn.Linear(width, width, bias=False)
+        self.up = nn.Linear(width, 4 * width, bias=False)
+        self.down = nn.Linear(4 * width, width, bias=False)
+        self.head = nn.Linear(width, vocab, bias=False)
+
+    def forward(self, ids: Tensor, valid: Tensor) -> Tensor:
+        if ids.ndim != 2 or ids.shape != valid.shape:
+            raise ValueError("expected equal [B,T] input and validity shapes")
+        if ids.dtype != torch.int64 or valid.dtype != torch.bool:
+            raise TypeError("expected int64 tokens and Boolean validity")
+        b, t = ids.shape
+        if b == 0 or not 0 < t <= self.max_positions:
+            raise ValueError("empty or oversized input")
+        if ids.device != valid.device:
+            raise ValueError("input and validity must share a device")
+        if bool(((ids < 0) | (ids >= self.vocab)).any()):
+            raise ValueError("token index outside vocabulary")
+        positions = torch.arange(t, device=ids.device)
+        active = valid.unsqueeze(-1)
+        h = (self.token(ids) + self.position(positions)) * active
+        q, k, v = self.qkv(rms(h, 1e-5)).chunk(3, dim=-1)
+        scores = wide(q) @ wide(k).transpose(-2, -1) / math.sqrt(q.shape[-1])
+        causal = positions[:, None] >= positions[None, :]
+        allowed = causal[None, :, :] & valid[:, None, :]
+        has_key = allowed.any(-1, keepdim=True)
+        masked = scores.masked_fill(~allowed, -torch.inf)
+        safe = torch.where(has_key, masked, torch.zeros_like(masked))
+        probabilities = torch.softmax(safe, dim=-1)
+        probabilities = torch.where(has_key, probabilities, torch.zeros_like(probabilities))
+        context = (probabilities @ wide(v)).to(h.dtype) * active
+        h = (h + self.proj(context)) * active
+        h = (h + self.down(F.gelu(self.up(rms(h, 1e-5))))) * active
+        return self.head(rms(h, 1e-5))
+
+
+def shifted_loss(model: ReferenceCausalModel, tokens: Tensor,
+                 valid: Tensor, transition: Tensor) -> Tensor:
+    # transition includes caller-declared document-boundary exclusions.
+    if tokens.ndim != 2 or tokens.shape != valid.shape or tokens.shape[1] < 2:
+        raise ValueError("expected matching [B,T+1] tokens and validity")
+    if transition.dtype != torch.bool or transition.shape != tokens[:, :-1].shape:
+        raise ValueError("expected Boolean [B,T] transition supervision")
+    if valid.dtype != torch.bool or tokens.device != transition.device:
+        raise ValueError("mask dtype/device mismatch")
+    mask = valid[:, :-1] & valid[:, 1:] & transition
+    if not bool(mask.any()):
+        raise ValueError("effective batch has no supervised transitions")
+    if tokens.dtype != torch.int64 or bool(((tokens < 0) | (tokens >= model.vocab)).any()):
+        raise ValueError("tokens must be valid vocabulary indices")
+    logits = model(tokens[:, :-1], valid[:, :-1])
+    # Select supervised rows before evaluating the loss, rather than NaN*0.
+    selected = wide(logits[mask])
+    targets = tokens[:, 1:][mask]
+    return F.cross_entropy(selected, targets, reduction="sum") / mask.sum()
+
+
+@dataclass(frozen=True)
+class Accepted:
+    loss: float
+    gradient_norm: float
+
+
+@dataclass(frozen=True)
+class Rejected:
+    reason: str
+
+
+def reference_step(model: ReferenceCausalModel, optimizer: torch.optim.Optimizer,
+                   tokens: Tensor, valid: Tensor, transition: Tensor,
+                   max_norm: float) -> Accepted | Rejected:
+    # This unscaled reference is FP32/FP64; AMP inserts Algorithm 3.8.
+    if not math.isfinite(max_norm) or max_norm <= 0:
+        raise ValueError("clipping threshold must be finite and positive")
+    optimizer.zero_grad(set_to_none=True)
+    loss = shifted_loss(model, tokens, valid, transition)
+    if not bool(torch.isfinite(loss)):
+        return Rejected("nonfinite loss")
+    loss.backward()
+    for name, parameter in model.named_parameters():
+        if parameter.grad is None:
+            optimizer.zero_grad(set_to_none=True)
+            return Rejected(f"disconnected parameter: {name}")
+        if not bool(torch.isfinite(parameter.grad).all()):
+            optimizer.zero_grad(set_to_none=True)
+            return Rejected(f"nonfinite gradient: {name}")
+    gradients = [wide(p.grad).double() for p in model.parameters()]
+    norm = torch.linalg.vector_norm(torch.stack([torch.linalg.vector_norm(g) for g in gradients]))
+    if not bool(torch.isfinite(norm)):
+        optimizer.zero_grad(set_to_none=True)
+        return Rejected("nonfinite global norm")
+    norm_value = float(norm)
+    factor = 1.0 if norm_value <= max_norm else max_norm / norm_value
+    with torch.no_grad():
+        for parameter in model.parameters():
+            parameter.grad.mul_(factor)
+    optimizer.step()
+    return Accepted(float(loss.detach()), norm_value)
+```
+
+[DERIVED] Exceptions above reject invalid caller input; finite training rejection is an explicit result. FP64 norm accumulation is a diagnostic choice rather than a low-overhead production recommendation. Optimizer internals remain outside the pre-update gate: this listing does not provide rollback if an optimizer implementation fails after partially writing state. Sparse gradients, tied parameters, multiple optimizers, and distributed replicas require extensions rather than silent reuse.
 
 ```figure
 id: fig-3.28
 kind: tensor-flow
-title: Dtype and shape along the skeleton's loss path
+title: Dtype and shape along the causal reference path
 caption: >-
-  ModelStub.forward and masked_token_mean_ce as one trace. The shape changes
-  only twice, into [B, T, V] at the head and back to [B, T] at the gather.
-  The dtype changes at every step the §3.2 rules name: statistics go up to
-  FP32 and come back, logits go up to FP32 before log_softmax, and the mean
-  divides by Σm, never by B·T. The [B, 1, T, T] mask is built on the side and
-  not consumed by the stub.
+  The attention mask is consumed by the score path. Empty score rows are
+  made finite before softmax and receive zero probabilities. Wider operations
+  preserve FP64 during reference checking and otherwise use FP32. Only valid
+  supervised transitions enter the scalar loss.
 placement: inline
 evidence: DERIVED
-source: ["DERIVED:eq-3.7", "DERIVED:eq-3.20"]
+source: ["DERIVED:eq-3.19", "DERIVED:eq-3.20", "DERIVED:alg-3.12"]
 alt: >-
-  Eight-step tensor trace. Token ids and key mask [B, T]. The embedding
-  gather gives x [B, T, D] in the storage dtype (V·D parameters). x.float()
-  and RMSNorm compute statistics in FP32 over [B, T, D]. .to(x.dtype) casts
-  back to storage. The output head D to V gives logits [B, T, V] (D·V
-  parameters, 2·D·V FLOPs per token). log_softmax of logits.float() gives
-  FP32 log-probabilities [B, T, V] by max-subtracted log-sum-exp (Eq.
-  3.6–3.7). Gathering the target and multiplying by the loss mask gives
-  per-token negative log-likelihood [B, T], with ignore index −100 becoming
-  m = 0 (Eq. 3.20). Σ(nll·m) / max(Σm, 1) gives the scalar token mean of
-  Eq. N.2.
+  Tokens and validity form embeddings, query/key/value projections, causal
+  masked scores, safe probabilities, context, residual feed-forward states,
+  vocabulary logits, selected valid transitions, and a scalar token mean.
+  The score and probability tensors scale quadratically in sequence length.
 spec:
-  dims: { B: "sequences", T: "input positions after the shift", D: "model width", V: "vocabulary" }
+  dims: { B: "sequences", T: "input positions", D: "width", V: "vocabulary", N: "valid supervised transitions" }
   steps:
-    - { shape: "[B, T]", label: "ids (int64) and key_mask (bool)" }
-    - { shape: "[B, T, D]", label: "x, storage dtype", op: "embedding gather", cost: "V·D params" }
-    - { shape: "[B, T, D]", label: "normalised, statistics in FP32", op: "x.float() → RMSNorm", cost: "row sums accumulated in FP32 (§3.2)" }
-    - { shape: "[B, T, D]", label: "back in storage dtype", op: ".to(x.dtype)" }
-    - { shape: "[B, T, V]", label: "logits", op: "output head, D → V", cost: "D·V params · 2·D·V FLOPs/token" }
-    - { shape: "[B, T, V]", label: "log-probabilities, FP32", op: "log_softmax(logits.float())", cost: "max-subtracted LSE, Eq. 3.6–3.7" }
-    - { shape: "[B, T]", label: "per-token NLL, zero where m = 0", op: "gather target, × m", cost: "ignore index −100 → m (Eq. 3.20)" }
-    - { shape: "[1]", label: "masked token mean", op: "Σ(nll·m) / max(Σm, 1)", cost: "Eq. N.2; never mean() over B·T" }
+    - { shape: "[B, T]", label: "ids and validity" }
+    - { shape: "[B, T, D]", label: "token plus position embeddings", op: "embedding" }
+    - { shape: "[B, T, 3D]", label: "query, key, value", op: "QKV projection" }
+    - { shape: "[B, T, T]", label: "wider masked scores", op: "QK^T / sqrt(D); causal and key mask" }
+    - { shape: "[B, T, T]", label: "finite safe probabilities", op: "softmax; empty rows to zero" }
+    - { shape: "[B, T, D]", label: "context and residual paths", op: "PV; projection; feed-forward" }
+    - { shape: "[B, T, V]", label: "vocabulary logits", op: "head" }
+    - { shape: "[N, V]", label: "wider supervised logits", op: "select transition mask" }
+    - { shape: "[1]", label: "token mean loss", op: "sum cross-entropy / N" }
 ```
 
-> **Implementation note [impl.pytorch · docs 2.14, accessed 2026-09-20; execution UNVERIFIED].** `torch.use_deterministic_algorithms(True)` requires `CUBLAS_WORKSPACE_CONFIG=:4096:8` or `:16:8` to be set in the environment for CUDA GEMMs [OFFICIAL-DOCUMENTATION — PyTorch Reproducibility page]; the skeleton's manifest records which.
+[DERIVED] With untied token/head weights, maximum position count $T_{\max}$, and no affine normalization or biases, parameter count is $2VD+T_{\max}D+12D^2$. Forward dense products cost approximately $24BTD^2+4BT^2D+2BTDV$ FLOPs, counting multiply-add as two and excluding elementwise work. Attention scores/probabilities occupy $O(BT^2)$ elements. This bounded reference deliberately exposes quadratic storage; it is not an inference or long-context implementation. No communication occurs within the stated boundary; latency, throughput, energy, and money are unmeasured.
 
 ## Experimental design
 
-Proposed: Experiment 3.5 in [verification.md](verification.md) — (1) build the fixture with Algorithm 3.11; (2) compare the skeleton's FP32 and BF16 forward/gradient against the stored FP64 values (Experiments 3.1–3.3); (3) run Algorithm 3.12 for each recipe; (4) mutation tests: flip the causal mask to `triu`, drop the padding term of Eq. 3.20, replace the masked mean with `mean()`, and confirm that each mutation is caught by (2) or (3). Controlled: seed, device, deterministic flags; metric: max relative error and final loss; baseline: the FP64 twin.
+### Reported experiments
+
+[PAPER-REPORTED] The Transformer paper studies decoder masking within an encoder–decoder translation model, rather than this reference architecture. Its WMT14 English–German data contain about 4.5M sentence pairs, with roughly 25,000 source and target tokens per batch. The base model trains100,000 steps on 8 P100 GPUs; reported base/big test BLEU is 27.3/28.4. Its label smoothing0.1 hurts perplexity while improving accuracy and BLEU. These details delimit the evidence for causal decoder training and objective tradeoffs; they do not validate the manuscript listing. [P01, §§3.2.3,5–6](references.md).
+
+[PAPER-REPORTED] Glorot and Bengio's initialization study evaluates signal and gradient propagation across deep networks, motivating a fan-in/fan-out compromise. Its variance argument depends on its activation and distribution conditions. It supports inspecting realized activation and gradient scales, rather than treating an initialization family as a guarantee against overflow. [R3.30, §§3–4](references.md).
 
 ## Observations
 
-**What the paper claims.** CS336 (Spring 2026) structures Assignment 1 as implementing the tokenizer, Transformer, and optimizer from scratch and training a minimal language model, with later assignments on systems and scaling [OFFICIAL-DOCUMENTATION — course page, R3.15, accessed 2026-09-20]. P01 defines the causal ("masking out") attention that Eq. 3.19 encodes [PAPER-REPORTED].
+**What the paper claims.** [PAPER-REPORTED] The translation study evaluates masked decoder training; the initialization study analyzes signal and gradient propagation under stated conditions. These are contextual evidence for the reference contracts rather than experiments on the book listing. [P01 sections 3/5/6; R3.30 section 4](references.md).
 
-**What the evidence shows.** Mask and loss-normalization semantics are definitional; the only empirical content of this section is that a skeleton either passes or fails the stated tests, and no runs were executed for this edition.
+**What the evidence shows.** [DERIVED] The inspected operator documentation establishes interface semantics, not that this particular composition executes correctly. The listing consumes its mask and preserves FP64 by construction; numerical validation remains outstanding.
 
-**What we infer.** A fixture stored with FP64 values decouples correctness testing from RNG-stream stability; the book treats stored fixtures as the unit of regression testing for every later chapter's reference model [DERIVED].
+**What we infer.** [MATHEMATICALLY-DERIVED] If identical visible contexts receive conflicting targets, their minimum empirical cross-entropy is positive. Tiny-batch capacity alone therefore cannot establish a 0.01-nat target or convergence in 300steps. Independent future/padding invariances diagnose different defects from derivative agreement.
 
-**What remains unknown.** Whether the stub's initialization scale is appropriate for the full Chapter 05 model is deferred to §5.4 (UNVERIFIED here). The behavior of fused attention kernels on fully masked rows is kernel-specific and must be tested per kernel (NOT-DISCLOSED in general).
+**What remains unknown.** [UNVERIFIED] Runtime compatibility, fitting behavior, actual allocation and fused parity of this listing have not been measured. Proposed fixtures and reports remain ungenerated.
 
 ## Failure modes
 
-> **Failure mode — Future leakage.** *Symptom:* tiny-batch loss collapses implausibly fast; evaluation loss at generation time is far worse than training loss. *Cause:* `triu` instead of `tril`, or a transposed mask. *Detection:* per-position loss at t = 0 is already near zero. *Mitigation:* Eq. 3.19 with an explicit test that logits at position i do not change when ids at j > i change.
-
-> **Failure mode — Padding in the denominator.** *Symptom:* loss values depend on batch padding fraction. *Cause:* `mean()` over [B, T]. *Detection:* the same sequences with different padding give different losses. *Mitigation:* Eq. N.2 with Σm.
-
-> **Failure mode — NaN from fully masked rows.** *Symptom:* NaN only in batches with short sequences. *Cause:* −∞ fill with all keys masked. *Detection:* per-row key counts of zero. *Mitigation:* finite fill plus loss mask; or exclude the row.
-
-> **Failure mode — Fixture drift.** *Symptom:* tests fail after a framework upgrade with no code change. *Cause:* regenerated fixture from a changed RNG stream, or a changed kernel outside tolerance. *Detection:* compare stored ids hash. *Mitigation:* never regenerate; re-derive tolerances ([§3.6](03-6-reproducibility-limits.md)).
+[DERIVED] Building a mask but never using it leaves causal mutation checks without a causal computation to test. Replacing an empty attention row by a finite-minimum softmax invents a uniform read. Multiplying an invalid loss by zero can preserve NaNs in the graph. A hidden FP32 cast invalidates FP64 checks. Padding exclusion based only on the current token supervises the last real token against padding. Each defect violates a different visible boundary in the reference path.
 
 ## Siblings
 
-**Boolean additive-mask vs Boolean multiplicative mask** — this section. Why additive exists: one fused add before softmax. What assumption changed: −∞ (or min-finite) is representable in the compute dtype. What new failure mode it introduced: NaN on fully masked rows. Changed primitive: multiply probabilities → add to logits.
-
-**Ignore-index loss mask vs explicit weight mask** — this section. Why ignore-index exists: a single integer marks unsupervised targets. What assumption changed: the target vocabulary never uses the sentinel. What new failure mode it introduced: a padding token id colliding with a real id if the sentinel is misused. Changed primitive: weight vector → sentinel id.
-
-**Packed sequences with document masks** — [§12.4](../../part-02-data-and-representation-engineering/ch12-scalable-data-infrastructure-and-reproducible-ingestion/12-4-packing-and-masks.md). Why it exists: padding wastes compute. What assumption changed: one row holds several documents. What new failure mode it introduced: cross-document attention unless the block-diagonal mask is applied. Changed primitive: per-batch key mask → per-document block mask.
-
-**Regenerated fixtures vs stored fixtures** — this section. Why regenerated exists: no storage. What new failure mode it introduced: RNG-stream drift across versions. Changed primitive: seed → stored tensors.
+[DERIVED] A token-only stub is suitable for checking embedding/head and loss shapes, but cannot verify attention semantics. The explicit attention reference exposes them at quadratic cost. A fused SDPA implementation changes dispatch and intermediate storage while retaining a declared attention contract. The full Chapter 05 model adds architecture-specific paths; passing this smaller reference cannot establish their correctness.
 
 ## Extensions
 
-Conditional objectives ([§4.5](../ch04-language-modeling-and-learning-objectives/04-5-conditional-and-multimodal-learning.md)) change only m_t; SFT with prompt masking sets m_t = 0 on prompt tokens; multimodal inputs add a modality mask to the key mask; agent trajectories add tool-output spans to the loss mask — all are values of Eq. 3.20, not new mechanisms (proposal-level).
+### Improvements
+
+[OFFICIAL-DOCUMENTATION] Fused SDPA can select different backends and provides backend controls for diagnosis. Substituting it should preserve Boolean-mask orientation, empty-row behavior, dropout settings, and the FP64 checking route. Its supported dtypes and numerical differences are implementation constraints to record, not reasons to loosen an objective test. [R3.37](references.md).
 
 ## Limitations
 
-The stub has no attention, so the [B, 1, T, T] mask is constructed but not consumed; the contract is exercised fully only in Chapter 05. The overfitting floor ℓ_min is an acceptance value chosen for a memorizable fixture and has no meaning for real data. Falsification: a skeleton passing Algorithm 3.12 but failing Algorithm 3.7 indicates a VJP error that still descends — the reason both tests exist. Decision consequence: no scale-up ([§19.6](../../part-04-training-science-and-adaptation/ch19-pretraining-objectives-and-the-full-training-loop/19-6-reference-to-scale-handoff.md)) before both pass.
+[UNVERIFIED] Syntax inspection and algebraic accounting do not establish runtime correctness. This listing has not been executed against the inspected documentation surface. It omits packed-document state, optimizer rollback, mixed-device execution, fused-kernel parity, and large-model performance engineering. Those are explicit gaps, not claimed completed artifacts.
 
 ## Reproducibility
 
-Target: the PyTorch 2.14 documented API; execution UNVERIFIED. Fixture metadata records seed, shapes, framework version, device, and deterministic flags. Unresolved: fused-kernel masked-row behavior (NOT-DISCLOSED per kernel).
+[DERIVED] The deliverable is the manuscript algorithm and listing. Proposed files, fixtures, and reports in verification.md remain unmaterialized until executed. An eventual report must distinguish a stored analytic reference from an independently checked derivative and state all changes to the objective, model, kernels, and fixture hashes.
 
 ## References
 
-P01; R3.11, R3.15, R3.25.
+[DERIVED] Source locators: [P01; R3.31/g/h; R3.20; R3.30](references.md). The connection from these contracts to the reference listing is original derivation, with no claim of independent experimental validation.

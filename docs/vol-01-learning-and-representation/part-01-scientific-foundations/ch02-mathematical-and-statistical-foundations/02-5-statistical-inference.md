@@ -28,7 +28,7 @@ datasets: []
 status: {maturity: established, disputed: false}
 evidence_summary: {labels_used: [MATHEMATICALLY-DERIVED, PAPER-REPORTED, ASSUMED, DERIVED, NOT-DISCLOSED, UNVERIFIED], empirically_observed: false}
 word_count_target: 1100
-updated_at: 2026-09-20
+updated_at: 2026-10-08
 editorial_status: manuscript_draft
 ---
 
@@ -36,21 +36,21 @@ editorial_status: manuscript_draft
 
 ## Scope
 
-Objective: fix how a measured difference between two systems is turned into an interval and a decision: confidence intervals, the bootstrap and its resampling unit, paired tests, dependence, multiple comparisons, effect sizes, and power. Baseline: a point estimate with no interval, or an interval computed by resampling prompts that are not independent. Success: every reported comparison in the book names its experimental unit, its interval method, its pairing, its number of comparisons, and the effect it was powered to detect. Boundaries: which units exist (model, checkpoint, prompt, scaffold, endpoint) is [§06.1](../ch06-experimental-design-and-evaluation-before-optimization/06-1-evaluation-units.md); seed and task variance in context is [§06.4](../ch06-experimental-design-and-evaluation-before-optimization/06-4-measurement-uncertainty.md); preference aggregation is [§62.2](../../../vol-03-grounded-and-interactive-intelligence/part-11-evaluation-interpretability-and-deployment-assurance/ch62-human-preference-model-judges-and-uncertainty/62-2-pairwise-aggregation.md).
+Statistical inference links an estimand to a sample, a variance model, and an interval or test. Relevant choices include the independent sampling unit, pairing, clustering, bootstrap construction, multiplicity, effect size, and power. Evaluation units are developed in [§06.1](../ch06-experimental-design-and-evaluation-before-optimization/06-1-evaluation-units.md), repeated-run uncertainty in [§06.4](../ch06-experimental-design-and-evaluation-before-optimization/06-4-measurement-uncertainty.md), and preference aggregation in [§62.2](../../../vol-03-grounded-and-interactive-intelligence/part-11-evaluation-interpretability-and-deployment-assurance/ch62-human-preference-model-judges-and-uncertainty/62-2-pairwise-aggregation.md).
 
 ## Why this exists
 
-What failed: benchmark differences of a point or two were reported as improvements without a variance model, and where intervals were given they treated every question as an independent draw. The bottleneck: questions in many evaluations are generated from shared templates, passages, or seeds, so the effective sample size is far smaller than the question count; and comparing two models on different question subsets throws away the pairing that would make small differences detectable. The dominant constraint: the number of *independent* units, not the number of rows. What changed: Miller frames evaluations as experiments in which "the inclusion of questions is non-independent" so that "a key assumption of the Central Limit Theorem (or a bootstrap) is violated", and supplies clustered and paired standard errors [PAPER-REPORTED · R2.7]; this section derives the same conclusions from Eq. 2.7 and fixes the resampling rule.
+Shared passages, templates, prompts, or training runs can induce covariance between observed rows. The variance of an average then includes covariance terms, and the row count alone does not determine precision. Evaluating two systems on the same units also introduces a cross-system covariance that changes the variance of their difference. Miller develops clustered and paired standard errors for these settings [PAPER-REPORTED · R2.7, §§2.2,4.2]. The resulting corrections quantify measurement precision; they do not change the systems' observed scores.
 
 ## Intuition
 
-Physically, an evaluation is a Monte Carlo estimate (Eq. 2.8) of a population mean over a task distribution (Chapter 01). Its uncertainty comes from three sources at once — which units were drawn, which samples were drawn per unit at nonzero temperature, and which training seed produced the model — and Eq. 2.7 adds their variances. Resampling reproduces the variance of whatever it resamples: bootstrapping prompts reproduces prompt-draw variance only if prompts were the independent draws. Heuristically, ten paraphrases of one question are one question asked ten times.
+A fixed benchmark mean is a deterministic summary after scores are recorded. Treating it as an estimate of a population quantity requires a sampling model. Prompt sampling, repeated generations, and training seeds can contribute different conditional variance terms. A bootstrap resamples the specified independent units and preserves the dependence carried inside each unit; its nominal coverage remains an approximation that must be assessed in the relevant regime [MATHEMATICALLY-DERIVED · DERIVED:eq-2.7; DERIVED:eq-2.22; PAPER-REPORTED · R2.16, §4.1].
 
 ## Formulation
 
-> **Definition — experimental unit / bootstrap unit.** The smallest entity that is independently sampled from the population or independently assigned a treatment; the bootstrap resamples these units and nothing finer.
+> **Definition — bootstrap unit.** The independently sampled unit reproduced by a resampling scheme for a specified estimand. Canonical experimental-unit and treatment-assignment distinctions are developed in [§06.1](../ch06-experimental-design-and-evaluation-before-optimization/06-1-evaluation-units.md); this section owns their statistical consequences.
 
-> **Definition — confidence interval (normal approximation).** For a mean of n independent unit scores s_i with sample standard deviation ŝ,
+> **Definition — confidence interval (normal approximation).** For a mean of n iid unit scores s_i with finite variance and sample standard deviation ŝ,
 
 $$
 \hat\mu \pm z_{1-\alpha/2}\,\frac{\hat s}{\sqrt{n}}, \qquad \operatorname{SE}_{\text{CLT}} = \sqrt{\frac{\operatorname{Var}(s)}{n}}
@@ -62,7 +62,7 @@ $$
 $$
 \operatorname{Var}(d) = \operatorname{Var}(s_A) + \operatorname{Var}(s_B) - 2\operatorname{Cov}(s_A, s_B), \qquad \operatorname{SE}_{\text{paired}} = \sqrt{\frac{\operatorname{Var}(d)}{n}}
 $$
-*(Eq. 2.21)* where the covariance is positive whenever both systems find the same units hard; R2.7 gives the second expression as its Eq. 7.
+*(Eq. 2.21)* where positive covariance quantifies a shared score component; it must be estimated rather than inferred solely from using the same units; R2.7 gives the second expression as its Eq. 7.
 
 > **Definition — design effect.** For K clusters of m units each (n = Km) with intra-cluster correlation ρ,
 
@@ -131,11 +131,13 @@ n \approx \frac{\big(z_{1-\alpha/2} + z_{1-\beta}\big)^2\,\sigma_d^2}{\delta^2}
 $$
 *(Eq. 2.23)* where σ_d² = variance of the per-unit (paired) difference; R2.7's Eq. 9 has the same form with σ_d² expanded, by Eq. 2.7, into a between-question term plus within-question terms divided by the samples per question.
 
-> **Assumption.** Unit scores have finite variance and clusters are exchangeable · *sensitivity:* with heavy-tailed scores (e.g. latency, reward) the normal approximation and the percentile bootstrap both under-cover; use the log scale or quantile-based effect sizes.
+> **Assumption.** Unit scores have finite variance and the resampled clusters are independent and identically distributed · *sensitivity:* finite-sample coverage can deteriorate with skew, heavy tails, few independent units, or an unsuitable estimator. A log transformation changes the estimand and cannot be prescribed without that change being stated.
 
 ## Mechanism
 
-**Why per-prompt resampling is wrong when prompts share a template.** Let K templates each generate m prompts and let the score be s_{kj} = μ + a_k + e_{kj} with a_k ∼ (0, σ_a²) the template effect and e_{kj} ∼ (0, σ_e²) the within-template noise. Then, by Eq. 2.7 with X = template, Var(μ̂) = σ_a²/K + σ_e²/(Km) = (σ²/n)(1 + (m−1)ρ). A bootstrap that resamples the n prompts individually produces replicates whose variance is σ²/n, because it treats the a_k as fixed and re-draws only across rows; it estimates the wrong quantity by exactly the factor DE [MATHEMATICALLY-DERIVED · DERIVED:eq-2.22]. Worked statement (ASSUMED inputs): m = 10 prompts per template and ρ = 0.5 give DE = 5.5, so the naive interval is too narrow by √5.5 ≈ 2.3×, and an effect that appears significant at "z = 2" is in fact at z ≈ 0.85. Resampling templates (clusters) with replacement, carrying all their prompts, reproduces σ_a²/K + σ_e²/(Km) because it re-draws the a_k [MATHEMATICALLY-DERIVED]. R2.7 arrives at the same place with its clustered standard error (its Eq. 4), which adds the within-cluster cross-covariances to SE²_CLT [PAPER-REPORTED · R2.7]. The same argument applies to seeds (one training seed is one cluster of all its evaluations), to repeated samples per prompt, and to questions built from one passage.
+### Methodology
+
+**Why per-prompt resampling is wrong when prompts share a template.** Let K templates each generate m prompts and let the score be s_{kj} = μ + a_k + e_{kj} with a_k ∼ (0, σ_a²) the template effect and e_{kj} ∼ (0, σ_e²) the within-template noise. Then, by Eq. 2.7 with X = template, Var(μ̂) = σ_a²/K + σ_e²/(Km) = (σ²/n)(1 + (m−1)ρ). A bootstrap that resamples the n prompts individually produces replicates whose variance is σ²/n, because it treats the a_k as fixed and re-draws only across rows; under this equal-size random-effects model, its asymptotic variance target differs by DE; finite-sample bootstrap variance need not equal that ratio exactly [MATHEMATICALLY-DERIVED · DERIVED:eq-2.22]. Worked statement (ASSUMED inputs): m = 10 prompts per template and ρ = 0.5 give DE = 5.5, so the naive interval is too narrow by √5.5 ≈ 2.3×, and an effect that appears significant at "z = 2" is in fact at z ≈ 0.85. Resampling templates (clusters) with replacement, carrying all their prompts, reproduces σ_a²/K + σ_e²/(Km) because it re-draws the a_k [MATHEMATICALLY-DERIVED]. R2.7 arrives at the same place with its clustered standard error (its Eq. 4), which adds the within-cluster cross-covariances to SE²_CLT [PAPER-REPORTED · R2.7]. The same argument applies to seeds (one training seed is one cluster of all its evaluations), to repeated samples per prompt, and to questions built from one passage.
 
 <details><summary>Derivation of Eq. 2.22</summary>
 
@@ -143,7 +145,7 @@ $$
 
 </details>
 
-**Pairing.** Eq. 2.21 says that scoring both systems on the same units and bootstrapping the differences removes the shared unit-difficulty variance; R2.7 states that "the naive comparison above misses an opportunity to reduce the standard error when two models evaluate the same set of questions" [PAPER-REPORTED · R2.7]. Worked statement (ASSUMED p = 0.5 for both systems, the worst case for a Bernoulli score): unpaired, SE of the difference is √(0.5/n), and Eq. 2.23 with α = 0.05, 1 − β = 0.8 (z sum ≈ 2.80) gives n ≈ 39,000 units per system to detect a 1-point (0.01) difference; paired with Cov = 0.125 (ρ_AB = 0.5), σ_d² = 0.25 and n ≈ 19,600 [MATHEMATICALLY-DERIVED · DERIVED:eq-2.23]. Both numbers are far above typical benchmark sizes, which is the quantitative content of "a one-point difference is noise unless shown otherwise". A paired sign-flip permutation test — randomly negate each d_i under the null of exchangeability within pairs — gives an exact p-value without a normality assumption at a cost of R permutations × O(n) [MATHEMATICALLY-DERIVED].
+**Pairing.** Eq. 2.21 says that scoring both systems on the same units and bootstrapping the differences removes the shared unit-difficulty variance; R2.7 states that "the naive comparison above misses an opportunity to reduce the standard error when two models evaluate the same set of questions" [PAPER-REPORTED · R2.7]. Worked statement (ASSUMED p = 0.5 for both systems, the worst case for a Bernoulli score): unpaired, SE of the difference is √(0.5/n), and Eq. 2.23 with α = 0.05, 1 − β = 0.8 (z sum ≈ 2.80) gives n ≈ 39,000 units per system to detect a 1-point (0.01) difference; paired with Cov = 0.125 (ρ_AB = 0.5), σ_d² = 0.25 and n ≈ 19,600 [MATHEMATICALLY-DERIVED · DERIVED:eq-2.23]. These numbers apply only to the chosen discordance/covariance model; near-identical paired outputs can have much smaller difference variance. No universal minimum detectable difference follows from benchmark size alone. A paired sign-flip permutation test — randomly negate each d_i under the null of exchangeability within pairs — gives a finite randomization reference under a sharp paired-exchangeability null; Monte Carlo sampling approximates the exhaustive reference at O(Rn) work, using an exceedance-count correction [MATHEMATICALLY-DERIVED].
 
 ```figure
 id: fig-2.26
@@ -191,9 +193,35 @@ spec:
     - { label: "power 0.9", values: { zb: 1.28 } }
 ```
 
-**Multiple comparisons.** With m independent comparisons at level α, the probability of at least one false rejection is 1 − (1−α)^m (≈ 0.64 for m = 20, α = 0.05) [MATHEMATICALLY-DERIVED]. Bonferroni tests each at α/m (family-wise control, conservative under positive dependence); Holm's step-down is uniformly more powerful with the same guarantee; Benjamini–Hochberg controls the expected proportion of false rejections instead. A leaderboard with dozens of benchmarks and a report with dozens of ablations are both families.
+**Multiple comparisons.** With m independent comparisons at level α, the probability of at least one false rejection is 1 − (1−α)^m (≈ 0.64 for m = 20, α = 0.05) [MATHEMATICALLY-DERIVED]. Bonferroni tests each at α/m (family-wise control, conservative under positive dependence); Holm step-down retains family-wise control under arbitrary dependence when the individual p-values are valid; Benjamini–Hochberg targets false-discovery rate under independence or specified positive-dependence conditions, not arbitrary dependence. A leaderboard with dozens of benchmarks and a report with dozens of ablations are both families.
 
 **Bootstrap variants and cost.** The percentile bootstrap takes the α/2 and 1 − α/2 quantiles of R replicate statistics; BCa additionally corrects for bias and skew; the basic bootstrap reflects the percentile interval about the estimate. Agarwal et al. recommend "interval estimates of aggregate performance" via stratified bootstrap and "more robust and efficient aggregate metrics, such as interquartile mean scores" for few-run settings [PAPER-REPORTED · R2.16]; Bouthillier et al. report that "variance due to data sampling, parameter initialization and hyperparameter choice impact markedly the results" and recommend randomising many sources [PAPER-REPORTED · R2.17]. Cost: with per-unit scores cached, a replicate is an O(n) aggregation, so R = 10⁴ replicates is negligible against the one-time generation cost; when the statistic requires refitting (a scaling-law fit, §02.6) the cost is R × fit cost.
+
+### Estimand, unequal clusters, and test construction
+
+Let independent clusters be $k=1,\ldots,K$, with cluster size $n_k$, paired score sum $t_k=\sum_jd_{kj}$, and row count $n=\sum_kn_k$. A row-weighted mean is $\hat\delta=\sum_kt_k/n$; an equal-cluster mean is $K^{-1}\sum_kt_k/n_k$. These are different population targets when cluster size is informative. Resampling clusters uniformly and carrying their rows intact produces a ratio of resampled sums and counts, estimating the former under an iid-cluster sampling model. Averaging cluster means instead estimates the latter. The bootstrap algorithm must preserve the selected numerator and denominator, rather than silently switching weighting [MATHEMATICALLY-DERIVED · DERIVED:eq-2.21].
+
+For the ratio target, define $u_k=t_k-\hat\delta n_k$. A cluster-robust plug-in standard error is
+
+$$
+\widehat{\mathrm{SE}}^2_{\rm cluster}
+=\frac{K}{K-1}\frac{\sum_{k=1}^Ku_k^2}{n^2}.
+$$
+*(Eq. 2.30)* Independent clusters, a finite second moment of cluster contributions, and a nondegenerate denominator justify a many-cluster approximation. For singleton clusters it reduces to the usual sample-mean SE. For equal-size clusters it is the SE of their mean scores. Crossed dependencies, such as the same annotator appearing in unrelated prompt clusters, violate this one-way independence model; merely nesting labels cannot repair a crossed design [MATHEMATICALLY-DERIVED · DERIVED:eq-2.27].
+
+For paired binary scores, each difference is in $\{-1,0,1\}$. Let $p_+$ and $p_-$ be probabilities of the two discordant outcomes. Then $\delta=p_+-p_-$ and $\mathrm{Var}(d)=p_++p_--\delta^2$. Power depends on discordance, not only the two marginal accuracies. Under a sharp null making signs exchangeable among discordant independent pairs, their positive count is binomial with probability one-half conditional on the discordant count. For clustered data, rowwise sign flips are generally invalid; the randomization unit must match the assignment or justified joint symmetry [MATHEMATICALLY-DERIVED · DERIVED:eq-2.21].
+
+A confidence interval is a random set whose repeated-sampling coverage is a property of the procedure and sampling model. It is not a posterior probability that a fixed unknown parameter lies in the realized interval. A nonzero interval for a metric difference also does not establish practical value; compare its range with a prespecified meaningful-effect threshold. Conversely, an interval overlapping zero need not establish equivalence. Equivalence requires a stated margin and a procedure aimed at excluding effects outside it [MATHEMATICALLY-DERIVED · DERIVED:eq-2.20].
+
+### Bootstrap variants, multiplicity, and power
+
+Given bootstrap replicates $d_1^*,\ldots,d_R^*$, let $q_u^*$ be their empirical $u$-quantile. The percentile interval is $[q_{\alpha/2}^*,q_{1-\alpha/2}^*]$; the basic interval is $[2\hat\delta-q_{1-\alpha/2}^*,2\hat\delta-q_{\alpha/2}^*]$. BCa modifies quantile levels using a bias term $z_0=\Phi^{-1}(R^{-1}\sum_r\mathbf1[d_r^*<\hat\delta])$ and a jackknife acceleration $a=\sum_k(\bar d_{(-\cdot)}-d_{(-k)})^3/[6\{\sum_k(\bar d_{(-\cdot)}-d_{(-k)})^2\}^{3/2}]$. Its adjusted level is $\Phi\{z_0+(z_0+z_u)/[1-a(z_0+z_u)]\}$. Delete-one operations must delete the independent resampling unit. Degenerate jackknife variation, infinite $z_0$, or a near-zero denominator makes this construction unstable; the method name does not guarantee coverage [MATHEMATICALLY-DERIVED · DERIVED:eq-2.20].
+
+For $m$ valid null p-values, Bonferroni family-wise control follows directly from the union bound: $\Pr(\cup_i\{p_i\le\alpha/m\})\le\sum_i\alpha/m=\alpha$, without independence. Holm orders p-values and tests $p_{(j)}\le\alpha/(m-j+1)$ until the first failure. Sorting costs $O(m\log m)$ with constant-cost numeric comparison. Benjamini–Hochberg instead finds the largest $j$ with $p_{(j)}\le jq/m$ and rejects that prefix; its FDR guarantee requires its dependence conditions. Selecting a winning configuration before declaring the comparison family changes the inference problem and is not cured by bootstrapping only the winner [MATHEMATICALLY-DERIVED · DERIVED:eq-2.20].
+
+Equation 2.23 uses a normal planning approximation to a paired mean. It needs a plausible difference variance, target effect, significance level, and desired power, all chosen before inspecting the decisive comparison. Clustering changes that variance and the available independent-unit count. Repeated generations reduce within-prompt noise but not the between-prompt term. Uncertainty in the variance estimate makes power itself uncertain; a range of plausible variances is more defensible than reporting one exact required sample count [MATHEMATICALLY-DERIVED · DERIVED:eq-2.23].
+
+For the mean-difference bootstrap, preaggregate each cluster into $(t_k,n_k)$. Each replicate samples $K$ cluster indices and sums those two arrays, so its time is $O(K)$ and total time $O(n+RK)$, with $O(K+R)$ auxiliary storage. This preserves unequal-size row weighting without concatenating every sampled row. Refitting statistics have a different cost, as do BCa jackknife refits. Evaluation generation is outside this cached-score boundary; no extra model parameters or training tokens are introduced. Energy, money, and elapsed runtime remain UNVERIFIED without executing the stated workload [MATHEMATICALLY-DERIVED · DERIVED:eq-2.30].
 
 ## Algorithm
 
@@ -205,18 +233,18 @@ STATE   list of cluster index sets; replicate array D[1..R]
 INVARIANT every replicate contains exactly K clusters drawn with replacement, each carried whole;
           both systems are evaluated on the identical resampled unit multiset (pairing preserved)
 1  d[i] ← s_A[i] − s_B[i]                                  # pair first
-2  groups ← {k : indices i with c[i] = k}                   # K clusters
+2  preaggregate score_sum[k] = Σ_{i:c[i]=k} d[i], count[k] = number of such rows
 3  d̂ ← mean over all i of d[i]
 4  for r = 1..R:
 5      draw k_1..k_K from {1..K} with replacement (seeded)
-6      idx ← concatenation of groups[k_1], …, groups[k_K]
-7      D[r] ← mean of d[idx]                                # cluster-weighted by construction
+6      numerator ← Σ_j score_sum[k_j]; denominator ← Σ_j count[k_j]
+7      D[r] ← numerator / denominator                      # preserves row-weighted estimand
 8  lo, hi ← quantiles of D at α/2 and 1 − α/2
 9  SE_boot ← standard deviation of D
 10 return d̂, [lo, hi], SE_boot, K
 ```
 
-Complexity: O(R·n) after O(n) grouping; memory O(n + R). Termination: R replicates. Reporting K is mandatory: an interval from K = 5 clusters is not a 95 % interval in any useful sense. Reference code and the coverage check are in [verification.md](verification.md) (Experiment 2.2), UNVERIFIED for version.
+Complexity: O(n + R·K) with preaggregated cluster sums/counts; auxiliary memory O(K + R). Termination: R replicates. Reporting K is mandatory: with very few clusters, nominal percentile coverage is not guaranteed and may be poor; report the observed count and the limitations rather than treating the confidence label as a validation. Reference code and the coverage check are in [verification.md](verification.md) (Experiment 2.2), UNVERIFIED for version.
 
 ```figure
 id: fig-2.27
@@ -227,7 +255,7 @@ caption: >-
   on the rows; resampling happens second, on the clusters. The emphasised
   path draws K whole clusters per replicate and reproduces
   σ_a²/K + σ_e²/(Km); the dashed alternative draws rows and reproduces
-  σ²/n, which understates the variance by exactly DE. The count K leaves
+  σ²/n, which targets a variance smaller by DE in the equal-size random-effects model. The count K leaves
   the algorithm as an output, because an interval from K = 5 clusters is not
   a 95 % interval in any useful sense.
 placement: inline
@@ -243,7 +271,7 @@ alt: >-
   mean D[r] at O(n) per replicate (line 7), loops R times, and returns the
   percentile interval and SE_boot (lines 8–9); its variance is
   σ_a²/K + σ_e²/(Km). The dashed alternative resamples rows, each prompt as
-  its own cluster, and reproduces σ²/n, too small by DE. K is reported with
+  its own cluster, and targets σ²/n asymptotically, too small by DE in that model. K is reported with
   the interval.
 spec:
   direction: LR
@@ -259,7 +287,7 @@ spec:
     - { id: rep, kind: process, label: "replicate mean D[r]", sub: "O(n) per replicate, line 7" }
     - { id: out, kind: metric, label: "percentile interval and SE_boot", sub: "lines 8–9; Var = σ_a²/K + σ_e²/(Km)", emphasis: true }
     - { id: k, kind: metric, label: "K, reported with the interval", sub: "independent units actually resampled" }
-    - { id: rows, kind: dependency, label: "rows as units: each prompt its own cluster", sub: "reproduces σ²/n, too small by DE" }
+    - { id: rows, kind: dependency, label: "rows as units: each prompt its own cluster", sub: "targets σ²/n asymptotically, too small by DE in that model" }
   edges:
     - { from: sa, to: d }
     - { from: sb, to: d }
@@ -277,63 +305,29 @@ spec:
 
 ## Implementation
 
-There is no tensor computation here beyond caching per-unit scores as arrays indexed by (system, unit, sample). The costly part is producing the scores once per system — a generation per unit per sample per system, priced in Chapter 42 — after which every statistic in this section is CPU work. Evaluation harnesses must record the cluster label (template id, passage id, seed) with every score, or Algorithm 2.5 cannot be run afterwards; P50's scenario-and-metric structure is an example of a design in which the scenario is a natural cluster [PAPER-REPORTED · P50].
+There is no tensor computation here beyond caching per-unit scores as arrays indexed by (system, unit, sample). The costly part is producing the scores once per system — a generation per unit per sample per system, priced in Chapter 42 — after which statistical computation is over the cached score arrays; CPU execution is one implementation choice. Evaluation harnesses must record the cluster label (template id, passage id, seed) with every score, or Algorithm 2.5 cannot be run afterwards; P50 separates scenarios and metrics, but a scenario label alone does not establish independence or a bootstrap sampling unit [PAPER-REPORTED · P50].
 
 ## Experimental design
 
-### Experiment 2.2 (summary; full protocol in verification.md) — Coverage of per-prompt versus per-cluster bootstrap
+### Reported experiments
 
-Hypothesis: on a synthetic clustered population with known ρ, per-prompt percentile intervals cover the true difference at a rate well below nominal while cluster intervals cover at nominal within Monte Carlo error. Setup: simulate K templates × m prompts, paired scores with a known δ; run Algorithm 2.5 with cluster labels and with each prompt as its own cluster; repeat over many synthetic populations. Independent variables: ρ ∈ {0, 0.25, 0.5, 0.75}, m ∈ {1, 5, 10, 25}. Metrics: empirical coverage, mean interval width. Expected result: coverage of the per-prompt method falls with DE; cluster method stays at 1 − α. Threats: the simulation's score model may be simpler than real evaluations. Not run.
+R2.7 Table 4 analyzes shared-question groups in DROP, RACE-H, and MGSM using Anthropic model scores. Its reported clustered-to-naive standard-error ratios are 3.05, 1.10, and 1.88, respectively; the fictional model tables elsewhere in that paper are not experimental evidence. This comparison isolates interval construction on the same scores, not a model-quality improvement. Model identities, seeds, and a reproducible runtime configuration are NOT-DISCLOSED for Table 4 [PAPER-REPORTED · R2.7, §2.2; Table 4].
 
-```figure
-id: fig-2.28
-kind: chart
-title: Predicted coverage of a nominal 95 % per-prompt interval
-caption: >-
-  What Experiment 2.2 should see if Eq. 2.22 holds, drawn before it is run:
-  an interval computed as if prompts were independent is √DE too narrow, so
-  its coverage is 2Φ(1.96/√DE) − 1. At m = 10, ρ = 0.5 (DE = 5.5) a nominal
-  95 % interval covers about 60 % of the time; at m = 25, ρ = 0.75 about
-  35 %. Cluster resampling is predicted to hold 95 % at large K. Derived for
-  the mean of clustered scores; for a paired difference the relevant ρ is
-  that of d_i, not of the scores. A prediction, not a result.
-placement: inline
-evidence: MATHEMATICALLY-DERIVED
-source: ["DERIVED:eq-2.22", "DERIVED:eq-2.20"]
-alt: >-
-  Line chart of predicted coverage, 2Φ(1.96/√DE) − 1 with DE = 1 + (m − 1)ρ,
-  against intra-cluster correlation ρ from 0 to 0.9, for per-prompt intervals
-  at m = 5, 10 and 25 prompts per cluster, with a dashed line at 0.95 for
-  cluster resampling at large K and for m = 1. At ρ = 0 every line is 0.95.
-  m = 5 falls to 0.742 at ρ = 0.5 and 0.639 at ρ = 0.9. m = 10 falls to
-  0.597 at ρ = 0.5 and 0.484 at ρ = 0.9. m = 25 falls to 0.413 at ρ = 0.5
-  and 0.320 at ρ = 0.9.
-spec:
-  type: line
-  x: { label: "intra-cluster correlation ρ", scale: linear, format: fixed2, domain: [0, 0.9] }
-  y: { label: "coverage of a nominal 95 % interval", scale: linear, format: percent, domain: [0.3, 1] }
-  series:
-    - { id: nominal, label: "cluster resampling, large K; or m = 1", points: [[0, 0.95], [0.9, 0.95]], dashed: true }
-    - { id: m5, label: "per-prompt, m = 5", points: [[0, 0.95], [0.1, 0.902], [0.2, 0.856], [0.3, 0.814], [0.4, 0.776], [0.5, 0.742], [0.6, 0.712], [0.7, 0.685], [0.8, 0.661], [0.9, 0.639]] }
-    - { id: m10, label: "per-prompt, m = 10", points: [[0, 0.95], [0.1, 0.845], [0.2, 0.759], [0.3, 0.692], [0.4, 0.639], [0.5, 0.597], [0.6, 0.562], [0.7, 0.532], [0.8, 0.506], [0.9, 0.484]], emphasis: true }
-    - { id: m25, label: "per-prompt, m = 25", points: [[0, 0.95], [0.1, 0.712], [0.2, 0.584], [0.3, 0.506], [0.4, 0.453], [0.5, 0.413], [0.6, 0.383], [0.7, 0.358], [0.8, 0.337], [0.9, 0.32]] }
-  annotations:
-    - { x: 0.5, label: "m = 10, DE = 5.5: ≈ 60 %" }
-```
+R2.16 §3 evaluates five algorithms on 26 Atari 100k games with 100 runs each and 100 evaluation episodes per run. Subsampling studies the few-run regime. Its confidence-interval study compares bootstrap constructions against a 200-run DER reference; §4.1 and Figure 6 report better percentile coverage at ten runs and undercoverage at three. That evidence concerns fixed-task stratified run resampling; it does not establish unconditional coverage for an arbitrary prompt-cluster bootstrap [PAPER-REPORTED · R2.16, §§3–4.1; Figure 6; Appendix A.5].
+
+R2.17 examines data, initialization, and hyperparameter variation in supervised-learning pipelines; its experimental design varies these sources rather than treating one fixed checkpoint's test rows as the whole uncertainty budget [PAPER-REPORTED · R2.17, §§2–4]. Proposed book coverage simulations and their acceptance thresholds are kept in [verification.md](verification.md).
 
 ## Observations
 
-**What the paper claims.** R2.7 reports clustered and paired standard errors and a power formula for evaluations; R2.16 recommends stratified bootstrap intervals and interquartile means; R2.17 reports that seed, data, and hyperparameter variance materially affect benchmark conclusions; P50 reports a multi-scenario, multi-metric evaluation design [PAPER-REPORTED].
+The covariance identity for paired differences and the random-effects design effect identify different sources of precision. Pairing can remove a shared difficulty component; clustering restores covariance omitted by an iid-row calculation. Neither formula assigns a universal correlation or minimum detectable difference to every benchmark [MATHEMATICALLY-DERIVED · DERIVED:eq-2.21; DERIVED:eq-2.22].
 
-**What the evidence shows.** The design-effect and pairing identities are theorems (Eq. 2.21–2.22). That real evaluations have ρ > 0 within templates or passages is reported by R2.7 as the reason for clustering and has not been independently quantified here [PAPER-REPORTED].
+Miller's same-score comparison changes standard errors rather than model capability. Agarwal et al. additionally change aggregation and examine repeated-run/subsampling behavior. Their reported coverage and aggregate comparisons apply to the named tasks, run budgets, and statistics, rather than establishing finite-sample coverage for every resampling scheme [PAPER-REPORTED · R2.7, Table 4; R2.16, §§3–4].
 
-**What we infer.** The book infers (DERIVED) that most benchmark differences of one or two points at typical sizes are not resolvable at conventional power, and (ASSUMED) that ρ within template families is large enough to matter; both inferences are testable by Experiment 2.2 and by recording cluster labels in harnesses.
-
-**What remains unknown.** The resampling unit and variance model behind vendor-reported intervals are NOT-DISCLOSED in the reports inspected; typical ρ values on named benchmarks are UNVERIFIED.
+Paired scores, dependency labels, estimand weights, and independent-unit counts determine which uncertainty calculation can be reconstructed. Model identities and runtime details absent from R2.7 Table 4 remain NOT-DISCLOSED; no coverage simulation or independent reproduction was executed for this chapter.
 
 ## Failure modes
 
-> **Failure mode — wrong resampling unit.** *Symptom:* intervals that shrink with the number of paraphrases or samples per prompt. *Cause:* rows, not independent units, resampled. *Detection:* compute DE from a variance decomposition; intervals should not narrow when m grows with K fixed. *Mitigation:* Algorithm 2.5 with cluster labels.
+> **Failure mode — wrong resampling unit.** *Symptom:* intervals that shrink with the number of paraphrases or samples per prompt. *Cause:* rows, not independent units, resampled. *Detection:* compute DE from a variance decomposition; the within-cluster term can shrink with m, but the between-cluster variance approaches σ_a²/K with K fixed. *Mitigation:* Algorithm 2.5 with cluster labels.
 
 > **Failure mode — unpaired comparison of paired data.** *Symptom:* wide intervals despite identical prompt sets. *Cause:* Eq. 2.21's covariance term discarded. *Detection:* compare SE_paired and unpaired SE. *Mitigation:* difference first, then resample.
 
@@ -343,17 +337,11 @@ spec:
 
 ## Siblings
 
-**Normal-approximation interval** — this file, Eq. 2.20. Why it exists: closed form. What assumption changed: CLT applies to the unit mean. New failure mode: small n, skew, dependence. Changed primitive: none.
+A normal interval estimates uncertainty through an analytic standard error and an asymptotic reference distribution. Percentile and basic bootstrap intervals instead transform empirical resampling quantiles. BCa changes the quantile levels using bias correction and acceleration, whose construction and degeneracies are stated above. Its availability does not establish higher-order coverage in a setting lacking the required regularity or enough independent units.
 
-**Percentile bootstrap** — this file. Why it exists: no distributional form needed. What assumption changed: the empirical distribution of units stands in for the population. New failure mode: bias and skew uncorrected; non-smooth statistics. Changed primitive: analytic SE → resampled quantiles.
+A paired sign-flip test evaluates a sharp exchangeability reference; exhaustive enumeration and Monte Carlo sampling have different exactness and computational properties. Inverting a justified family of tests can construct an interval, while one p-value alone does not estimate effect magnitude. A clustered standard error analytically aggregates residual cluster sums; few clusters, incorrect dependency labels, and cross-cluster correlation can invalidate its reference approximation [MATHEMATICALLY-DERIVED · DERIVED:eq-2.21; PAPER-REPORTED · R2.7, §2.2].
 
-**BCa bootstrap** — this file. Why it exists: correct percentile bias and acceleration. What assumption changed: a jackknife acceleration estimate is available. New failure mode: cost n extra evaluations for the jackknife; instability at small K.
-
-**Paired permutation (sign-flip) test** — this file. Why it exists: exact inference under exchangeability. What assumption changed: exchangeability within pairs instead of a distribution. What problem it solved: valid p-values at small n. New failure mode: it tests, it does not estimate; no interval without inversion.
-
-**Clustered standard error** — [R2.7], this file. Why it exists: analytic alternative to the cluster bootstrap. Changed primitive: resampling → cross-covariance sum.
-
-**Stratified bootstrap with interquartile mean** — [R2.16]; applied in [§63.2](../../../vol-03-grounded-and-interactive-intelligence/part-11-evaluation-interpretability-and-deployment-assurance/ch63-agent-retrieval-multimodal-and-system-reliability-evaluation/63-2-repeated-run-reliability.md). Why it exists: few runs per task, many tasks. What objective changed: robust aggregate instead of mean. New failure mode: the IQM is not the mean the deployment pays for.
+Stratified resampling within a fixed task benchmark preserves task composition. The interquartile mean trims the bottom and top quarter of the pooled performance distribution; it is a different estimand from mean deployment utility. A task-population estimand additionally requires a model for sampling tasks, and cannot inherit its interval from fixed-task run resampling alone [PAPER-REPORTED · R2.16, §§4.1–4.3].
 
 ```figure
 id: fig-2.29
@@ -378,7 +366,7 @@ alt: >-
   under bias, skew and non-smooth statistics. BCa bootstrap: bias- and
   skew-corrected quantiles; needs a jackknife acceleration estimate; O(R·n)
   plus n jackknife evaluations; unstable at small K. Paired sign-flip
-  permutation: an exact p-value under exchangeability within pairs; O(R·n);
+  permutation: an exact exhaustive reference under exchangeability within pairs; sampled references have Monte Carlo error; O(R·n);
   tests but does not estimate. Clustered standard error (R2.7): analytic SE
   with within-cluster cross-covariances; O(n). Stratified bootstrap with
   interquartile mean (R2.16): an interval on the IQM for few runs per task;
@@ -395,20 +383,24 @@ spec:
     - { id: cse, label: "Clustered SE (R2.7)" }
     - { id: iqm, label: "Stratified bootstrap + IQM (R2.16)", node: ms.section.63.2 }
   rows:
-    - { dimension: "returns", values: { normal: "μ̂ ± z·ŝ/√n", pct: "α/2 and 1 − α/2 quantiles of R replicates", bca: "bias- and skew-corrected quantiles", perm: "an exact p-value; no interval without inversion", cse: "analytic SE including within-cluster cross-covariances", iqm: "an interval on the interquartile mean" } }
+    - { dimension: "returns", values: { normal: "μ̂ ± z·ŝ/√n", pct: "α/2 and 1 − α/2 quantiles of R replicates", bca: "bias- and skew-corrected quantiles", perm: "randomization p-value; exhaustive exactness under the specified null", cse: "analytic SE including within-cluster cross-covariances", iqm: "an interval on the interquartile mean" } }
     - { dimension: "assumes", values: { normal: "CLT on the unit mean; independent units", pct: "the empirical distribution of units stands in for the population", bca: "a jackknife acceleration estimate is available", perm: "exchangeability within pairs", cse: "independent clusters with recorded labels", iqm: "few runs per task, many tasks" } }
     - { dimension: "resampled or summed unit", values: { normal: "none: analytic", pct: "the independent unit, whole clusters", bca: "the independent unit", perm: "the sign of each paired d_i", cse: "clusters, analytically", iqm: "runs within each task (stratum)" } }
     - { dimension: "cost after scores are cached", values: { normal: "O(n)", pct: "O(R·n)", bca: "O(R·n) + n jackknife evaluations", perm: "O(R·n)", cse: "O(n)", iqm: "O(R·n)" } }
-    - { dimension: "new failure mode", values: { normal: "small n, skew, dependence", pct: "bias, skew; non-smooth statistics such as a max", bca: "instability at small K", perm: "tests, does not estimate", cse: "not stated in this section", iqm: "the IQM is not the mean the deployment pays for" } }
+    - { dimension: "new failure mode", values: { normal: "small n, skew, dependence", pct: "bias, skew; non-smooth statistics such as a max", bca: "instability at small K", perm: "tests, does not estimate", cse: "few clusters; wrong labels; omitted cross-cluster dependence", iqm: "the IQM is not the mean the deployment pays for" } }
 ```
 
 ## Extensions
+
+### Improvements
+
+R2.16 replaces isolated point aggregates with stratified intervals, performance profiles, and an interquartile mean; its repeated-run/subsampling protocol supports narrower and more reliable uncertainty in that few-run benchmark setting. It does not make the IQM equal to deployment mean utility. R2.7 changes independent-question uncertainty analysis to clustered and paired analysis, with its same-score Table 4 comparison establishing the precision correction rather than better model capability [PAPER-REPORTED · R2.16, §§4.1–4.3; R2.7, §§2.2,4.2].
 
 For agents the unit is an episode, and repeated episodes of one task are a cluster ([§63.2](../../../vol-03-grounded-and-interactive-intelligence/part-11-evaluation-interpretability-and-deployment-assurance/ch63-agent-retrieval-multimodal-and-system-reliability-evaluation/63-2-repeated-run-reliability.md)). For preference data the unit is a pairwise judgement nested in a prompt and a rater; the aggregation model of [§62.2](../../../vol-03-grounded-and-interactive-intelligence/part-11-evaluation-interpretability-and-deployment-assurance/ch62-human-preference-model-judges-and-uncertainty/62-2-pairwise-aggregation.md) must cluster on both. For latency SLOs the statistic is a quantile and the interval methods here apply only to the quantile estimator, not to the mean (Chapter 48). Proposals are marked there.
 
 ## Limitations
 
-Eq. 2.22 assumes equal cluster sizes and a single clustering level; unequal sizes and crossed clusterings (prompt × seed) need the general clustered estimator or a nested bootstrap. Eq. 2.23 is a normal-approximation planning formula; it is not a guarantee. Falsification: Experiment 2.2 showing nominal coverage for per-prompt resampling at ρ > 0 would falsify the design-effect argument as applied; it cannot, since the derivation is exact, but it would reveal an error in the simulation.
+Eq. 2.22 assumes equal cluster sizes and a single clustering level; unequal sizes and crossed clusterings (prompt × seed) need a justified covariance or resampling construction; a nested bootstrap does not automatically address crossed dependence. Eq. 2.23 is a normal-approximation planning formula; it is not a guarantee. The design-effect identity is exact within the specified equal-size random-effects model; finite-sample coverage is a different claim. A coverage failure rejects the chosen approximation or implementation for that regime without refuting the algebraic identity.
 
 ## Reproducibility
 

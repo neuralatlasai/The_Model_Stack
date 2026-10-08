@@ -3,12 +3,41 @@
 import type { ParagraphBlock } from '@atlas/core';
 import Inline from '../Inline.astro';
 import { depthAttrs } from '../lib/dom.ts';
+import { inspectionDimensions } from '../lib/inspection-dimensions.ts';
 
 interface Props {
   block: ParagraphBlock;
 }
 
 const { block } = Astro.props;
+const view = inspectionDimensions(block.content);
 ---
 
-<p class="rb-p" id={block.anchor ?? undefined} {...depthAttrs(block.depth)}><Inline nodes={block.content} /></p>
+{view.kind === 'dimensions' ? (
+  <div class="rb-dimensions" id={block.anchor ?? undefined} {...depthAttrs(block.depth)}>
+    <p class="rb-dimensions__heading">
+      <Inline nodes={view.heading} />
+    </p>
+    <dl class="rb-dimensions__list">
+      {view.rows.map((row) => (
+        <div class="rb-dimensions__item">
+          <dt class="rb-dimensions__term">
+            <Inline nodes={row.term} />
+          </dt>
+          <dd class="rb-dimensions__text">
+            <Inline nodes={row.content} />
+          </dd>
+        </div>
+      ))}
+    </dl>
+    {view.trailing.length > 0 && (
+      <p class="rb-p">
+        <Inline nodes={view.trailing} />
+      </p>
+    )}
+  </div>
+) : (
+  <p class="rb-p" id={block.anchor ?? undefined} {...depthAttrs(block.depth)}>
+    <Inline nodes={view.content} />
+  </p>
+)}

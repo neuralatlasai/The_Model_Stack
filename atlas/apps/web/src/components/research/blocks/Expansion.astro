@@ -16,8 +16,20 @@ interface Props {
 const { block } = Astro.props;
 ---
 
-<details class={`rb-expand rb-expand--${block.variant}`} id={block.anchor ?? undefined} {...depthAttrs(block.depth)}>
-  <summary class="rb-expand__summary"><span class="rb-expand__caret" aria-hidden="true">▸</span><span class="rb-expand__label"><Inline nodes={block.summary} /></span></summary>
+<details
+  open={Astro.locals.completeReading === true}
+  class={`rb-expand rb-expand--${block.variant}`}
+  id={block.anchor ?? undefined}
+  {...depthAttrs(block.depth)}
+>
+  <summary class="rb-expand__summary">
+    <span class="rb-expand__caret" aria-hidden="true">
+      ▸
+    </span>
+    <span class="rb-expand__label">
+      <Inline nodes={block.summary} interactive={false} />
+    </span>
+  </summary>
   <div class="rb-expand__body">
     <Blocks blocks={block.blocks} />
   </div>

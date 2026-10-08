@@ -19,57 +19,76 @@ interface Props {
   readonly navKey: TopNavKey | null;
   readonly hasTree: boolean;
   readonly depthControl: boolean;
+  readonly article?: boolean;
+  readonly articleTitle?: string | null;
 }
 
-const { navKey, hasTree, depthControl } = Astro.props;
+const { navKey, hasTree, depthControl, article = false, articleTitle = null } = Astro.props;
+// The full atlas remains one click away; reading pages keep navigation secondary to prose.
+const navigation =
+  articleTitle !== null
+    ? TOP_NAV.filter((item) => ['library', 'papers'].includes(item.key))
+    : article
+      ? TOP_NAV.filter((item) => ['library', 'papers', 'systems'].includes(item.key))
+      : TOP_NAV;
 ---
 
 <header class="sh-topbar">
   <div class="sh-topbar-inner">
-    {
-      hasTree && (
-        <button
-          type="button"
-          class="sh-icon-button sh-tree-toggle"
-          popovertarget="knowledge-tree"
-          data-action="toggle-tree"
-          aria-label="Knowledge tree"
-          title="Knowledge tree"
-        >
-          <svg class="sh-icon" viewBox="0 0 16 16" width="16" height="16" aria-hidden="true" focusable="false">
-            <path
-              d="M3 3.5h10M5.5 8H13M8 12.5h5M3 3.5v9h2.5M3 8h2.5"
-              fill="none"
-              stroke="currentColor"
-              stroke-width="1.2"
-              stroke-linecap="round"
-            />
-          </svg>
-        </button>
-      )
-    }
-    <a class="sh-wordmark" href="/" aria-label="The Model Stack — Research Atlas home">
-      <BrandMark size={26} />
-      <span class="sh-wordmark-title">The Model Stack</span>
-      <span class="sh-wordmark-sub">Research Atlas</span>
-    </a>
+    {hasTree && (
+      <button
+        type="button"
+        class="sh-icon-button sh-tree-toggle"
+        popovertarget="knowledge-tree"
+        data-action="toggle-tree"
+        aria-label="Knowledge tree"
+        title="Knowledge tree"
+      >
+        <svg class="sh-icon" viewBox="0 0 16 16" width="16" height="16" aria-hidden="true" focusable="false">
+          <path
+            d="M3 3.5h10M5.5 8H13M8 12.5h5M3 3.5v9h2.5M3 8h2.5"
+            fill="none"
+            stroke="currentColor"
+            stroke-width="1.2"
+            stroke-linecap="round"
+          />
+        </svg>
+      </button>
+    )}
+    {articleTitle !== null ? (
+      <h1 class="aw-masthead-title sh-wordmark">
+        <a href="/" aria-label="The Model Stack — Research Atlas home">
+          The Model Stack
+        </a>
+        <span>: {articleTitle}</span>
+      </h1>
+    ) : (
+      <a class="sh-wordmark" href="/" aria-label="The Model Stack — Research Atlas home">
+        <BrandMark size={26} />
+        <span class="sh-wordmark-title">The Model Stack</span>
+        <span class="sh-wordmark-sub">Research Atlas</span>
+      </a>
+    )}
     <nav class="sh-topnav" aria-label="Atlas">
       <ul class="sh-topnav-list">
-        {
-          TOP_NAV.map((item) => (
-            <li>
-              <a class="sh-topnav-link" href={item.url} aria-current={item.key === navKey ? 'page' : undefined}>
-                {item.label}
-              </a>
-            </li>
-          ))
-        }
+        {navigation.map((item) => (
+          <li>
+            <a class="sh-topnav-link" href={item.url} aria-current={item.key === navKey ? 'page' : undefined}>
+              {item.label}
+            </a>
+          </li>
+        ))}
       </ul>
     </nav>
     <div class="sh-tools">
-      <SearchTrigger />
+      {articleTitle !== null && (
+        <button type="button" class="aw-context-button" popovertarget="context-rail">
+          On this page
+        </button>
+      )}
+      {articleTitle === null && <SearchTrigger />}
       {depthControl && <DepthControl />}
-      <ThemeToggle />
+      {articleTitle === null && <ThemeToggle />}
     </div>
   </div>
 </header>

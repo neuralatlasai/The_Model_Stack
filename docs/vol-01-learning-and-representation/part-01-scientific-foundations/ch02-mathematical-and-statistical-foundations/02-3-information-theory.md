@@ -27,8 +27,8 @@ benchmarks: []
 datasets: []
 status: {maturity: foundational, disputed: false}
 evidence_summary: {labels_used: [MATHEMATICALLY-DERIVED, PAPER-REPORTED, ASSUMED, NOT-DISCLOSED], empirically_observed: false}
-word_count_target: 1000
-updated_at: 2026-09-20
+word_count_target: 2600
+updated_at: 2026-10-08
 editorial_status: manuscript_draft
 ---
 
@@ -36,24 +36,44 @@ editorial_status: manuscript_draft
 
 ## Scope
 
-Objective: define entropy, cross-entropy, KL divergence, and mutual information; identify negative log-likelihood with coding length; and fix bits per byte as the tokenizer-independent unit of language-model fit. Baseline: "perplexity" reported without tokenizer, base, or normalisation. Success: every likelihood figure in the book states its unit (nats or bits), its denominator (token, sequence, byte), and its tokenizer, and comparisons across tokenizers are made only in bits per byte. Boundaries: perplexity's dependence on tokenizer and distribution mismatch is developed in [§04.6](../ch04-language-modeling-and-learning-objectives/04-6-likelihood-and-capability.md); vocabulary economics in [§10.3](../../part-02-data-and-representation-engineering/ch10-tokenization-serialization-and-interface-correctness/10-3-vocabulary-economics.md); distillation losses in [§39.2](../../../vol-02-execution-and-optimization/part-07-inference-algorithms-distillation-and-compression/ch39-knowledge-response-and-policy-distillation/39-2-information-access.md).
+For a probability law p, entropy quantifies expected self-information; cross-entropy evaluates a second law q on p-distributed events; KL divergence measures their expected log-likelihood ratio. These quantities become different language-model reports when their events are tokens, terminated sequences, or decoded byte strings. Their units and denominators are part of the mathematical object, rather than a presentation choice. A token-level improvement, a byte-normalized improvement, and a downstream task improvement consequently require distinct evidence.
+
+This section derives the discrete identities, their support and finiteness conditions, conditional and mutual information, likelihood-based predictive risk, ideal coding bounds, canonical-token versus marginal-byte likelihood, and sampled KL estimation. It then examines the Pile's likelihood protocol and DeepSeekMath's KL-regularized procedure as source-specific applications. Continuous differential entropy and practical arithmetic-coder implementations require additional measure and precision contracts and are not identified with the discrete results below [PAPER-REPORTED · R2.1, Part I §§6–9; P03, §3; P25, §4].
 
 ## Why this exists
 
-What failed: perplexities from models with different vocabularies were compared as if they measured the same quantity; a larger vocabulary lowers per-token loss by putting more bytes in each token, without the model predicting the text any better. The bottleneck: scaling studies (P08, P09) and data comparisons need a fit metric that is stable across tokenizers and time. The dominant constraint: the denominator. What changed: the total code length of the byte string — a tokenizer-free quantity — divided by bytes, which P03 adopted for exactly this reason.
+A next-token model specifies conditional probabilities, but an evaluation report may average negative log probabilities over tokens, documents, bytes, or selected response positions. Those averages assign different weights to the underlying data. In addition, the same byte string may have several token paths, so the probability of its canonical tokenization need not equal the total probability of decoding to that string. A common byte denominator resolves the event-count problem without resolving either probability-model or context-policy differences.
+
+A sampled log-ratio introduces another distinction: estimating a divergence value and differentiating that value are separate tasks when the sampling law depends on the trained parameters. Nonnegative samples also do not imply lower variance. These distinctions determine which claims can be obtained from an identity, which require a source protocol, and which need an independently executed comparison [MATHEMATICALLY-DERIVED · DERIVED:eq-2.10; DERIVED:eq-2.13; DERIVED:eq-2.18].
 
 ## Intuition
 
-Physically, a model is a compressor: an arithmetic coder driven by q produces a code for the byte string whose length is, to within two bits, −log₂ q(string). Training minimises the expected code length of held-out data; cross-entropy is that length in bits or nats per symbol. KL divergence is the *excess* code length paid for coding p-distributed data with a q-designed code. Mutual information is the code length saved on one variable by knowing another. No cognitive analogy is needed; the compressor picture is literal.
+The elementary object is the surprisal −log q(x) of a specified event x. Averaging it under p yields cross-entropy. Replacing q by p gives entropy; subtracting those averages gives KL when the subtraction is well-defined. Conditioning changes the probability law used for each event. In an autoregressive model, the total sequence surprisal is a sum of conditional token surprisals by the probability chain rule; independence of those tokens is unnecessary for that equality.
+
+An ideal coding construction gives a second interpretation of the same logarithm. It assigns intervals with widths proportional to sequence probabilities and selects a binary subinterval to identify a terminated message. The resulting bound is about ideal message identification under an agreed model, not about the physical size of model weights or the runtime of a deployed compressor [MATHEMATICALLY-DERIVED · DERIVED:eq-2.12].
 
 ## Formulation
 
-> **Definition — entropy, cross-entropy, KL divergence.** For distributions p, q on a discrete set 𝒳 with q(x) > 0 wherever p(x) > 0: H(p) = −Σ p log p; H(p,q) = −Σ p log q; KL(p‖q) = Σ p log(p/q).
+### Entropy, cross-entropy, and support
+
+Let p and q be normalized probability mass functions on a finite or countable alphabet 𝒳. Use the convention 0 log 0=0. With natural logarithms,
 
 $$
-H(p,q) = H(p) + \mathrm{KL}(p\,\|\,q), \qquad \mathrm{KL}(p\,\|\,q) \ge 0 \text{ with equality iff } p = q
+H(p)=-\sum_xp(x)\log p(x),\qquad
+H(p,q)=-\sum_xp(x)\log q(x),\qquad
+\mathrm{KL}(p\|q)=\sum_{x:p(x)>0}p(x)\log\frac{p(x)}{q(x)}.
 $$
-*(Eq. 2.10)* where the logarithm base sets the unit: natural → nats, base 2 → bits; 1 nat = 1/ln 2 ≈ 1.4427 bits.
+
+If p(x)>0 while q(x)=0, cross-entropy and KL are infinite. Absolute continuity p≪q excludes that support failure but does not ensure a finite divergence on a countably infinite alphabet. For a finite alphabet with q positive on p's support, every term is finite. Then
+
+$$
+H(p,q)=H(p)+\mathrm{KL}(p\|q),\qquad
+\mathrm{KL}(p\|q)\ge0,
+$$
+*(Eq. 2.10)* with equality in the inequality exactly when p=q. On a countably infinite alphabet, the decomposition requires care when entropy or cross-entropy is infinite: subtracting ∞−∞ is undefined. A reported finite KL should therefore not be reconstructed by subtracting two divergent entropies. Base-2 logarithms give bits; natural logarithms give nats, with one nat equal to 1/ln2 bits [MATHEMATICALLY-DERIVED · DERIVED:eq-2.10].
+
+For a direct proof, write S={x:p(x)>0}. Since log u≤u−1,
+−KL(p‖q)=Σ_S p log(q/p)≤Σ_S(q−p)=q(S)−1≤0. Equality requires q/p=1 on S and no residual q mass outside S. Expanding −log q=−log p+log(p/q) gives the decomposition under the finiteness conditions above. This proof also identifies why zero reference probability cannot be repaired merely by averaging more samples.
 
 ```figure
 id: fig-2.14
@@ -95,26 +115,39 @@ states:
   - { anchor: siblings, label: "q = 0.9", variables: { x: 0.9 }, highlight: [fkl, rkl], note: "Overshoot to q = 0.9: forward 1.490 bits, reverse 1.146. The direction chosen is part of the objective, not a detail." }
 ```
 
-> **Definition — mutual information.** I(X;Y) = KL(p(x,y) ‖ p(x)p(y)) = H(X) − H(X|Y) = H(Y) − H(Y|X) ≥ 0.
+### Conditional entropy and mutual information
+
+For p(x,y), define p(x|y) only on y with p(y)>0; choices on null y do not affect the expectation. Conditional entropy is H(X|Y)=Σ_y p(y)H(p(·|y)). Expanding log p(x,y)=log p(y)+log p(x|y) gives the chain rule H(X,Y)=H(Y)+H(X|Y). Repeating it gives H(X₁,…,X_T)=Σ_t H(X_t|X_{<t}); no Markov assumption appears in this identity. A first-order Markov assumption changes the conditionals, rather than the chain rule itself [MATHEMATICALLY-DERIVED · DERIVED:eq-2.11; PAPER-REPORTED · R2.1, Part I §6, conditional-entropy discussion].
 
 $$
-I(X;Y) = \sum_{x,y} p(x,y)\log\frac{p(x,y)}{p(x)\,p(y)} = H(X) - H(X \mid Y)
+I(X;Y)=\mathrm{KL}\big(p_{XY}\|p_Xp_Y\big)
+=H(X)-H(X|Y)=H(X)+H(Y)-H(X,Y)\ge0.
 $$
-*(Eq. 2.11)* where H(X|Y) = E_y[H(p(·|y))] is the conditional entropy.
+*(Eq. 2.11)* The KL definition remains primary when entropy differences are not finite. On finite alphabets these identities give symmetry, I(X;Y)=I(Y;X), the bound I(X;Y)≤min{H(X),H(Y)}, and independence if and only if I(X;Y)=0. Conditional mutual information is
+I(X;Y|Z)=Σ_zp(z)KL[p_{XY|z}‖p_{X|z}p_{Y|z}]≥0. Consequently H(X|Y,Z)≤H(X|Y) after averaging. Conditioning does not guarantee H(X|Y=y)≤H(X) for every realized y: for example, if P(X=1)=.01 and a rare event Y=1 selects a subpopulation with P(X=1|Y=1)=.5, that event's conditional entropy is larger even though average conditional entropy cannot increase [MATHEMATICALLY-DERIVED · DERIVED:eq-2.11].
 
-> **Definition — coding length.** The coding length of x under model q is ℓ_q(x) = −log₂ q(x) bits; the negative log-likelihood of a dataset is its total coding length under the model.
+Additional conditioning can either raise or lower mutual information. For independent fair bits X,Y and Z=X XOR Y, I(X;Y)=0 but I(X;Y|Z)=1 bit. If instead Z=X=Y is a fair bit, I(X;Y)=1 bit while I(X;Y|Z)=0. Thus the inequality for conditional entropy must not be transferred to mutual information without its own conditions.
+
+The chain rule I(X;Y,Z)=I(X;Z)+I(X;Y|Z) gives data processing. If X→Z→Y is a Markov chain, I(X;Y|Z)=0, so I(X;Z)=I(X;Y)+I(X;Z|Y)≥I(X;Y). This limits information recoverable by postprocessing under that chain; supplying new side information breaks the assumed graph. If a stored representation has at most 2^z discrete states, H(Z)≤z bits and I(X;Z)≤z. A z-dimensional real vector does not have this finite-state bound without quantization, noise, precision, or another capacity restriction. Differential entropy can be negative and changes under coordinate transformations; it cannot be substituted for discrete entropy in this capacity argument [MATHEMATICALLY-DERIVED · DERIVED:eq-2.11].
+
+### Coding length and likelihood units
+
+For a finite terminated token stream u with probability q(u)>0, its ideal surprisal in bits is −log₂q(u). An interval-code construction, specified below, yields
 
 $$
-\sum_{i=1}^{n} -\log_2 q(x_i) \;\le\; \text{(arithmetic-code length in bits)} \;<\; \sum_{i=1}^{n} -\log_2 q(x_i) + 2
+-\log_2 q(u)\le\ell_{\rm code}(u)<-\log_2q(u)+2.
 $$
-*(Eq. 2.12)* where x_i = the i-th document, q = the model's sequential distribution; the bound is the standard arithmetic-coding guarantee, taken here as MATHEMATICALLY-DERIVED from the coding literature and not re-proved.
+*(Eq. 2.12)* If q(u)=∏_i q(s_i) for independently reset documents assembled into one coded stream, its negative log is the sum of document negative logs. The bound's two-bit overhead belongs to that single stream. Separately coding each document incurs a separate termination overhead. A model description, length framing, finite-precision coding, and any transmitted side information are outside this ideal bound [MATHEMATICALLY-DERIVED · DERIVED:eq-2.12; PAPER-REPORTED · R2.1, Part I §9, Theorem 9].
 
-> **Definition — bits per byte.** For a corpus of L_T tokens and L_B UTF-8 bytes whose mean per-token loss under the model is ℓ nats,
+For an evaluation corpus, let S be total scored negative log probability in nats, L_T its scored-token count, and L_B>0 the byte count of the declared target text. Define ℓ=S/L_T when L_T>0. Then
 
 $$
-\text{BPB} = \frac{L_T}{L_B}\cdot\frac{\ell}{\ln 2}, \qquad \text{PPL} = \exp(\ell), \qquad \text{BPB} = \frac{L_T}{L_B}\log_2 \text{PPL}
+\mathrm{BPB}=\frac{S}{L_B\ln2}
+=\frac{L_T}{L_B}\frac{\ell}{\ln2},\qquad
+\mathrm{PPL}=\exp(\ell),\qquad
+\mathrm{BPB}=\frac{L_T}{L_B}\log_2\mathrm{PPL}.
 $$
-*(Eq. 2.13)* where ℓ = token-mean negative log-likelihood in nats (Eq. N.2 with all m_t = 1), L_T/L_B = tokens per byte (the inverse of bytes per token; related to tokenizer fertility, §10.3), PPL = perplexity.
+*(Eq. 2.13)* This conversion is an accounting identity for the selected terms in S. A complete text-code interpretation additionally requires that those terms encode the declared target text under the agreed conditional/framing policy. Masking arbitrary text tokens while retaining all raw bytes can still produce a numerical ratio, but it no longer represents the complete code length of those bytes. Conditional completion BPB can instead score a response while treating the prompt as known side information and counting only response bytes; that is a different estimand from unconditional corpus BPB [MATHEMATICALLY-DERIVED · DERIVED:eq-2.13].
 
 ```figure
 id: fig-2.15
@@ -159,13 +192,32 @@ states:
   - { anchor: failure-modes, label: "nats or bits?", variables: { ell: 1, tpb: 0.25 }, highlight: [ell, bpt], note: "Base confusion: a loss of 1.0 nat is 1.443 bits per token. State the unit next to every number." }
 ```
 
-> **Claim [PAPER-REPORTED · P03].** P03 defines bits per byte exactly as Eq. 2.13 ("bpb = (L_T/L_B) log₂(e^ℓ) = (L_T/L_B) ℓ/ln 2, where L_T is the length of the dataset in tokens and L_B is the length of the dataset in UTF-8 encoded bytes") and states that it "is preferred over bits per character or perplexity when using Pile as a metric due to its invariance to different tokenization schemes and the ambiguity of measuring characters in Unicode".
-
-> **Assumption.** The tokenizer is a deterministic, lossless encoding of the byte string · *sensitivity:* if it is lossy (normalisation, dropped bytes) the byte count and the coded string differ and BPB values are not comparable across tokenizers.
-
 ## Mechanism
 
-**Why BPB is tokenizer-independent and perplexity is not.** Let s be a byte string and t(s) its canonical tokenisation. The model's total code length for s is −log₂ q(t(s)) bits, and it is a property of the model's induced distribution over byte strings (up to the mass q assigns to non-canonical tokenisations of the same bytes, which only makes −log₂ q(t(s)) an upper bound on the true byte-level code length). Dividing by L_B, a quantity that depends only on s, yields a number comparable across models with any tokenizer. Perplexity instead divides by L_T, which is a property of the tokenizer: a tokenizer with larger vocabulary produces fewer tokens for the same bytes, so ℓ per token rises or falls with L_T/L_B independently of how well the bytes are predicted, and exp(ℓ) is not comparable across tokenizers [MATHEMATICALLY-DERIVED · DERIVED:eq-2.13]. The concrete failure — two reported perplexities that cannot be compared — is the verification task of Chapter 04 ([§04.6](../ch04-language-modeling-and-learning-objectives/04-6-likelihood-and-capability.md)).
+### Methodology
+
+A likelihood comparison first fixes its event space, conditioning information, sampling population, and reduction. For a fixed fitted q_θ and independent held-out documents S_i∼p_data, n⁻¹Σ_i−log q_θ(S_i) estimates sequence cross-entropy. Dependence among tokens inside a document does not change sequence factorization, but it affects uncertainty if those tokens are incorrectly treated as independent observations. If the model was selected on the same evaluation set, the held-out independence required for that straightforward interpretation no longer holds.
+
+### Maximum likelihood and predictive risk
+
+For a normalized model family {q_θ}, define predictive log risk R(θ)=E_{S∼p_data}[−log q_θ(S)]. When source entropy is finite, R(θ)=H(p_data)+KL(p_data‖q_θ). Minimizing population log risk therefore selects the forward-KL projection into the model family. It recovers p_data only if that law belongs to the family and the optimization reaches an appropriate optimum. The empirical maximum-likelihood estimate minimizes the observed negative log-likelihood; it does not minimize an unobserved population risk by algebra alone. Finite data, model selection, distribution shift, and imperfect optimization separate the two [MATHEMATICALLY-DERIVED · DERIVED:eq-2.10].
+
+For conditional prediction with context C and target X, risk is E_C H[p(·|C),q_θ(·|C)]. Expanding Eq. 2.10 separately for each context gives H(X|C)+E_C KL[p(·|C)‖q_θ(·|C)]. Thus observed-context weighting is part of the objective. For fixed-length sequences, dividing the document sum by the fixed length changes its scale but not its minimizer. For variable lengths, mean document loss, mean document-normalized loss, and pooled token loss weight documents differently. If document i has token count T_i and summed NLL S_i, the pooled statistic Σ_i S_i/Σ_i T_i targets E[S]/E[T] under iid document sampling and finite first moments. It is generally not an unbiased finite-n estimator of that ratio, nor equal to E[S/T]. Conditioning on a particular recorded corpus makes it a deterministic statistic [MATHEMATICALLY-DERIVED · DERIVED:eq-2.13].
+
+Perplexity exponentiates the pooled token log loss. It is the inverse geometric mean probability assigned to scored events, not a count of semantically plausible continuations. Even if ℓ estimates a population quantity without bias in a fixed-length setting, exp(ℓ) is generally biased by convexity. Neither monotonicity of exp nor log-score propriety establishes a monotonic relationship to a separate task-success metric. Those require the specified evaluation distribution and capability protocol in [§04.6](../ch04-language-modeling-and-learning-objectives/04-6-likelihood-and-capability.md).
+
+### Coding construction and token-to-byte probability
+
+Sequential interval subdivision associates a terminated message of probability q(u) with an interval of width q(u) in [0,1). For h=ceil[−log₂q(u)]+1, a binary cell of width 2⁻ʰ≤q(u)/2 fits inside any such interval: choose the first grid boundary at or after its left endpoint, leaving a full cell within the interval. Identifying that contained cell requires h bits, and containment identifies the intended message when the terminated-message intervals are disjoint. Since h<−log₂q(u)+2 and a contained cell cannot be wider than its parent, Eq. 2.12 follows. Finite precision and termination rules of an actual coder require separate analysis.
+
+The entropy lower bound is an expected-length statement. For a prefix code with lengths h_j, Kraft's inequality gives K=Σ_j2⁻ʰʲ≤1. Put r_j=2⁻ʰʲ/K. Then Σ_jp_jh_j=H₂(p)+KL₂(p‖r)−log₂K≥H₂(p). This does not require each realized message to be longer than its own source surprisal; it bounds the average under p. Shannon's noiseless-coding result supplies the source foundation, while these interval and Kraft arguments explicitly reconstruct the conditions [MATHEMATICALLY-DERIVED · DERIVED:eq-2.10; DERIVED:eq-2.12; PAPER-REPORTED · R2.1, Theorem 9].
+
+Let a deterministic tokenizer t and decoder d satisfy d(t(s))=s for the declared byte string s. This guarantees a canonical lossless path but need not make that path unique. With normalized probabilities on terminated token sequences,
+q_bytes(s)=Σ_{u:d(u)=s}q_tokens(u). Canonical-path probability is one term, so −log₂q_tokens(t(s))≥−log₂q_bytes(s). The excess is log₂[q_bytes(s)/q_tokens(t(s))], whose size is unknown from losslessness alone. If q_tokens(t(s))=.2 and another path decoding to s has mass .3, the canonical and marginal surprisals are −log₂(.2) and −log₂(.5), separated by log₂2.5 bits. This is an exact hypothetical distribution, not a measured tokenizer result [MATHEMATICALLY-DERIVED · DERIVED:eq-2.13].
+
+Equality with marginal byte likelihood requires either uniqueness of positive-probability token paths or explicit marginalization. It also requires a consistent termination policy: a prefix likelihood without an EOS term is not automatically the probability of a terminated byte string. A fixed-length or externally framed conditional score remains valid under its own contract, but must not silently be read as a normalized distribution over all terminated documents.
+
+A shared raw UTF-8 byte count removes dependence of the denominator on token segmentation. It does not make BPB invariant to q, to the canonical-path gap, to lossy Unicode normalization, or to which preceding tokens are available. Comparability requires the same declared text, counted bytes, conditioning/reset policy, target coverage, and framing interpretation. Different vocabularies can then be compared by the resulting code-rate report; no theorem makes their numerical BPB equal. The Pile's term “invariance” concerns its metric choice across tokenization schemes, not independence of model predictions from tokenization [PAPER-REPORTED · P03, §3.1; MATHEMATICALLY-DERIVED · DERIVED:eq-2.13].
 
 ```figure
 id: fig-2.16
@@ -175,10 +227,9 @@ caption: >-
   Follow the emphasised path: the byte count L_B is read from the string
   before any tokenizer runs, so the BPB denominator cannot move when the
   vocabulary does. Everything inside the boundary depends on the tokenizer:
-  L_T, the per-token mean ℓ, and perplexity. The numerator, total code
-  length, is a property of the model's distribution over byte strings, up
-  to the mass on non-canonical tokenisations, which only makes reported BPB
-  an upper bound.
+  L_T, the per-token mean ℓ, and perplexity. The numerator is the canonical token-path surprisal under the declared
+  framing. For normalized terminated token sequences it upper-bounds the
+  marginal byte-string surprisal; losslessness alone does not fix the gap.
 placement: inline
 evidence: MATHEMATICALLY-DERIVED
 source: ["DERIVED:eq-2.13", "DERIVED:eq-2.12", P03]
@@ -198,7 +249,7 @@ spec:
   nodes:
     - { id: s, kind: dataset, label: "byte string s", sub: "UTF-8, raw" }
     - { id: lb, kind: metric, label: "byte count L_B", sub: "depends on s only" }
-    - { id: tok, kind: process, label: "tokenizer t(s), lossless", sub: "vocabulary size sets L_T", group: tz }
+    - { id: tok, kind: process, label: "tokenizer t(s), lossless", sub: "tokenization determines L_T", group: tz }
     - { id: ids, kind: tensor, label: "token ids", sub: "[L_T]", group: tz }
     - { id: q, kind: model, label: "model q, windows and stride", sub: "Algorithm 2.3 lines 5–8" }
     - { id: code, kind: metric, label: "total code length", sub: "−log₂ q(t(s)) bits" }
@@ -206,7 +257,7 @@ spec:
     - { id: ell, kind: metric, label: "per-token loss ℓ", sub: "NLL_total / L_T, nats", group: tz }
     - { id: ppl, kind: metric, label: "perplexity exp(ℓ)", sub: "not comparable across tokenizers", group: tz }
     - { id: bpb, kind: objective, label: "bits per byte", sub: "code length / L_B, Eq. 2.13", emphasis: true }
-    - { id: nc, kind: dependency, label: "mass on non-canonical tokenisations", sub: "BPB is an upper bound" }
+    - { id: nc, kind: dependency, label: "mass on non-canonical tokenisations", sub: "canonical rate ≥ marginal rate, with framing" }
   edges:
     - { from: s, to: lb, kind: emphasis, label: "count bytes" }
     - { from: lb, to: bpb, kind: emphasis, label: "denominator" }
@@ -224,15 +275,11 @@ spec:
     - { id: tz, label: "tokenizer-dependent" }
 ```
 
-<details><summary>Derivation of Eq. 2.10 (Gibbs' inequality)</summary>
+### KL support, estimation, and differentiation
 
-With log x ≤ x − 1 for x > 0: −KL(p‖q) = Σ p log(q/p) ≤ Σ p (q/p − 1) = Σ q − Σ p ≤ 0, so KL ≥ 0. Equality in log x ≤ x − 1 requires x = 1, i.e. q = p wherever p > 0. Expanding H(p,q) = −Σ p log q = −Σ p log p + Σ p log(p/q) = H(p) + KL(p‖q).
+At a fixed context, let a∼q and r=p(a)/q(a). The sampled log-ratio k₁=−log r estimates KL(q‖p) when the expectation exists. It can be negative on samples where p(a)>q(a). The nonnegative expression k₃=r−log r−1 satisfies k₃≥0 because log r≤r−1. Its expectation equals KL(q‖p) only when E_qr=1, requiring p to assign no mass outside q's support. Finite KL additionally needs p>0 wherever q>0, along with the appropriate integrability. On a finite full-support softmax alphabet these conditions hold; truncation can break them. If p has mass outside q's support, E_qr=p[supp(q)]<1 and k₃ has an additional negative expectation offset [MATHEMATICALLY-DERIVED · DERIVED:eq-2.10; PAPER-REPORTED · P25, §4.1, Eq. (4)].
 
-</details>
-
-**Likelihood as cross-entropy.** The token-mean loss of Eq. N.2 is an unbiased estimate of H(p_data, p_θ) per token when the data are sampled from p_data; minimising it minimises KL(p_data ‖ p_θ) since H(p_data) is fixed. This is the *forward* KL: it penalises q for assigning low mass where p has mass (mode-covering). The *reverse* KL, KL(q‖p), is what RL and DPO regularise with (Eq. N.6, [§33.1](../../../vol-02-execution-and-optimization/part-06-post-training-and-reinforcement-learning/ch33-direct-preference-optimization-and-related-objectives/33-1-dpo-derivation.md)) and it is mode-seeking: q is penalised for placing mass where p has none, never for missing p's modes [MATHEMATICALLY-DERIVED · DERIVED:eq-2.10].
-
-**Sampled KL estimators.** KL(π_θ‖π_ref) per token over V is exact at O(V) cost when both distributions are available; RL trainers instead use a single sample o ∼ π_θ. With r = π_ref(o)/π_θ(o): (i) k₁ = −log r is unbiased but can be negative; (ii) k₃ = r − log r − 1 is unbiased (because E_{π_θ}[r] = 1 and E[−log r] = KL) and non-negative for every sample (because x − log x − 1 ≥ 0) [MATHEMATICALLY-DERIVED]. P25 uses k₃ as its Eq. 4 and describes it as unbiased and guaranteed positive [PAPER-REPORTED · P25]; being non-negative per sample lowers variance relative to k₁ but does not change the expectation. Cost: two log-probability evaluations per token (policy and reference forward passes) instead of a full-vocabulary sum — the same two passes the importance ratio of §02.2 already requires.
+The term r−1 is a zero-mean control variate under that support condition. Consequently Var(k₃)=Var(k₁)+Var(r−1)+2Cov(k₁,r−1), when these moments exist. Nonnegativity alone does not determine the sign of the variance change. On countably infinite alphabets k₃ can have infinite variance when E_qr² is infinite even if KL is finite. For a finite alphabet its variance can still be large when q is tiny on outcomes carrying substantial p mass. Exact KL needs O(V) arithmetic after both vectors exist; one sampled ratio needs O(1) post-gather arithmetic, but still needs model normalization and the required policy/reference evaluations.
 
 ```figure
 id: fig-2.17
@@ -268,71 +315,75 @@ spec:
     - { x: 0.5, label: "r = 0.5: k₁ = 0.69, k₃ = 0.19" }
 ```
 
-**Mutual information as a budget.** For an encoder–decoder or retrieval interface, I(X;Z) bounds how much of X the representation Z can carry; a representation of z bits cannot carry more than z bits of information about X (H(Z) ≥ I(X;Z)). This is the accounting used for compressed caches ([Chapter 42](../../../vol-02-execution-and-optimization/part-07-inference-algorithms-distillation-and-compression/ch42-prefill-decode-kv-state-and-inference-resource-models/README.md)) and for the impossibility of recovering dropped information downstream [MATHEMATICALLY-DERIVED · DERIVED:eq-2.11].
+For parameter-dependent q_θ and h_θ, differentiation gives
+∇_θE_{q_θ}h_θ=E_{q_θ}[∇_θh_θ+h_θ∇_θlog q_θ], under the interchange conditions in §02.4. With h_θ=log q_θ−log p and fixed p, the explicit-derivative expectation vanishes, leaving the score-weighted log-ratio contribution. Holding sampled outputs fixed and differentiating k₃ omits a sampling-law term unless the optimization procedure supplies the relevant correction. A value estimator's unbiasedness therefore does not by itself establish an unbiased stochastic gradient.
+
+DeepSeekMath samples groups from π_old in Eq. (3), uses a clipped policy-ratio objective, and puts the Eq. (4) KL term directly in the loss rather than inside its group-relative advantage. Its stored-output distribution and objective must be analyzed together. Replacing π_θ samples by π_old samples changes the expectation unless a justified weighting or approximation is specified; Eq. (4) alone is not a proof of equivalence between off-policy surrogate and on-policy divergence gradients [PAPER-REPORTED · P25, §4.1, Eqs. (3)–(4); MATHEMATICALLY-DERIVED · DERIVED:eq-2.18].
 
 ## Algorithm
 
 ```text
-Algorithm 2.3 — Bits per byte over a document set
-INPUT   documents s_1..s_n (byte strings); tokenizer tok (lossless); model q; context length T_max; stride
-OUTPUT  BPB, token-mean loss ℓ (nats), L_T, L_B
-STATE   NLL_total (nats), L_T, L_B
-INVARIANT every scored token is counted exactly once in L_T; every byte of every document exactly once in L_B
-1  NLL_total, L_T, L_B ← 0
+Algorithm 2.3 — Byte-normalized log score under an explicit context policy
+INPUT   byte documents s_i; lossless tokenizer tok; model q; context limit T_max;
+        target-window partition and context policy; BOS/EOS and reset policy
+OUTPUT  BPB, token mean ell, scored count L_T, raw byte count L_B, scoring manifest
+STATE   NLL_total = 0; L_T = 0; L_B = 0
+INVARIANT target token positions are scored once; context-only positions are unscored;
+          each declared target byte is counted once; loss and denominator refer to that target
+1  reject an empty target corpus or invalid target/context partition
 2  for each document s_i:
-3      L_B += len_bytes_utf8(s_i)
-4      ids ← [BOS] + tok(s_i)                        # BOS is conditioned on, never scored
-5      for each window (start, end) covering ids[1:] with the stated stride:
-6          logits ← q(ids[start−ctx : end])           # forward pass; cost per §02.4
-7          NLL_total += Σ_{t in scored range} −log q(ids[t] | ids[<t])   # LSE form, §03.2
-8          L_T += number of scored tokens in window
-9  ℓ ← NLL_total / L_T
-10 BPB ← (L_T / L_B) · ℓ / ln 2
-11 return BPB, ℓ, L_T, L_B
+3      verify decode(tok(s_i)) = s_i; L_B += length of declared target bytes
+4      form ids and target positions under the recorded BOS/EOS policy
+5      for each disjoint target block [a,b):
+6          choose legal preceding context C_t using the fixed context policy
+7          evaluate log q(ids[t] | C_t) for t in [a,b), using stable log-softmax
+8          NLL_total += sum of negative target log probabilities
+9          L_T += count of target positions
+10 ell = NLL_total / L_T; BPB = NLL_total / (L_B * ln 2)
+11 return BPB, ell, L_T, L_B, scoring manifest
 ```
 
-Complexity: one forward pass per window, O(L_T · cost per token); with stride < context, tokens are recomputed and the ratio of forward tokens to scored tokens must be reported. Termination: after the last document. Whether document boundaries are scored, whether documents are concatenated, and whether the BOS token is scored change ℓ and must be stated; they do not change L_B.
+Each target is scored once, but overlapping context can be recomputed. Report both scored positions and total model-input positions. The workload is the sum of forward-window costs, which depend on their lengths and the model; O(L_T) total cost is justified only after fixing the per-target context/work boundary. A block-reset policy and a sliding-window policy generally define different scores. The Pile's historical protocol below is one specific blockwise policy, not a hidden default of this algorithm. A prompt-conditioned response score must count response bytes and identify the prompt as uncharged side information. Arbitrary target masks cannot be combined with an unconditional full-document coding interpretation [MATHEMATICALLY-DERIVED · DERIVED:eq-2.13].
 
 ## Implementation
 
-```text
-Tensor trace
-[B, T, D] hidden → lm_head [D, V] → [B, T, V] logits → log_softmax over V → gather(target) → [B, T] token NLL → mask m_t → Σ / Σ m_t → ℓ
-```
+For hidden states [B,T,D], an output projection [D,V] produces logits [B,T,V]. Stable log-softmax followed by target gather gives [B,T] target log probabilities; a recorded mask selects scored positions. The sum of their negative log probabilities and the sum of mask entries are separate accumulators. A per-document mean must not be averaged again to obtain a pooled token mean unless weighted by its scored-token count. A corpus BPB is likewise the total bit numerator divided by total bytes, not an unweighted average of document or component BPB values [MATHEMATICALLY-DERIVED · DERIVED:eq-2.13].
 
-The [B, T, V] logits tensor costs B·T·V·b bytes and is typically the largest single activation in a language model; for the loss only the gathered target log-probability and the log-sum-exp per position are needed, which is what fused linear–cross-entropy kernels exploit. Liger Kernel documents a `LigerFusedLinearCrossEntropyLoss` that performs "chunk-by-chunk computation to reduce memory" (README, accessed 2026-09-20; the exact chunking policy and release behaviour are UNVERIFIED here) [OFFICIAL-DOCUMENTATION · R2.9]. Full-vocabulary KL for distillation (Eq. N.7) needs the teacher's V logits per token transferred or recomputed; the bytes are V·b per token per layer of teacher output, and [§39.2](../../../vol-02-execution-and-optimization/part-07-inference-algorithms-distillation-and-compression/ch39-knowledge-response-and-policy-distillation/39-2-information-access.md) develops the top-k and sampled alternatives.
+Materializing logits takes BTVb bytes for b bytes per value. Whether this is the largest activation depends on architecture, sequence length, attention storage, and fusion; it is not a universal property of language models. The Liger README documents chunked fused linear cross-entropy, but no inspected kernel or immutable commit establishes its allocation policy for a particular workload here [OFFICIAL-DOCUMENTATION · R2.9, low-level API example]. Full-distribution teacher KL requires V teacher probabilities per scored position or an equivalent computation. Top-k and sampled substitutes change the target/access contract and are developed in [§39.2](../../../vol-02-execution-and-optimization/part-07-inference-algorithms-distillation-and-compression/ch39-knowledge-response-and-policy-distillation/39-2-information-access.md).
+
+Byte counts must be measured on the exact declared serialized text, with encoding, newline policy, normalization, separators, and empty-document handling fixed. Computing the denominator after a lossy transform changes the scored target. If preprocessing is intentionally lossy, the resulting score describes the processed text, not a lossless code for the original bytes. Log-space evaluation prevents avoidable exponential underflow but does not make a genuinely zero reference probability positive.
 
 ## Experimental design
 
-Proposal (developed as the Chapter 04 verification): score one held-out byte corpus with two tokenizers of different vocabulary size using the same model family and training data; report ℓ, PPL, L_T/L_B, and BPB. Prediction: PPL differs by roughly the ratio of L_T/L_B raised to a power that has nothing to do with model quality, while BPB differences reflect fit. Controlled: context length, stride, boundary handling, UTF-8 normalisation. Not run in this edition.
+### Reported experiments
+
+The Pile holds out .1% each for validation and test, while warning that cross-split duplicates may remain. Its GPT-2/GPT-3 evaluation scores documents separately and subsamples one tenth of test documents for most components because of API cost; Ubuntu IRC, BookCorpus2, and PhilPapers are exceptions. Appendix E.2 partitions documents into model-length segments, with limits 1024 for GPT-2 and 2048 for GPT-3, scores each token once, and aggregates sums rather than averaging component perplexities [PAPER-REPORTED · P03, §§3.1–3.2; Appendix E.2].
+
+Table 2 reports whole-Pile BPB 1.2253 for GPT-2 small, 1.0468 for GPT-2 xl, and .7177 for the historical GPT-3 davinci endpoint. GPT-2 and GPT-3 share a tokenizer in this protocol, so this is not an experiment isolating tokenizer choice. API endpoint parameter counts used in its scaling plot are explicitly assumed by the source; they are not verified architectural disclosures [PAPER-REPORTED · P03, Table 2; §3.2 footnote 10]. Hardware-normalized throughput and seed-level uncertainty are NOT-DISCLOSED for this comparison.
+
+DeepSeekMath applies RL to its 7B instruction model using approximately 144K GSM8K/MATH-related questions. It reports policy learning rate 10⁻⁶, KL coefficient .04, 64 outputs per question, length limit 1024, batch size 1024, and one update per exploration stage. The no-tool MATH score changes from 46.8% for Instruct to 51.7% for RL in Table 5 [PAPER-REPORTED · P25, §4.2; Table 5]. Group normalization, reward modeling, data selection, and KL regularization are part of that procedure together. No k₁-versus-k₃-only ablation isolates the KL estimator's contribution. These results therefore support a source-specific training comparison, not a general claim that nonnegative estimators improve capability.
+
+Entropy, the chain rule, Gibbs' inequality, and the ideal coding bounds are mathematical statements, so their training dataset and benchmark fields are N/A. Proposed book checks are recorded in [verification.md](verification.md); no new likelihood, estimator-variance, or capability measurement is reported here.
 
 ## Observations
 
-**What the paper claims.** P03 reports BPB as its evaluation metric for the stated reason of tokenizer invariance [PAPER-REPORTED · P03]. P25 reports the k₃ KL estimator as unbiased and positive [PAPER-REPORTED · P25].
+Equation 2.10 separates irreducible source uncertainty from model mismatch for a fixed event distribution. Changing context, target masks, or document weights changes that distribution or its risk functional. Equation 2.13 converts units for a recorded score, but it cannot recover information missing from the scoring manifest. The Pile comparison illustrates a reported byte-normalized protocol; it does not establish one universally correct context policy.
 
-**What the evidence shows.** Both claims are consequences of definitions (Eq. 2.13; E[r] = 1) and hold regardless of any experiment [MATHEMATICALLY-DERIVED].
+For a deterministic tokenizer, losslessness establishes recovery of the input bytes. It does not establish unique token paths, canonical-path/marginal equality, or negligible noncanonical mass. The gap is bounded in direction by the construction above, while its numerical size is NOT-DISCLOSED by the sources inspected. Two models with identical marginal byte distributions can therefore have different canonical-path BPB if their token-path allocations differ. Such a difference need not indicate an implementation error [MATHEMATICALLY-DERIVED · DERIVED:eq-2.13].
 
-**What we infer.** The book infers (DERIVED) that the non-canonical-tokenisation mass makes reported BPB an upper bound on the model's true byte-level code length; the size of the gap is ASSUMED small for standard tokenizers and is not measured.
-
-**What remains unknown.** Whether vendor-reported perplexities are token-mean or sequence-mean, and over which stride and boundary convention, is typically NOT-DISCLOSED, which is why Chapter 04 treats undocumented perplexities as incomparable.
+For sampled KL, nonnegativity is a pointwise property of r−log r−1; unbiasedness is an expectation property with support conditions; finite variance is a moment property; optimization correctness additionally concerns the sampling-law derivative. None substitutes for the others. DeepSeekMath's end-to-end score comparison does not isolate these statistical properties [MATHEMATICALLY-DERIVED · DERIVED:eq-2.10; DERIVED:eq-2.18; PAPER-REPORTED · P25, §§4.1–4.2].
 
 ## Failure modes
 
-> **Failure mode — base and unit confusion.** *Symptom:* a "loss" of 1.0 reported as 1 bit when it was 1 nat (1.44 bits). *Cause:* natural logs in frameworks, base-2 in reports. *Detection:* recompute one value by hand. *Mitigation:* state the unit next to every number.
+A base conversion error rescales a loss by ln2. A reduction error changes document weights. An inconsistent target-byte boundary changes BPB's estimand. These errors can be detected by reconstructing total nats, total scored tokens, and total target bytes from the same scoring manifest; recomputing only perplexity cannot distinguish them.
 
-> **Failure mode — denominator drift.** *Symptom:* BPB improves after a tokenizer change with no model change. *Cause:* L_B computed after lossy normalisation, or BOS/boundary tokens scored inconsistently. *Detection:* L_B must be identical across tokenizers for the same corpus. *Mitigation:* compute L_B from raw UTF-8 bytes once and store it with the corpus manifest ([§06.6](../ch06-experimental-design-and-evaluation-before-optimization/06-6-reproducible-evidence.md)).
+A support mismatch can produce infinite KL legitimately. Numerical underflow is a different failure, in which a representable log probability was converted to zero probability before taking the log. Stable log-space computation addresses the latter. Adding smoothing or truncating a reference changes the distribution and therefore the divergence; it is not an exact repair of the former.
 
-> **Failure mode — KL with disjoint support.** *Symptom:* infinite or NaN KL. *Cause:* q(x) = 0 where p(x) > 0 (e.g. after truncation or in FP16 underflow). *Detection:* check min log-probabilities. *Mitigation:* compute in log-space with the LSE form of §03.2; never truncate the reference distribution.
+A pathwise/autograd derivative through stored KL samples can disagree with the desired on-policy gradient even when each sampled value has the right on-policy expectation. The sampling distribution, detached quantities, policy-ratio weights, clipping, and explicit integrand derivative must all be included in the procedure specification. The derivative identity and score-function conditions are developed in [§02.4](02-4-differential-calculus.md).
 
 ## Siblings
 
-**Cross-entropy / forward KL (maximum likelihood)** — this file, Eq. 2.10. Why it exists: unbiased, mode-covering, samples from data only. New failure mode: mass on data-absent regions is not penalised.
-
-**Reverse KL (policy regularisation)** — [§33.1](../../../vol-02-execution-and-optimization/part-06-post-training-and-reinforcement-learning/ch33-direct-preference-optimization-and-related-objectives/33-1-dpo-derivation.md) and [§34.2](../../../vol-02-execution-and-optimization/part-06-post-training-and-reinforcement-learning/ch34-policy-gradients-ppo-and-rlhf/34-2-policy-gradients.md). Why it exists: keep a policy near a reference while sampling from the policy. What assumption changed: samples come from q, not p. What objective changed: KL direction. What problem it solved: tractable regularisation from policy samples. New failure mode: mode collapse.
-
-**Temperature-scaled KL (distillation)** — [§39.2](../../../vol-02-execution-and-optimization/part-07-inference-algorithms-distillation-and-compression/ch39-knowledge-response-and-policy-distillation/39-2-information-access.md), Eq. N.7. Why it exists: transfer the teacher's full distribution. Changed primitive: one-hot target → soft target. New failure mode: teacher-logit access and bandwidth.
-
-**Perplexity** — [§04.6](../ch04-language-modeling-and-learning-objectives/04-6-likelihood-and-capability.md). Why it exists: per-token interpretability. What assumption changed: a fixed tokenizer. New failure mode: incomparability across tokenizers. Changed primitive: byte denominator → token denominator.
+Forward KL, reverse KL, temperature-scaled distillation, and perplexity share log-probability primitives but answer different questions. Forward-KL risk weights outcomes by the data law; reverse-KL regularization weights outcomes by the policy law. The terms “mode covering” and “mode seeking” describe behavior in restricted approximation families, not universal guarantees that one direction preserves all modes or that the other always collapses. Both are minimized at equality when the common target is representable. Full-distribution distillation replaces one observed target with a distribution over outcomes; sampling or truncation changes that information access. Perplexity is a monotone report of token log loss and inherits its tokenizer and reduction dependence [MATHEMATICALLY-DERIVED · DERIVED:eq-2.10; DERIVED:eq-2.13].
 
 ```figure
 id: fig-2.18
@@ -340,11 +391,12 @@ kind: compare
 title: Four likelihood objectives and reports, by sampling source and price
 caption: >-
   Read the "samples drawn from" row first: it decides everything below it.
-  Forward KL can be estimated from data alone, reverse KL only from the
-  policy's own samples, and distillation needs the teacher's whole
-  distribution at every position, which is a bandwidth bill rather than a
-  FLOP bill. Perplexity is not an objective at all but a report, and it is
-  the only column whose value depends on the tokenizer.
+  Cross-entropy uses data samples; policy-sampled reverse KL is one
+  estimable regularizer, though exact summation or importance sampling can
+  use other access patterns. Full-distribution distillation requires all
+  teacher probabilities and their computation or transfer. Perplexity
+  exponentiates token-normalized cross-entropy; every token-space quantity
+  here depends on the tokenizer and evaluation protocol.
 placement: wide
 evidence: MATHEMATICALLY-DERIVED
 source: ["DERIVED:eq-2.10", "DERIVED:eq-2.13", P25]
@@ -353,7 +405,7 @@ alt: >-
   likelihood (§02.3): samples from the data; estimates H(p_data, p_θ), which
   is H(p_data) plus KL(p_data‖p_θ); penalises low model mass where the data
   has mass, mode-covering; costs one log-softmax and gather over V per token;
-  fails to penalise mass on data-absent regions. Reverse KL, policy
+  has no direct summand on data-absent outcomes, although normalization couples their mass. Reverse KL, policy
   regularisation (§33.1): samples from the policy; penalises policy mass
   where the reference has none, mode-seeking; exact at O(V) per token or two
   log-probability evaluations with the k₃ estimator; failure mode mode
@@ -377,21 +429,25 @@ spec:
     - { dimension: "penalises", values: { fwd: "low q where p has mass: mode-covering", rev: "q mass where p has none: mode-seeking", dist: "mismatch across all V outcomes", ppl: "nothing: a report of fit, not an objective" } }
     - { dimension: "cost per token", values: { fwd: "one log-softmax and gather over V", rev: "O(V) exact, or two log-probability evaluations with k₃", dist: "teacher's V logits: V·b bytes transferred or recomputed", ppl: "as forward, then exponentiated" } }
     - { dimension: "changed primitive", values: { fwd: "reference column", rev: "samples from q instead of p", dist: "one-hot target → soft target", ppl: "byte denominator → token denominator" } }
-    - { dimension: "new failure mode", values: { fwd: "mass on data-absent regions is not penalised", rev: "mode collapse", dist: "teacher-logit access and bandwidth", ppl: "incomparable across tokenizers" } }
+    - { dimension: "new failure mode", values: { fwd: "no direct summand on unobserved outcomes; normalization still matters", rev: "mode collapse", dist: "teacher-logit access and bandwidth", ppl: "incomparable across tokenizers" } }
 ```
 
 ## Extensions
 
-For multimodal inputs the byte count of an image or audio segment is not a natural denominator, and fit is reported per modality-specific unit (patch, frame, sample) with the same caveats ([Chapter 55](../../../vol-03-grounded-and-interactive-intelligence/part-10-multimodal-world-and-embodied-models/ch55-vision-language-models-and-document-intelligence/README.md)). For long context the window and stride in Algorithm 2.3 dominate the result. For agents the likelihood of a tool trajectory mixes model tokens with environment tokens, and only the former are scored (m_t in Eq. N.2). These are cross-references, not proposals.
+### Improvements
+
+The Pile's byte denominator removes token-count variation from the reporting denominator while retaining a source-defined text and context protocol. Its methodological contribution is therefore a more explicit comparison boundary. DeepSeekMath's k₃ construction supplies nonnegative realizations of the reported KL value under the stated sampling/support assumptions; the paper does not isolate a general variance or capability advantage for that estimator. These are bounded improvements in measurement or procedure, not a ranking of current models [PAPER-REPORTED · P03, §3.1; P25, §4.1].
+
+For a conditional interface, mutual information and data processing can analyze what a representation preserves only after the random variables and graph are specified. Retrieval can add side information absent from a compressed state, and an agent trajectory can include environment tokens that the policy did not generate. Scoring only policy tokens then defines a conditional policy likelihood, not the joint probability of the environment trajectory. Modality-specific targets also require their own event and denominator definitions; file byte counts for compressed images or audio are not automatically a meaningful common predictive unit.
 
 ## Limitations
 
-Eq. 2.13 assumes UTF-8 byte counts of raw text; a different encoding changes L_B. BPB measures fit, not capability; the relation between likelihood and downstream capability is the subject of [§04.6](../ch04-language-modeling-and-learning-objectives/04-6-likelihood-and-capability.md) and is not assumed here. Falsification: two models with identical byte-level distributions but different tokenizers reporting different BPB on the same corpus would indicate a lossy tokenizer or a scoring-convention difference, not a failure of the identity.
+The entropy-difference identities above assume finite discrete entropies where stated; a measure-theoretic KL treatment extends beyond this finite/countable exposition. The code bound is ideal and excludes model transmission, framing, and finite-precision coder behavior. Canonical BPB can differ from marginal byte likelihood, and likelihood can differ from task capability. Source omissions in runtime configuration, uncertainty, and estimator-isolating ablations prevent stronger empirical conclusions. No book experiment fills those gaps in this revision.
 
 ## Reproducibility
 
-Symbols: H, KL, I, ℓ, L_T, L_B, BPB, PPL, r, k₁, k₃ (local); p_θ, π_θ, π_ref, m_t from notation.md. Every reported ℓ must state: unit, denominator, tokenizer name and version, context length, stride, boundary and BOS handling, and the UTF-8 byte count of the corpus. No measurement was made.
+A reproducible score records the exact data revision and serialized target bytes; tokenizer/decoder revision; model/checkpoint or endpoint and access date; event space and termination policy; context length, window partition and stride; document resets; BOS/EOS and separators; target mask; log base and numerical dtype; total NLL, scored-token count and target-byte count; weighting and uncertainty unit. An estimator additionally records its sampling law, support modifications, ratio direction, detached terms, and any policy-ratio correction. The source ledger distinguishes inspected primary text from mutable documented interfaces and unexecuted verification.
 
 ## References
 
-P03 (bits-per-byte definition and rationale), P25 (k₃ KL estimator), R2.9 (Liger Kernel README). See [references.md](references.md).
+P03, §§3.1–3.2, Table 2 and Appendix E.2 (byte-normalized evaluation); P25, §4.1 Eqs. (3)–(4), §4.2 and Table 5 (sampled KL and reported RL protocol); R2.1, Part I §§6–9 and Theorem 9 (entropy and noiseless coding); R2.9, README low-level API example (documented fused-loss interface); R2.14, §2.1 (differentiating expectations). Revisions, dates, and limitations are recorded in [references.md](references.md).

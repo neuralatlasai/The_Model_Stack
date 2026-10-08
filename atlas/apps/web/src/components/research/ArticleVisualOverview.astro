@@ -1,0 +1,108 @@
+---
+/**
+ * Two real scientific objects from the current manuscript, presented before
+ * its complete argument. Caption, source context, and the generated text
+ * equivalent remain accessible in a native disclosure. The canonical figures
+ * remain in their original manuscript positions and receive the title links.
+ */
+import type { PerformanceContext, ResearchDocument } from '@atlas/core';
+import { FigureBody } from '@atlas/visual/svg';
+import Calculator from '../../islands/Calculator.tsx';
+import { articleOverviewCopy, articleOverviewFigures } from './lib/article-figures.ts';
+import { figureHostProps } from './lib/figure-host.ts';
+import { figureLabel, isCalculator } from './lib/figure.ts';
+
+interface Props {
+  readonly doc: ResearchDocument;
+}
+
+const { doc } = Astro.props;
+const visuals = await Promise.all(
+  articleOverviewFigures(doc.figures).map(async (source) => {
+    const figure = articleOverviewCopy(source);
+    return { source, figure, ...(await figureHostProps(figure)) };
+  }),
+);
+const contextFields: readonly (readonly [keyof PerformanceContext, string])[] = [
+  ['hardware', 'Hardware'],
+  ['model', 'Model'],
+  ['precision', 'Precision'],
+  ['sequenceLength', 'Sequence length'],
+  ['ioDistribution', 'Input / output distribution'],
+  ['concurrency', 'Concurrency'],
+  ['runtimeVersion', 'Runtime'],
+  ['measurementBoundary', 'Measurement boundary'],
+];
+---
+
+{visuals.length > 0 && (
+  <div class="aw-visuals" data-overview-figures={visuals.length} role="group" aria-label="Scientific figures">
+    {visuals.map(({ source, figure, nodeHref, tex }) => (
+      <figure
+        class:list={[
+          'aw-visual',
+          'vg-figure',
+          'vg-place--inline',
+          `aw-visual--${figure.spec.kind}`,
+          `vg-figure--${figure.spec.kind}`,
+        ]}
+        id={figure.anchor}
+        data-figure={figure.id}
+        data-figure-kind={figure.spec.kind}
+        data-figure-origin={figure.origin}
+        data-source-figure={source.id}
+      >
+        <header class="aw-visual__heading" id={`${figure.anchor}--heading`}>
+          <a href={`#${source.anchor}`}>
+            <span class="aw-visual__number">{figureLabel(source)}</span>
+            {source.number !== null && <span class="aw-visual__title">{figure.spec.title}</span>}
+          </a>
+        </header>
+        <div class="aw-visual__body" role="region" aria-labelledby={`${figure.anchor}--heading`} tabindex={0}>
+          {isCalculator(figure) ? (
+            <Calculator client:visible figure={figure} {...tex} />
+          ) : (
+            <FigureBody figure={figure} nodeHref={nodeHref} chartDimensions={{ width: 440, height: 390 }} {...tex} />
+          )}
+        </div>
+        <figcaption class="aw-visual__caption">
+          <details class="aw-visual__details">
+            <summary>Caption and sources</summary>
+            <p class="aw-visual__caption-text">{figure.spec.caption}</p>
+            <p class="aw-visual__source">
+              <span>{figure.evidence}</span>
+              {figure.sources.map((sourceId) => (
+                <span>
+                  <span aria-hidden="true"> · </span>
+                  {sourceId}
+                </span>
+              ))}
+            </p>
+            {figure.spec.context !== undefined && (
+              <dl class="aw-visual__context">
+                {contextFields.map(([key, label]) => (
+                  <div>
+                    <dt>{label}</dt>
+                    <dd>{figure.spec.context?.[key]}</dd>
+                  </div>
+                ))}
+              </dl>
+            )}
+            {figure.spec.states[0]?.note !== undefined && <p>{figure.spec.states[0].note}</p>}
+            <div class="aw-visual__description">
+              {figure.text
+                .split(/\n+/u)
+                .filter((line) => line.trim() !== '')
+                .map((paragraph) => (
+                  <p>{paragraph}</p>
+                ))}
+            </div>
+          </details>
+          <a class="aw-visual__open" href={`#${source.anchor}`}>
+            Full figure <span aria-hidden="true">↘</span>
+          </a>
+        </figcaption>
+      </figure>
+    ))}
+  </div>
+)}

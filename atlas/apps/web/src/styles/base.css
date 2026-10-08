@@ -352,12 +352,12 @@ summary {
 
 /* Screen only: print always carries every layer (UI_UX §75). */
 @media screen {
-  html[data-depth='overview'] [data-depth-min='technical'],
-  html[data-depth='overview'] [data-depth-min='research'],
-  html[data-depth='overview'] [data-depth-min='implementation'],
-  html[data-depth='technical'] [data-depth-min='research'],
-  html[data-depth='technical'] [data-depth-min='implementation'],
-  html[data-depth='research'] [data-depth-min='implementation'] {
+  html:not([data-reading-mode='complete'])[data-depth='overview'] [data-depth-min='technical'],
+  html:not([data-reading-mode='complete'])[data-depth='overview'] [data-depth-min='research'],
+  html:not([data-reading-mode='complete'])[data-depth='overview'] [data-depth-min='implementation'],
+  html:not([data-reading-mode='complete'])[data-depth='technical'] [data-depth-min='research'],
+  html:not([data-reading-mode='complete'])[data-depth='technical'] [data-depth-min='implementation'],
+  html:not([data-reading-mode='complete'])[data-depth='research'] [data-depth-min='implementation'] {
     display: none;
   }
 }

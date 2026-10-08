@@ -29,7 +29,7 @@ datasets: []
 status: {maturity: established, disputed: false}
 evidence_summary: {labels_used: [MATHEMATICALLY-DERIVED, DERIVED, ASSUMED, PAPER-REPORTED, OFFICIAL-DOCUMENTATION, KNOWN, NOT-DISCLOSED, UNVERIFIED], empirically_observed: false}
 word_count_target: 2200
-updated_at: 2026-09-20
+updated_at: 2026-10-08
 editorial_status: manuscript_draft
 ---
 
@@ -37,15 +37,21 @@ editorial_status: manuscript_draft
 
 ## Scope
 
-Objective: state the partition contract — which data may influence which decision — covering train/development/test separation, temporal splits, group splits, contamination treated as a partitioning failure at design time, and repeated test-set exposure. Baseline: a random row-level split of one dataset. Success: for any reported test score the reader can name every path by which test information could have reached the evaluated unit and can distinguish fixed-candidate selection bounds from adaptive-reuse claims. Boundaries: contamination *detection* methods (overlap search, membership tests, rephrasing probes) are owned by [§8.5](../../part-02-data-and-representation-engineering/ch08-cleaning-deduplication-privacy-filtering-and-contamination/08-5-evaluation-contamination.md); near-duplicate structure by [§8.3](../../part-02-data-and-representation-engineering/ch08-cleaning-deduplication-privacy-filtering-and-contamination/08-3-duplicate-structure.md); dataset documentation fields by [§7.5](../../part-02-data-and-representation-engineering/ch07-data-provenance-acquisition-and-dataset-semantics/07-5-dataset-documentation.md); validity threats at portfolio level by [§61.4](../../../vol-03-grounded-and-interactive-intelligence/part-11-evaluation-interpretability-and-deployment-assurance/ch61-capability-portfolios-and-benchmark-validity/61-4-validity-threats.md).
+Partitioning defines which observations may influence a model's parameters, its development decisions, and its final evaluation. A test row can be absent from the training file while related passages, solutions, benchmark-derived filters, or prior test feedback still influence the evaluated system. The scientific requirement is independence appropriate to the claim, together with a disclosure of information that was deliberately allowed to cross the boundary.
+
+This section develops item, group, temporal, and adaptive-exposure boundaries. Exact overlap is one operational defect; population shift and within-group generalisation are distinct questions. The detection procedures in [8.5](../../part-02-data-and-representation-engineering/ch08-cleaning-deduplication-privacy-filtering-and-contamination/08-5-evaluation-contamination.md) provide evidence about particular leakage paths, rather than a certificate of complete absence. Statistical selection bounds require their own sampling assumptions and cannot be inferred from a query count alone.
 
 ## Why this exists
 
-What failed before was an assumption borrowed from supervised learning on curated datasets: that a test split drawn once at random is independent of everything the system has seen. For web-scale pretraining the training set is a crawl that may contain the benchmark; the GPT-3 report already names datasets where the model "faces methodological issues related to training on large web corpora" (PAPER-REPORTED · R6.21). For leaderboards the test set is queried by many teams for years. For ML-based science generally, Kapoor and Narayanan survey 17 fields and 329 papers affected by leakage and give a taxonomy of "8 types of leakage that range from textbook errors to open research problems" (PAPER-REPORTED · R6.17). The bottleneck is that independence cannot be restored after the fact: a contaminated or over-queried test set yields a number whose bias is unknown and unit-specific. The constraint that became dominant is information flow from the test sample into any decision — a gradient, a hyperparameter, a prompt, a filter, a stopping time. What changed is that partitioning becomes a contract written before data collection or training, with group and temporal keys and a ledger of test exposures, instead of a preprocessing step.
+Web-scale training and public benchmark reuse make a partition a property of the complete model-development lineage. Post-training data, synthetic examples, prompt search, checkpoint selection, and retrieval indexes can all carry evaluation information even if the pretraining corpus was filtered. A frozen row-level split addresses none of these paths by itself.
+
+The adaptive-data-analysis literature distinguishes a fixed collection of candidates from candidates constructed after observing holdout feedback. Dwork et al. derive reusable-holdout mechanisms under explicit stability and disclosure conditions; Blum and Hardt's Ladder restricts leaderboard feedback rather than treating unlimited precise test feedback as harmless ([R6.15, R6.16](references.md), PAPER-REPORTED). The implementation consequence is to record information access and the decisions it influenced, alongside the split membership.
 
 ## Intuition
 
-Physically, a test set is a finite store of independent bits about the task distribution. Every decision that consumes a statistic of it spends some of those bits: the statistic's noise becomes part of the selected system. A training corpus that contains test items has spent them all at once. A quality filter trained on benchmark-like text spends them indirectly, by raising the density of test-like documents. Heuristically, this is "teaching to the test"; the measurable fact is a dependence between the sample used to estimate quality and the procedure that produced the unit.
+Let the learning-and-selection procedure be a function of training data, development feedback, and its random variables. Ordinary holdout inference treats that procedure's selected output as fixed independently of the test draw. If the procedure consumes test statistics, the selected output depends on that draw. The score can then contain both population performance and selection on test noise.
+
+A group split addresses a different dependence. Questions derived from one passage share source information, and related code files can share repository-specific structure. Separating rows estimates performance on new rows within represented groups; separating groups estimates transfer to groups withheld from development. Neither estimand is universally preferable. The partition must match the intended deployment population, and uncertainty must preserve the corresponding sampling unit.
 
 ## Formulation
 
@@ -425,20 +431,9 @@ Proposal only; no run was executed.
 
 ## Siblings
 
-**Static held-out split** — this file, Eq. 6.3 first condition
-Why it exists: cheapest independence guarantee. What assumption changed: none; rows are iid. What problem it solved: overfitting to training rows. New failure mode: sibling leakage, contamination, reuse. Changed primitive: none (baseline).
+A random row split estimates generalisation to new rows from the represented sampling process when its independence assumptions are appropriate. A group split withholds the registered dependence unit, changing the transfer question and often the available number of independent units. A temporal split conditions on a direction of time and may deliberately include distribution shift. Their results differ for reasons beyond contamination; a score decrease does not by itself identify leaked solutions.
 
-**Temporal refresh benchmarks** — this file; portfolio use in [§61.3](../../../vol-03-grounded-and-interactive-intelligence/part-11-evaluation-interpretability-and-deployment-assurance/ch61-capability-portfolios-and-benchmark-validity/61-3-version-and-protocol-control.md)
-Why it exists: static items end up in crawls. What assumption changed: the test set is a process, not a file. What objective changed: performance on recent items. What problem it solved: path (i) and (ii) for units with known earlier cut-offs. New failure mode: scores not comparable across refreshes; authoring cost. Changed primitive: fixed 𝒮 → dated stream of 𝒮_t.
-
-**Private or gated test sets** — [§61.4](../../../vol-03-grounded-and-interactive-intelligence/part-11-evaluation-interpretability-and-deployment-assurance/ch61-capability-portfolios-and-benchmark-validity/61-4-validity-threats.md)
-Why it exists: public items get crawled. What assumption changed: the evaluator, not the developer, holds 𝒮. What problem it solved: paths (i)–(iii). New failure mode: no external audit of item quality; evaluator becomes a trusted party. Changed primitive: public file → query interface.
-
-**Reuse-robust leaderboards (Ladder, reusable holdout)** — this file, R6.15, R6.16
-Why it exists: leaderboards are adaptive by construction. What assumption changed: answers to test queries are deliberately coarsened or noised. What objective changed: leaderboard accuracy under adaptivity. What problem it solved: adaptive-query validity under each method's own assumptions. New failure mode: small true gains invisible. Changed primitive: exact test statistic → thresholded or noised statistic.
-
-**Contamination detection** — [§8.5 Evaluation contamination](../../part-02-data-and-representation-engineering/ch08-cleaning-deduplication-privacy-filtering-and-contamination/08-5-evaluation-contamination.md)
-Why it exists: design-time control is unavailable for third-party units. What assumption changed: membership is inferred, not known. What problem it solved: after-the-fact audit. New failure mode: false positives and negatives (P07 reports the former). Changed primitive: contract → detector.
+Private or gated tests reduce particular dissemination paths, while controlled feedback mechanisms limit how development can exploit test statistics. Neither guarantees that every item is absent from a model's lineage. Fresh benchmark instances require separate checks of difficulty, source overlap, and model exposure. These approaches can be combined, but each should retain its own operational guarantee and unresolved boundary.
 
 ## Extensions
 

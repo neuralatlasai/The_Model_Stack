@@ -1,0 +1,45 @@
+---
+/** Authored notation, without invented defaults or fabricated parameter values. */
+import type { ResearchDocument } from '@atlas/core';
+import { articleParameters } from './lib/article-parameters.ts';
+import { renderDisplayTex } from './lib/tex.ts';
+
+interface Props {
+  readonly doc: ResearchDocument;
+}
+
+const { doc } = Astro.props;
+const parameters = articleParameters(doc).map((parameter) => ({
+  ...parameter,
+  // Multi-letter source identifiers (e.g. Prec or q_ref) are labels, not
+  // products of italic TeX letters. Explicit mathematical notation keeps TeX.
+  html: /^[A-Za-z][A-Za-z0-9_]+$/u.test(parameter.symbol) ? undefined : renderDisplayTex(parameter.symbol),
+}));
+const headingId = `${doc.meta.id}--parameters`;
+---
+
+{parameters.length > 0 && (
+  <section class="aw-parameters" aria-labelledby={headingId}>
+    <h2 class="aw-parameters__heading" id={headingId}>
+      Key parameters
+    </h2>
+    <dl class="aw-parameters__list">
+      {parameters.map((parameter) => (
+        <div class="aw-parameters__item">
+          <dt class="aw-parameters__symbol">
+            {parameter.equationAnchor !== undefined ? (
+              <a href={`#${parameter.equationAnchor}`} aria-label={`Definition of ${parameter.symbol}`}>
+                {parameter.html !== undefined ? <span set:html={parameter.html} /> : <code>{parameter.symbol}</code>}
+              </a>
+            ) : parameter.html !== undefined ? (
+              <span set:html={parameter.html} />
+            ) : (
+              <code>{parameter.symbol}</code>
+            )}
+          </dt>
+          <dd class="aw-parameters__meaning">{parameter.meaning}</dd>
+        </div>
+      ))}
+    </dl>
+  </section>
+)}

@@ -1,0 +1,452 @@
+/*
+ * Complete research articles follow the supplied AI 2027 research-page visual
+ * reference: ET Book, an open 700px text column, sentence-case headings, and a
+ * separate notes margin. The atlas indexes retain their existing design.
+ * Source fonts: public/fonts/et-book/PROVENANCE.md (MIT, pinned upstream).
+ * All manuscript blocks stay in the server-rendered article, at every depth.
+ */
+@font-face {
+  font-family: 'ET Book';
+  src: url('/fonts/et-book/regular.woff') format('woff');
+  font-style: normal;
+  font-weight: 400;
+  font-display: swap;
+}
+
+.rb-figure__scale {
+  display: none;
+}
+
+@font-face {
+  font-family: 'ET Book';
+  src: url('/fonts/et-book/italic.woff') format('woff');
+  font-style: italic;
+  font-weight: 400;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: 'ET Book';
+  src: url('/fonts/et-book/bold.woff') format('woff');
+  font-style: normal;
+  font-weight: 700;
+  font-display: swap;
+}
+
+:root[data-reading-mode='complete'] {
+  --font-serif: 'ET Book', Palatino, 'Palatino Linotype', 'Book Antiqua', Georgia, serif;
+  --measure: 700px;
+  --fs-h1: 52px;
+  --fs-h2: 33px;
+  --fs-h3: 25.5px;
+  --fs-body: 21px;
+  --lh-body: 1.428571;
+  --article-width: 1160px;
+  --article-gutter: 140px;
+}
+
+:root[data-reading-mode='complete'][data-theme='light'] {
+  --paper: #fffff8;
+  --ink: #111;
+  --ink-2: #393933;
+}
+
+@media (prefers-color-scheme: light) {
+  :root[data-reading-mode='complete']:not([data-theme='dark']) {
+    --paper: #fffff8;
+    --ink: #111;
+    --ink-2: #393933;
+  }
+}
+
+html[data-reading-mode='complete'] {
+  .sh-topbar {
+    position: static;
+    border: 0;
+    background: var(--paper);
+    backdrop-filter: none;
+  }
+
+  .sh-topbar-inner {
+    max-inline-size: var(--article-width);
+    min-block-size: 106px;
+    margin-inline: auto;
+    padding: 0;
+    gap: 1.25rem;
+  }
+
+  .sh-wordmark {
+    order: -1;
+  }
+
+  .sh-wordmark-title {
+    font-size: 28px;
+    font-weight: 700;
+    font-variant-caps: normal;
+    letter-spacing: 0;
+  }
+
+  .sh-wordmark-sub,
+  .sh-wordmark > svg {
+    display: none;
+  }
+
+  .sh-topnav {
+    flex: 0 1 auto;
+    margin-inline-start: auto;
+  }
+
+  .sh-topnav-link {
+    font-family: var(--font-serif);
+    font-size: 18px;
+  }
+
+  .sh-frame,
+  .sh-frame[data-has-rail='false'] {
+    max-inline-size: var(--article-width);
+    inline-size: calc(100% - 64px);
+    margin-inline: auto;
+    grid-template-columns: minmax(0, 700px) minmax(0, 320px);
+    grid-template-areas: 'main rail';
+    column-gap: var(--article-gutter);
+  }
+
+  .sh-main {
+    padding: 1rem 0 5rem;
+  }
+
+  .sh-reader {
+    max-inline-size: 100%;
+    margin: 0;
+  }
+
+  /* The book tree remains a native, keyboard-accessible navigator at all widths. */
+  .sh-tree {
+    display: none;
+    position: fixed;
+    inset: 0 auto 0 0;
+    inline-size: min(360px, 90vw);
+    block-size: 100dvh;
+    max-block-size: none;
+    margin: 0;
+    padding: 1rem 1rem 2rem;
+    border: 0;
+    border-inline-end: 1px solid var(--rule-strong);
+    background: var(--paper);
+    color: var(--ink);
+    overflow: auto;
+  }
+
+  .sh-tree:popover-open {
+    display: block;
+  }
+
+  .sh-tree::backdrop {
+    background: var(--sh-backdrop);
+  }
+
+  .sh-tree-toggle,
+  .sh-tree .sh-panel-close {
+    display: inline-flex;
+  }
+
+  .sh-rail {
+    border-inline-start: 0;
+  }
+
+  .sh-breadcrumbs {
+    font-size: 12px;
+    opacity: 0.85;
+  }
+
+  .rb-header {
+    padding-block-start: 0;
+  }
+
+  /* Breadcrumbs already provide this hierarchy as navigable links. */
+  .rb-header__identity {
+    display: none;
+  }
+
+  .rb-header__title {
+    font-weight: 400;
+    line-height: 1.1;
+    text-wrap: pretty;
+  }
+
+  .rb-header__number {
+    font-size: 0.6em;
+  }
+
+  .rb-header__thesis {
+    font-size: 25.5px;
+    line-height: 1.4;
+  }
+
+  .rb-header__meta {
+    margin-block-start: 1.4rem;
+    padding: 0;
+    border: 0;
+    font-family: var(--font-serif);
+    font-size: 17px;
+    font-style: italic;
+  }
+
+  .sh-modes {
+    margin-block: 1.5rem 2.5rem;
+  }
+
+  .rb-region__title {
+    padding: 0;
+    border: 0;
+    font-size: 33px;
+    font-weight: 400;
+    font-variant-caps: normal;
+    letter-spacing: 0;
+    line-height: 1.2;
+  }
+
+  .rb-region__ordinal {
+    display: none;
+  }
+
+  .rb-h3 {
+    font-weight: 400;
+  }
+
+  :is(.rb-p, .rb-header__thesis, .rb-def__text, .rb-note__text, .rb-asm__sens, .rb-obs__text) {
+    text-align: start;
+    hyphens: none;
+  }
+
+  .sh-article :is(.rb-p, .rb-list, .vg-figure__caption) a {
+    color: var(--ink);
+    text-decoration-color: currentColor;
+  }
+
+  .sh-article :is(.rb-p, .rb-list, .vg-figure__caption) a:hover {
+    color: var(--accent-hover);
+  }
+
+  :is(.rb-region, .rb-flow) > .rb-p + .rb-p {
+    margin-block-start: 1.5rem;
+  }
+
+  .rb-region > .rb-region__title + * {
+    margin-block-start: 1.5rem;
+  }
+
+  /* Authored rail figures also appear at their argument, never as missing placeholders. */
+  .rb-figure--rail > .rb-figure__inline {
+    display: block;
+  }
+
+  .rb-figure--rail > .rb-figmark {
+    display: none;
+  }
+
+  /* Show the entire research image first; native controls retain legible
+   * inspection at its original size, including when JavaScript is disabled. */
+  .rb-figure:not(:has(.rb-figure__scale input:checked)) .vg-scroll .vg-svg {
+    min-width: 0;
+    max-width: 100%;
+    height: auto;
+  }
+
+  .rb-figure__scale {
+    display: flex;
+    justify-content: end;
+    align-items: center;
+    gap: 0.4rem;
+    margin-block-end: 0.5rem;
+    font: 15px/1.5 var(--font-serif);
+    color: var(--ink-2);
+    cursor: pointer;
+  }
+
+  .vg-figure {
+    /* Reading-state highlighting must not make scientific labels inaccessible. */
+    --vg-dim: 1;
+    padding-block: 1rem;
+    border: 0;
+  }
+
+  .vg-figure__num {
+    font: italic 17px/1.4 var(--font-serif);
+    font-variant-caps: normal;
+    letter-spacing: 0;
+    color: var(--ink-2);
+  }
+
+  .vg-figure.has-lit [data-vg-key] {
+    opacity: 1;
+  }
+
+  .vg-figure__title {
+    font-size: 21px;
+  }
+
+  .vg-figure__caption {
+    font: 17px/1.45 var(--font-serif);
+    color: var(--ink-2);
+  }
+
+  .rb-def__term {
+    font-variant-caps: normal;
+    letter-spacing: 0;
+  }
+
+  .rb-def__marker {
+    display: none;
+  }
+
+  .rb-minimap {
+    margin-block: 0 1.75rem;
+    padding-block-start: 0;
+    border-block-start: 0;
+  }
+
+  .rb-minimap__link {
+    font-family: var(--font-serif);
+    font-size: 16px;
+    line-height: 1.4;
+  }
+
+  .rb-minimap__count,
+  .rb-minimap__ord {
+    display: none;
+  }
+
+  .rb-minimap__title {
+    white-space: normal;
+    overflow: visible;
+  }
+
+  .article-context {
+    margin-block: 1.5rem;
+    font: 12px/1.5 var(--font-sans);
+    color: var(--ink-3);
+  }
+
+  .article-context > summary {
+    cursor: pointer;
+  }
+
+  .article-context[open] > summary {
+    margin-block-end: 1rem;
+  }
+}
+
+@media (min-width: 1024px) {
+  html[data-reading-mode='complete'] .sh-rail {
+    top: 2rem;
+    block-size: calc(100dvh - 4rem);
+    padding: 2rem 0 3rem;
+  }
+}
+
+@media (min-width: 1024px) and (max-width: 1279.98px) {
+  :root[data-reading-mode='complete'] {
+    --article-gutter: 48px;
+  }
+
+  html[data-reading-mode='complete'] .sh-frame {
+    grid-template-columns: minmax(0, 700px) minmax(0, 260px);
+  }
+}
+
+@media (max-width: 1279.98px) {
+  html[data-reading-mode='complete'] .sh-topbar-inner {
+    margin-inline: 32px;
+  }
+}
+
+@media (max-width: 1023.98px) {
+  html[data-reading-mode='complete'] {
+    .sh-frame,
+    .sh-frame[data-has-rail='false'] {
+      max-inline-size: 700px;
+      grid-template-columns: minmax(0, 1fr);
+      grid-template-areas: 'main';
+      column-gap: 0;
+    }
+
+    .sh-topbar-inner {
+      min-block-size: 88px;
+    }
+
+    .sh-topnav {
+      order: initial;
+      flex: initial;
+    }
+
+    .sh-main {
+      padding-block-start: 1rem;
+    }
+  }
+}
+
+@media (max-width: 719.98px) {
+  :root[data-reading-mode='complete'] {
+    --fs-h1: 38px;
+    --fs-h2: 29px;
+    --fs-h3: 24px;
+    --fs-body: 20px;
+    --lh-body: 1.5;
+  }
+
+  html[data-reading-mode='complete'] {
+    .sh-topbar-inner {
+      min-block-size: 76px;
+      margin-inline: 22px;
+      padding-block: 0.75rem;
+      gap: 0.6rem;
+    }
+
+    .sh-wordmark-title {
+      font-size: 23px;
+    }
+
+    .sh-topnav {
+      order: 3;
+      flex: 1 0 100%;
+      margin: 0;
+    }
+
+    .sh-frame,
+    .sh-frame[data-has-rail='false'] {
+      inline-size: calc(100% - 44px);
+    }
+
+    .rb-header__title {
+      font-size: 38px;
+    }
+
+    .rb-header__thesis {
+      font-size: 23px;
+    }
+
+    .rb-region__title {
+      font-size: 29px;
+    }
+
+    .rb-region {
+      margin-block-start: 2.75rem;
+    }
+  }
+}
+
+@media print {
+  html[data-reading-mode='complete'] {
+    .sh-frame,
+    .sh-frame[data-has-rail='false'] {
+      display: block;
+      max-inline-size: none;
+      inline-size: 100%;
+    }
+
+    .sh-main {
+      padding: 0;
+    }
+  }
+}

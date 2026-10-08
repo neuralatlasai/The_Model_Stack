@@ -36,7 +36,7 @@ evidence_summary:
   labels_used: [KNOWN, DERIVED, PAPER-REPORTED, UNVERIFIED, NOT-DISCLOSED, ASSUMED]
   empirically_observed: false
 word_count_target: 1700
-updated_at: 2026-09-20
+updated_at: 2026-10-07
 editorial_status: manuscript_draft
 ---
 
@@ -44,25 +44,21 @@ editorial_status: manuscript_draft
 
 ## Scope
 
-Objective: separate seven levels at which a claim about a foundation model can be made and assign each the evidence that can support it. Baseline: "model X is better", which attributes nothing. Success: any reported gain is attributed to one level with the other six held fixed or accounted for. Boundaries: controlled-comparison methodology is [§6.3](../ch06-experimental-design-and-evaluation-before-optimization/06-3-controlled-comparisons.md); mechanistic evidence is [§64.1](../../../vol-03-grounded-and-interactive-intelligence/part-11-evaluation-interpretability-and-deployment-assurance/ch64-mechanistic-interpretability-and-causal-model-analysis/64-1-behavioral-versus-mechanistic-evidence.md). Algorithm and Implementation are short: this is a conceptual section.
+The seven analysis levels distinguish objective, representation, algorithm, implementation, runtime, infrastructure, and product behavior; data exposure and evaluation protocol cut across them. The subject is attribution of a measured contrast to a defined intervention. Matched settings alone do not guarantee causal identification, and a jointly changed system supports a package comparison. The section develops a disclosure/contrast record; controlled experimental design is treated in Chapter 6 and component-level analysis in Chapter 64.
 
 ## Why this exists
 
-Results were reported as properties of a named model when the variable that changed was the tokenizer, chat template, serving engine, decoding temperature, or harness. A single run varies many levels at once, so attribution needs a design that holds levels fixed or a reanalysis that partials them out; holding levels fixed means re-running, which the budget forbids. This book therefore gives each level an owner chapter and an admissible evidence type so a claim can be checked for the level it actually supports.
+PAPER-REPORTED · [P19, §§2–4](https://arxiv.org/html/2205.14135v2) and [P36, §§3–6](https://arxiv.org/pdf/2309.06180): exact attention and cache management change execution without constituting a new language-model objective. PAPER-REPORTED · [P28, §§2–3](https://arxiv.org/html/2503.20783v1): reasoning-style outputs also depend on the initial checkpoint, prompt template, and optimization normalization. These studies motivate distinct attribution questions. DERIVED: a comparison between released systems measures the effect of their complete disclosed configuration; attributing that difference to a particular component requires additional controls and an explicitly defined estimand.
 
 ## Intuition
 
-The seven levels are the seven places where behavior can be changed by spending a resource: the objective re-spends training FLOPs; the representation re-spends parameters and memory; the algorithm re-spends optimizer steps; the implementation re-spends engineering time and may change numerics; the runtime re-spends memory traffic and latency; the infrastructure re-spends communication and money; product behavior (prompts, retrieval, filters) spends nothing on the model but changes what the user sees. A product-level gain could have been bought at any of the six levels beneath it.
-
-Heuristically, the levels resemble the computational, algorithmic, and implementational levels of computational neuroscience, extended by the runtime and infrastructure layers a deployed model cannot avoid; the analogy orders levels and licenses no inference between them.
-
-> **Historical note.** The three-level scheme is Marr's (1982) [R1.6]; the seven-level expansion is this book's editorial choice, not a neuroscience claim.
+DERIVED: the seven levels are an editorial decomposition of variables, not an established causal hierarchy or seven independent physical systems. Their purpose is to ask what changed and which measurements can detect its effect. A prompt modification may leave weights unchanged while changing input tokens, retrieval calls, acceptance, and latency. A new kernel may preserve the real-arithmetic function while changing floating-point rounding and feasible batch sizes. The observed outcome includes these interactions unless the comparison explicitly holds them fixed.
 
 ## Formulation
 
 > **Definition — level of analysis.** One of seven strata at which a foundation-model system is described and varied: objective, representation, algorithm, implementation, runtime, infrastructure, product behavior. A claim is attributed to the level whose variable changed.
 
-> **Definition — held-fixed rule.** A claim about level i is supported by a comparison only if the other six levels were held fixed, or their variation was measured and its effect subtracted with stated uncertainty.
+> **Definition — held-fixed rule.** A single-level effect is identified by a comparison that holds other outcome-relevant variables fixed, or by an explicitly justified identification model. Listing co-variables does not remove their effects; statistical adjustment requires additional causal and statistical conditions.
 
 Write a system as ψ = (O, Rp, A, I, Rt, If, Pb) with outcome Y(ψ). The effect attributed to O → O′ is
 
@@ -71,7 +67,7 @@ $$
 $$
 *(Eq. 1.3)* where O = objective, Rp = representation (architecture, parameterization, tokenizer), A = optimization algorithm and schedule, I = implementation (framework, kernels), Rt = runtime (engine, decoding, batching), If = infrastructure (accelerators, fabric, precision), Pb = product behavior, Y = outcome under the success criterion of [§1.1](01-1-problem-formulation.md).
 
-> **Claim [DERIVED · DERIVED:eq-1.3].** If two levels change together, Eq. 1.3 measures their joint effect plus interaction; the report must name both or run single-level comparisons. A difference between two released models is a sum over all seven levels plus data and is evidence about none of them.
+> **Claim [MATHEMATICALLY-DERIVED · DERIVED:eq-1.3].** A comparison that changes multiple coordinates measures a joint configuration difference. Without cross-comparisons or identification conditions it does not identify Eq. 1.3's single-coordinate effect. It remains valid evidence about the tested complete systems.
 
 | Level | What varies | Admissible evidence | Owner |
 |---|---|---|---|
@@ -132,11 +128,19 @@ spec:
     - { label: "Product behavior Pb", kind: node, note: "prompts, templates, retrieval, filters, tools · spends nothing on the model" }
 ```
 
-Data is not a level; it is an input every level consumes and the most common hidden co-variable. It appears in the ledger of [§1.5](01-5-resource-accounting.md) as tokens.
+DERIVED: data is a separate input to this decomposition. Its identity, mixture, order, duplication, and train/evaluation separation cannot be represented by token count alone. Eq. 1.3 suppresses these inputs only to keep the notation short; an attribution record must retain them. Precision is recorded at the implementation and hardware boundary, since a dtype is a numerical choice and hardware support determines its execution cost.
 
 ## Mechanism
 
-Attribution proceeds by elimination: for a reported gain, walk the seven levels and ask what evidence shows each was held fixed. Three recurrent category errors: a low-rank adapter changes which parameters are trainable (representation and algorithm levels) and is not compression, since the base model is unchanged at inference and adds no latency once merged (PAPER-REPORTED · P14); an IO-aware exact attention kernel changes the implementation level only, leaving objective, representation, and outputs unchanged within tolerance while reducing HBM reads and writes by tiling (PAPER-REPORTED · P19), so a speedup credited to "the architecture" is a level error; paged cache allocation is a runtime-level change that reduces KV waste from fragmentation and duplication and raises throughput at fixed weights without changing outputs (PAPER-REPORTED · P36).
+### Methodology
+
+DERIVED: first define the outcome Y as an expectation over evaluation units and execution randomness, or explicitly as the result of a particular deterministic run. Eq. 1.3 describes a contrast, not an estimator: estimating it requires paired evaluation units, a defined training/decoding randomness distribution, and uncertainty appropriate to those units. Matching a random seed does not establish identical random trajectories when implementations consume random values in different orders.
+
+PAPER-REPORTED · [P14, §4.1](https://arxiv.org/html/2106.09685v2): LoRA freezes a pretrained matrix W₀ and parameterizes its update as BA. The base checkpoint initializes training; after merging, the deployed matrix is W₀+BA rather than unchanged W₀. The additional factors reduce trainable state; they do not remove the dense base weights. DERIVED: distinguish changed parameterization and optimization state from compression of the deployed artifact. Whether an adapter remains separate or is merged also changes the execution contract.
+
+PAPER-REPORTED · [P19, §3.1 and Algorithm 1](https://arxiv.org/html/2205.14135v2): FlashAttention tiles query/key/value operations and maintains running row maxima and normalizers, avoiding materialization of the full score/probability matrices in HBM. It reconstructs intermediates during the backward pass. DERIVED: real-arithmetic attention is preserved while the execution graph and memory traffic change; floating-point equivalence requires tolerance-based tests. The mechanism's owner is [Chapter 27](../../../vol-02-execution-and-optimization/part-05-hardware-kernels-and-distributed-execution/ch27-attention-latent-attention-and-expert-kernels/README.md), which must establish exact kernel-version claims.
+
+PAPER-REPORTED · [P36, §§4–5](https://arxiv.org/pdf/2309.06180): PagedAttention maps logical KV blocks to physical storage and uses reference counting and copy-on-write for sharing. Its serving system also changes scheduling and batch admission. DERIVED: an end-to-end vLLM comparison therefore tests a runtime package, not the cache kernel alone. A throughput improvement accompanied by a larger resident batch is consistent with the capacity mechanism; identifying a kernel-only contribution requires its own matched-batch experiment.
 
 When two levels co-vary, the joint difference decomposes exactly. For objective and algorithm,
 
@@ -145,7 +149,7 @@ Y(O',A') - Y(O,A) = \underbrace{Y(O',A) - Y(O,A)}_{\Delta_O} + \underbrace{Y(O,A
 $$
 *(Eq. 1.10)* where the other five levels and data are held fixed in all four arms, and Δ_{O×A} is the interaction.
 
-> **Claim [MATHEMATICALLY-DERIVED · DERIVED:eq-1.10].** Eq. 1.10 is an identity, and its three terms are identified only by all four arms. With k co-varied levels and s seeds per arm, full attribution costs s·2^k runs; a report with two arms identifies only the sum. This is why attribution is affordable at pilot scale ([§21.5](../../part-04-training-science-and-adaptation/ch21-scaling-laws-and-compute-allocation/21-5-pilot-methodology.md)) and rarely at release scale, and why additivity (Δ_{O×A} = 0) is an assumption to be stated, not a default.
+> **Claim [MATHEMATICALLY-DERIVED · DERIVED:eq-1.10].** Four arm outcomes determine this two-factor decomposition without an additivity condition. For k binary factors, evaluating every configuration with s replications costs s·2^k runs. Baseline-plus-single-factor comparisons cost s·(k+1) runs and estimate effects at the baseline configuration, leaving interactions unresolved. This is a design cost, not a claim that every attribution study requires an unrestricted full factorial.
 
 ```figure
 id: fig-1.11
@@ -193,8 +197,7 @@ caption: >-
   and misses 40% of the joint effect; the 'additive' preset makes the
   interaction vanish. The run rows are the claim's s·2^k, 12 at k = 2 and
   384 at k = 7, against s·(k + 1) = 24 at k = 7 for the one-level-per-arm
-  design of the Experimental design, which identifies main effects but no
-  interactions.
+  design of the Experimental design, which estimates baseline-conditional single-factor contrasts and does not identify all interactions.
 placement: rail
 anchor: mechanism
 evidence: DERIVED
@@ -204,7 +207,7 @@ alt: >-
   Y(O, A) = 60%, Y(O′, A) = 64%, Y(O, A′) = 62% and Y(O′, A′) = 70%
   (illustrative, not measurements), co-varied levels k = 2 and seeds per arm
   s = 3. Outputs: Δ_O = 4 points, Δ_A = 2 points, interaction Δ_O×A = 4
-  points, joint difference 10 points, runs for full attribution s·2^k = 12,
+  points, joint difference 10 points, runs for the complete binary factorial s·2^k = 12,
   and runs for one level per arm s·(k + 1) = 9. Preset 'additive' sets
   Y(O′, A′) = 66% and the interaction is 0. Preset 'all seven levels' sets
   k = 7: 384 runs against 24.
@@ -224,77 +227,49 @@ spec:
     - { symbol: dA, label: "Δ_A = Y(O, A′) − Y(O, A)", formula: "Y01 - Y00", format: percent }
     - { symbol: dOA, label: "interaction Δ_O×A", formula: "Y11 - Y10 - Y01 + Y00", format: percent, emphasis: true }
     - { symbol: J, label: "joint difference, all two arms can see", formula: "Y11 - Y00", format: percent }
-    - { symbol: Rf, label: "runs for full attribution, s·2^k", formula: "s*2^k", format: integer }
+    - { symbol: Rf, label: "runs for the complete binary factorial, s·2^k", formula: "s*2^k", format: integer }
     - { symbol: Ro, label: "runs, one level per arm, s·(k + 1)", formula: "s*(k + 1)", format: integer }
   presets:
     - { label: "additive: Δ_O×A = 0", values: { Y11: 0.66 } }
     - { label: "all seven levels", values: { k: 7 } }
 ```
 
-Worked attribution maps from the cited disclosures (fixed / varied / ND = NOT-DISCLOSED):
+Worked attribution maps distinguish comparison types rather than assigning causality by counting changed configuration fields.
 
-| Report | O | Rp | A | I | Rt, If | Pb | Data | Verdict |
-|---|---|---|---|---|---|---|---|---|
-| P19: IO-aware kernel vs standard attention | fixed (exact attention) | fixed | fixed | varied | as set by the authors; not re-checked here (UNVERIFIED) | fixed | fixed | conditional: single-level, implementation, only if runtime and infrastructure were matched, which is UNVERIFIED here; as checked, Algorithm 1.2 puts three levels in V (I, Rt, If) and returns no single-level attribution. The reported 15% end-to-end gain on BERT-large at sequence length 512 and 3× on GPT-2 at sequence length 1K (PAPER-REPORTED · P19) are the authors' figures on their hardware, implementation-level only under that condition |
-| P21: 1.3B InstructGPT vs 175B GPT-3 | varied | varied (N) | varied | ND | ND | same prompt distribution | varied | joint effect of four disclosed co-variables (O, Rp, A, data) and three undisclosed levels (I, Rt, If); a same-size arm removes Rp but leaves O, A and data co-varied, so it is still not a single-level comparison |
-| P26: R1-Zero vs DeepSeek-V3-Base | varied (rule-based rewards) | fixed (same base) | varied (GRPO) | ND | ND | varied (format reward imposes a template) | varied (RL prompts) | joint effect; P28 supplies the missing base arm |
+| Reported comparison | Controlled or changed object | Supported scope |
+|---|---|---|
+| P19 attention microbenchmarks | fixed tensor shape and accelerator; implementation and IO schedule changed | execution comparison for the tested operator; numerical equivalence is checked separately |
+| P21 1.3B InstructGPT versus 175B GPT-3 | size, post-training data, objectives, and optimization route change together | preference comparison between those systems on the study's prompt population; no isolated size or algorithm effect |
+| P26 R1-Zero versus its starting base | additional RL prompts, rule rewards, optimizer updates, and output distribution | effect of the reported post-training package; the base comparison is already part of P26 and P28 further investigates base behavior |
 
 ```figure
 id: fig-1.13
 kind: compare
-title: Attribution maps of three cited comparisons
+title: Attribution scope of three published comparisons
 caption: >-
-  Count the cells in each column that are not 'fixed'. P19 has two:
-  implementation, and the runtime and infrastructure cell, which this
-  chapter has not re-checked; P21 and P26 each have four disclosed
-  co-variables and three undisclosed levels. Algorithm 1.2 marks a level
-  fixed only on cited evidence, so as checked here none licenses a
-  single-level claim: P19 would, for implementation, once its runtime and
-  hardware are shown matched; the other two are joint effects, and P28 is
-  the arm the third is missing.
+  The source-defined comparison determines the conclusion. Matched operator
+  inputs identify a different quantity from a multi-stage training comparison.
 placement: wide
 evidence: PAPER-REPORTED
 source: [P19, P21, P26, P28]
-concepts: [ms.section.1.2]
 alt: >-
-  Comparison of three reports on the seven levels plus data, each marked
-  fixed, varied or NOT-DISCLOSED from the cited disclosures. P19, IO-aware
-  kernel against standard attention: objective fixed (exact attention),
-  representation and algorithm fixed, implementation varied, runtime and
-  infrastructure as set by the authors and UNVERIFIED here, product behavior
-  and data fixed; verdict single-level (implementation) only if runtime and
-  infrastructure were matched, so none as checked. P21, 1.3B InstructGPT
-  against 175B GPT-3: objective, representation (N) and algorithm varied;
-  implementation, runtime and infrastructure not disclosed; same prompt
-  distribution; data varied; verdict joint effect of four disclosed
-  co-variables and three undisclosed levels, and a same-size arm still
-  leaves objective, algorithm and data co-varied. P26, R1-Zero against
-  DeepSeek-V3-Base: objective varied
-  (rule-based rewards), representation fixed (same base), algorithm varied
-  (GRPO), implementation, runtime and infrastructure not disclosed, product
-  behavior varied (format reward imposes a template), data varied (RL
-  prompts); verdict joint effect, with P28 supplying the missing base arm.
+  FlashAttention compares operator execution on matched shapes and hardware;
+  InstructGPT compares jointly changed systems; R1-Zero compares a training
+  package with its starting policy. Component attribution remains separate.
 spec:
-  axis: >-
-    Which levels and the data were fixed, varied or not disclosed in each
-    cited comparison, and the claim Algorithm 1.2 lets it support
+  axis: "Comparison and attribution boundary"
   columns:
-    - { id: p19, label: "P19: IO-aware vs standard attention" }
-    - { id: p21, label: "P21: 1.3B InstructGPT vs 175B GPT-3" }
-    - { id: p26, label: "P26: R1-Zero vs DeepSeek-V3-Base" }
+    - { id: kernel, label: "P19 · attention operator" }
+    - { id: instruct, label: "P21 · instruction-following system" }
+    - { id: rl, label: "P26 · R1-Zero training package" }
   rows:
-    - { dimension: "O, objective", values: { p19: "fixed (exact attention)", p21: "varied", p26: "varied (rule-based rewards)" } }
-    - { dimension: "Rp, representation", values: { p19: "fixed", p21: "varied (N)", p26: "fixed (same base)" } }
-    - { dimension: "A, algorithm", values: { p19: "fixed", p21: "varied", p26: "varied (GRPO)" } }
-    - { dimension: "I, implementation", values: { p19: "varied", p21: "NOT-DISCLOSED", p26: "NOT-DISCLOSED" } }
-    - { dimension: "Rt, If, runtime and infrastructure", values: { p19: "as set by the authors; UNVERIFIED here", p21: "NOT-DISCLOSED", p26: "NOT-DISCLOSED" } }
-    - { dimension: "Pb, product behavior", values: { p19: "fixed", p21: "same prompt distribution", p26: "varied (format reward imposes a template)" } }
-    - { dimension: "data", values: { p19: "fixed", p21: "varied", p26: "varied (RL prompts)" } }
-    - { dimension: "disclosed co-variables", values: { p19: "I", p21: "O, Rp, A, data", p26: "O, A, Pb, data" } }
-    - { dimension: "verdict", values: { p19: "conditional: single-level, implementation, only if Rt and If were matched (UNVERIFIED here); as checked, no single-level claim", p21: "joint effect of four disclosed co-variables and three undisclosed levels (I, Rt, If); a same-size arm still leaves O, A, data co-varied", p26: "joint effect; P28 supplies the missing base arm" } }
+    - { dimension: "matched object", values: { kernel: "tensor shapes and accelerator in microbenchmark", instruct: "evaluation prompt population", rl: "starting base checkpoint" } }
+    - { dimension: "changed object", values: { kernel: "implementation and IO schedule", instruct: "size, data, objectives, training route", rl: "RL data, rewards, updates, resulting policy" } }
+    - { dimension: "conclusion", values: { kernel: "operator execution in tested setting", instruct: "joint-system preference comparison", rl: "post-training-package outcomes; component causes unresolved" } }
+    - { dimension: "additional boundary", values: { kernel: "end-to-end gains depend on model workload", instruct: "not an isolated size effect", rl: "P26 already measures base; P28 adds base and normalization analysis" } }
 ```
 
-Cost line: evaluation FLOPs per arm actually run (s·2^k arms for full attribution), plus reanalysis time; memory, communication, and energy are those of the underlying runs; where a level cannot be held fixed, the entry is UNVERIFIED, not inferred.
+Cost line: a factorial design with s repetitions of each of 2^k configurations costs s–2^k runs; a smaller design estimates fewer contrasts or requires structural assumptions. Reanalysis uses the underlying runs' resource records. Missing configuration evidence is a gap, not a measured change.
 
 ## Algorithm
 
@@ -307,13 +282,13 @@ INVARIANT  a level is marked fixed only with cited evidence (config, version, ch
  2.     α[ℓ] := fixed if identical by cited evidence; varied if disclosed and different; else NOT-DISCLOSED
  3. data_fixed := training data identical by cited evidence
  4. V := {ℓ : α[ℓ] ≠ fixed}; if not data_fixed: V := V ∪ {data}
- 5. if |V| = 1 and data ∉ V: claim := "ΔY attributable to that level"
- 6. else: claim := "ΔY is a joint effect of V; no single-level attribution"
+ 5. check assignment, comparable data exposure, measurement protocol, randomness, and uncertainty
+ 6. claim := design-supported contrast; single-level attribution requires identification, not only |V| = 1
  7. return α, claim
 TERMINATION  seven iterations
 ```
 
-Complexity: constant; dominated by locating configurations. Implementation link: the model record of [Appendix A](../../../appendices/appendix-a-organizations-model-families-and-disclosure.md).
+Complexity: O(m) in disclosed configuration fields after the seven-level schema is fixed; causal validity additionally depends on the experiment design. Implementation link: the model record of [Appendix A](../../../appendices/appendix-a-organizations-model-families-and-disclosure.md).
 
 ## Implementation
 
@@ -321,15 +296,19 @@ The implementation-level check is a pinned configuration: repository, commit, co
 
 ## Experimental design
 
-Proposal: a seven-arm ablation on a small reference model, one level changed per arm against a control, with data, seeds, and steps fixed; bootstrap intervals over independent units; runtime and infrastructure arms report latency and throughput with the boundary stated. Budget small enough for three seeds. Design for [§6.3](../ch06-experimental-design-and-evaluation-before-optimization/06-3-controlled-comparisons.md); not run.
+### Reported experiments
+
+PAPER-REPORTED · [P19, §4.3, Appendix E.5–E.6](https://arxiv.org/html/2205.14135v2): attention microbenchmarks compare implementations on fixed Q/K/V shapes and several GPUs; the A100 sweep uses batch 8, 12 heads, and head dimension 64, with sequence length varied. Forward and backward timing, masking, and dropout are distinguished. The end-to-end BERT/GPT-2 experiments answer a different question because the fraction of total time spent in attention changes with the model. This chapter retains the protocol distinction without importing a speed ratio as a hardware-independent constant.
+
+PAPER-REPORTED · [P28, §3.2 and Fig. 6](https://arxiv.org/html/2503.20783v1): the GRPO/Dr. GRPO comparison starts from Qwen2.5-1.5B, uses the R1 template, MATH training questions, and a binary answer-verification reward. It tracks training reward and response length and evaluates on five mathematical benchmark sets. The alternative removes both response-length normalization and group reward-standard-deviation normalization. The reported comparison tests that combined modification; it is not a separate ablation of each term. Hardware, repeated-seed uncertainty, and exact implementation commits are not established by the inspected section.
 
 ## Observations
 
-**What the paper claims.** A reanalysis of R1-Zero-style training reports that DeepSeek-V3-Base already exhibits an "Aha moment" and Qwen2.5 base models show strong reasoning outputs without prompt templates, and identifies "an optimization bias in Group Relative Policy Optimization (GRPO), which artificially increases response length (especially for incorrect outputs) during training" (PAPER-REPORTED · P28, abstract, accessed 2026-09-20). DeepSeek-R1 reports that R1-Zero was trained by GRPO directly on DeepSeek-V3-Base with rule-based accuracy and format rewards and no SFT, and exhibited poor readability and language mixing (PAPER-REPORTED · P26, Sections 2.2–2.3).
+**What the paper claims.** PAPER-REPORTED · P28, §§2.3, 3.2: self-reflection expressions occur in the tested base-model outputs; the revised normalization reduces continued growth of incorrect response lengths relative to the GRPO arm. PAPER-REPORTED · P26, §2.2: R1-Zero is trained without preliminary SFT and displays readability and language-consistency problems.
 
-**What the evidence shows.** P28's finding is a level attribution: part of a product-level behavior credited to the algorithm was present at the representation-plus-data level (the base checkpoint). P28 is a preprint not reproduced here.
+**What the evidence shows.** PAPER-REPORTED: P28's base outputs are evidence that the observed expressions are not exclusive to RL-trained checkpoints. They do not isolate which pretraining data caused them. Its optimizer comparison supports an effect of the jointly changed normalization in its setup. This chapter provides no independent reproduction.
 
-**What we infer.** DERIVED: every post-training claim must run Algorithm 1.2 with the base checkpoint's behavior as the control arm. ASSUMED: where the base is unavailable, α is NOT-DISCLOSED at the representation level and no algorithm-level attribution is possible.
+**What we infer.** DERIVED: a claim that a behavior first appeared during post-training requires a measurement of the starting policy under a compatible protocol. Without that arm the timing of acquisition is unresolved, even when the final-policy score is well measured.
 
 **What remains unknown.** Training data and intermediate checkpoints of most released models are NOT-DISCLOSED, so the fraction of reported gains attributable to each level is UNVERIFIED in general.
 
@@ -354,11 +333,13 @@ Why it exists: to distinguish what a model does from how. What assumption change
 
 ## Extensions
 
-Domain adaptation adds a data axis held fixed across adaptation methods ([§23.6](../../part-04-training-science-and-adaptation/ch23-parameter-efficient-adaptation-and-model-composition/23-6-evaluation.md)); long context couples representation and runtime through cache state; multimodality multiplies the representation level by encoders; agents add environment and tool implementations as product-level co-variables ([§63.3](../../../vol-03-grounded-and-interactive-intelligence/part-11-evaluation-interpretability-and-deployment-assurance/ch63-agent-retrieval-multimodal-and-system-reliability-evaluation/63-3-stage-attribution.md)); embodiment adds the physical plant. Proposals for extending ψ.
+### Improvements
+
+PAPER-REPORTED · P19, §§2–3: the predecessor computes and stores full attention intermediates; tiling and recomputation change IO while retaining exact attention. The resource benefit is therefore attributable to a changed execution method under the benchmark's conditions, with additional recomputation in backward. PAPER-REPORTED · P28, §3.2: Dr. GRPO changes normalization to target biases the authors derive; the observed length dynamics support that correction on the reported tasks. DERIVED: these are improvements at different levels and cannot be ranked on one axis. Long-context, multimodal, and agent comparisons additionally require matched context construction, encoder inputs, tool implementations, and environment state; their canonical protocols are linked in [§63.3](../../../vol-03-grounded-and-interactive-intelligence/part-11-evaluation-interpretability-and-deployment-assurance/ch63-agent-retrieval-multimodal-and-system-reliability-evaluation/63-3-stage-attribution.md).
 
 ## Limitations
 
-Valid regime: systems disclosed enough to mark levels. Falsification: if single-level arms reproduce a joint gain additively, the interaction is negligible for that system; otherwise joint attribution stands. Decision consequence: a gain with |V| > 1 is no reason to adopt the named method alone.
+Valid regime: systems disclosed enough to mark levels. Falsification: if the estimated interaction is within a prespecified equivalence margin with adequate precision, an additive approximation is supported in that setting; otherwise joint attribution stands. Decision consequence: a gain with |V| > 1 is no reason to adopt the named method alone.
 
 ## Reproducibility
 
@@ -366,4 +347,4 @@ Artifacts: attribution maps per cited comparison. Configurations: pinned per §4
 
 ## References
 
-P14, P19, P26, P28, P36; R1.6; `AI_REFERENCE_STACK.md` §4.1–4.2.
+P14, P19, P21, P26, P28, P36; inspected revisions and locators in [references.md](references.md); `AI_REFERENCE_STACK.md` §4.1–4.2. The seven levels and factorial decomposition are book-defined analytical records.

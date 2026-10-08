@@ -24,7 +24,7 @@ import { EVIDENCE_CLASS, type CompiledFigure, type FigureSpec, type PerformanceC
 import { calculatorDefaults } from '../figure-math.ts';
 import { resolveFigureStates } from '../state.ts';
 import { CalculatorView } from './calculator.tsx';
-import { ChartView } from './chart.tsx';
+import { ChartView, type ChartDimensions } from './chart.tsx';
 import { CompareView } from './compare.tsx';
 import { HierarchyView } from './hierarchy.tsx';
 import { LineageView } from './lineage.tsx';
@@ -42,9 +42,16 @@ export interface FigureBodyProps {
   readonly texHtml?: string | undefined;
   /** Resolves atlas node ids (lineage entries, compare columns) to URLs. */
   readonly nodeHref?: ((id: string) => string | null) | undefined;
+  /** Optional geometry for chart previews; canonical figures keep placement defaults. */
+  readonly chartDimensions?: ChartDimensions | undefined;
 }
 
-const SCROLLED_KINDS: ReadonlySet<FigureSpec['kind']> = new Set<FigureSpec['kind']>(['diagram', 'cycle', 'chart', 'matrix']);
+const SCROLLED_KINDS: ReadonlySet<FigureSpec['kind']> = new Set<FigureSpec['kind']>([
+  'diagram',
+  'cycle',
+  'chart',
+  'matrix',
+]);
 
 const CONTEXT_FIELDS: readonly (readonly [keyof PerformanceContext, string])[] = [
   ['hardware', 'hardware'],
@@ -65,7 +72,7 @@ export function initialState(spec: FigureSpec): StateView {
 }
 
 /** The visual alone, dispatched on `spec.kind`. Calculators render statically (the island supplies interactivity). */
-export function FigureBody({ figure, texHtml, nodeHref }: FigureBodyProps): JSX.Element {
+export function FigureBody({ figure, texHtml, nodeHref, chartDimensions }: FigureBodyProps): JSX.Element {
   const spec: FigureSpec = figure.spec;
   const prefix = safeId(figure.anchor);
   const state = initialState(spec);
@@ -75,7 +82,14 @@ export function FigureBody({ figure, texHtml, nodeHref }: FigureBodyProps): JSX.
       return figure.scene === null ? (
         <p class="vg-fallback">Layout unavailable; see the text description below.</p>
       ) : (
-        <SceneSvg scene={figure.scene} title={spec.title} desc={spec.alt} idPrefix={prefix} state={state} ordinals={spec.kind === 'cycle'} />
+        <SceneSvg
+          scene={figure.scene}
+          title={spec.title}
+          desc={spec.alt}
+          idPrefix={prefix}
+          state={state}
+          ordinals={spec.kind === 'cycle'}
+        />
       );
     case 'tensor-flow':
       return <TensorFlowView spec={spec.spec} state={state} />;
@@ -84,7 +98,15 @@ export function FigureBody({ figure, texHtml, nodeHref }: FigureBodyProps): JSX.
     case 'memory-stack':
       return <MemoryStackView spec={spec.spec} state={state} />;
     case 'calculator':
-      return <CalculatorView spec={spec.spec} values={{ ...calculatorDefaults(spec.spec), ...(state.overrides ?? {}) }} idPrefix={prefix} state={state} {...(texHtml === undefined ? {} : { texHtml })} />;
+      return (
+        <CalculatorView
+          spec={spec.spec}
+          values={{ ...calculatorDefaults(spec.spec), ...(state.overrides ?? {}) }}
+          idPrefix={prefix}
+          state={state}
+          {...(texHtml === undefined ? {} : { texHtml })}
+        />
+      );
     case 'stat-panel':
       return <StatPanelView spec={spec.spec} state={state} />;
     case 'lineage':
@@ -92,7 +114,17 @@ export function FigureBody({ figure, texHtml, nodeHref }: FigureBodyProps): JSX.
     case 'matrix':
       return <MatrixView spec={spec.spec} title={spec.title} desc={spec.alt} idPrefix={prefix} />;
     case 'chart':
-      return <ChartView spec={spec.spec} title={spec.title} desc={spec.alt} idPrefix={prefix} placement={figure.placement} state={state} />;
+      return (
+        <ChartView
+          spec={spec.spec}
+          title={spec.title}
+          desc={spec.alt}
+          idPrefix={prefix}
+          placement={figure.placement}
+          dimensions={chartDimensions}
+          state={state}
+        />
+      );
     case 'hierarchy':
       return <HierarchyView spec={spec.spec} caption={spec.title} state={state} />;
     case 'compare':
@@ -159,7 +191,13 @@ export function FigureFrame({ figure, children }: FigureFrameProps): JSX.Element
   const lit = first !== undefined && first.highlight.length > 0;
   return (
     <figure
-      class={cls('vg-figure', `vg-figure--${spec.kind}`, `vg-place--${figure.placement}`, first !== undefined && 'has-states', lit && 'has-lit')}
+      class={cls(
+        'vg-figure',
+        `vg-figure--${spec.kind}`,
+        `vg-place--${figure.placement}`,
+        first !== undefined && 'has-states',
+        lit && 'has-lit',
+      )}
       id={figure.anchor}
       data-figure={figure.id}
       data-figure-kind={spec.kind}
@@ -203,10 +241,12 @@ export interface FigureProps extends FigureBodyProps {
 }
 
 /** A complete figure: chrome plus the kind-specific visual. Zero client JS. */
-export function Figure({ figure, texHtml, nodeHref, children }: FigureProps): JSX.Element {
+export function Figure({ figure, texHtml, nodeHref, chartDimensions, children }: FigureProps): JSX.Element {
   return (
     <FigureFrame figure={figure}>
-      {children ?? <FigureBody figure={figure} texHtml={texHtml} nodeHref={nodeHref} />}
+      {children ?? (
+        <FigureBody figure={figure} texHtml={texHtml} nodeHref={nodeHref} chartDimensions={chartDimensions} />
+      )}
     </FigureFrame>
   );
 }

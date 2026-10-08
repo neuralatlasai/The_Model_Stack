@@ -29,7 +29,7 @@ datasets: []
 status: {maturity: foundational, disputed: false}
 evidence_summary: {labels_used: [MATHEMATICALLY-DERIVED, PAPER-REPORTED, OFFICIAL-DOCUMENTATION, ASSUMED, UNVERIFIED], empirically_observed: false}
 word_count_target: 1100
-updated_at: 2026-09-20
+updated_at: 2026-10-08
 editorial_status: manuscript_draft
 ---
 
@@ -37,15 +37,15 @@ editorial_status: manuscript_draft
 
 ## Scope
 
-Objective: fix Jacobians, vector–Jacobian products, the chain rule, forward- versus reverse-mode automatic differentiation, Hessian approximations, and stochastic gradient estimators, each with its computational cost. Baseline: "take the gradient" written as if free. Success: every derivative quantity in later chapters is named (VJP, JVP, HVP, Gauss–Newton, K-FAC, diagonal; score-function, reparameterisation, straight-through) with its cost relative to a forward pass and its memory footprint. Boundaries: graph construction, saved tensors, in-place operations, gradient accumulation, clipping, and gradient checking are owned by [§03.3](../ch03-numerical-computation-and-trustworthy-training/03-3-automatic-differentiation.md); optimiser mechanics by [§20.1](../../part-04-training-science-and-adaptation/ch20-optimization-schedules-and-training-stability/20-1-optimizer-mechanics.md); policy gradients by [§34.2](../../../vol-02-execution-and-optimization/part-06-post-training-and-reinforcement-learning/ch34-policy-gradients-ppo-and-rlhf/34-2-policy-gradients.md).
+Jacobians act on tangent vectors through JVPs and on cotangent vectors through VJPs. Their composition gives first derivatives; Hessian and generalized Gauss–Newton products provide distinct second-order objects. Stochastic objectives additionally require an estimator such as a score-function or pathwise derivative, while straight-through differentiation supplies a generally biased surrogate. Graph construction and numerical differentiation are developed in [§03.3](../ch03-numerical-computation-and-trustworthy-training/03-3-automatic-differentiation.md), optimizer mechanics in [§20.1](../../part-04-training-science-and-adaptation/ch20-optimization-schedules-and-training-stability/20-1-optimizer-mechanics.md), and policy gradients in [§34.2](../../../vol-02-execution-and-optimization/part-06-post-training-and-reinforcement-learning/ch34-policy-gradients-ppo-and-rlhf/34-2-policy-gradients.md).
 
 ## Why this exists
 
-What failed: methods were compared by their update rule while the cost of computing the update was hidden — a natural-gradient step, a Hessian-vector product, and a plain gradient were treated as commensurate. The bottleneck: for a model with N parameters, anything that touches an N×N object is impossible; only products with vectors and factored approximations are affordable, and the memory of reverse mode — not its FLOPs — is what limits sequence length and batch size. The dominant constraint: cost as a multiple of the forward pass, and bytes of saved activations. What changed: derivatives are written as linear maps applied to vectors, priced per application.
+A dense parameter Hessian stores N² entries, whereas an HVP applies that linear map without constructing it. Reverse differentiation retains or recomputes intermediates; structured curvature methods retain different factors and may require repeated model passes. These choices change arithmetic, state, communication, and approximation error. Neither an update-rule name nor a FLOP multiplier alone establishes a wall-time comparison [MATHEMATICALLY-DERIVED · DERIVED:eq-2.17; OFFICIAL-DOCUMENTATION · R2.10; R2.11].
 
 ## Intuition
 
-Physically, differentiation is linear-algebra bookkeeping on the forward computation: forward mode pushes a tangent vector through the same graph, reverse mode pulls a cotangent vector back through its transpose. A scalar loss has one cotangent, so reverse mode gives the whole gradient in one pass; this is why training uses it and why it must keep the forward intermediates in memory. Heuristically, a gradient estimator is "a Monte Carlo estimate of a derivative"; the score-function and reparameterisation estimators differ in what they sample and therefore in variance.
+Forward mode propagates a tangent through local derivatives. Reverse mode propagates a cotangent through their transposes and accumulates contributions wherever a value is reused. A scalar objective starts from one output cotangent and yields its full input gradient in one reverse traversal. Saved intermediates can instead be recomputed, trading state for work. Score-function and pathwise estimators apply different differentiation identities to an expectation; their regularity conditions and random integrands determine bias and variance [PAPER-REPORTED · R2.6, §3; R2.14, §2.1].
 
 ## Formulation
 
@@ -54,7 +54,7 @@ Physically, differentiation is linear-algebra bookkeeping on the forward computa
 $$
 J_{f\circ g}(x) = J_f\big(g(x)\big)\, J_g(x), \qquad v^{\top} J_{f\circ g} = \big(v^{\top} J_f\big) J_g, \qquad J_{f\circ g}\, u = J_f\big(J_g\, u\big)
 $$
-*(Eq. 2.14)* where g: ℝⁿ → ℝᵏ, f: ℝᵏ → ℝᵐ; the VJP composes right-to-left (reverse mode), the JVP left-to-right (forward mode); neither forms a Jacobian.
+*(Eq. 2.14)* where g: ℝⁿ → ℝᵏ, f: ℝᵏ → ℝᵐ; the VJP first applies the outer pullback and then the inner pullback; the JVP first applies the inner tangent map and then the outer tangent map. Neither procedure materializes the full Jacobian.
 
 > **Definition — forward-mode / reverse-mode differentiation.** Forward mode evaluates J u alongside the forward computation with one tangent per input direction; reverse mode records the forward computation and evaluates vᵀJ for one cotangent per output direction.
 
@@ -172,20 +172,22 @@ $$
 > **Definition — score-function estimator; reparameterisation estimator; straight-through estimator.** For J(θ) = E_{x∼p_θ}[f(x)]:
 
 $$
-\nabla_\theta J = \mathbb{E}_{x\sim p_\theta}\big[\big(f(x) - b\big)\,\nabla_\theta \log p_\theta(x)\big] \quad \text{(score function; any } b \text{ independent of } x\text{)}
+\nabla_\theta J = \mathbb{E}_{x\sim p_\theta}\big[\big(f(x) - c_0\big)\,\nabla_\theta \log p_\theta(x)\big] \quad \text{(score function; any } c_0 \text{ independent of } x\text{)}
 $$
-*(Eq. 2.18)* where b = a baseline; validity requires that the support of p_θ not depend on θ and that ∇ and ∫ commute.
+*(Eq. 2.18)* where c_0 = a baseline; validity requires that the support of p_θ not depend on θ and that ∇ and ∫ commute.
 
 $$
 \nabla_\theta J = \mathbb{E}_{\varepsilon\sim p(\varepsilon)}\big[\nabla_\theta f\big(g(\theta,\varepsilon)\big)\big] \quad \text{(reparameterisation, } x = g(\theta,\varepsilon)\text{)}
 $$
 *(Eq. 2.19)* where g is differentiable in θ and f is differentiable in x; the straight-through estimator replaces J of a non-differentiable inner map by I and is biased.
 
-> **Assumption.** Loss and network are almost-everywhere differentiable and the forward graph is static within one step · *sensitivity:* piecewise-linear activations make the Hessian zero almost everywhere in the second term of Eq. 2.17, which is one argument for G; data-dependent control flow changes the graph per step, which reverse-mode frameworks handle by re-recording.
+> **Assumption.** Loss and network are almost-everywhere differentiable and the forward graph is static within one step · *sensitivity:* piecewise-linear activation branches do not make a multilayer network linear in all parameters jointly, so the parameter Hessian term need not vanish. Branch-boundary derivatives require operator conventions [MATHEMATICALLY-DERIVED · DERIVED:eq-2.17].
 
 ## Mechanism
 
-**Cost of a VJP.** Under the chain rule each primitive contributes its local VJP, and for the matrix products that dominate a Transformer the VJP of y = xW with respect to both x and W is two products of the same size as the forward one: ∂x = ∂y Wᵀ and ∂W = xᵀ∂y, each 2·T·d_in·d_out FLOPs. Hence backward ≈ 2× forward for matmul-dominated layers, and forward + backward ≈ 6 FLOPs per parameter per token — the accounting behind C ≈ 6ND in notation.md Eq. N.3 [MATHEMATICALLY-DERIVED · DERIVED:eq-2.14]. The JAX documentation states the general bound in the same terms: the cost of evaluating (f(x), vᵀ∂f(x)) "is only about three times the cost of evaluating f", and likewise for the JVP, while for reverse mode "memory scales with the depth of the computation" and for forward mode "the memory cost is independent of the depth" [OFFICIAL-DOCUMENTATION · R2.10]. The memory statement is the material one: reverse mode must retain, for every primitive on the path, whatever its local VJP needs (the inputs of a matmul, the mask of a ReLU, the probabilities of a softmax); PyTorch documents that "some operations need intermediary results to be saved during the forward pass in order to execute the backward pass" and exposes `save_for_backward` for that purpose [OFFICIAL-DOCUMENTATION · R2.11]. The bytes are Σ over layers of the saved activations at B·T resolution, the M_act term of Eq. N.5; activation checkpointing trades them for recomputation ([§30.2](../../../vol-02-execution-and-optimization/part-05-hardware-kernels-and-distributed-execution/ch30-large-training-runs-reliability-monitoring-and-recovery/30-2-memory-management.md)). The constant "about three" is documentation for JAX's transformation and is UNVERIFIED as a measured ratio for any specific PyTorch model.
+### Methodology
+
+**Cost of a VJP.** Under the chain rule each primitive contributes its local VJP, and for the matrix products that dominate a Transformer the VJP of y = xW with respect to both x and W is two products of the same size as the forward one: ∂x = ∂y Wᵀ and ∂W = xᵀ∂y, each 2·T·d_in·d_out FLOPs. Hence backward ≈ 2× forward for matmul-dominated layers, and forward + backward ≈ 6 FLOPs per parameter per token — the accounting behind C ≈ 6ND in notation.md Eq. N.3 [MATHEMATICALLY-DERIVED · DERIVED:eq-2.14]. For a general program, the cost is the sum of the executed local derivative primitives; no device-independent wall-time multiplier follows. JAX's cookbook discusses roughly constant-factor JVP/VJP arithmetic overhead and the saved-intermediate memory of reverse mode [OFFICIAL-DOCUMENTATION · R2.10, “Jacobian-vector products” and “Vector-Jacobian products”]. PyTorch documents backward graph construction and saved tensors [OFFICIAL-DOCUMENTATION · R2.11, “How autograd encodes the history”; “Saved tensors”]. Those documents do not establish a measured ratio for a named language model or hardware configuration. Activation checkpointing changes retained state and recomputation, as developed in [§30.2](../../../vol-02-execution-and-optimization/part-05-hardware-kernels-and-distributed-execution/ch30-large-training-runs-reliability-monitoring-and-recovery/30-2-memory-management.md).
 
 ```figure
 id: fig-2.21
@@ -241,11 +243,17 @@ states:
 
 <details><summary>Derivation of Eq. 2.16</summary>
 
-log p_v = z_v − LSE(z), so L = −Σ_v y_v z_v + LSE(z) Σ_v y_v = −yᵀz + LSE(z). Then ∂LSE/∂z_u = e^{z_u}/Σ_v e^{z_v} = p_u, giving ∂L/∂z = −y + p. For the softmax Jacobian, ∂p_v/∂z_u = ∂/∂z_u [e^{z_v}/Σ e^{z_w}] = p_v δ_{vu} − p_v p_u, i.e. diag(p) − ppᵀ. Differentiating p − y once more gives the same matrix as the Hessian of L in z. The stable form: LSE(z) = m + log Σ e^{z_v − m} is exact for any m; choosing m = max z keeps every exponent ≤ 0 and the sum ≥ 1, so neither overflow nor log(0) can occur. Under sampling y ∼ p, E[(p − y)(p − y)ᵀ] = Cov(y) = diag(p) − ppᵀ, so the Fisher information in z equals the Hessian in z.
+log p_v = z_v − LSE(z), so L = −Σ_v y_v z_v + LSE(z) Σ_v y_v = −yᵀz + LSE(z). Then ∂LSE/∂z_u = e^{z_u}/Σ_v e^{z_v} = p_u, giving ∂L/∂z = −y + p. For the softmax Jacobian, ∂p_v/∂z_u = ∂/∂z_u [e^{z_v}/Σ e^{z_w}] = p_v δ_{vu} − p_v p_u, i.e. diag(p) − ppᵀ. Differentiating p − y once more gives the same matrix as the Hessian of L in z. The stable form: LSE(z) = m + log Σ e^{z_v − m} is exact for any m; choosing m = max z keeps every exponent ≤ 0 and the sum ≥ 1, so individual exponentials avoid positive-exponent overflow and their exact-real sum is nonzero. The reduction, final LSE, and loss still need representable arithmetic; the shift alone does not guarantee their floating-point range. Under sampling y ∼ p, E[(p − y)(p − y)ᵀ] = Cov(y) = diag(p) − ppᵀ, so the Fisher information in z equals the Hessian in z.
 
 </details>
 
-**Hessian approximations and their costs.** Forming H is impossible for N of interest (N² entries). Hv costs a bounded multiple of a gradient: forward-over-reverse computes the JVP of the gradient map, and the JAX documentation reports this composition as cheaper than reverse-over-reverse [OFFICIAL-DOCUMENTATION · R2.10]; the multiple in a specific framework is UNVERIFIED here. The Gauss–Newton matrix G (Eq. 2.17) is PSD for cross-entropy because ∂²ℓ/∂z² = diag(p) − ppᵀ, and by the last line of the derivation it coincides with the Fisher information matrix; Martens reports that "in many important cases, the Fisher information matrix is shown to be equivalent to the Generalized Gauss-Newton matrix" [PAPER-REPORTED · R2.12]. Gv costs one JVP, one V×V product per token, and one VJP [MATHEMATICALLY-DERIVED]. K-FAC approximates each layer's Fisher block as a Kronecker product: for a linear layer with input a and backpropagated gradient g at the pre-activation, the per-example weight gradient is g aᵀ, so the block is E[(aaᵀ) ⊗ (ggᵀ)], approximated by E[aaᵀ] ⊗ E[ggᵀ] = A ⊗ G_ℓ; Martens and Grosse describe K-FAC as "approximating various large blocks of the Fisher (corresponding to entire layers) as being the Kronecker product of two much smaller matrices" [PAPER-REPORTED · R2.5]. Cost: storing A (d_in²) and G_ℓ (d_out²) instead of (d_in d_out)², inverting each at O(d_in³ + d_out³) amortised over steps, and applying the preconditioner as G_ℓ⁻¹ ∇W A⁻¹, two products of the size of the weight gradient [MATHEMATICALLY-DERIVED · DERIVED:eq-2.17]. Diagonal approximations cost one vector of size N: the second-moment estimate of adaptive optimisers is an elementwise empirical-Fisher-like quantity ([§20.1](../../part-04-training-science-and-adaptation/ch20-optimization-schedules-and-training-stability/20-1-optimizer-mechanics.md)), and the identity E[v ⊙ Hv] = diag(H) for Rademacher v gives a stochastic diagonal at one HVP per sample [MATHEMATICALLY-DERIVED].
+**Hessian approximations and their costs.** A dense parameter Hessian contains $N^2$ values. A Hessian-vector product evaluates $H v$ without materializing that object. JAX documents forward-over-reverse composition and compares it with reverse-over-reverse; the exact workload-dependent time ratio remains UNVERIFIED [OFFICIAL-DOCUMENTATION · R2.10, “Hessian-vector products using both forward- and reverse-mode”]. For categorical logits, the generalized Gauss–Newton inner matrix is $H_z=\operatorname{diag}(p)-pp^\top$. Its product with $u$ is $p\odot u-p(p^\top u)$, requiring $O(V)$ work and auxiliary state, rather than an explicit $V\times V$ multiplication. Then $Gv$ is one network JVP, this inner product, and one network VJP [MATHEMATICALLY-DERIVED · DERIVED:eq-2.17].
+
+Martens distinguishes the Fisher, generalized Gauss–Newton, and empirical Fisher. Fisher–GGN equality holds when the output distribution and its natural parameterization make the output Fisher equal the loss Hessian; it is not a generic identity for any network output or loss [PAPER-REPORTED · R2.12, §§8–9, Eqs. (5)–(6)]. For a categorical softmax in logits, averaging model-sampled targets gives that equality. Replacing those targets with observed labels gives the empirical Fisher, which need not coincide [MATHEMATICALLY-DERIVED · DERIVED:eq-2.16].
+
+For a linear layer $h=Wa$, a per-example gradient is $ga^\top$. For Fisher statistics, average over model-sampled targets conditional on the input. Vectorization then gives a Fisher block $\mathbb E[(aa^\top)\otimes(gg^\top)]$. Replacing this expectation of a product by $\mathbb E[aa^\top]\otimes\mathbb E[gg^\top]$ and neglecting chosen cross-layer interactions produces the simplified block-diagonal K-FAC representation [PAPER-REPORTED · R2.5, §§3–4]. Storing factors costs $O(d_{\rm in}^2+d_{\rm out}^2)$; constructing them over $n$ examples costs $O(n(d_{\rm in}^2+d_{\rm out}^2))$. Factor decompositions cost $O(d_{\rm in}^3+d_{\rm out}^3)$ per refresh. Applying the preconditioner costs $O(d_{\rm out}^2d_{\rm in}+d_{\rm out}d_{\rm in}^2)$, not elementwise weight-gradient cost. These are dense arithmetic counts for the stated simplified representation [MATHEMATICALLY-DERIVED · DERIVED:eq-2.17].
+
+A diagonal curvature surrogate stores $O(N)$ values. The unbiased randomized identity $\mathbb E[v\odot Hv]=\operatorname{diag}(H)$ follows from independent Rademacher coordinates with $\mathbb E[v_iv_j]=\mathbf1[i=j]$, but its Monte Carlo variance and signed diagonal are distinct from adaptive-optimizer second moments. A second-moment accumulator is not automatically an unbiased Hessian or Fisher estimator [MATHEMATICALLY-DERIVED · DERIVED:eq-2.17].
 
 ```figure
 id: fig-2.22
@@ -291,13 +299,25 @@ spec:
     - { dimension: "object", values: { full: "H = JᵀH_out J + Σ_i ∂ℓ/∂f_i ∂²f_i/∂θ² (Eq. 2.17); G drops the second term", kfac: "E[aaᵀ] ⊗ E[ggᵀ] per layer (R2.5)", hvp: "Hv by forward-over-reverse; Gv by JVP, output curvature, VJP", diag: "one value per parameter" } }
     - { dimension: "stored for one layer", values: { full: "(d_in·d_out)² per block; N² for the model", kfac: "d_in² + d_out²", hvp: "gradient-sized vectors only", diag: "d_in·d_out" } }
     - { dimension: "at d_in = d_out = 4096", values: { full: "281,474,976,710,656 entries", kfac: "33,554,432 entries", hvp: "16,777,216 per vector", diag: "16,777,216 entries" } }
-    - { dimension: "cost per application", values: { full: "infeasible at N of interest", kfac: "invert at O(d_in³ + d_out³), amortised; apply G_ℓ⁻¹ ∇W A⁻¹", hvp: "a bounded multiple of a gradient; the multiple is UNVERIFIED (R2.10)", diag: "one elementwise product; Hutchinson: one HVP per sample" } }
-    - { dimension: "PSD", values: { full: "H: not in general; G: yes for cross-entropy", kfac: "yes: Kronecker product of PSD factors", hvp: "Gv: yes; Hv: no guarantee", diag: "second moment: yes" } }
-    - { dimension: "what is dropped", values: { full: "nothing (H); the inner map's second derivative (G)", kfac: "the correlation between a and g", hvp: "nothing; only products are formed", diag: "all off-diagonal curvature" } }
+    - { dimension: "cost per application", values: { full: "infeasible at N of interest", kfac: "invert at O(d_in³ + d_out³), amortised; apply at O(d_out²d_in + d_out d_in²)", hvp: "a bounded multiple of a gradient; the multiple is UNVERIFIED (R2.10)", diag: "one elementwise product; Hutchinson: one HVP per sample" } }
+    - { dimension: "PSD", values: { full: "H: not in general; G: yes for cross-entropy", kfac: "yes: Kronecker product of PSD factors", hvp: "operator G: PSD; operator H: not generally PSD", diag: "second moment: yes" } }
+    - { dimension: "what is dropped", values: { full: "nothing (H); the inner map's second derivative (G)", kfac: "dependence between aaᵀ and ggᵀ", hvp: "nothing; only products are formed", diag: "all off-diagonal curvature" } }
     - { dimension: "communication", values: { full: "not applicable", kfac: "d_in × d_in and d_out × d_out factors reduced across data-parallel ranks (Chapter 29)", hvp: "not analysed here", diag: "not analysed here" } }
 ```
 
-**Gradient estimators.** Eq. 2.18 follows from ∇∫p_θ f = ∫(∇p_θ) f = ∫p_θ (∇log p_θ) f, and the baseline term vanishes because E[∇log p_θ] = ∇∫p_θ = 0 [MATHEMATICALLY-DERIVED · DERIVED:eq-2.18]. Its variance scales with the magnitude of f − b and with the length of the sequence, since ∇log π_θ(y|x) = Σ_t ∇log π_θ(y_t|y_{<t},x) is a sum of T terms; this is the policy-gradient estimator of [§34.2](../../../vol-02-execution-and-optimization/part-06-post-training-and-reinforcement-learning/ch34-policy-gradients-ppo-and-rlhf/34-2-policy-gradients.md), where advantages are the baseline-subtracted f. Cost: one sample (a generation) and one backward pass through the log-probability, the same as a supervised step on that sequence. Eq. 2.19 moves the randomness outside the parameters; Kingma and Welling report that "a reparameterization of the variational lower bound yields a lower bound estimator that can be straightforwardly optimized using standard stochastic gradient methods" [PAPER-REPORTED · R2.4]. It requires continuous x and differentiable f, so it does not apply to token sampling; its variance is governed by ∇f rather than by f. The straight-through estimator, introduced by Bengio, Léonard and Courville as an approach that "heuristically copies the gradient with respect to the stochastic output directly as an estimator of the gradient with respect to the sigmoid argument" [PAPER-REPORTED · R2.13], is what quantisation-aware training uses through rounding ([§40.3](../../../vol-02-execution-and-optimization/part-07-inference-algorithms-distillation-and-compression/ch40-quantization-from-numerical-model-to-deployable-artifact/40-3-ptq-and-qat.md)); it is biased and its cost is one ordinary backward pass. Schulman et al. unify these under stochastic computation graphs [PAPER-REPORTED · R2.14]; Mohamed et al. survey the pathwise, score-function, and measure-valued families and their variance [PAPER-REPORTED · R2.15]. The word "reparameterisation" in DPO ([§33.1](../../../vol-02-execution-and-optimization/part-06-post-training-and-reinforcement-learning/ch33-direct-preference-optimization-and-related-objectives/33-1-dpo-derivation.md)) names a change of variables from reward to policy, not Eq. 2.19.
+**Gradient estimators.** Equation 2.18 is the fixed-integrand score-function identity: write $\nabla p_\theta=p_\theta\nabla\log p_\theta$ under a parameter-independent support and a justified derivative/integral interchange. The baseline vanishes because $\mathbb E[\nabla\log p_\theta]=\nabla\int p_\theta=0$. With an explicit parameter-dependent integrand $f_\theta$, retain the additional $\mathbb E[\nabla_\theta f_\theta]$ term. For conditional samples, a baseline can depend on the conditioning context but not on the sampled action conditional on that context [MATHEMATICALLY-DERIVED · DERIVED:eq-2.18].
+
+For score vector $s=\nabla\log p_\theta$, minimizing the trace of $\mathrm{Cov}[(f-c_0)s]$ over a scalar constant $c_0$ differentiates $\mathbb E[(f-c_0)^2\|s\|^2]$. When $\mathbb E\|s\|^2>0$, the optimum is $c_0^*=\mathbb E[f\|s\|^2]/\mathbb E\|s\|^2$. Thus subtracting an unweighted mean reward is not generally the variance-optimal baseline. Reusing the same sample to fit and evaluate a baseline can also change unbiasedness unless its dependence is handled [MATHEMATICALLY-DERIVED · DERIVED:eq-2.18].
+
+For a location-scale sample $X=\mu+s_0\varepsilon$, $\varepsilon\sim\mathcal N(0,1)$, Eq. 2.19 gives gradients $f'(X)$ and $f'(X)\varepsilon$ with respect to $\mu,s_0$. The score estimator instead uses $f(X)(X-\mu)/s_0^2$ and $f(X)((X-\mu)^2/s_0^3-1/s_0)$. Both have the same mean under their respective regularity conditions but different random integrands; neither family universally dominates variance. Reparameterization requires a differentiable sampling transformation and usable derivative of the integrand; a black-box discrete verifier can satisfy the score-function conditions without satisfying pathwise conditions [MATHEMATICALLY-DERIVED · DERIVED:eq-2.19].
+
+Kingma and Welling's SGVB construction moves posterior noise into a parameter-independent auxiliary distribution and differentiates its transformed sample [PAPER-REPORTED · R2.4, §§2.3–2.4, Eqs. (4)–(7)]. Bengio, Léonard, and Courville's straight-through construction substitutes a surrogate backward derivative for a discrete forward node; its copied derivative is heuristic [PAPER-REPORTED · R2.13, §4]. Schulman et al. combine deterministic path derivatives and log-probability terms in a stochastic DAG, with downstream cost selection preventing unrelated costs from entering a stochastic node's score term [PAPER-REPORTED · R2.14, §3, Theorem 1]. These are distinct estimators rather than alternate names for automatic differentiation.
+
+### Curvature validity and damping
+
+The dropped term in Eq. 2.17 can remain nonzero with a fixed ReLU activation pattern. For $f(w_1,w_2)=w_2\operatorname{ReLU}(w_1x)$ on the branch $w_1x>0$, $f=w_1w_2x$ and $\partial^2f/\partial w_1\partial w_2=x$. The network is linear in each layer separately, but bilinear jointly. GGN drops this network-curvature term deliberately; it does not prove that the term is zero. For $u$, $u^\top Gu=(Ju)^\top H_z(Ju)\ge0$ when the output loss is convex. The exact Hessian can be indefinite because its second term has no such sign guarantee [MATHEMATICALLY-DERIVED · DERIVED:eq-2.17].
+
+Solving $(G+\gamma\mathrm{Id})\Delta=-g$ with $\gamma>0$ controls singular directions and changes the step. K-FAC factor damping $(A+\gamma_A\mathrm{Id})\otimes(G_\ell+\gamma_G\mathrm{Id})$ expands into the undamped Kronecker product plus cross terms; it is not identical to adding one scalar identity to the full block. Refresh intervals, factor approximation, damping, and line-search or trust-region choices all belong to the algorithm specification. Matrix-free products avoid $N^2$ storage but require repeated model passes if used inside an iterative solver; a cost comparison must specify the number of such products [MATHEMATICALLY-DERIVED · DERIVED:eq-2.17].
 
 ## Algorithm
 
@@ -398,23 +418,25 @@ The [B, T, V] cotangent p − y has the same size as the logits and is retained 
 
 ## Experimental design
 
-Proposal: Experiment 2.1 in [verification.md](verification.md) checks Eq. 2.16 against FP64 central differences on ordinary and extreme logits. A second proposal compares the per-step wall time and peak memory of gradient, HVP (forward-over-reverse and reverse-over-reverse), and K-FAC statistics on one stated model, reporting each as a multiple of a forward pass with p50/p95 over repeated steps. Not run in this edition.
+### Reported experiments
+
+R2.5 §13 compares K-FAC with Nesterov-style momentum SGD on deep autoencoders for MNIST, CURVES, and FACES. It uses squared-parameter regularization with coefficient $10^{-5}$, reports training reconstruction error versus iteration and time curves, and studies K-FAC approximations/efficiency choices. Diagonal adaptive methods are not included in that comparison. These experiments therefore cannot establish K-FAC superiority over modern adaptive optimizers in language-model training [PAPER-REPORTED · R2.5, §13 and experimental figures].
+
+R2.4 §5 and Appendices C–E evaluate SGVB/AEVB on MNIST and Frey Face, reporting variational bounds and comparisons with wake-sleep and Monte Carlo EM. The latent-variable construction, objective, and estimator change together; the experiment does not give a universal pathwise-versus-score variance ratio [PAPER-REPORTED · R2.4, §5; Appendices C–E]. Hardware-normalized modern language-model throughput and the release-specific fused-loss memory gain are NOT-DISCLOSED for these protocols. The chapter's FP64 derivative checks remain unexecuted proposals in [verification.md](verification.md).
 
 ## Observations
 
-**What the paper claims.** R2.5 reports that K-FAC's Kronecker-factored blocks make natural-gradient steps affordable; R2.12 reports the Fisher–Gauss–Newton equivalence; R2.4 and R2.13 report the reparameterisation and straight-through estimators; R2.10 documents the ≈3× VJP/JVP cost bound and the depth-scaling memory of reverse mode; R2.11 documents saved tensors [PAPER-REPORTED / OFFICIAL-DOCUMENTATION].
+For finite logits and a fixed normalized target, the softmax-cross-entropy gradient is p−y and its logit Hessian is diag(p)−ppᵀ. The latter is a covariance matrix, so it is positive semidefinite with a constant-shift null direction. The parameter Hessian includes an additional network-curvature term and need not inherit that sign [MATHEMATICALLY-DERIVED · DERIVED:eq-2.16; DERIVED:eq-2.17].
 
-**What the evidence shows.** Eq. 2.14–2.19 and the Fisher = Hessian-in-logits identity are theorems. The reported advantages of K-FAC over adaptive diagonal methods at language-model scale have not been independently established in the sources inspected; the book takes no position [UNVERIFIED].
+Model-target Fisher and GGN coincide only under the specified output-family/parameterization conditions. An empirical Fisher formed from observed-label gradients is a different expectation. K-FAC further approximates the relevant blocks and changes their inversion and damping; the reported autoencoder experiments do not rank all such choices on modern language models [PAPER-REPORTED · R2.12, §§8–11; R2.5, §13].
 
-**What we infer.** The book infers (DERIVED) that the practical ordering of curvature methods by cost is diagonal < HVP-based < K-FAC < anything forming G explicitly, and (ASSUMED) that memory rather than FLOPs binds first for reverse mode at long T.
-
-**What remains unknown.** The measured ratio backward/forward for a specific model, framework version, and kernel set is UNVERIFIED; the memory saved by a specific fused-loss release is UNVERIFIED.
+Matrix-free derivatives avoid a dense N² object but may require multiple model passes inside a solver. Factor refresh, damping, solver iterations, layout, and retained state enter the execution cost. No release-specific fused-loss allocation or language-model backward/forward latency ratio is measured here [OFFICIAL-DOCUMENTATION · R2.10; R2.11].
 
 ## Failure modes
 
 > **Failure mode — unstable softmax gradient.** *Symptom:* NaN loss on long sequences or large logits. *Cause:* LSE computed without the max shift, or p formed by exp then normalised in low precision. *Detection:* Experiment 2.1 on extreme inputs. *Mitigation:* Eq. 2.15's shifted form; cross-entropy from log-softmax, never from softmax then log ([§03.2](../ch03-numerical-computation-and-trustworthy-training/03-2-stable-primitives.md)).
 
-> **Failure mode — score-function variance blow-up.** *Symptom:* policy updates dominated by a few long sequences. *Cause:* Σ_t over T terms with unnormalised f − b. *Detection:* per-sequence gradient-norm distribution. *Mitigation:* baselines, per-token advantages, length normalisation (§34.2, §35.2).
+> **Failure mode — score-function variance blow-up.** *Symptom:* policy updates dominated by a few long sequences. *Cause:* Σ_t over T terms with unnormalised f − c₀. *Detection:* per-sequence gradient-norm distribution. *Mitigation:* baselines, per-token advantages, length normalisation (§34.2, §35.2).
 
 > **Failure mode — reparameterisation applied to a discrete variable.** *Symptom:* gradient is zero or undefined through a sampling op. *Cause:* Eq. 2.19 needs continuous x. *Detection:* the sampling op has no registered VJP. *Mitigation:* use Eq. 2.18, or a straight-through surrogate with its bias stated.
 
@@ -422,13 +444,9 @@ Proposal: Experiment 2.1 in [verification.md](verification.md) checks Eq. 2.16 a
 
 ## Siblings
 
-**Score-function estimator** — this file, Eq. 2.18; applied in [§34.2](../../../vol-02-execution-and-optimization/part-06-post-training-and-reinforcement-learning/ch34-policy-gradients-ppo-and-rlhf/34-2-policy-gradients.md). Why it exists: differentiate through sampling of discrete outputs. What assumption changed: none on f. What problem it solved: unbiased gradients of expected reward. New failure mode: variance ∝ |f − b| and T. Changed primitive: gradient of f → f times gradient of log-probability.
+Score-function differentiation requires no pathwise derivative through the sampled action, but it needs the support, integrability, and interchange conditions of Eq. 2.18. A conditional baseline must be independent of the sampled action given its context, or its dependence must be accounted for. Pathwise differentiation instead uses a differentiable noise transformation; an exact categorical draw ordinarily lacks the required derivative. Neither estimator family universally dominates variance [PAPER-REPORTED · R2.14, §2.1; MATHEMATICALLY-DERIVED · DERIVED:eq-2.18; DERIVED:eq-2.19].
 
-**Reparameterisation estimator** — this file, Eq. 2.19 [R2.4]. Why it exists: lower variance when x is continuous. What assumption changed: f differentiable, x = g(θ, ε). What problem it solved: variational objectives with continuous latents. New failure mode: inapplicable to tokens. Changed primitive: sample x → sample ε.
-
-**Straight-through estimator** — this file [R2.13]; applied in [§40.3](../../../vol-02-execution-and-optimization/part-07-inference-algorithms-distillation-and-compression/ch40-quantization-from-numerical-model-to-deployable-artifact/40-3-ptq-and-qat.md). Why it exists: train through rounding or thresholding. What assumption changed: the Jacobian of the non-differentiable op is replaced by I. What problem it solved: quantisation-aware training. New failure mode: bias with no unbiasedness guarantee. Changed primitive: true local VJP → identity.
-
-**Exact gradient (reverse mode)** — this file, Algorithm 2.4; owned mechanically by [§03.3](../ch03-numerical-computation-and-trustworthy-training/03-3-automatic-differentiation.md). Why it exists: deterministic objectives. New failure mode: saved-tensor memory.
+Straight-through differentiation substitutes a backward rule for a discrete forward node. The identity rule is one example, rather than the only surrogate; it generally does not equal the derivative of the forward expectation. Exact reverse-mode differentiation applies the registered local derivatives of a deterministic computation and accumulates every reuse. These procedures can share an autodiff engine while targeting different derivatives or surrogates [PAPER-REPORTED · R2.13, §4; R2.6, §3].
 
 ```figure
 id: fig-2.24
@@ -437,9 +455,10 @@ title: Gradient estimators for an expectation, and the exact gradient
 caption: >-
   Read the "requires" and "applies to tokens" rows together: they, not
   variance, decide which estimator is available. Token sampling is discrete,
-  so the reparameterised estimator is simply unavailable for language-model
-  outputs; the score-function estimator is unbiased but its variance grows
-  with |f − b| and with T; straight-through is cheap and biased. Every
+  so an ordinary differentiable pathwise transformation is unavailable for
+  exact categorical samples. Score-function unbiasedness requires the
+  stated regularity conditions; trajectory covariance determines its
+  variance. Straight-through uses a generally biased surrogate. Every
   column's cost row is priced in forward and backward passes, the unit of
   the Mechanism.
 placement: wide
@@ -447,9 +466,10 @@ evidence: MATHEMATICALLY-DERIVED
 source: ["DERIVED:eq-2.18", "DERIVED:eq-2.19", R2.4, R2.13, R2.14, R2.15]
 alt: >-
   Comparison of four ways to obtain a gradient. Score function (Eq. 2.18,
-  applied in §34.2): E[(f − b)∇log p_θ]; requires only that the support not
-  depend on θ; unbiased for any baseline b independent of x; variance driven
-  by |f − b| and the sequence length T; costs one generation and one backward
+  applied in §34.2): E[(f − c₀)∇log p_θ]; requires parameter-independent support, finite moments,
+  and valid gradient–expectation interchange; unbiased for a sample-independent
+  baseline. Variance depends
+  on residual rewards and covariance among trajectory score terms; costs one generation and one backward
   pass through the log-probability; applies to tokens; fails by variance
   blow-up on long sequences. Reparameterisation (Eq. 2.19, R2.4): E_ε of the
   gradient of f(g(θ, ε)); requires continuous x and differentiable f;
@@ -458,7 +478,7 @@ alt: >-
   non-differentiable op replaced by the identity; biased with no guarantee;
   one ordinary backward pass; used through rounding in quantisation-aware
   training. Exact reverse mode (Algorithm 2.4): deterministic objectives;
-  about three times forward FLOPs; fails by saved-tensor memory.
+  about three times forward arithmetic for the stated matmul-dominated graph; saved-tensor memory is an additional constraint.
 spec:
   axis: >-
     What each way of obtaining a gradient requires of f and x, its bias,
@@ -471,17 +491,21 @@ spec:
     - { id: ex, label: "Exact reverse mode (Alg. 2.4)", node: ms.section.3.3 }
   rows:
     - { dimension: "estimator", values: { sf: "E[(f(x) − b)·∇_θ log p_θ(x)]", rp: "E_ε[∇_θ f(g(θ, ε))], x = g(θ, ε)", st: "local VJP of a non-differentiable op replaced by I", ex: "vᵀJ composed right to left, v = 1 for a scalar L" } }
-    - { dimension: "requires", values: { sf: "support of p_θ independent of θ; nothing of f", rp: "continuous x; f differentiable in x", st: "an op to bypass: rounding, thresholding", ex: "a deterministic, a.e.-differentiable graph" } }
-    - { dimension: "bias", values: { sf: "none, for any b independent of x", rp: "none", st: "biased, with no unbiasedness guarantee", ex: "none, up to rounding" } }
-    - { dimension: "variance driven by", values: { sf: "|f − b| and T: ∇log π sums T per-token terms", rp: "∇f rather than f", st: "not applicable: a deterministic surrogate", ex: "not applicable" } }
-    - { dimension: "cost per sample", values: { sf: "one generation + one backward through log p", rp: "one forward + one backward", st: "one ordinary backward pass", ex: "≈ 3 × forward FLOPs; saved-tensor memory" } }
+    - { dimension: "requires", values: { sf: "fixed support; finite moments; derivative–expectation interchange", rp: "continuous x; f differentiable in x", st: "an op to bypass: rounding, thresholding", ex: "a deterministic, a.e.-differentiable graph" } }
+    - { dimension: "bias", values: { sf: "none, for any c₀ independent of x", rp: "none", st: "biased, with no unbiasedness guarantee", ex: "none, up to rounding" } }
+    - { dimension: "variance driven by", values: { sf: "E[(f−c₀)² ssᵀ] and score-term covariance", rp: "∇f rather than f", st: "not applicable: a deterministic surrogate", ex: "not applicable" } }
+    - { dimension: "cost per sample", values: { sf: "one generation + one backward through log p", rp: "one forward + one backward", st: "one ordinary backward pass", ex: "matmul-dominated graph: ≈ 3 × forward FLOPs; saved state" } }
     - { dimension: "applies to tokens", values: { sf: "yes", rp: "no: x must be continuous", st: "yes, with its bias stated", ex: "only for deterministic objectives" } }
     - { dimension: "new failure mode", values: { sf: "variance blow-up on long sequences", rp: "inapplicable to tokens", st: "bias with no guarantee", ex: "saved-tensor memory" } }
 ```
 
 ## Extensions
 
-For long context the saved-tensor memory of Algorithm 2.4 grows linearly in T per layer and quadratically for materialised attention scores, which is the motivation for IO-aware attention recomputing scores in the backward pass ([§27.1](../../../vol-02-execution-and-optimization/part-05-hardware-kernels-and-distributed-execution/ch27-attention-latent-attention-and-expert-kernels/27-1-io-aware-attention.md)). For agents, the sampled object in Eq. 2.18 is a multi-turn trajectory with environment tokens masked out of ∇log π ([§36.2](../../../vol-02-execution-and-optimization/part-06-post-training-and-reinforcement-learning/ch36-agent-rl-and-distributed-rollout-systems/36-2-credit-assignment.md)). For continuous action policies (embodiment), Eq. 2.19 becomes applicable and is the estimator of choice ([Chapter 60](../../../vol-03-grounded-and-interactive-intelligence/part-10-multimodal-world-and-embodied-models/ch60-vision-language-action-policies-and-embodied-learning/README.md)). These are cross-references.
+### Improvements
+
+The documented SGVB change replaces a high-variance score-based posterior-gradient construction with a differentiable noise transformation in its latent-variable setting. K-FAC replaces a dense Fisher representation with structured factors and separately controls damping and approximation. Their experiments support those source-specific procedures; neither isolates a universally optimal estimator or optimizer. Straight-through derivatives trade exact differentiation of the forward map for a surrogate, so their usefulness cannot be described as an unbiasedness improvement [PAPER-REPORTED · R2.4, §§2.3,5; R2.5, §§3–8,13; R2.13, §4].
+
+For long context the saved-tensor memory of Algorithm 2.4 grows linearly in T per layer and quadratically for materialised attention scores, which is the motivation for IO-aware attention recomputing scores in the backward pass ([§27.1](../../../vol-02-execution-and-optimization/part-05-hardware-kernels-and-distributed-execution/ch27-attention-latent-attention-and-expert-kernels/27-1-io-aware-attention.md)). For agents, the sampled object in Eq. 2.18 is a multi-turn trajectory with environment tokens masked out of ∇log π ([§36.2](../../../vol-02-execution-and-optimization/part-06-post-training-and-reinforcement-learning/ch36-agent-rl-and-distributed-rollout-systems/36-2-credit-assignment.md)). For continuous action policies (embodiment), Eq. 2.19 can become applicable under its differentiability conditions ([Chapter 60](../../../vol-03-grounded-and-interactive-intelligence/part-10-multimodal-world-and-embodied-models/ch60-vision-language-action-policies-and-embodied-learning/README.md)). These are cross-references.
 
 ## Limitations
 
@@ -489,7 +513,7 @@ The ≈3× cost bound is a documented property of one framework's transformation
 
 ## Reproducibility
 
-Symbols: J, vᵀJ, Ju, H, G, A, G_ℓ, b, ε, g(θ, ε) (local); θ, π_θ, N, D, C, T from notation.md. Framework claims cite JAX documentation ("latest", accessed 2026-09-20) and PyTorch 2.14 documentation; measured ratios are not provided. Reference code for the gradient check is in [verification.md](verification.md), UNVERIFIED for version.
+Symbols: J, vᵀJ, Ju, H, G, A, G_ℓ, c₀, ε, g(θ, ε) (local); θ, π_θ, N, D, C, T from notation.md. Framework claims cite JAX documentation ("latest", accessed 2026-10-07) and PyTorch 2.14 documentation; measured ratios are not provided. Reference code for the gradient check is in [verification.md](verification.md), UNVERIFIED for version.
 
 ## References
 

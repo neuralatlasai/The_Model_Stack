@@ -11,20 +11,28 @@ import { derivedMetaLine, identityLine, sentenceCase } from './lib/header.ts';
 
 interface Props {
   doc: ResearchDocument;
+  compact?: boolean;
+  showThesis?: boolean;
 }
 
-const { doc } = Astro.props;
+const { doc, compact = false, showThesis = true } = Astro.props;
 const { header } = doc;
 const identity = identityLine(doc);
 const thesis = header.thesis === null ? null : sentenceCase(header.thesis);
 ---
 
-<header class="rb-header">
-  {identity !== null && <p class="rb-header__identity">{identity}</p>}
-  <h1 class="rb-header__title">
-    {header.number !== null && <span class="rb-header__number">{header.number}</span>}
-    <span class="rb-header__text">{header.title}</span>
-  </h1>
-  {thesis !== null && <p class="rb-header__thesis"><Inline nodes={thesis} /></p>}
+<header class:list={['rb-header', { 'aw-document-meta': compact }]}>
+  {!compact && identity !== null && <p class="rb-header__identity">{identity}</p>}
+  {!compact && (
+    <h1 class="rb-header__title">
+      {header.number !== null && <span class="rb-header__number">{header.number}</span>}
+      <span class="rb-header__text">{header.title}</span>
+    </h1>
+  )}
+  {showThesis && thesis !== null && (
+    <p class="rb-header__thesis">
+      <Inline nodes={thesis} />
+    </p>
+  )}
   <p class="rb-header__meta">{header.metaLine !== null ? <Inline nodes={header.metaLine} /> : derivedMetaLine(doc)}</p>
 </header>
