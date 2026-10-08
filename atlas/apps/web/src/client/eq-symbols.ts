@@ -66,7 +66,10 @@ function stripTex(text: string): string {
  * sub `model`; `MFU` → null).
  */
 export function parseSymbol(raw: string): SymbolKey | null {
-  const text = raw.trim().replace(/^\$+|\$+$/gu, '').trim();
+  const text = raw
+    .trim()
+    .replace(/^\$+|\$+$/gu, '')
+    .trim();
   if (text === '') return null;
   const underscore = text.indexOf('_');
   const baseRaw = underscore === -1 ? text : text.slice(0, underscore);

@@ -12,7 +12,18 @@ const { block } = Astro.props;
 ---
 
 <div class="rb-oq" id={block.anchor ?? undefined} {...depthAttrs(block.depth)}>
-  <p class="rb-oq__label"><span class="rb-oq__glyph" aria-hidden="true">?</span>Open question</p>
-  <p class="rb-oq__question"><Inline nodes={block.content} /></p>
-  {block.settle !== null && <p class="rb-oq__settle"><span class="rb-lead">What would settle it</span> <Inline nodes={block.settle} /></p>}
+  <p class="rb-oq__label">
+    <span class="rb-oq__glyph" aria-hidden="true">
+      ?
+    </span>
+    Open question
+  </p>
+  <p class="rb-oq__question">
+    <Inline nodes={block.content} />
+  </p>
+  {block.settle !== null && (
+    <p class="rb-oq__settle">
+      <span class="rb-lead">What would settle it</span> <Inline nodes={block.settle} />
+    </p>
+  )}
 </div>

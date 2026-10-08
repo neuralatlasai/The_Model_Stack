@@ -33,13 +33,24 @@ const ledger = evidenceLedger(docs, (doc) => doc.meta.entityType === 'chapter' |
 const pad = (n: number): string => String(n).padStart(2, '0');
 const chapterTitle = (n: number): string => graph.nodes[`ms.chapter.${String(n)}`]?.shortTitle ?? `Chapter ${pad(n)}`;
 const topChapter = (label: (typeof EVIDENCE_LABELS)[number]): number | null =>
-  ledger.chapters.reduce<number | null>((best, n) => (ledger.count(label, n) > (best === null ? 0 : ledger.count(label, best)) ? n : best), null);
+  ledger.chapters.reduce<number | null>(
+    (best, n) => (ledger.count(label, n) > (best === null ? 0 : ledger.count(label, best)) ? n : best),
+    null,
+  );
 const maxLabelTotal = Math.max(1, ...EVIDENCE_LABELS.map((label) => ledger.labelTotal(label)));
 const chapterUrl = (n: number): string => graph.nodes[`ms.chapter.${String(n)}`]?.url ?? '/library/';
 const mostUsed = [...EVIDENCE_LABELS].sort((a, b) => ledger.labelTotal(b) - ledger.labelTotal(a))[0];
 const classTotal = (evidenceClass: EvidenceClass): number =>
-  EVIDENCE_LABELS.filter((label) => EVIDENCE_CLASS[label] === evidenceClass).reduce((sum, label) => sum + ledger.labelTotal(label), 0);
-const CLASS_NAMES: Readonly<Record<EvidenceClass, string>> = { source: 'source', inference: 'inference', gap: 'gap', measurement: 'measurement' };
+  EVIDENCE_LABELS.filter((label) => EVIDENCE_CLASS[label] === evidenceClass).reduce(
+    (sum, label) => sum + ledger.labelTotal(label),
+    0,
+  );
+const CLASS_NAMES: Readonly<Record<EvidenceClass, string>> = {
+  source: 'source',
+  inference: 'inference',
+  gap: 'gap',
+  measurement: 'measurement',
+};
 ---
 
 <ReaderLayout
@@ -57,76 +68,122 @@ const CLASS_NAMES: Readonly<Record<EvidenceClass, string>> = { source: 'source',
 
   <section class="evx gx-inst" aria-labelledby="evx-title" data-evidence-ledger>
     <p class="gx-head">
-      <span class="gx-head__title" id="evx-title">Label ledger</span>
+      <span class="gx-head__title" id="evx-title">
+        Label ledger
+      </span>
       <span class="gx-head__note">label × chapter</span>
       <span class="gx-head__keys" aria-hidden="true">
         <span class="evx-key">dot area = statements</span>
       </span>
     </p>
     <div class="gx-body">
-      <div class="gx-main evx__grid" role="table" aria-label="Labelled statements by label and chapter" style={`--evx-cols:${String(ledger.chapters.length)}`}>
+      <div
+        class="gx-main evx__grid"
+        role="table"
+        aria-label="Labelled statements by label and chapter"
+        style={`--evx-cols:${String(ledger.chapters.length)}`}
+      >
         <div class="evx__row evx__row--head" role="row">
-          <span class="evx__label evx__corner" role="columnheader">label</span>
+          <span class="evx__label evx__corner" role="columnheader">
+            label
+          </span>
           {ledger.chapters.map((n) => (
-            <a class="evx__ch" role="columnheader" href={chapterUrl(n)} data-evx-col={n} title={chapterTitle(n)} aria-label={`Chapter ${pad(n)} ${chapterTitle(n)}`}>
+            <a
+              class="evx__ch"
+              role="columnheader"
+              href={chapterUrl(n)}
+              data-evx-col={n}
+              title={chapterTitle(n)}
+              aria-label={`Chapter ${pad(n)} ${chapterTitle(n)}`}
+            >
               {pad(n)}
             </a>
           ))}
-          <span class="evx__total evx__corner" role="columnheader">all chapters</span>
+          <span class="evx__total evx__corner" role="columnheader">
+            all chapters
+          </span>
         </div>
-        {
-          classes.map((evidenceClass) => (
-            <div class="evx__group" role="rowgroup" data-evidence-class={evidenceClass}>
-              <p class="evx__class" role="row">
-                <span role="rowheader">{CLASS_NAMES[evidenceClass]}</span>
-              </p>
-              {EVIDENCE_LABELS.filter((label) => EVIDENCE_CLASS[label] === evidenceClass).map((label) => {
-                const total = ledger.labelTotal(label);
-                const top = topChapter(label);
-                return (
-                  <div
-                    class="evx__row"
-                    role="row"
-                    data-evx-row={label}
-                    data-evx-kicker={`${CLASS_NAMES[evidenceClass]} · short form ${EVIDENCE_SHORT[label]}`}
-                    data-evx-meaning={`${EVIDENCE_MEANINGS[label]}.`}
-                    data-evx-total={total}
-                    data-evx-top={top === null ? '' : `${pad(top)} ${chapterTitle(top)} · ${grouped(ledger.count(label, top))}`}
-                  >
-                    <a class="evx__label" role="rowheader" href={`#ev-${label.toLowerCase()}`}>
-                      <span class="evx__mark" aria-hidden="true" />
-                      {label}
-                    </a>
-                    {ledger.chapters.map((n) => {
-                      const count = ledger.count(label, n);
-                      const size = markSize(count, ledger.max);
-                      return (
-                        <span class="evx__cell" role="cell" data-evx-col={n} data-evx-n={count} data-evx-ch={`${pad(n)} ${chapterTitle(n)}`} data-evx-share={share(count, ledger.chapterTotal(n))} aria-label={`${label}, chapter ${pad(n)}: ${String(count)}`}>
-                          {size > 0 && <i class="evx__dot" style={`--d:${String(size)}px`} />}
-                        </span>
-                      );
-                    })}
-                    <span class="evx__total" role="cell">
-                      <span class="evx__bar" style={`--w:${String(Math.round((total / maxLabelTotal) * 1000) / 10)}%`} aria-hidden="true" />
-                      <span class="evx__n">{grouped(total)}</span>
-                    </span>
-                  </div>
-                );
-              })}
-            </div>
-          ))
-        }
+        {classes.map((evidenceClass) => (
+          <div class="evx__group" role="rowgroup" data-evidence-class={evidenceClass}>
+            <p class="evx__class" role="row">
+              <span role="rowheader">{CLASS_NAMES[evidenceClass]}</span>
+            </p>
+            {EVIDENCE_LABELS.filter((label) => EVIDENCE_CLASS[label] === evidenceClass).map((label) => {
+              const total = ledger.labelTotal(label);
+              const top = topChapter(label);
+              return (
+                <div
+                  class="evx__row"
+                  role="row"
+                  data-evx-row={label}
+                  data-evx-kicker={`${CLASS_NAMES[evidenceClass]} · short form ${EVIDENCE_SHORT[label]}`}
+                  data-evx-meaning={`${EVIDENCE_MEANINGS[label]}.`}
+                  data-evx-total={total}
+                  data-evx-top={
+                    top === null ? '' : `${pad(top)} ${chapterTitle(top)} · ${grouped(ledger.count(label, top))}`
+                  }
+                >
+                  <a class="evx__label" role="rowheader" href={`#ev-${label.toLowerCase()}`}>
+                    <span class="evx__mark" aria-hidden="true" />
+                    {label}
+                  </a>
+                  {ledger.chapters.map((n) => {
+                    const count = ledger.count(label, n);
+                    const size = markSize(count, ledger.max);
+                    return (
+                      <span
+                        class="evx__cell"
+                        role="cell"
+                        data-evx-col={n}
+                        data-evx-n={count}
+                        data-evx-ch={`${pad(n)} ${chapterTitle(n)}`}
+                        data-evx-share={share(count, ledger.chapterTotal(n))}
+                        aria-label={`${label}, chapter ${pad(n)}: ${String(count)}`}
+                      >
+                        {size > 0 && <i class="evx__dot" style={`--d:${String(size)}px`} />}
+                      </span>
+                    );
+                  })}
+                  <span class="evx__total" role="cell">
+                    <span
+                      class="evx__bar"
+                      style={`--w:${String(Math.round((total / maxLabelTotal) * 1000) / 10)}%`}
+                      aria-hidden="true"
+                    />
+                    <span class="evx__n">{grouped(total)}</span>
+                  </span>
+                </div>
+              );
+            })}
+          </div>
+        ))}
       </div>
 
       <aside class="gx-readout evx__readout" aria-live="polite" data-evx-readout>
-        <p class="gx-ro__kicker" data-evx-rk>{String(EVIDENCE_LABELS.length)} labels · {String(ledger.chapters.length)} chapters</p>
-        <p class="gx-ro__title" data-evx-rt>Point at a dot, a label, or a chapter</p>
+        <p class="gx-ro__kicker" data-evx-rk>
+          {String(EVIDENCE_LABELS.length)} labels · {String(ledger.chapters.length)} chapters
+        </p>
+        <p class="gx-ro__title" data-evx-rt>
+          Point at a dot, a label, or a chapter
+        </p>
         <p class="gx-ro__text" data-evx-rx>
-          Statements by class: {classes.map((evidenceClass) => `${CLASS_NAMES[evidenceClass]} ${share(classTotal(evidenceClass), ledger.total)}`).join(' · ')}.
+          Statements by class:{' '}
+          {classes
+            .map((evidenceClass) => `${CLASS_NAMES[evidenceClass]} ${share(classTotal(evidenceClass), ledger.total)}`)
+            .join(' · ')}
+          .
         </p>
         <dl class="gx-ro__rows evx__ro-rows">
-          <div><dt data-evx-r1k>statements</dt><dd data-evx-r1>{grouped(ledger.total)}</dd></div>
-          <div><dt data-evx-r2k>most used</dt><dd data-evx-r2>{mostUsed === undefined ? '—' : `${mostUsed} · ${share(ledger.labelTotal(mostUsed), ledger.total)}`}</dd></div>
+          <div>
+            <dt data-evx-r1k>statements</dt>
+            <dd data-evx-r1>{grouped(ledger.total)}</dd>
+          </div>
+          <div>
+            <dt data-evx-r2k>most used</dt>
+            <dd data-evx-r2>
+              {mostUsed === undefined ? '—' : `${mostUsed} · ${share(ledger.labelTotal(mostUsed), ledger.total)}`}
+            </dd>
+          </div>
         </dl>
       </aside>
     </div>
@@ -135,36 +192,40 @@ const CLASS_NAMES: Readonly<Record<EvidenceClass, string>> = { source: 'source',
   <section class="sh-section evx-defs" aria-labelledby="ev-definitions">
     <h2 id="ev-definitions">Definitions</h2>
     <div class="evx-defs__grid">
-      {
-        classes.map((evidenceClass) => {
-          const labels = EVIDENCE_LABELS.filter((label) => EVIDENCE_CLASS[label] === evidenceClass);
-          const [name, gloss] = EVIDENCE_CLASS_TITLES[evidenceClass].split(' — ');
-          return (
-            <section class="evx-defs__class" data-evidence-class={evidenceClass} aria-labelledby={`ev-${evidenceClass}`}>
-              <h3 class="evx-defs__head" id={`ev-${evidenceClass}`}>
-                <span class="evx-defs__name">{name}</span>
-                <span class="evx-defs__gloss">{gloss}</span>
-              </h3>
-              <dl class="sh-evidence-list">
-                {labels.map((label) => (
-                  <div class="sh-evidence-row evx-def" id={`ev-${label.toLowerCase()}`} data-evx-def={label}>
-                    <dt>
-                      <span class="sh-evidence-mark" aria-hidden="true" />
-                      <span class="sh-mono">{label}</span>
-                      {EVIDENCE_SHORT[label] !== label && <span class="sh-evidence-short">short form {EVIDENCE_SHORT[label]}</span>}
-                    </dt>
-                    <dd>{EVIDENCE_MEANINGS[label]}.</dd>
-                    {FORBIDDEN_IN_EDITION_1.has(label) && (
-                      <dd class="sh-evidence-rule">Does not appear in Edition 1.0: no experiments were run; every experiment is a proposal.</dd>
+      {classes.map((evidenceClass) => {
+        const labels = EVIDENCE_LABELS.filter((label) => EVIDENCE_CLASS[label] === evidenceClass);
+        const [name, gloss] = EVIDENCE_CLASS_TITLES[evidenceClass].split(' — ');
+        return (
+          <section class="evx-defs__class" data-evidence-class={evidenceClass} aria-labelledby={`ev-${evidenceClass}`}>
+            <h3 class="evx-defs__head" id={`ev-${evidenceClass}`}>
+              <span class="evx-defs__name">{name}</span>
+              <span class="evx-defs__gloss">{gloss}</span>
+            </h3>
+            <dl class="sh-evidence-list">
+              {labels.map((label) => (
+                <div class="sh-evidence-row evx-def" id={`ev-${label.toLowerCase()}`} data-evx-def={label}>
+                  <dt>
+                    <span class="sh-evidence-mark" aria-hidden="true" />
+                    <span class="sh-mono">{label}</span>
+                    {EVIDENCE_SHORT[label] !== label && (
+                      <span class="sh-evidence-short">short form {EVIDENCE_SHORT[label]}</span>
                     )}
-                    {label === 'CODE-VERIFIED' && <dd class="sh-evidence-rule">Requires the repository, the commit, and the check performed.</dd>}
-                  </div>
-                ))}
-              </dl>
-            </section>
-          );
-        })
-      }
+                  </dt>
+                  <dd>{EVIDENCE_MEANINGS[label]}.</dd>
+                  {FORBIDDEN_IN_EDITION_1.has(label) && (
+                    <dd class="sh-evidence-rule">
+                      Does not appear in Edition 1.0: no experiments were run; every experiment is a proposal.
+                    </dd>
+                  )}
+                  {label === 'CODE-VERIFIED' && (
+                    <dd class="sh-evidence-rule">Requires the repository, the commit, and the check performed.</dd>
+                  )}
+                </div>
+              ))}
+            </dl>
+          </section>
+        );
+      })}
     </div>
   </section>
 
@@ -175,14 +236,12 @@ const CLASS_NAMES: Readonly<Record<EvidenceClass, string>> = { source: 'source',
       indistinguishable from the book's commentary:
     </p>
     <ol class="sh-index-list">
-      {
-        OBSERVATION_PARTS.map((part, index) => (
-          <li class="sh-index-row">
-            <span class="sh-num">{index + 1}</span>
-            <span>{OBSERVATION_PART_TITLES[part]}</span>
-          </li>
-        ))
-      }
+      {OBSERVATION_PARTS.map((part, index) => (
+        <li class="sh-index-row">
+          <span class="sh-num">{index + 1}</span>
+          <span>{OBSERVATION_PART_TITLES[part]}</span>
+        </li>
+      ))}
     </ol>
   </section>
 </ReaderLayout>

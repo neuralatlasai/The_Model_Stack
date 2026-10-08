@@ -35,11 +35,19 @@ export interface SearchInputs {
 }
 
 function joinBody(parts: readonly (string | null | undefined)[]): string {
-  return truncate(parts.filter((part): part is string => typeof part === 'string' && part.trim() !== '').map(squash).join(' · '), SEARCH_BODY_MAX);
+  return truncate(
+    parts
+      .filter((part): part is string => typeof part === 'string' && part.trim() !== '')
+      .map(squash)
+      .join(' · '),
+    SEARCH_BODY_MAX,
+  );
 }
 
 function keywords(parts: readonly (string | number | null | undefined)[]): string {
-  return unique(parts.filter((part): part is string | number => part !== null && part !== undefined && part !== '').map(String)).join(' ');
+  return unique(
+    parts.filter((part): part is string | number => part !== null && part !== undefined && part !== '').map(String),
+  ).join(' ');
 }
 
 export function buildSearchDocs(input: SearchInputs): SearchDoc[] {
@@ -84,12 +92,21 @@ export function buildSearchDocs(input: SearchInputs): SearchDoc[] {
     switch (kind) {
       case 'volume':
         context = 'The Model Stack';
-        body = joinBody([thesisText(doc), doc === undefined ? null : firstParagraphText(doc.lead), ...regionTitles(doc)]);
+        body = joinBody([
+          thesisText(doc),
+          doc === undefined ? null : firstParagraphText(doc.lead),
+          ...regionTitles(doc),
+        ]);
         keys = keywords([node.number, `volume ${node.number ?? ''}`]);
         break;
       case 'part':
         context = `${domainLabel(node)} / ${parent?.shortTitle ?? ''}`;
-        body = joinBody([node.plan?.outcome, thesisText(doc), doc === undefined ? null : firstParagraphText(doc.lead), ...regionTitles(doc)]);
+        body = joinBody([
+          node.plan?.outcome,
+          thesisText(doc),
+          doc === undefined ? null : firstParagraphText(doc.lead),
+          ...regionTitles(doc),
+        ]);
         keys = keywords([node.number, `part ${node.number ?? ''}`, node.part]);
         break;
       case 'chapter': {
@@ -99,8 +116,18 @@ export function buildSearchDocs(input: SearchInputs): SearchDoc[] {
         body =
           doc === undefined
             ? joinBody([node.plan?.artifact, prerequisites === null ? null : `prerequisites: ${prerequisites}`])
-            : joinBody([thesisText(doc), why === undefined ? null : firstParagraphText(why.blocks), node.plan?.artifact, ...regionTitles(doc)]);
-        keys = keywords([node.number, node.chapter, `ch${node.number ?? ''}`, ...(doc?.meta.axes.mechanism.map(humanise) ?? [])]);
+            : joinBody([
+                thesisText(doc),
+                why === undefined ? null : firstParagraphText(why.blocks),
+                node.plan?.artifact,
+                ...regionTitles(doc),
+              ]);
+        keys = keywords([
+          node.number,
+          node.chapter,
+          `ch${node.number ?? ''}`,
+          ...(doc?.meta.axes.mechanism.map(humanise) ?? []),
+        ]);
         break;
       }
       case 'section':
@@ -110,18 +137,34 @@ export function buildSearchDocs(input: SearchInputs): SearchDoc[] {
         break;
       case 'appendix':
         context = id === APPENDICES_ID ? 'Reference appendices' : `Appendix ${node.number ?? ''}`;
-        body = joinBody([thesisText(doc), doc === undefined ? null : firstParagraphText(doc.lead), ...regionTitles(doc)]);
+        body = joinBody([
+          thesisText(doc),
+          doc === undefined ? null : firstParagraphText(doc.lead),
+          ...regionTitles(doc),
+        ]);
         keys = keywords([node.number, node.number === null ? null : `appendix ${node.number}`]);
         break;
       case 'front-matter':
         context = 'Front matter';
-        body = joinBody([thesisText(doc), doc === undefined ? null : firstParagraphText(doc.lead), ...regionTitles(doc)]);
+        body = joinBody([
+          thesisText(doc),
+          doc === undefined ? null : firstParagraphText(doc.lead),
+          ...regionTitles(doc),
+        ]);
         keys = keywords([node.slug]);
         break;
       default:
         break;
     }
-    push({ id: `node:${id}`, kind, title: node.title, context: squash(context.replace(/\s*\/\s*$/u, '')), url: node.url, body, keywords: keys });
+    push({
+      id: `node:${id}`,
+      kind,
+      title: node.title,
+      context: squash(context.replace(/\s*\/\s*$/u, '')),
+      url: node.url,
+      body,
+      keywords: keys,
+    });
   }
 
   // ── objects inside documents ───────────────────────────────────────────────
@@ -157,7 +200,10 @@ export function buildSearchDocs(input: SearchInputs): SearchDoc[] {
             title: `Eq. ${block.number} · ${node.shortTitle}`,
             context,
             url: entry.url,
-            body: joinBody([...block.variables.map((variable) => `${variable.symbol}: ${variable.meaning}`), block.note === null ? null : inlineToText(block.note)]),
+            body: joinBody([
+              ...block.variables.map((variable) => `${variable.symbol}: ${variable.meaning}`),
+              block.note === null ? null : inlineToText(block.note),
+            ]),
             keywords: keywords([block.number, ...block.variables.map((variable) => variable.symbol)]),
           });
           break;
@@ -169,7 +215,12 @@ export function buildSearchDocs(input: SearchInputs): SearchDoc[] {
             title: block.number === null ? block.name : `Algorithm ${block.number} — ${block.name}`,
             context,
             url: at,
-            body: joinBody([...block.input, ...block.output, ...block.invariant, ...block.lines.map((line) => line.comment)]),
+            body: joinBody([
+              ...block.input,
+              ...block.output,
+              ...block.invariant,
+              ...block.lines.map((line) => line.comment),
+            ]),
             keywords: keywords([block.number]),
           });
           break;
@@ -207,7 +258,10 @@ export function buildSearchDocs(input: SearchInputs): SearchDoc[] {
             title: truncate(question, 140),
             context,
             url: at,
-            body: joinBody([question, block.settle === null ? null : `What would settle it: ${inlineToText(block.settle)}`]),
+            body: joinBody([
+              question,
+              block.settle === null ? null : `What would settle it: ${inlineToText(block.settle)}`,
+            ]),
             keywords: '',
           });
           break;
@@ -292,7 +346,12 @@ function sectionBody(doc: ResearchDocument): string {
     if (block.kind === 'definition') definitions.push(`${block.term}: ${inlineToText(block.content)}`);
   }
   const firsts = doc.regions.map((region) => firstParagraphText(region.blocks));
-  return joinBody([doc.header.thesis === null ? null : inlineToText(doc.header.thesis), doc.regions.map((region) => region.title).join(', '), ...definitions, ...firsts]);
+  return joinBody([
+    doc.header.thesis === null ? null : inlineToText(doc.header.thesis),
+    doc.regions.map((region) => region.title).join(', '),
+    ...definitions,
+    ...firsts,
+  ]);
 }
 
 function termDoc(term: GlossaryTerm, table: NodeTable, context: (node: NodeRecord) => string): SearchDoc {

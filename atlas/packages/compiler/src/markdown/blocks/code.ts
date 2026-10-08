@@ -46,7 +46,12 @@ function plainCode(node: Code, st: CompileState, env: FlowEnv): CodeBlock {
   };
 }
 
-export function convertCode(node: Code, following: readonly RootContent[], st: CompileState, env: FlowEnv): Consumed<Block> {
+export function convertCode(
+  node: Code,
+  following: readonly RootContent[],
+  st: CompileState,
+  env: FlowEnv,
+): Consumed<Block> {
   const next = following[0];
   const lang = (node.lang ?? '').toLowerCase();
   const line = st.lineOf(node);

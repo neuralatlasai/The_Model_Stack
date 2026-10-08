@@ -64,7 +64,10 @@ export async function readTextFiles(
   return mapLimit(
     relativePaths,
     concurrency,
-    async (relative) => ({ path: relative, text: normaliseText(await readFile(path.join(root, relative), { encoding: 'utf8', signal })) }),
+    async (relative) => ({
+      path: relative,
+      text: normaliseText(await readFile(path.join(root, relative), { encoding: 'utf8', signal })),
+    }),
     signal,
   );
 }

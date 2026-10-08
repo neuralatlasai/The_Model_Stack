@@ -26,36 +26,40 @@ const idLabel = number === null ? '' : doc.meta.entityType === 'section' ? `§${
 const first = regions[0];
 ---
 
-{
-  regions.length > 1 && (
-    <div class="rb-track" data-rail-track>
-      <p class="rb-track__head">
-        {idLabel !== '' && <span class="rb-track__id">{idLabel}</span>}
-        <span class="rb-track__title">{doc.meta.shortTitle}</span>
-        <span class="rb-track__pct" data-track-pct aria-hidden="true">0%</span>
-      </p>
-      <ol class="rb-track__ticks" role="list" aria-label="Regions of this page">
-        {regions.map((region, index) => (
-          <li class="rb-track__cell">
-            <a
-              class:list={['rb-track__tick', { 'is-current': index === 0 }]}
-              href={`#${region.anchor}`}
-              data-track-tick={region.anchor}
-              data-track-ord={ordinals.get(region.anchor) ?? ''}
-              data-track-title={region.title}
-              title={`${ordinals.get(region.anchor) ?? ''} ${region.title}`}
-            >
-              <span class="rb-vh">
-                {ordinals.get(region.anchor) ?? ''} {region.title}
-              </span>
-            </a>
-          </li>
-        ))}
-      </ol>
-      <p class="rb-track__now" aria-live="off">
-        <span class="rb-track__ord" data-track-now-ord>{first === undefined ? '' : (ordinals.get(first.anchor) ?? '')}</span>
-        <span class="rb-track__label" data-track-now-label>{first?.title ?? ''}</span>
-      </p>
-    </div>
-  )
-}
+{regions.length > 1 && (
+  <div class="rb-track" data-rail-track>
+    <p class="rb-track__head">
+      {idLabel !== '' && <span class="rb-track__id">{idLabel}</span>}
+      <span class="rb-track__title">{doc.meta.shortTitle}</span>
+      <span class="rb-track__pct" data-track-pct aria-hidden="true">
+        0%
+      </span>
+    </p>
+    <ol class="rb-track__ticks" role="list" aria-label="Regions of this page">
+      {regions.map((region, index) => (
+        <li class="rb-track__cell">
+          <a
+            class:list={['rb-track__tick', { 'is-current': index === 0 }]}
+            href={`#${region.anchor}`}
+            data-track-tick={region.anchor}
+            data-track-ord={ordinals.get(region.anchor) ?? ''}
+            data-track-title={region.title}
+            title={`${ordinals.get(region.anchor) ?? ''} ${region.title}`}
+          >
+            <span class="rb-vh">
+              {ordinals.get(region.anchor) ?? ''} {region.title}
+            </span>
+          </a>
+        </li>
+      ))}
+    </ol>
+    <p class="rb-track__now" aria-live="off">
+      <span class="rb-track__ord" data-track-now-ord>
+        {first === undefined ? '' : (ordinals.get(first.anchor) ?? '')}
+      </span>
+      <span class="rb-track__label" data-track-now-label>
+        {first?.title ?? ''}
+      </span>
+    </p>
+  </div>
+)}

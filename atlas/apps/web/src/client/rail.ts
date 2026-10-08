@@ -15,12 +15,29 @@
  */
 import type { InspectTarget } from '@atlas/core';
 import { ATTR, EVENTS } from './contract.ts';
-import { $, $$, focusElement, h, isRendered, prefersReducedMotion, replaceChildren, scrollIntoContainer } from './dom.ts';
+import {
+  $,
+  $$,
+  focusElement,
+  h,
+  isRendered,
+  prefersReducedMotion,
+  replaceChildren,
+  scrollIntoContainer,
+} from './dom.ts';
 import { CLIENT_EVENTS, emit } from './events.ts';
 import { ACTIONS, actionSelector, HOOK } from './hooks.ts';
 import type * as InspectorViewModule from './inspector-view.ts';
 import type { PageContext } from './page.ts';
-import { INITIAL_RAIL_STATE, railAnchor, railReducer, sameTarget, targetKey, type RailEvent, type RailState } from './rail-machine.ts';
+import {
+  INITIAL_RAIL_STATE,
+  railAnchor,
+  railReducer,
+  sameTarget,
+  targetKey,
+  type RailEvent,
+  type RailState,
+} from './rail-machine.ts';
 import { openSheet, showPanel } from './sheets.ts';
 
 const PANEL_MS = 190;
@@ -100,9 +117,18 @@ export function initRail(ctx: PageContext): void {
     if (ctl.disposed || state.mode !== 'inspecting' || !sameTarget(state.target, target)) return;
     const view = buildInspectorView(ctx, target, 'pinned');
     const titleId = 'atlas-inspector-title';
-    const close = h('button', { type: 'button', class: 'cx-inspector__close', [HOOK.action]: ACTIONS.inspectorClose[0] }, 'Close');
+    const close = h(
+      'button',
+      { type: 'button', class: 'cx-inspector__close', [HOOK.action]: ACTIONS.inspectorClose[0] },
+      'Close',
+    );
     const heading = h('h3', { class: 'cx-insp__title', id: titleId, tabindex: -1 }, view.title);
-    replaceChildren(host, h('header', { class: 'cx-inspector__head' }, h('span', { class: 'cx-insp__kind' }, view.kind), close), heading, view.body);
+    replaceChildren(
+      host,
+      h('header', { class: 'cx-inspector__head' }, h('span', { class: 'cx-insp__kind' }, view.kind), close),
+      heading,
+      view.body,
+    );
     host.setAttribute('aria-labelledby', titleId);
     host.setAttribute('data-inspect', targetKey(target));
     if (!host.hasAttribute('role')) host.setAttribute('role', 'region');
@@ -216,7 +242,8 @@ export function initRail(ctx: PageContext): void {
 
   // Before the first region crosses the reading line, show the first region's instruments.
   const first = groups[0]?.getAttribute(ATTR.railFor);
-  if (first !== undefined && first !== null && ctx.state.activeAnchor === null) dispatch({ type: 'region', anchor: first });
+  if (first !== undefined && first !== null && ctx.state.activeAnchor === null)
+    dispatch({ type: 'region', anchor: first });
 }
 
 function fadeIn(element: HTMLElement): void {

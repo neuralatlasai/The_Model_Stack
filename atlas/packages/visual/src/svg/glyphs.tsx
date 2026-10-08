@@ -29,8 +29,26 @@ export interface Box {
 
 const RADIUS = 1.5;
 
-function Rect({ box, class: className, radius = RADIUS }: { readonly box: Box; readonly class: string; readonly radius?: number }): JSX.Element {
-  return <rect class={className} x={r1(box.x)} y={r1(box.y)} width={r1(Math.max(0, box.width))} height={r1(Math.max(0, box.height))} rx={radius} ry={radius} />;
+function Rect({
+  box,
+  class: className,
+  radius = RADIUS,
+}: {
+  readonly box: Box;
+  readonly class: string;
+  readonly radius?: number;
+}): JSX.Element {
+  return (
+    <rect
+      class={className}
+      x={r1(box.x)}
+      y={r1(box.y)}
+      width={r1(Math.max(0, box.width))}
+      height={r1(Math.max(0, box.height))}
+      rx={radius}
+      ry={radius}
+    />
+  );
 }
 
 function points(list: readonly (readonly [number, number])[]): string {
@@ -46,7 +64,10 @@ export function NodeShape({ kind, box }: { readonly kind: NodeKind; readonly box
       return (
         <>
           <Rect class="vg-shape" box={box} />
-          <path class="vg-ink" d={`M${r1(x + RADIUS)} ${r1(y)} H${r1(x + 3)} V${r1(y + h)} H${r1(x + RADIUS)} A${RADIUS} ${RADIUS} 0 0 1 ${r1(x)} ${r1(y + h - RADIUS)} V${r1(y + RADIUS)} A${RADIUS} ${RADIUS} 0 0 1 ${r1(x + RADIUS)} ${r1(y)} Z`} />
+          <path
+            class="vg-ink"
+            d={`M${r1(x + RADIUS)} ${r1(y)} H${r1(x + 3)} V${r1(y + h)} H${r1(x + RADIUS)} A${RADIUS} ${RADIUS} 0 0 1 ${r1(x)} ${r1(y + h - RADIUS)} V${r1(y + RADIUS)} A${RADIUS} ${RADIUS} 0 0 1 ${r1(x + RADIUS)} ${r1(y)} Z`}
+          />
         </>
       );
     case 'state':
@@ -68,9 +89,15 @@ export function NodeShape({ kind, box }: { readonly kind: NodeKind; readonly box
       return (
         <>
           <Rect class="vg-shape" box={box} />
-          <path class="vg-band" d={`M${r1(x + 0.5)} ${r1(y + band)} V${r1(y + RADIUS)} Q${r1(x + 0.5)} ${r1(y + 0.5)} ${r1(x + RADIUS)} ${r1(y + 0.5)} H${r1(x + w - RADIUS)} Q${r1(x + w - 0.5)} ${r1(y + 0.5)} ${r1(x + w - 0.5)} ${r1(y + RADIUS)} V${r1(y + band)} Z`} />
+          <path
+            class="vg-band"
+            d={`M${r1(x + 0.5)} ${r1(y + band)} V${r1(y + RADIUS)} Q${r1(x + 0.5)} ${r1(y + 0.5)} ${r1(x + RADIUS)} ${r1(y + 0.5)} H${r1(x + w - RADIUS)} Q${r1(x + w - 0.5)} ${r1(y + 0.5)} ${r1(x + w - 0.5)} ${r1(y + RADIUS)} V${r1(y + band)} Z`}
+          />
           <line class="vg-hair" x1={r1(x)} y1={r1(y + band)} x2={r1(x + w)} y2={r1(y + band)} />
-          <path class="vg-hair vg-hair--soft" d={banks.map((bx) => `M${r1(bx)} ${r1(y + 1.5)} V${r1(y + band - 1.5)}`).join(' ')} />
+          <path
+            class="vg-hair vg-hair--soft"
+            d={banks.map((bx) => `M${r1(bx)} ${r1(y + 1.5)} V${r1(y + band - 1.5)}`).join(' ')}
+          />
         </>
       );
     }
@@ -117,8 +144,20 @@ export function NodeShape({ kind, box }: { readonly kind: NodeKind; readonly box
         <>
           <Rect class="vg-shape" box={box} />
           <line class="vg-hair" x1={r1(x + 8)} y1={r1(base)} x2={r1(x + w - 8)} y2={r1(base)} />
-          <path class="vg-hair" d={ticks.filter((tick) => tick.major).map(({ tx }) => `M${r1(tx)} ${r1(base)} V${r1(base - 3.5)}`).join(' ')} />
-          <path class="vg-hair vg-hair--soft" d={ticks.filter((tick) => !tick.major).map(({ tx }) => `M${r1(tx)} ${r1(base)} V${r1(base - 2)}`).join(' ')} />
+          <path
+            class="vg-hair"
+            d={ticks
+              .filter((tick) => tick.major)
+              .map(({ tx }) => `M${r1(tx)} ${r1(base)} V${r1(base - 3.5)}`)
+              .join(' ')}
+          />
+          <path
+            class="vg-hair vg-hair--soft"
+            d={ticks
+              .filter((tick) => !tick.major)
+              .map(({ tx }) => `M${r1(tx)} ${r1(base)} V${r1(base - 2)}`)
+              .join(' ')}
+          />
         </>
       );
     }
@@ -129,7 +168,12 @@ export function NodeShape({ kind, box }: { readonly kind: NodeKind; readonly box
       return (
         <>
           <path class="vg-shape" d={d} />
-          <path class="vg-hair" d={pins.map((px) => `M${r1(px)} ${r1(y - 2.5)} V${r1(y)} M${r1(px)} ${r1(y + h)} V${r1(y + h + 2.5)}`).join(' ')} />
+          <path
+            class="vg-hair"
+            d={pins
+              .map((px) => `M${r1(px)} ${r1(y - 2.5)} V${r1(y)} M${r1(px)} ${r1(y + h)} V${r1(y + h + 2.5)}`)
+              .join(' ')}
+          />
         </>
       );
     }
@@ -155,8 +199,14 @@ export function NodeShape({ kind, box }: { readonly kind: NodeKind; readonly box
       return (
         <>
           <Rect class="vg-shape" box={box} />
-          <polygon class="vg-ink" points={`${r1(dx - s)},${r1(cy)} ${r1(dx)},${r1(cy - s)} ${r1(dx + s)},${r1(cy)} ${r1(dx)},${r1(cy + s)}`} />
-          <path class="vg-hair" d={`M${r1(dx + s)} ${r1(cy)} L${r1(dx + s + 4)} ${r1(cy - 4)} M${r1(dx + s)} ${r1(cy)} L${r1(dx + s + 4)} ${r1(cy + 4)}`} />
+          <polygon
+            class="vg-ink"
+            points={`${r1(dx - s)},${r1(cy)} ${r1(dx)},${r1(cy - s)} ${r1(dx + s)},${r1(cy)} ${r1(dx)},${r1(cy + s)}`}
+          />
+          <path
+            class="vg-hair"
+            d={`M${r1(dx + s)} ${r1(cy)} L${r1(dx + s + 4)} ${r1(cy - 4)} M${r1(dx + s)} ${r1(cy)} L${r1(dx + s + 4)} ${r1(cy + 4)}`}
+          />
         </>
       );
     }
@@ -165,8 +215,14 @@ export function NodeShape({ kind, box }: { readonly kind: NodeKind; readonly box
       return (
         <>
           <Rect class="vg-shape" box={box} />
-          <path class="vg-hair" d={`M${r1(hx)} ${r1(cy + 5)} V${r1(cy - 1)} A4 4 0 0 0 ${r1(hx - 8)} ${r1(cy - 1)} V${r1(cy + 3)}`} />
-          <path class="vg-hair" d={`M${r1(hx - 11)} ${r1(cy + 1)} L${r1(hx - 8)} ${r1(cy + 4)} L${r1(hx - 5)} ${r1(cy + 1)}`} />
+          <path
+            class="vg-hair"
+            d={`M${r1(hx)} ${r1(cy + 5)} V${r1(cy - 1)} A4 4 0 0 0 ${r1(hx - 8)} ${r1(cy - 1)} V${r1(cy + 3)}`}
+          />
+          <path
+            class="vg-hair"
+            d={`M${r1(hx - 11)} ${r1(cy + 1)} L${r1(hx - 8)} ${r1(cy + 4)} L${r1(hx - 5)} ${r1(cy + 1)}`}
+          />
         </>
       );
     }
@@ -192,29 +248,71 @@ export interface NodeGlyphProps {
 }
 
 /** A complete node: glyph plus wrapped label and monospace sub-label. */
-export function NodeGlyph({ kind, label, sub, box, emphasis = false, href = null, id, vgKey, lit = false }: NodeGlyphProps): JSX.Element {
+export function NodeGlyph({
+  kind,
+  label,
+  sub,
+  box,
+  emphasis = false,
+  href = null,
+  id,
+  vgKey,
+  lit = false,
+}: NodeGlyphProps): JSX.Element {
   const lines = placeNodeText(kind, label, sub, box);
   const key = vgKey ?? id;
   const body = (
-    <g class={cls('vg-node', `vg-node--${kind}`, emphasis && 'vg-node--emph', lit && 'is-lit')} data-node={id} data-vg-key={key}>
+    <g
+      class={cls('vg-node', `vg-node--${kind}`, emphasis && 'vg-node--emph', lit && 'is-lit')}
+      data-node={id}
+      data-vg-key={key}
+    >
       <NodeShape kind={kind} box={box} />
       {lines.map((line) => (
-        <text class={line.role === 'label' ? cls('vg-node__label', kind === 'boundary' && 'vg-node__label--caps') : 'vg-node__sub'} x={line.x} y={line.y} text-anchor="middle">
+        <text
+          class={
+            line.role === 'label'
+              ? cls('vg-node__label', kind === 'boundary' && 'vg-node__label--caps')
+              : 'vg-node__sub'
+          }
+          x={line.x}
+          y={line.y}
+          text-anchor="middle"
+        >
           {line.text}
         </text>
       ))}
     </g>
   );
-  return href === null ? body : <a href={href} class="vg-node-link">{body}</a>;
+  return href === null ? (
+    body
+  ) : (
+    <a href={href} class="vg-node-link">
+      {body}
+    </a>
+  );
 }
 
 /** A small standalone glyph (legends, hierarchy rows). Decorative: the adjacent text names the kind. */
-export function GlyphIcon({ kind, emphasis = false }: { readonly kind: NodeKind; readonly emphasis?: boolean }): JSX.Element {
+export function GlyphIcon({
+  kind,
+  emphasis = false,
+}: {
+  readonly kind: NodeKind;
+  readonly emphasis?: boolean;
+}): JSX.Element {
   const inset = GLYPH_INSET[kind];
   const width = 30 + Math.min(inset.left + inset.right, 10);
   const height = 18 + Math.min(inset.top + inset.bottom, 6);
   return (
-    <svg class={cls('vg-glyph', `vg-node--${kind}`, emphasis && 'vg-node--emph')} viewBox={`-1 -4 ${width + 2} ${height + 8}`} width={width + 2} height={height + 8} aria-hidden="true" focusable="false">
+    <svg
+      class={cls('vg-glyph', `vg-node--${kind}`, emphasis && 'vg-node--emph')}
+      viewBox={`-1 -4 ${width + 2} ${height + 8}`}
+      width={width + 2}
+      height={height + 8}
+      aria-hidden="true"
+      focusable="false"
+    >
       <g class="vg-node">
         <NodeShape kind={kind} box={{ x: 0, y: 0, width, height }} />
       </g>

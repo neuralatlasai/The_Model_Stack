@@ -89,7 +89,11 @@ export function mapItem(node: GraphNode): MapItem {
     url: node.url,
     map: mapUrl(node.url),
     written: node.hasManuscript,
-    summary: node.summary ?? (node.plan?.artifact === null || node.plan?.artifact === undefined ? null : `Planned artifact: ${node.plan.artifact}`),
+    summary:
+      node.summary ??
+      (node.plan?.artifact === null || node.plan?.artifact === undefined
+        ? null
+        : `Planned artifact: ${node.plan.artifact}`),
     domain: node.domain,
     kind: nodeKind(node),
   };

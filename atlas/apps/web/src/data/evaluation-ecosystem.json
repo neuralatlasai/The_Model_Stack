@@ -322,15 +322,8 @@
       "why": "Probably the strongest single public model-comparison surface today because it independently runs models and combines intelligence with price, latency and throughput. Its current Intelligence Index uses ten evaluations spanning agents, coding, science and general capability.",
       "kind": "leaderboard",
       "domain": "general",
-      "chapters": [
-        6,
-        48,
-        61,
-        62
-      ],
-      "aliases": [
-        "Artificial Analysis"
-      ],
+      "chapters": [6, 48, 61, 62],
+      "aliases": ["Artificial Analysis"],
       "refs": [
         {
           "label": "Artificial Analysis",
@@ -361,16 +354,8 @@
       "why": "Exceptionally strong research-grade longitudinal capability tracking. It currently tracks hundreds of models and dozens of benchmarks and exposes methodology/data rather than only a leaderboard.",
       "kind": "leaderboard",
       "domain": "general",
-      "chapters": [
-        6,
-        61,
-        62
-      ],
-      "aliases": [
-        "Epoch Capabilities Index",
-        "Epoch AI Benchmarking",
-        "Epoch AI benchmarking hub"
-      ],
+      "chapters": [6, 61, 62],
+      "aliases": ["Epoch Capabilities Index", "Epoch AI Benchmarking", "Epoch AI benchmarking hub"],
       "refs": [
         {
           "label": "Epoch AI",
@@ -401,18 +386,8 @@
       "why": "Best large-scale real-user preference signal. It measures utility that static QA benchmarks miss through anonymous pairwise human judgments. LMArena rebranded to Arena in January 2026.",
       "kind": "leaderboard",
       "domain": "general",
-      "chapters": [
-        6,
-        61,
-        62
-      ],
-      "aliases": [
-        "Chatbot Arena",
-        "LMArena",
-        "LM Arena",
-        "LMSYS Arena",
-        "Arena.ai"
-      ],
+      "chapters": [6, 61, 62],
+      "aliases": ["Chatbot Arena", "LMArena", "LM Arena", "LMSYS Arena", "Arena.ai"],
       "refs": [
         {
           "label": "Arena AI",
@@ -443,14 +418,8 @@
       "why": "Critical for long-horizon autonomous capability, human-calibrated task horizons and AI-R&D evaluation. METR itself warns that time-horizon estimates have large uncertainty and are approaching saturation—exactly the methodological transparency a serious evaluation program should provide.",
       "kind": "leaderboard",
       "domain": "agents",
-      "chapters": [
-        51,
-        54,
-        63
-      ],
-      "aliases": [
-        "METR"
-      ],
+      "chapters": [51, 54, 63],
+      "aliases": ["METR"],
       "refs": [
         {
           "label": "METR",
@@ -481,13 +450,8 @@
       "why": "One of the strongest directions in 2026: economically valuable real work rather than academic QA. APEX now spans professional services, long-horizon agents, accounting and software engineering.",
       "kind": "leaderboard",
       "domain": "work",
-      "chapters": [
-        61,
-        63
-      ],
-      "aliases": [
-        "Mercor"
-      ],
+      "chapters": [61, 63],
+      "aliases": ["Mercor"],
       "refs": [
         {
           "label": "Mercor",
@@ -518,17 +482,8 @@
       "why": "Important because test data are private, domain experts grade outputs, and contamination/gaming resistance is explicitly part of the design.",
       "kind": "leaderboard",
       "domain": "general",
-      "chapters": [
-        6,
-        8,
-        61,
-        62
-      ],
-      "aliases": [
-        "SEAL Leaderboard",
-        "SEAL leaderboards",
-        "Scale SEAL"
-      ],
+      "chapters": [6, 8, 61, 62],
+      "aliases": ["SEAL Leaderboard", "SEAL leaderboards", "Scale SEAL"],
       "refs": [
         {
           "label": "Scale AI",
@@ -559,14 +514,8 @@
       "why": "Still one of the canonical real-repository agent/coding measures. Actual GitHub issue resolution is significantly more informative than function-generation benchmarks.",
       "kind": "benchmark",
       "domain": "coding",
-      "chapters": [
-        61,
-        63
-      ],
-      "aliases": [
-        "SWE-bench",
-        "SWE-Bench"
-      ],
+      "chapters": [61, 63],
+      "aliases": ["SWE-bench", "SWE-Bench"],
       "refs": [],
       "links": {
         "official": "https://www.swebench.com/",
@@ -592,14 +541,8 @@
       "why": "High-value signal for abstraction/generalization rather than memorized knowledge. Maintains explicit verification policies and cost/task reporting.",
       "kind": "benchmark",
       "domain": "reasoning",
-      "chapters": [
-        38,
-        61
-      ],
-      "aliases": [
-        "ARC-AGI",
-        "ARC Prize"
-      ],
+      "chapters": [38, 61],
+      "aliases": ["ARC-AGI", "ARC Prize"],
       "refs": [
         {
           "label": "ARC Prize",
@@ -630,15 +573,8 @@
       "why": "One of the most consequential 2026 agent evaluations: real terminal environments, difficult evolving tasks, executable verification and standardized Harbor execution.",
       "kind": "benchmark",
       "domain": "agents",
-      "chapters": [
-        51,
-        54,
-        63
-      ],
-      "aliases": [
-        "Terminal-Bench",
-        "Terminal Bench"
-      ],
+      "chapters": [51, 54, 63],
+      "aliases": ["Terminal-Bench", "Terminal Bench"],
       "refs": [
         {
           "label": "GitHub",
@@ -669,16 +605,8 @@
       "why": "The strongest open-source general frontier-evaluation framework in my ordering: datasets, agents, tools, scorers, sandboxes, MCP, external agents and 200+ ready-to-run evaluations.",
       "kind": "framework",
       "domain": "general",
-      "chapters": [
-        6,
-        61,
-        62
-      ],
-      "aliases": [
-        "Inspect AI",
-        "inspect_ai",
-        "UK AISI Inspect"
-      ],
+      "chapters": [6, 61, 62],
+      "aliases": ["Inspect AI", "inspect_ai", "UK AISI Inspect"],
       "refs": [
         {
           "label": "Inspect",
@@ -709,15 +637,8 @@
       "why": "Designed explicitly against contamination, with new questions introduced over time rather than freezing a static benchmark forever.",
       "kind": "benchmark",
       "domain": "general",
-      "chapters": [
-        6,
-        8,
-        61,
-        62
-      ],
-      "aliases": [
-        "LiveBench"
-      ],
+      "chapters": [6, 8, 61, 62],
+      "aliases": ["LiveBench"],
       "refs": [
         {
           "label": "GitHub",
@@ -748,16 +669,8 @@
       "why": "Tool calling has become core agent infrastructure. BFCL V4 moves beyond trivial function selection toward multi-turn and agentic evaluation.",
       "kind": "benchmark",
       "domain": "agents",
-      "chapters": [
-        51,
-        54,
-        63
-      ],
-      "aliases": [
-        "BFCL",
-        "Berkeley Function Calling Leaderboard",
-        "Berkeley Function-Calling Leaderboard"
-      ],
+      "chapters": [51, 54, 63],
+      "aliases": ["BFCL", "Berkeley Function Calling Leaderboard", "Berkeley Function-Calling Leaderboard"],
       "refs": [
         {
           "label": "Gorilla",
@@ -788,19 +701,8 @@
       "why": "Evaluates policy following, user interaction and tool execution under dynamic environments; materially closer to production agents than static QA. The original τ-bench repository now explicitly points users toward τ³.",
       "kind": "benchmark",
       "domain": "agents",
-      "chapters": [
-        51,
-        54,
-        63
-      ],
-      "aliases": [
-        "τ³-bench",
-        "τ²-bench",
-        "τ-bench",
-        "~tau-bench",
-        "~tau2-bench",
-        "~tau3-bench"
-      ],
+      "chapters": [51, 54, 63],
+      "aliases": ["τ³-bench", "τ²-bench", "τ-bench", "~tau-bench", "~tau2-bench", "~tau3-bench"],
       "refs": [
         {
           "label": "GitHub",
@@ -831,15 +733,8 @@
       "why": "Strong methodology, standardized scenarios and broad evaluation philosophy. Especially useful where transparency across metrics matters more than a single number.",
       "kind": "framework",
       "domain": "general",
-      "chapters": [
-        6,
-        61,
-        62
-      ],
-      "aliases": [
-        "HELM",
-        "Holistic Evaluation of Language Models"
-      ],
+      "chapters": [6, 61, 62],
+      "aliases": ["HELM", "Holistic Evaluation of Language Models"],
       "refs": [],
       "links": {
         "official": "https://crfm.stanford.edu/helm/",
@@ -865,14 +760,8 @@
       "why": "Major open evaluation stack supporting 100+ datasets, proprietary/open models and increasingly multimodal evaluation. Active 2026 development matters here.",
       "kind": "framework",
       "domain": "general",
-      "chapters": [
-        6,
-        61,
-        62
-      ],
-      "aliases": [
-        "OpenCompass"
-      ],
+      "chapters": [6, 61, 62],
+      "aliases": ["OpenCompass"],
       "refs": [
         {
           "label": "GitHub",
@@ -903,15 +792,8 @@
       "why": "Important for production evaluation pipelines, model graders and application-specific eval sets rather than public leaderboard comparison.",
       "kind": "platform",
       "domain": "apps",
-      "chapters": [
-        47,
-        62,
-        63
-      ],
-      "aliases": [
-        "OpenAI Evals API",
-        "OpenAI graders"
-      ],
+      "chapters": [47, 62, 63],
+      "aliases": ["OpenAI Evals API", "OpenAI graders"],
       "refs": [],
       "links": {
         "official": "https://developers.openai.com/api/docs/guides/evals",
@@ -937,15 +819,8 @@
       "why": "Mature reference architecture for defining model/system evals and private/custom eval datasets.",
       "kind": "framework",
       "domain": "general",
-      "chapters": [
-        6,
-        61,
-        62
-      ],
-      "aliases": [
-        "OpenAI Evals",
-        "openai/evals"
-      ],
+      "chapters": [6, 61, 62],
+      "aliases": ["OpenAI Evals", "openai/evals"],
       "refs": [
         {
           "label": "GitHub",
@@ -976,17 +851,8 @@
       "why": "Still foundational infrastructure. It implements 60+ standard benchmarks, numerous backends and underpins major open-model evaluation workflows. It remains actively maintained in 2026.",
       "kind": "framework",
       "domain": "general",
-      "chapters": [
-        6,
-        61,
-        62
-      ],
-      "aliases": [
-        "lm-evaluation-harness",
-        "LM Evaluation Harness",
-        "Language Model Evaluation Harness",
-        "lm-eval"
-      ],
+      "chapters": [6, 61, 62],
+      "aliases": ["lm-evaluation-harness", "LM Evaluation Harness", "Language Model Evaluation Harness", "lm-eval"],
       "refs": [
         {
           "label": "GitHub",
@@ -1017,14 +883,8 @@
       "why": "Strong because the problems are deliberately unpublished/extremely difficult; newer variants include research-level and open mathematical problems.",
       "kind": "benchmark",
       "domain": "reasoning",
-      "chapters": [
-        8,
-        38,
-        61
-      ],
-      "aliases": [
-        "FrontierMath"
-      ],
+      "chapters": [8, 38, 61],
+      "aliases": ["FrontierMath"],
       "refs": [
         {
           "label": "Epoch AI",
@@ -1055,14 +915,8 @@
       "why": "Better contamination profile than static coding datasets because it continuously draws from recently released competitive-programming problems.",
       "kind": "benchmark",
       "domain": "coding",
-      "chapters": [
-        8,
-        61,
-        63
-      ],
-      "aliases": [
-        "LiveCodeBench"
-      ],
+      "chapters": [8, 61, 63],
+      "aliases": ["LiveCodeBench"],
       "refs": [
         {
           "label": "GitHub",
@@ -1093,15 +947,8 @@
       "why": "Extremely difficult multi-domain expert knowledge/reasoning; useful while frontier separation remains substantial.",
       "kind": "benchmark",
       "domain": "reasoning",
-      "chapters": [
-        38,
-        61
-      ],
-      "aliases": [
-        "Humanity's Last Exam",
-        "Humanity’s Last Exam",
-        "HLE"
-      ],
+      "chapters": [38, 61],
+      "aliases": ["Humanity's Last Exam", "Humanity’s Last Exam", "HLE"],
       "refs": [],
       "links": {
         "official": "https://lastexam.ai/",
@@ -1127,13 +974,8 @@
       "why": "Real occupational deliverables rather than exam-style QA; covers economically relevant tasks across occupations.",
       "kind": "benchmark",
       "domain": "work",
-      "chapters": [
-        61,
-        63
-      ],
-      "aliases": [
-        "GDPval"
-      ],
+      "chapters": [61, 63],
+      "aliases": ["GDPval"],
       "refs": [
         {
           "label": "OpenAI",
@@ -1164,13 +1006,8 @@
       "why": "Multi-hour professional tasks across files, communications and productivity applications. Updated to 1.1 in September 2026.",
       "kind": "benchmark",
       "domain": "work",
-      "chapters": [
-        61,
-        63
-      ],
-      "aliases": [
-        "APEX-Agents"
-      ],
+      "chapters": [61, 63],
+      "aliases": ["APEX-Agents"],
       "refs": [
         {
           "label": "Mercor",
@@ -1201,13 +1038,8 @@
       "why": "Focuses on economically valuable integration and observability engineering rather than toy coding.",
       "kind": "benchmark",
       "domain": "coding",
-      "chapters": [
-        61,
-        63
-      ],
-      "aliases": [
-        "APEX-SWE"
-      ],
+      "chapters": [61, 63],
+      "aliases": ["APEX-SWE"],
       "refs": [
         {
           "label": "Mercor",
@@ -1238,14 +1070,8 @@
       "why": "Long-horizon GUI/computer interaction in real operating-system environments. OSWorld 2.0/2.1 is the current branch in 2026.",
       "kind": "benchmark",
       "domain": "agents",
-      "chapters": [
-        51,
-        54,
-        63
-      ],
-      "aliases": [
-        "OSWorld"
-      ],
+      "chapters": [51, 54, 63],
+      "aliases": ["OSWorld"],
       "refs": [
         {
           "label": "OSWorld",
@@ -1276,14 +1102,8 @@
       "why": "Measures AI agents against human experts on research-engineering tasks; valuable for autonomous AI-R&D capability.",
       "kind": "benchmark",
       "domain": "agents",
-      "chapters": [
-        51,
-        54,
-        63
-      ],
-      "aliases": [
-        "RE-Bench"
-      ],
+      "chapters": [51, 54, 63],
+      "aliases": ["RE-Bench"],
       "refs": [
         {
           "label": "GitHub",
@@ -1314,14 +1134,8 @@
       "why": "Measures persistent, strategic search for difficult-to-find facts; designed around easy verification but difficult discovery.",
       "kind": "benchmark",
       "domain": "agents",
-      "chapters": [
-        51,
-        54,
-        63
-      ],
-      "aliases": [
-        "BrowseComp"
-      ],
+      "chapters": [51, 54, 63],
+      "aliases": ["BrowseComp"],
       "refs": [
         {
           "label": "OpenAI",
@@ -1352,16 +1166,8 @@
       "why": "Long-form web research, information recall, analysis and presentation. Current professional research-agent signal.",
       "kind": "benchmark",
       "domain": "agents",
-      "chapters": [
-        51,
-        54,
-        63
-      ],
-      "aliases": [
-        "DeepResearchBench",
-        "Deep Research Bench",
-        "DeepResearch Bench"
-      ],
+      "chapters": [51, 54, 63],
+      "aliases": ["DeepResearchBench", "Deep Research Bench", "DeepResearch Bench"],
       "refs": [
         {
           "label": "Mercor",
@@ -1392,13 +1198,8 @@
       "why": "Simulated software-company tasks involving browsing, coding, communication and work applications.",
       "kind": "benchmark",
       "domain": "work",
-      "chapters": [
-        61,
-        63
-      ],
-      "aliases": [
-        "TheAgentCompany"
-      ],
+      "chapters": [61, 63],
+      "aliases": ["TheAgentCompany"],
       "refs": [
         {
           "label": "GitHub",
@@ -1429,14 +1230,8 @@
       "why": "Multi-step general-agent benchmark with tools/files and private test answers; still actively maintained.",
       "kind": "benchmark",
       "domain": "agents",
-      "chapters": [
-        51,
-        54,
-        63
-      ],
-      "aliases": [
-        "GAIA"
-      ],
+      "chapters": [51, 54, 63],
+      "aliases": ["GAIA"],
       "refs": [
         {
           "label": "Hugging Face",
@@ -1467,13 +1262,8 @@
       "why": "Real freelance engineering tasks linked to actual monetary value and end-to-end verification.",
       "kind": "benchmark",
       "domain": "coding",
-      "chapters": [
-        61,
-        63
-      ],
-      "aliases": [
-        "SWE-Lancer"
-      ],
+      "chapters": [61, 63],
+      "aliases": ["SWE-Lancer"],
       "refs": [
         {
           "label": "OpenAI",
@@ -1504,13 +1294,8 @@
       "why": "Particularly useful for realistic edit-based coding rather than isolated function generation.",
       "kind": "benchmark",
       "domain": "coding",
-      "chapters": [
-        61,
-        63
-      ],
-      "aliases": [
-        "~aider polyglot"
-      ],
+      "chapters": [61, 63],
+      "aliases": ["~aider polyglot"],
       "refs": [
         {
           "label": "GitHub",
@@ -1541,13 +1326,8 @@
       "why": "Research-derived coding problems across physics, biology, chemistry, mathematics and materials science.",
       "kind": "benchmark",
       "domain": "coding",
-      "chapters": [
-        61,
-        63
-      ],
-      "aliases": [
-        "SciCode"
-      ],
+      "chapters": [61, 63],
+      "aliases": ["SciCode"],
       "refs": [
         {
           "label": "GitHub",
@@ -1578,14 +1358,8 @@
       "why": "Stateful agent benchmark combining legitimate task utility with prompt-injection attack success.",
       "kind": "benchmark",
       "domain": "safety",
-      "chapters": [
-        51,
-        63,
-        65
-      ],
-      "aliases": [
-        "AgentDojo"
-      ],
+      "chapters": [51, 63, 65],
+      "aliases": ["AgentDojo"],
       "refs": [
         {
           "label": "GitHub",
@@ -1616,14 +1390,8 @@
       "why": "Interactive web environments and execution-based success.",
       "kind": "benchmark",
       "domain": "agents",
-      "chapters": [
-        51,
-        54,
-        63
-      ],
-      "aliases": [
-        "WebArena"
-      ],
+      "chapters": [51, 54, 63],
+      "aliases": ["WebArena"],
       "refs": [],
       "links": {
         "official": "https://webarena.dev/",
@@ -1649,14 +1417,8 @@
       "why": "Useful common environment/harness for browser-agent evaluation.",
       "kind": "framework",
       "domain": "agents",
-      "chapters": [
-        51,
-        54,
-        63
-      ],
-      "aliases": [
-        "BrowserGym"
-      ],
+      "chapters": [51, 54, 63],
+      "aliases": ["BrowserGym"],
       "refs": [],
       "links": {
         "official": "https://github.com/ServiceNow/BrowserGym",
@@ -1682,14 +1444,8 @@
       "why": "Adds visual web understanding to browser task execution.",
       "kind": "benchmark",
       "domain": "agents",
-      "chapters": [
-        51,
-        54,
-        63
-      ],
-      "aliases": [
-        "VisualWebArena"
-      ],
+      "chapters": [51, 54, 63],
+      "aliases": ["VisualWebArena"],
       "refs": [],
       "links": {
         "official": "https://jykoh.com/vwa",
@@ -1715,14 +1471,8 @@
       "why": "Work-oriented web application tasks; useful for enterprise agent evaluation.",
       "kind": "benchmark",
       "domain": "agents",
-      "chapters": [
-        51,
-        54,
-        63
-      ],
-      "aliases": [
-        "WorkArena"
-      ],
+      "chapters": [51, 54, 63],
+      "aliases": ["WorkArena"],
       "refs": [],
       "links": {
         "official": "https://github.com/ServiceNow/WorkArena",
@@ -1748,16 +1498,8 @@
       "why": "Tests an outer coding agent constructing a functioning customer-service agent, then evaluates it through τ-style interactions.",
       "kind": "benchmark",
       "domain": "agents",
-      "chapters": [
-        51,
-        54,
-        63
-      ],
-      "aliases": [
-        "Hyper-τ",
-        "~hyper-tau",
-        "τ^τ-bench"
-      ],
+      "chapters": [51, 54, 63],
+      "aliases": ["Hyper-τ", "~hyper-tau", "τ^τ-bench"],
       "refs": [
         {
           "label": "GitHub",
@@ -1788,13 +1530,8 @@
       "why": "Measures agent ability against remote-work tasks; included in Epoch's current capability benchmark ecosystem.",
       "kind": "benchmark",
       "domain": "work",
-      "chapters": [
-        61,
-        63
-      ],
-      "aliases": [
-        "Remote Labor Index"
-      ],
+      "chapters": [61, 63],
+      "aliases": ["Remote Labor Index"],
       "refs": [
         {
           "label": "Epoch AI",
@@ -1825,15 +1562,8 @@
       "why": "High-value banking, consulting, law and medicine deliverables.",
       "kind": "benchmark",
       "domain": "work",
-      "chapters": [
-        61,
-        63
-      ],
-      "aliases": [
-        "APEX-1",
-        "APEX-v1",
-        "AI Productivity Index"
-      ],
+      "chapters": [61, 63],
+      "aliases": ["APEX-1", "APEX-v1", "AI Productivity Index"],
       "refs": [],
       "links": {
         "official": "https://www.mercor.com/apex/apex-v1-leaderboard/",
@@ -1859,13 +1589,8 @@
       "why": "Real reconciliation, statements, audit and tax workflows.",
       "kind": "benchmark",
       "domain": "work",
-      "chapters": [
-        61,
-        63
-      ],
-      "aliases": [
-        "APEX-Accounting"
-      ],
+      "chapters": [61, 63],
+      "aliases": ["APEX-Accounting"],
       "refs": [
         {
           "label": "Mercor",
@@ -1896,13 +1621,8 @@
       "why": "Evaluates realistic shopping, food, DIY and gaming tasks rather than academic questions.",
       "kind": "benchmark",
       "domain": "work",
-      "chapters": [
-        61,
-        63
-      ],
-      "aliases": [
-        "AI Consumer Index"
-      ],
+      "chapters": [61, 63],
+      "aliases": ["AI Consumer Index"],
       "refs": [
         {
           "label": "Mercor",
@@ -1933,14 +1653,8 @@
       "why": "High-quality verified factual knowledge benchmark; useful as a clean factual layer rather than a holistic intelligence metric.",
       "kind": "benchmark",
       "domain": "general",
-      "chapters": [
-        6,
-        61,
-        62
-      ],
-      "aliases": [
-        "SimpleQA"
-      ],
+      "chapters": [6, 61, 62],
+      "aliases": ["SimpleQA"],
       "refs": [],
       "links": {
         "official": "https://www.kaggle.com/benchmarks/deepmind/simpleqa-verified",
@@ -1966,13 +1680,8 @@
       "why": "Reimplementation of entire software programs rather than isolated functions; part of Epoch's current frontier suite.",
       "kind": "benchmark",
       "domain": "coding",
-      "chapters": [
-        61,
-        63
-      ],
-      "aliases": [
-        "MirrorCode"
-      ],
+      "chapters": [61, 63],
+      "aliases": ["MirrorCode"],
       "refs": [
         {
           "label": "Epoch AI",
@@ -2003,13 +1712,8 @@
       "why": "Stronger emphasis on repository-level software agent performance.",
       "kind": "benchmark",
       "domain": "coding",
-      "chapters": [
-        61,
-        63
-      ],
-      "aliases": [
-        "DeepSWE"
-      ],
+      "chapters": [61, 63],
+      "aliases": ["DeepSWE"],
       "refs": [],
       "links": {
         "official": "https://deepswe.datacurve.ai/",
@@ -2035,13 +1739,8 @@
       "why": "Hard coding/agent capability signal included in contemporary capability indices.",
       "kind": "benchmark",
       "domain": "coding",
-      "chapters": [
-        61,
-        63
-      ],
-      "aliases": [
-        "FrontierCode"
-      ],
+      "chapters": [61, 63],
+      "aliases": ["FrontierCode"],
       "refs": [],
       "links": {
         "official": "https://cognition.com/frontiercode",
@@ -2067,13 +1766,8 @@
       "why": "Important for verifiable proof/reasoning capability.",
       "kind": "benchmark",
       "domain": "reasoning",
-      "chapters": [
-        38,
-        61
-      ],
-      "aliases": [
-        "ProofBench"
-      ],
+      "chapters": [38, 61],
+      "aliases": ["ProofBench"],
       "refs": [],
       "links": {
         "official": "https://www.vals.ai/benchmarks/proof_bench",
@@ -2099,13 +1793,8 @@
       "why": "Realistic exploitation/security capability evaluation.",
       "kind": "benchmark",
       "domain": "safety",
-      "chapters": [
-        63,
-        65
-      ],
-      "aliases": [
-        "ExploitBench"
-      ],
+      "chapters": [63, 65],
+      "aliases": ["ExploitBench"],
       "refs": [],
       "links": {
         "official": "https://exploitbench.ai/",
@@ -2131,15 +1820,8 @@
       "why": "Measures capabilities associated with post-training workflows.",
       "kind": "benchmark",
       "domain": "agents",
-      "chapters": [
-        31,
-        51,
-        54,
-        63
-      ],
-      "aliases": [
-        "PostTrainBench"
-      ],
+      "chapters": [31, 51, 54, 63],
+      "aliases": ["PostTrainBench"],
       "refs": [],
       "links": {
         "official": "https://posttrainbench.com/",
@@ -2165,14 +1847,8 @@
       "why": "Extensible OpenCompass-family infrastructure specifically aimed at LLM/VLM agents; active in 2026.",
       "kind": "framework",
       "domain": "agents",
-      "chapters": [
-        51,
-        54,
-        63
-      ],
-      "aliases": [
-        "AgentCompass"
-      ],
+      "chapters": [51, 54, 63],
+      "aliases": ["AgentCompass"],
       "refs": [
         {
           "label": "GitHub",
@@ -2203,14 +1879,8 @@
       "why": "Unified text/image/video/audio evaluation with 100+ tasks.",
       "kind": "framework",
       "domain": "multimodal",
-      "chapters": [
-        55,
-        63
-      ],
-      "aliases": [
-        "LMMs-Eval",
-        "lmms-eval"
-      ],
+      "chapters": [55, 63],
+      "aliases": ["LMMs-Eval", "lmms-eval"],
       "refs": [
         {
           "label": "GitHub",
@@ -2241,13 +1911,8 @@
       "why": "One-command VLM benchmarking and broad model/dataset support; increasingly integrated into OpenCompass.",
       "kind": "framework",
       "domain": "multimodal",
-      "chapters": [
-        55,
-        63
-      ],
-      "aliases": [
-        "VLMEvalKit"
-      ],
+      "chapters": [55, 63],
+      "aliases": ["VLMEvalKit"],
       "refs": [
         {
           "label": "GitHub",
@@ -2278,14 +1943,8 @@
       "why": "Useful common leaderboard around standardized VLM evaluations.",
       "kind": "leaderboard",
       "domain": "multimodal",
-      "chapters": [
-        55,
-        63
-      ],
-      "aliases": [
-        "OpenVLM Leaderboard",
-        "Open VLM Leaderboard"
-      ],
+      "chapters": [55, 63],
+      "aliases": ["OpenVLM Leaderboard", "Open VLM Leaderboard"],
       "refs": [],
       "links": {
         "official": "https://huggingface.co/spaces/opencompass/open_vlm_leaderboard",
@@ -2311,14 +1970,8 @@
       "why": "Removes many text-only shortcuts and introduces harder visual reasoning conditions.",
       "kind": "benchmark",
       "domain": "multimodal",
-      "chapters": [
-        55,
-        63
-      ],
-      "aliases": [
-        "MMMU-Pro",
-        "MMMU"
-      ],
+      "chapters": [55, 63],
+      "aliases": ["MMMU-Pro", "MMMU"],
       "refs": [
         {
           "label": "GitHub",
@@ -2349,14 +2002,8 @@
       "why": "Broad video understanding evaluation and increasingly treated as an industry-standard multimodal test.",
       "kind": "benchmark",
       "domain": "multimodal",
-      "chapters": [
-        55,
-        57,
-        63
-      ],
-      "aliases": [
-        "Video-MME"
-      ],
+      "chapters": [55, 57, 63],
+      "aliases": ["Video-MME"],
       "refs": [
         {
           "label": "GitHub",
@@ -2387,13 +2034,8 @@
       "why": "Stronger emphasis on difficult real-world high-resolution visual scenarios.",
       "kind": "benchmark",
       "domain": "multimodal",
-      "chapters": [
-        55,
-        63
-      ],
-      "aliases": [
-        "MME-RealWorld"
-      ],
+      "chapters": [55, 63],
+      "aliases": ["MME-RealWorld"],
       "refs": [],
       "links": {
         "official": "https://mme-realworld.github.io/",
@@ -2419,14 +2061,8 @@
       "why": "Explicitly filters tasks where text alone can solve the problem and studies multimodal leakage.",
       "kind": "benchmark",
       "domain": "multimodal",
-      "chapters": [
-        8,
-        55,
-        63
-      ],
-      "aliases": [
-        "MMStar"
-      ],
+      "chapters": [8, 55, 63],
+      "aliases": ["MMStar"],
       "refs": [
         {
           "label": "GitHub",
@@ -2457,13 +2093,8 @@
       "why": "Important for OCR-centric VLM and document intelligence evaluation.",
       "kind": "benchmark",
       "domain": "multimodal",
-      "chapters": [
-        55,
-        63
-      ],
-      "aliases": [
-        "OCRBench"
-      ],
+      "chapters": [55, 63],
+      "aliases": ["OCRBench"],
       "refs": [],
       "links": {
         "official": "https://github.com/Yuliang-Liu/MultimodalOCR",
@@ -2489,13 +2120,8 @@
       "why": "Contexts from 8K to extremely long inputs, emphasizing deeper understanding rather than needle retrieval.",
       "kind": "benchmark",
       "domain": "context",
-      "chapters": [
-        15,
-        61
-      ],
-      "aliases": [
-        "LongBench"
-      ],
+      "chapters": [15, 61],
+      "aliases": ["LongBench"],
       "refs": [
         {
           "label": "GitHub",
@@ -2526,13 +2152,8 @@
       "why": "Measures effective rather than advertised context length across configurable long-context tasks.",
       "kind": "benchmark",
       "domain": "context",
-      "chapters": [
-        15,
-        61
-      ],
-      "aliases": [
-        "RULER"
-      ],
+      "chapters": [15, 61],
+      "aliases": ["RULER"],
       "refs": [
         {
           "label": "GitHub",
@@ -2563,14 +2184,8 @@
       "why": "Stress test for very-long-context model behavior.",
       "kind": "benchmark",
       "domain": "context",
-      "chapters": [
-        15,
-        61
-      ],
-      "aliases": [
-        "InfiniteBench",
-        "∞Bench"
-      ],
+      "chapters": [15, 61],
+      "aliases": ["InfiniteBench", "∞Bench"],
       "refs": [],
       "links": {
         "official": "https://github.com/OpenBMB/InfiniteBench",
@@ -2596,13 +2211,8 @@
       "why": "Standardized public safety evaluation across multiple risk categories.",
       "kind": "benchmark",
       "domain": "safety",
-      "chapters": [
-        63,
-        65
-      ],
-      "aliases": [
-        "HELM Safety"
-      ],
+      "chapters": [63, 65],
+      "aliases": ["HELM Safety"],
       "refs": [
         {
           "label": "Stanford CRFM",
@@ -2633,13 +2243,8 @@
       "why": "Canonical harmful-behavior and jailbreak evaluation suite.",
       "kind": "benchmark",
       "domain": "safety",
-      "chapters": [
-        63,
-        65
-      ],
-      "aliases": [
-        "HarmBench"
-      ],
+      "chapters": [63, 65],
+      "aliases": ["HarmBench"],
       "refs": [],
       "links": {
         "official": "https://www.harmbench.org/",
@@ -2665,13 +2270,8 @@
       "why": "Open benchmark for attacks, defenses and jailbreak artifacts with an official leaderboard.",
       "kind": "benchmark",
       "domain": "safety",
-      "chapters": [
-        63,
-        65
-      ],
-      "aliases": [
-        "JailbreakBench"
-      ],
+      "chapters": [63, 65],
+      "aliases": ["JailbreakBench"],
       "refs": [
         {
           "label": "GitHub",
@@ -2702,14 +2302,8 @@
       "why": "Better than naive refusal scoring for measuring harmful-request compliance.",
       "kind": "benchmark",
       "domain": "safety",
-      "chapters": [
-        63,
-        65
-      ],
-      "aliases": [
-        "StrongREJECT",
-        "StrongReject"
-      ],
+      "chapters": [63, 65],
+      "aliases": ["StrongREJECT", "StrongReject"],
       "refs": [],
       "links": {
         "official": "https://strong-reject.readthedocs.io/en/latest/",
@@ -2735,14 +2329,8 @@
       "why": "Security evaluation specifically for tool-using autonomous agents.",
       "kind": "benchmark",
       "domain": "safety",
-      "chapters": [
-        51,
-        63,
-        65
-      ],
-      "aliases": [
-        "Agent Security Bench"
-      ],
+      "chapters": [51, 63, 65],
+      "aliases": ["Agent Security Bench"],
       "refs": [],
       "links": {
         "official": "https://github.com/agiresearch/ASB",
@@ -2768,14 +2356,8 @@
       "why": "Security/cyber capability and risk evaluation.",
       "kind": "benchmark",
       "domain": "safety",
-      "chapters": [
-        63,
-        65
-      ],
-      "aliases": [
-        "CyberSecEval",
-        "CYBERSECEVAL"
-      ],
+      "chapters": [63, 65],
+      "aliases": ["CyberSecEval", "CYBERSECEVAL"],
       "refs": [],
       "links": {
         "official": "https://meta-llama.github.io/PurpleLlama/CyberSecEval/",
@@ -2801,14 +2383,8 @@
       "why": "Tests stateful tool interactions where tool-call sequence and world state matter.",
       "kind": "benchmark",
       "domain": "agents",
-      "chapters": [
-        51,
-        54,
-        63
-      ],
-      "aliases": [
-        "ToolSandbox"
-      ],
+      "chapters": [51, 54, 63],
+      "aliases": ["ToolSandbox"],
       "refs": [],
       "links": {
         "official": "https://github.com/apple-aiml-research/ToolSandbox",
@@ -2834,13 +2410,8 @@
       "why": "Mature vulnerability scanner covering jailbreaks, injection, leakage, hallucination and toxicity.",
       "kind": "framework",
       "domain": "safety",
-      "chapters": [
-        63,
-        65
-      ],
-      "aliases": [
-        "garak"
-      ],
+      "chapters": [63, 65],
+      "aliases": ["garak"],
       "refs": [
         {
           "label": "Garak",
@@ -2871,13 +2442,8 @@
       "why": "Highly relevant enterprise adversarial-testing framework with reusable attack scenarios.",
       "kind": "framework",
       "domain": "safety",
-      "chapters": [
-        63,
-        65
-      ],
-      "aliases": [
-        "PyRIT"
-      ],
+      "chapters": [63, 65],
+      "aliases": ["PyRIT"],
       "refs": [
         {
           "label": "Microsoft GitHub",
@@ -2908,15 +2474,8 @@
       "why": "Important bridge between standardized benchmark definitions and the Inspect execution stack.",
       "kind": "framework",
       "domain": "general",
-      "chapters": [
-        6,
-        61,
-        62
-      ],
-      "aliases": [
-        "Inspect Evals",
-        "inspect_evals"
-      ],
+      "chapters": [6, 61, 62],
+      "aliases": ["Inspect Evals", "inspect_evals"],
       "refs": [
         {
           "label": "GitHub",
@@ -2947,14 +2506,8 @@
       "why": "Excellent pytest-native unit/regression evaluation; now supports end-to-end, component and trajectory evaluation with 50+ metrics.",
       "kind": "framework",
       "domain": "apps",
-      "chapters": [
-        47,
-        62,
-        63
-      ],
-      "aliases": [
-        "DeepEval"
-      ],
+      "chapters": [47, 62, 63],
+      "aliases": ["DeepEval"],
       "refs": [
         {
           "label": "DeepEval",
@@ -2985,14 +2538,8 @@
       "why": "Managed collaboration/observability layer around DeepEval; useful when local eval code has to become a team/production workflow.",
       "kind": "platform",
       "domain": "apps",
-      "chapters": [
-        47,
-        62,
-        63
-      ],
-      "aliases": [
-        "Confident AI"
-      ],
+      "chapters": [47, 62, 63],
+      "aliases": ["Confident AI"],
       "refs": [
         {
           "label": "DeepEval",
@@ -3023,16 +2570,8 @@
       "why": "Still one of the canonical RAG-specific evaluation toolkits; evolving toward experiment-oriented APIs.",
       "kind": "framework",
       "domain": "apps",
-      "chapters": [
-        47,
-        50,
-        62,
-        63
-      ],
-      "aliases": [
-        "Ragas",
-        "RAGAS"
-      ],
+      "chapters": [47, 50, 62, 63],
+      "aliases": ["Ragas", "RAGAS"],
       "refs": [
         {
           "label": "Ragas",
@@ -3063,14 +2602,8 @@
       "why": "Strong CI-native prompt/model/agent regression framework with deterministic assertions and red-team capabilities.",
       "kind": "framework",
       "domain": "apps",
-      "chapters": [
-        47,
-        62,
-        63
-      ],
-      "aliases": [
-        "~promptfoo"
-      ],
+      "chapters": [47, 62, 63],
+      "aliases": ["~promptfoo"],
       "refs": [
         {
           "label": "Promptfoo",
@@ -3101,14 +2634,8 @@
       "why": "Strong offline benchmarking, regression, backtesting, LLM judges and online evaluation integrated with tracing.",
       "kind": "platform",
       "domain": "apps",
-      "chapters": [
-        47,
-        62,
-        63
-      ],
-      "aliases": [
-        "LangSmith"
-      ],
+      "chapters": [47, 62, 63],
+      "aliases": ["LangSmith"],
       "refs": [
         {
           "label": "Docs by LangChain",
@@ -3139,14 +2666,8 @@
       "why": "Strong experiment-driven production evaluation workflow.",
       "kind": "platform",
       "domain": "apps",
-      "chapters": [
-        47,
-        62,
-        63
-      ],
-      "aliases": [
-        "Braintrust"
-      ],
+      "chapters": [47, 62, 63],
+      "aliases": ["Braintrust"],
       "refs": [],
       "links": {
         "official": "https://www.braintrust.dev/docs/evaluate",
@@ -3172,16 +2693,8 @@
       "why": "Strong traces + evaluation combination, especially RAG/agent debugging.",
       "kind": "framework",
       "domain": "apps",
-      "chapters": [
-        47,
-        50,
-        62,
-        63
-      ],
-      "aliases": [
-        "Arize Phoenix",
-        "Arize"
-      ],
+      "chapters": [47, 50, 62, 63],
+      "aliases": ["Arize Phoenix", "Arize"],
       "refs": [],
       "links": {
         "official": "https://arize.com/docs/phoenix/",
@@ -3207,15 +2720,8 @@
       "why": "Natural choice for teams already using W&B experiments/artifacts.",
       "kind": "platform",
       "domain": "apps",
-      "chapters": [
-        47,
-        62,
-        63
-      ],
-      "aliases": [
-        "W&B Weave",
-        "Weights & Biases Weave"
-      ],
+      "chapters": [47, 62, 63],
+      "aliases": ["W&B Weave", "Weights & Biases Weave"],
       "refs": [],
       "links": {
         "official": "https://docs.wandb.ai/weave",
@@ -3241,15 +2747,8 @@
       "why": "Serious 2026 option: datasets, judges, human feedback, traces, production monitoring and `mlflow.genai.evaluate`.",
       "kind": "framework",
       "domain": "apps",
-      "chapters": [
-        47,
-        62,
-        63
-      ],
-      "aliases": [
-        "mlflow.genai",
-        "MLflow GenAI"
-      ],
+      "chapters": [47, 62, 63],
+      "aliases": ["mlflow.genai", "MLflow GenAI"],
       "refs": [
         {
           "label": "MLflow AI Platform",
@@ -3280,14 +2779,8 @@
       "why": "Particularly good evaluation loop from production traces → datasets → experiments → deployment monitoring.",
       "kind": "framework",
       "domain": "apps",
-      "chapters": [
-        47,
-        62,
-        63
-      ],
-      "aliases": [
-        "Langfuse"
-      ],
+      "chapters": [47, 62, 63],
+      "aliases": ["Langfuse"],
       "refs": [
         {
           "label": "Langfuse",
@@ -3318,15 +2811,8 @@
       "why": "Mature feedback/evaluator model and strong RAG/agent instrumentation.",
       "kind": "framework",
       "domain": "apps",
-      "chapters": [
-        47,
-        50,
-        62,
-        63
-      ],
-      "aliases": [
-        "TruLens"
-      ],
+      "chapters": [47, 50, 62, 63],
+      "aliases": ["TruLens"],
       "refs": [
         {
           "label": "TruLens",
@@ -3357,14 +2843,8 @@
       "why": "Test suites, datasets, quantitative metrics and agent tracing.",
       "kind": "framework",
       "domain": "apps",
-      "chapters": [
-        47,
-        62,
-        63
-      ],
-      "aliases": [
-        "Opik"
-      ],
+      "chapters": [47, 62, 63],
+      "aliases": ["Opik"],
       "refs": [
         {
           "label": "Comet",
@@ -3395,15 +2875,8 @@
       "why": "Specialized evaluator API, experiments, production scoring and hallucination/safety evaluation.",
       "kind": "platform",
       "domain": "apps",
-      "chapters": [
-        47,
-        62,
-        63
-      ],
-      "aliases": [
-        "Patronus AI",
-        "Patronus"
-      ],
+      "chapters": [47, 62, 63],
+      "aliases": ["Patronus AI", "Patronus"],
       "refs": [
         {
           "label": "Patronus Docs",
@@ -3434,14 +2907,8 @@
       "why": "Strong behavioral testing, LLM judges, vulnerability scanning and CI/CD.",
       "kind": "platform",
       "domain": "apps",
-      "chapters": [
-        47,
-        62,
-        63
-      ],
-      "aliases": [
-        "Giskard"
-      ],
+      "chapters": [47, 62, 63],
+      "aliases": ["Giskard"],
       "refs": [
         {
           "label": "Giskard Documentation",
@@ -3472,15 +2939,8 @@
       "why": "Production-focused model/application evaluation and monitoring.",
       "kind": "platform",
       "domain": "apps",
-      "chapters": [
-        47,
-        62,
-        63
-      ],
-      "aliases": [
-        "Galileo AI",
-        "rungalileo"
-      ],
+      "chapters": [47, 62, 63],
+      "aliases": ["Galileo AI", "rungalileo"],
       "refs": [],
       "links": {
         "official": "https://www.splunk.com/en_us/products/agent-observability.html",
@@ -3506,14 +2966,8 @@
       "why": "Experiment and trace-based LLM application evaluation.",
       "kind": "platform",
       "domain": "apps",
-      "chapters": [
-        47,
-        62,
-        63
-      ],
-      "aliases": [
-        "HoneyHive"
-      ],
+      "chapters": [47, 62, 63],
+      "aliases": ["HoneyHive"],
       "refs": [],
       "links": {
         "official": "https://www.honeyhive.ai/",
@@ -3539,14 +2993,8 @@
       "why": "Dataset/evaluator/experiment workflow for model and prompt iteration.",
       "kind": "platform",
       "domain": "apps",
-      "chapters": [
-        47,
-        62,
-        63
-      ],
-      "aliases": [
-        "Parea"
-      ],
+      "chapters": [47, 62, 63],
+      "aliases": ["Parea"],
       "refs": [],
       "links": {
         "official": "https://docs.parea.ai/",
@@ -3572,14 +3020,8 @@
       "why": "Good application-level comparison when evals need to sit next to orchestration/workflow tooling.",
       "kind": "platform",
       "domain": "apps",
-      "chapters": [
-        47,
-        62,
-        63
-      ],
-      "aliases": [
-        "Vellum"
-      ],
+      "chapters": [47, 62, 63],
+      "aliases": ["Vellum"],
       "refs": [],
       "links": {
         "official": "https://docs.vellum.ai/product/evaluation/quantitative-evaluation",
@@ -3605,14 +3047,8 @@
       "why": "Broader production experimentation/evaluation environment.",
       "kind": "platform",
       "domain": "apps",
-      "chapters": [
-        47,
-        62,
-        63
-      ],
-      "aliases": [
-        "Maxim AI"
-      ],
+      "chapters": [47, 62, 63],
+      "aliases": ["Maxim AI"],
       "refs": [],
       "links": {
         "official": "https://www.getmaxim.ai/evals",
@@ -3638,14 +3074,8 @@
       "why": "Useful where LLM quality evaluation must live beside conventional ML/data monitoring.",
       "kind": "framework",
       "domain": "apps",
-      "chapters": [
-        47,
-        62,
-        63
-      ],
-      "aliases": [
-        "Evidently AI"
-      ],
+      "chapters": [47, 62, 63],
+      "aliases": ["Evidently AI"],
       "refs": [],
       "links": {
         "official": "https://www.evidentlyai.com/",
@@ -3671,15 +3101,8 @@
       "why": "Strong enterprise evaluator library covering groundedness, relevance, safety, retrieval and agent-specific tool-call/task-adherence evaluation.",
       "kind": "platform",
       "domain": "apps",
-      "chapters": [
-        47,
-        62,
-        63
-      ],
-      "aliases": [
-        "Azure AI Evaluation",
-        "azure-ai-evaluation"
-      ],
+      "chapters": [47, 62, 63],
+      "aliases": ["Azure AI Evaluation", "azure-ai-evaluation"],
       "refs": [
         {
           "label": "Microsoft Learn",
@@ -3710,16 +3133,8 @@
       "why": "Managed Google Cloud model/application evaluation.",
       "kind": "platform",
       "domain": "apps",
-      "chapters": [
-        47,
-        62,
-        63
-      ],
-      "aliases": [
-        "Vertex AI Gen AI Evaluation",
-        "Gen AI evaluation service",
-        "Vertex AI evaluation"
-      ],
+      "chapters": [47, 62, 63],
+      "aliases": ["Vertex AI Gen AI Evaluation", "Gen AI evaluation service", "Vertex AI evaluation"],
       "refs": [
         {
           "label": "Google Cloud Documentation",
@@ -3750,16 +3165,8 @@
       "why": "Supports automated, LLM-judge, human and RAG evaluations, including non-Bedrock sources.",
       "kind": "platform",
       "domain": "apps",
-      "chapters": [
-        47,
-        50,
-        62,
-        63
-      ],
-      "aliases": [
-        "Bedrock Evaluations",
-        "Amazon Bedrock evaluation"
-      ],
+      "chapters": [47, 50, 62, 63],
+      "aliases": ["Bedrock Evaluations", "Amazon Bedrock evaluation"],
       "refs": [
         {
           "label": "AWS Documentation",
@@ -3790,15 +3197,8 @@
       "why": "Useful one-stop ModelScope framework spanning LLM/VLM capability eval and inference-performance benchmarking.",
       "kind": "framework",
       "domain": "general",
-      "chapters": [
-        6,
-        48,
-        61,
-        62
-      ],
-      "aliases": [
-        "EvalScope"
-      ],
+      "chapters": [6, 48, 61, 62],
+      "aliases": ["EvalScope"],
       "refs": [
         {
           "label": "GitHub",
@@ -3829,13 +3229,8 @@
       "why": "Current hard benchmark included in Epoch's capability-index input set.",
       "kind": "benchmark",
       "domain": "coding",
-      "chapters": [
-        61,
-        63
-      ],
-      "aliases": [
-        "WeirdML"
-      ],
+      "chapters": [61, 63],
+      "aliases": ["WeirdML"],
       "refs": [
         {
           "label": "Epoch AI",
@@ -3866,13 +3261,8 @@
       "why": "Specialized difficult scientific/computational task signal used in current frontier composite evaluation.",
       "kind": "benchmark",
       "domain": "reasoning",
-      "chapters": [
-        38,
-        61
-      ],
-      "aliases": [
-        "Surface Evolver"
-      ],
+      "chapters": [38, 61],
+      "aliases": ["Surface Evolver"],
       "refs": [
         {
           "label": "Epoch AI",
@@ -3903,14 +3293,8 @@
       "why": "Tests whether systems improve through repeated interaction rather than measuring only static knowledge.",
       "kind": "benchmark",
       "domain": "reasoning",
-      "chapters": [
-        38,
-        61
-      ],
-      "aliases": [
-        "Earthborne Rangers",
-        "EBR-bench"
-      ],
+      "chapters": [38, 61],
+      "aliases": ["Earthborne Rangers", "EBR-bench"],
       "refs": [
         {
           "label": "Epoch AI",
@@ -3941,13 +3325,8 @@
       "why": "Useful niche evaluation of inference under deliberately undisclosed game structure; tracked by Epoch.",
       "kind": "benchmark",
       "domain": "reasoning",
-      "chapters": [
-        38,
-        61
-      ],
-      "aliases": [
-        "Mystery Game Puzzles"
-      ],
+      "chapters": [38, 61],
+      "aliases": ["Mystery Game Puzzles"],
       "refs": [
         {
           "label": "Epoch AI",

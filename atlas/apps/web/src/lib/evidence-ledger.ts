@@ -21,8 +21,13 @@ export interface EvidenceLedger {
   readonly max: number;
 }
 
-export function evidenceLedger(docs: readonly ResearchDocument[], counted: (doc: ResearchDocument) => boolean): EvidenceLedger {
-  const cells = new Map<EvidenceLabel, Map<number, number>>(EVIDENCE_LABELS.map((label) => [label, new Map<number, number>()]));
+export function evidenceLedger(
+  docs: readonly ResearchDocument[],
+  counted: (doc: ResearchDocument) => boolean,
+): EvidenceLedger {
+  const cells = new Map<EvidenceLabel, Map<number, number>>(
+    EVIDENCE_LABELS.map((label) => [label, new Map<number, number>()]),
+  );
   const add = (label: EvidenceLabel | null, chapter: number): void => {
     if (label === null) return;
     const row = cells.get(label);
@@ -42,8 +47,10 @@ export function evidenceLedger(docs: readonly ResearchDocument[], counted: (doc:
   }
   const chapters = [...new Set([...cells.values()].flatMap((row) => [...row.keys()]))].sort((a, b) => a - b);
   const count = (label: EvidenceLabel, chapter: number): number => cells.get(label)?.get(chapter) ?? 0;
-  const labelTotal = (label: EvidenceLabel): number => [...(cells.get(label)?.values() ?? [])].reduce((sum, n) => sum + n, 0);
-  const chapterTotal = (chapter: number): number => EVIDENCE_LABELS.reduce((sum, label) => sum + count(label, chapter), 0);
+  const labelTotal = (label: EvidenceLabel): number =>
+    [...(cells.get(label)?.values() ?? [])].reduce((sum, n) => sum + n, 0);
+  const chapterTotal = (chapter: number): number =>
+    EVIDENCE_LABELS.reduce((sum, label) => sum + count(label, chapter), 0);
   const total = EVIDENCE_LABELS.reduce((sum, label) => sum + labelTotal(label), 0);
   const max = Math.max(0, ...[...cells.values()].flatMap((row) => [...row.values()]));
   return { chapters, count, labelTotal, chapterTotal, total, max };

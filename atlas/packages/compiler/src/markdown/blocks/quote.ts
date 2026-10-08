@@ -57,7 +57,11 @@ function quoteContent(node: Blockquote, rest: readonly PhrasingContent[], st: Co
     if (extra.type === 'paragraph') {
       out.push({ kind: 'break' }, { kind: 'break' }, ...convertPhrasing(extra.children, st));
     } else {
-      st.report('block-malformed', `typed blockquote carries a ${extra.type} after its first paragraph; kept as text`, st.lineOf(extra));
+      st.report(
+        'block-malformed',
+        `typed blockquote carries a ${extra.type} after its first paragraph; kept as text`,
+        st.lineOf(extra),
+      );
       out.push({ kind: 'break' }, { kind: 'text', value: toString(extra) });
     }
   }
@@ -68,7 +72,12 @@ function classifySource(raw: string, st: CompileState, line: number | null): Cla
   const keyMatch = /^(P\d{2}|R\d+\.\d+)(?![\d.]\d|\d)/u.exec(raw)?.[1];
   if (keyMatch !== undefined && isCitationKey(keyMatch)) {
     if (keyMatch.startsWith('R') && !st.ctx.hasCitation(keyMatch)) {
-      st.reportOnce(`cite:${keyMatch}`, 'citation-unresolved', `citation ${keyMatch} has no record in any references.md`, line);
+      st.reportOnce(
+        `cite:${keyMatch}`,
+        'citation-unresolved',
+        `citation ${keyMatch} has no record in any references.md`,
+        line,
+      );
     }
     return { raw, type: keyMatch.startsWith('P') ? 'paper' : 'reference', key: keyMatch };
   }
@@ -99,7 +108,12 @@ function partOf<K extends string>(parts: readonly { key: K; content: Inline[] }[
 
 /** Converts one blockquote. Proposition proofs are attached by the caller (they follow the quote). */
 export function convertBlockquote(node: Blockquote, st: CompileState, env: FlowEnv, flow: FlowConverter): Block {
-  const plain = (): Block => ({ kind: 'quote', anchor: null, depth: depthOf('quote', env), blocks: flow(node.children, env) });
+  const plain = (): Block => ({
+    kind: 'quote',
+    anchor: null,
+    depth: depthOf('quote', env),
+    blocks: flow(node.children, env),
+  });
   const first = node.children[0];
   if (first?.type !== 'paragraph') return plain();
   const lead = first.children[0];
@@ -174,7 +188,10 @@ export function convertBlockquote(node: Blockquote, st: CompileState, env: FlowE
     };
   }
 
-  const proposition = new RegExp(String.raw`^(Proposition|Theorem|Lemma|Corollary)(?:\s+(${OBJECT_NUMBER}))?\s*\.?$`, 'u').exec(label);
+  const proposition = new RegExp(
+    String.raw`^(Proposition|Theorem|Lemma|Corollary)(?:\s+(${OBJECT_NUMBER}))?\s*\.?$`,
+    'u',
+  ).exec(label);
   if (proposition !== null) {
     const variant = PROPOSITION_VARIANTS[proposition[1] ?? 'Proposition'] ?? 'proposition';
     const number = proposition[2] ?? null;

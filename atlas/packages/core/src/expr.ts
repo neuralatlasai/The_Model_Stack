@@ -30,7 +30,10 @@ export const FUNCTIONS = {
   round: { arity: [1, 1], fn: (x: number) => Math.round(x) },
   pow: { arity: [2, 2], fn: (x: number, y: number) => x ** y },
   clamp: { arity: [3, 3], fn: (x: number, lo: number, hi: number) => Math.min(Math.max(x, lo), hi) },
-} as const satisfies Record<string, { readonly arity: readonly [number, number]; readonly fn: (...xs: number[]) => number }>;
+} as const satisfies Record<
+  string,
+  { readonly arity: readonly [number, number]; readonly fn: (...xs: number[]) => number }
+>;
 export type FunctionName = keyof typeof FUNCTIONS;
 
 export type Expr =

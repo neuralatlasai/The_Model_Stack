@@ -31,7 +31,14 @@ export interface ModeInput {
   readonly chapterHasCompare?: boolean;
 }
 
-export function modeLinks({ graph, url, chapter, referencesAnchor, hasCompare, chapterHasCompare = false }: ModeInput): ModeLinks {
+export function modeLinks({
+  graph,
+  url,
+  chapter,
+  referencesAnchor,
+  hasCompare,
+  chapterHasCompare = false,
+}: ModeInput): ModeLinks {
   const referencesNode = chapter === null ? undefined : graph.nodes[`ms.references.${String(chapter)}` as NodeId];
   let papers = '/papers/';
   if (referencesAnchor !== null) papers = `${url}#${referencesAnchor}`;

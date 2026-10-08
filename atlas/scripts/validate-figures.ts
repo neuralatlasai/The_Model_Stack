@@ -15,12 +15,7 @@ import { readdir, readFile } from 'node:fs/promises';
 import path from 'node:path';
 import { parseArgs } from 'node:util';
 import { parse as parseYaml } from 'yaml';
-import {
-  compileFormula,
-  ExprError,
-  FigureSpecSchema,
-  type FigureSpec,
-} from '@atlas/core';
+import { compileFormula, ExprError, FigureSpecSchema, type FigureSpec } from '@atlas/core';
 
 interface Finding {
   readonly file: string;
@@ -141,10 +136,15 @@ function semanticChecks(fig: FigureSpec, refs: ReadonlySet<string>, nodes: Reado
   const problems: string[] = [];
   const citeLike = /^(P\d{2}|R\d+\.\d+)$/u;
   for (const source of fig.source) {
-    if (citeLike.test(source) && !refs.has(source)) problems.push(`source ${source} not in the chapter's references.md`);
+    if (citeLike.test(source) && !refs.has(source))
+      problems.push(`source ${source} not in the chapter's references.md`);
   }
   for (const concept of fig.concepts) if (!nodes.has(concept)) problems.push(`concept ${concept} not in manifest`);
-  if ((fig.evidence === 'PAPER-REPORTED' || fig.evidence === 'OFFICIAL-DOCUMENTATION') && fig.kind === 'chart' && fig.context === undefined) {
+  if (
+    (fig.evidence === 'PAPER-REPORTED' || fig.evidence === 'OFFICIAL-DOCUMENTATION') &&
+    fig.kind === 'chart' &&
+    fig.context === undefined
+  ) {
     problems.push('PAPER-REPORTED/OFFICIAL-DOCUMENTATION chart needs `context` (hardware, model, precision, …)');
   }
 
@@ -153,7 +153,8 @@ function semanticChecks(fig: FigureSpec, refs: ReadonlySet<string>, nodes: Reado
       const ids = new Set(fig.spec.nodes.map((n) => n.id));
       const groups = new Set(fig.spec.groups.map((g) => g.id));
       if (ids.size !== fig.spec.nodes.length) problems.push('duplicate node ids');
-      for (const n of fig.spec.nodes) if (n.group !== undefined && !groups.has(n.group)) problems.push(`node ${n.id}: unknown group ${n.group}`);
+      for (const n of fig.spec.nodes)
+        if (n.group !== undefined && !groups.has(n.group)) problems.push(`node ${n.id}: unknown group ${n.group}`);
       for (const e of fig.spec.edges) {
         if (!ids.has(e.from)) problems.push(`edge from unknown node ${e.from}`);
         if (!ids.has(e.to)) problems.push(`edge to unknown node ${e.to}`);
@@ -184,7 +185,8 @@ function semanticChecks(fig: FigureSpec, refs: ReadonlySet<string>, nodes: Reado
       for (const input of fig.spec.inputs) {
         bound.add(input.symbol);
         env[input.symbol] = input.default;
-        if (input.options !== undefined && !input.options.includes(input.default)) problems.push(`input ${input.symbol}: default not among options`);
+        if (input.options !== undefined && !input.options.includes(input.default))
+          problems.push(`input ${input.symbol}: default not among options`);
       }
       for (const output of fig.spec.outputs) {
         const issue = checkFormula(output.formula, bound, env, `output ${output.symbol}`);
@@ -193,7 +195,9 @@ function semanticChecks(fig: FigureSpec, refs: ReadonlySet<string>, nodes: Reado
         bound.add(output.symbol);
       }
       for (const preset of fig.spec.presets) {
-        for (const key of Object.keys(preset.values)) if (!fig.spec.inputs.some((i) => i.symbol === key)) problems.push(`preset ${preset.label}: unknown input ${key}`);
+        for (const key of Object.keys(preset.values))
+          if (!fig.spec.inputs.some((i) => i.symbol === key))
+            problems.push(`preset ${preset.label}: unknown input ${key}`);
       }
       break;
     }
@@ -205,7 +209,8 @@ function semanticChecks(fig: FigureSpec, refs: ReadonlySet<string>, nodes: Reado
           if (issue !== null) problems.push(issue);
         }
       }
-      if (fig.spec.glyph?.type === 'dots' && fig.spec.glyph.filled > fig.spec.glyph.total) problems.push('glyph: filled > total');
+      if (fig.spec.glyph?.type === 'dots' && fig.spec.glyph.filled > fig.spec.glyph.total)
+        problems.push('glyph: filled > total');
       break;
     }
     case 'memory-stack': {
@@ -234,7 +239,12 @@ function semanticChecks(fig: FigureSpec, refs: ReadonlySet<string>, nodes: Reado
           if (series.sample === undefined) problems.push(`series ${series.id}: formula needs sample {from, to, count}`);
           else {
             for (const x of sampleXs(series.sample, log)) {
-              const issue = checkFormula(series.formula, bound, { ...fig.spec.variables, x }, `series ${series.id} at x=${x}`);
+              const issue = checkFormula(
+                series.formula,
+                bound,
+                { ...fig.spec.variables, x },
+                `series ${series.id} at x=${x}`,
+              );
               if (issue !== null) {
                 problems.push(issue);
                 break;
@@ -244,7 +254,8 @@ function semanticChecks(fig: FigureSpec, refs: ReadonlySet<string>, nodes: Reado
         }
         if (fig.spec.type === 'bar') {
           if (fig.spec.categories === undefined) problems.push('bar chart needs categories');
-          else if (series.values?.length !== fig.spec.categories.length) problems.push(`series ${series.id}: values length must equal categories length`);
+          else if (series.values?.length !== fig.spec.categories.length)
+            problems.push(`series ${series.id}: values length must equal categories length`);
         }
       }
       break;
@@ -252,27 +263,38 @@ function semanticChecks(fig: FigureSpec, refs: ReadonlySet<string>, nodes: Reado
     case 'matrix': {
       if (fig.spec.pattern === 'explicit') {
         if (fig.spec.cells === undefined) problems.push('explicit matrix needs cells');
-        else if (fig.spec.cells.length !== fig.spec.rows || fig.spec.cells.some((r) => r.length !== fig.spec.cols)) problems.push('cells must be rows × cols');
+        else if (fig.spec.cells.length !== fig.spec.rows || fig.spec.cells.some((r) => r.length !== fig.spec.cols))
+          problems.push('cells must be rows × cols');
       }
-      if (['banded', 'block-diagonal', 'prefix', 'dilated'].includes(fig.spec.pattern) && fig.spec.parameter === undefined) {
+      if (
+        ['banded', 'block-diagonal', 'prefix', 'dilated'].includes(fig.spec.pattern) &&
+        fig.spec.parameter === undefined
+      ) {
         problems.push(`pattern ${fig.spec.pattern} needs parameter`);
       }
-      for (const h of fig.spec.highlight) if (h.row >= fig.spec.rows || h.col >= fig.spec.cols) problems.push(`highlight (${h.row},${h.col}) outside matrix`);
+      for (const h of fig.spec.highlight)
+        if (h.row >= fig.spec.rows || h.col >= fig.spec.cols)
+          problems.push(`highlight (${h.row},${h.col}) outside matrix`);
       break;
     }
     case 'lineage': {
       for (const entry of fig.spec.entries) {
-        if (entry.cite !== undefined && !refs.has(entry.cite)) problems.push(`lineage ${entry.work}: cite ${entry.cite} not in references.md`);
-        if (entry.node !== undefined && !nodes.has(entry.node)) problems.push(`lineage ${entry.work}: node ${entry.node} not in manifest`);
+        if (entry.cite !== undefined && !refs.has(entry.cite))
+          problems.push(`lineage ${entry.work}: cite ${entry.cite} not in references.md`);
+        if (entry.node !== undefined && !nodes.has(entry.node))
+          problems.push(`lineage ${entry.work}: node ${entry.node} not in manifest`);
       }
       break;
     }
     case 'compare': {
       const cols = new Set(fig.spec.columns.map((c) => c.id));
       for (const row of fig.spec.rows) {
-        for (const key of Object.keys(row.values)) if (!cols.has(key)) problems.push(`row ${row.dimension}: unknown column ${key}`);
+        for (const key of Object.keys(row.values))
+          if (!cols.has(key)) problems.push(`row ${row.dimension}: unknown column ${key}`);
       }
-      for (const col of fig.spec.columns) if (col.node !== undefined && !nodes.has(col.node)) problems.push(`column ${col.id}: node ${col.node} not in manifest`);
+      for (const col of fig.spec.columns)
+        if (col.node !== undefined && !nodes.has(col.node))
+          problems.push(`column ${col.id}: node ${col.node} not in manifest`);
       break;
     }
     case 'systems-trace':
@@ -281,7 +303,6 @@ function semanticChecks(fig: FigureSpec, refs: ReadonlySet<string>, nodes: Reado
   }
   return problems;
 }
-
 
 /** Same algorithm as the compiler's region anchors (packages/compiler/src/markdown/slug.ts). */
 function slugify(text: string): string {
@@ -298,7 +319,7 @@ function regionAnchors(text: string): Set<string> {
   const anchors = new Set<string>();
   let inFence = false;
   for (const line of text.split('\n')) {
-    if (line.trim().startsWith("```")) inFence = !inFence;
+    if (line.trim().startsWith('```')) inFence = !inFence;
     if (inFence) continue;
     const match = /^##\s+(.+?)\s*$/u.exec(line);
     if (match?.[1] !== undefined) anchors.add(slugify(match[1]));
@@ -318,7 +339,9 @@ function highlightKeys(fig: FigureSpec): Set<string> {
     case 'stat-panel':
       return new Set(fig.spec.rows.map((row) => row.key));
     case 'memory-stack':
-      return new Set(fig.spec.bars.flatMap((bar) => [bar.label, ...bar.segments.map((seg) => `${bar.label}/${seg.label}`)]));
+      return new Set(
+        fig.spec.bars.flatMap((bar) => [bar.label, ...bar.segments.map((seg) => `${bar.label}/${seg.label}`)]),
+      );
     case 'hierarchy':
       return new Set(fig.spec.levels.map((level) => level.label));
     case 'tensor-flow':
@@ -363,13 +386,20 @@ function stateChecks(fig: FigureSpec, anchors: ReadonlySet<string>): string[] {
   const seen = new Set<string>();
   for (const [index, state] of fig.states.entries()) {
     const where = `states[${String(index)}]`;
-    if (!anchors.has(state.anchor)) problems.push(`${where}: anchor "${state.anchor}" is not an H2 region of this file`);
+    if (!anchors.has(state.anchor))
+      problems.push(`${where}: anchor "${state.anchor}" is not an H2 region of this file`);
     if (seen.has(state.anchor)) problems.push(`${where}: two states for region "${state.anchor}"`);
     seen.add(state.anchor);
-    for (const key of state.highlight) if (!keys.has(key)) problems.push(`${where}: highlight "${key}" is not a part of this ${fig.kind} (valid: ${[...keys].slice(0, 12).join(', ')})`);
+    for (const key of state.highlight)
+      if (!keys.has(key))
+        problems.push(
+          `${where}: highlight "${key}" is not a part of this ${fig.kind} (valid: ${[...keys].slice(0, 12).join(', ')})`,
+        );
     if (state.variables !== undefined) {
       if (vars === null) problems.push(`${where}: ${fig.kind} figures take no variables`);
-      else for (const key of Object.keys(state.variables)) if (!vars.has(key)) problems.push(`${where}: unknown variable "${key}"`);
+      else
+        for (const key of Object.keys(state.variables))
+          if (!vars.has(key)) problems.push(`${where}: unknown variable "${key}"`);
     }
   }
   return problems;
@@ -404,20 +434,27 @@ async function main(): Promise<void> {
       const rawId = typeof raw === 'object' && raw !== null && 'id' in raw ? String(raw.id) : '?';
       if (!parsed.success) {
         for (const issue of parsed.error.issues) {
-          findings.push({ file: rel, line, id: rawId, message: `schema ${issue.path.join('.') || '(root)'}: ${issue.message}` });
+          findings.push({
+            file: rel,
+            line,
+            id: rawId,
+            message: `schema ${issue.path.join('.') || '(root)'}: ${issue.message}`,
+          });
         }
         continue;
       }
       const fig = parsed.data;
       const idChapter = Number.parseInt(fig.id.slice(4).split('.')[0] ?? '', 10);
-      if (chapter !== null && idChapter !== chapter) findings.push({ file: rel, line, id: fig.id, message: `id chapter ${idChapter} ≠ file chapter ${chapter}` });
+      if (chapter !== null && idChapter !== chapter)
+        findings.push({ file: rel, line, id: fig.id, message: `id chapter ${idChapter} ≠ file chapter ${chapter}` });
       if (chapter !== null) {
         const list = perChapter.get(chapter) ?? [];
         list.push({ id: fig.id, file: rel, line });
         perChapter.set(chapter, list);
       }
       for (const message of semanticChecks(fig, refs, nodes)) findings.push({ file: rel, line, id: fig.id, message });
-      if (chapter !== null) for (const message of stateChecks(fig, anchors)) findings.push({ file: rel, line, id: fig.id, message });
+      if (chapter !== null)
+        for (const message of stateChecks(fig, anchors)) findings.push({ file: rel, line, id: fig.id, message });
     }
   }
 
@@ -425,7 +462,13 @@ async function main(): Promise<void> {
     const seen = new Map<string, string>();
     for (const item of list) {
       const prior = seen.get(item.id);
-      if (prior !== undefined) findings.push({ file: item.file, line: item.line, id: item.id, message: `duplicate figure id in chapter ${chapter} (also ${prior})` });
+      if (prior !== undefined)
+        findings.push({
+          file: item.file,
+          line: item.line,
+          id: item.id,
+          message: `duplicate figure id in chapter ${chapter} (also ${prior})`,
+        });
       seen.set(item.id, `${item.file}:${item.line}`);
     }
   }

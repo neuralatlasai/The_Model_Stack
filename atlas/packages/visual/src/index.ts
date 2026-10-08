@@ -7,8 +7,20 @@
  * The Preact renderers live under `@atlas/visual/svg`.
  */
 export { parseMermaid, type MermaidIssue, type MermaidParseResult } from './mermaid.ts';
-export { collectDims, parseSystemsTrace, parseTensorTrace, type ParsedSystemsTrace, type ParsedTensorTrace } from './traces.ts';
-export { parseFigure, validateFigure, type FigureIssue, type FigureValidationContext, type ParsedFigure } from './validate.ts';
+export {
+  collectDims,
+  parseSystemsTrace,
+  parseTensorTrace,
+  type ParsedSystemsTrace,
+  type ParsedTensorTrace,
+} from './traces.ts';
+export {
+  parseFigure,
+  validateFigure,
+  type FigureIssue,
+  type FigureValidationContext,
+  type ParsedFigure,
+} from './validate.ts';
 export {
   layoutCycle,
   layoutDiagram,
@@ -36,7 +48,20 @@ export {
   type StackValues,
   type StatRowValue,
 } from './figure-math.ts';
-export { logTicks, makeScale, niceLinearTicks, resolveChart, samplePositions, seriesValueAt, unitScales, type ResolvedChart, type ResolvedSeries, type Scale, type ScaleKind, type UnitScales } from './chart.ts';
+export {
+  logTicks,
+  makeScale,
+  niceLinearTicks,
+  resolveChart,
+  samplePositions,
+  seriesValueAt,
+  unitScales,
+  type ResolvedChart,
+  type ResolvedSeries,
+  type Scale,
+  type ScaleKind,
+  type UnitScales,
+} from './chart.ts';
 export {
   BUDGET_KEY,
   CURSOR_VARIABLE,
@@ -48,5 +73,12 @@ export {
   type ResolvedFigureState,
 } from './state.ts';
 export { MATRIX_PATTERN_TEXT, matrixCell, matrixCells, matrixSummary, type MatrixSummary } from './matrix.ts';
-export { GLYPH_INSET, measureNode, NODE_TYPE, placeNodeText, type MeasuredNode, type PlacedLine } from './node-geometry.ts';
+export {
+  GLYPH_INSET,
+  measureNode,
+  NODE_TYPE,
+  placeNodeText,
+  type MeasuredNode,
+  type PlacedLine,
+} from './node-geometry.ts';
 export { linesWidth, textWidth, wrapText, type TextFamily } from './text-metrics.ts';

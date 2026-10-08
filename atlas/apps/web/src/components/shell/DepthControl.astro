@@ -23,22 +23,22 @@ const SHORT: Readonly<Record<Depth, string>> = {
 
 <nav class="sh-depth" aria-label="Reading depth">
   <ul class="sh-depth-list">
-    {
-      DEPTHS.map((depth) => (
-        <li>
-          <a
-            class="sh-depth-option"
-            href={`?depth=${depth}`}
-            data-action="set-depth"
-            data-depth-option={depth}
-            aria-current={depth === DEFAULT_DEPTH ? 'true' : undefined}
-            title={`${DEPTH_LABELS[depth]} — ${DEPTH_DESCRIPTIONS[depth]}`}
-          >
-            <span class="sh-depth-full">{DEPTH_LABELS[depth]}</span>
-            <span class="sh-depth-short" aria-hidden="true">{SHORT[depth]}</span>
-          </a>
-        </li>
-      ))
-    }
+    {DEPTHS.map((depth) => (
+      <li>
+        <a
+          class="sh-depth-option"
+          href={`?depth=${depth}`}
+          data-action="set-depth"
+          data-depth-option={depth}
+          aria-current={depth === DEFAULT_DEPTH ? 'true' : undefined}
+          title={`${DEPTH_LABELS[depth]} — ${DEPTH_DESCRIPTIONS[depth]}`}
+        >
+          <span class="sh-depth-full">{DEPTH_LABELS[depth]}</span>
+          <span class="sh-depth-short" aria-hidden="true">
+            {SHORT[depth]}
+          </span>
+        </a>
+      </li>
+    ))}
   </ul>
 </nav>

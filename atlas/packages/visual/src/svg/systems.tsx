@@ -16,7 +16,17 @@ interface Row {
   readonly emphasis: boolean;
 }
 
-function TraceTable({ caption, columns, rows, state = NO_STATE }: { readonly caption: string; readonly columns: readonly string[]; readonly rows: readonly Row[]; readonly state?: StateView }): JSX.Element {
+function TraceTable({
+  caption,
+  columns,
+  rows,
+  state = NO_STATE,
+}: {
+  readonly caption: string;
+  readonly columns: readonly string[];
+  readonly rows: readonly Row[];
+  readonly state?: StateView;
+}): JSX.Element {
   return (
     <div class="vg-table-scroll" role="region" aria-label={caption} tabIndex={0}>
       <table class="vg-systrace">
@@ -36,7 +46,13 @@ function TraceTable({ caption, columns, rows, state = NO_STATE }: { readonly cap
         <tbody>
           {rows.map((row, index) => (
             <tr
-              class={cls('vg-systrace__row', row.emphasis && 'vg-systrace__row--emph', index === 0 && 'vg-systrace__row--first', index === rows.length - 1 && 'vg-systrace__row--last', litClass(state, row.stage))}
+              class={cls(
+                'vg-systrace__row',
+                row.emphasis && 'vg-systrace__row--emph',
+                index === 0 && 'vg-systrace__row--first',
+                index === rows.length - 1 && 'vg-systrace__row--last',
+                litClass(state, row.stage),
+              )}
               data-vg-key={row.stage}
               key={`${index}:${row.stage}`}
             >
@@ -50,7 +66,14 @@ function TraceTable({ caption, columns, rows, state = NO_STATE }: { readonly cap
               {columns.map((column, k) => {
                 const value = row.cells[k] ?? '';
                 return (
-                  <td key={column} data-column={column} class={cls(value === '' && 'vg-systrace__empty', /^(?:none|—|-|n\/a)$/iu.test(value) && 'vg-systrace__none')}>
+                  <td
+                    key={column}
+                    data-column={column}
+                    class={cls(
+                      value === '' && 'vg-systrace__empty',
+                      /^(?:none|—|-|n\/a)$/iu.test(value) && 'vg-systrace__none',
+                    )}
+                  >
                     {value === '' ? (
                       <>
                         <span aria-hidden="true">·</span>
@@ -71,7 +94,15 @@ function TraceTable({ caption, columns, rows, state = NO_STATE }: { readonly cap
 }
 
 /** Authored `systems-trace` figure. */
-export function SystemsTraceTable({ spec, caption, state = NO_STATE }: { readonly spec: SystemsTraceSpec; readonly caption: string; readonly state?: StateView }): JSX.Element {
+export function SystemsTraceTable({
+  spec,
+  caption,
+  state = NO_STATE,
+}: {
+  readonly spec: SystemsTraceSpec;
+  readonly caption: string;
+  readonly state?: StateView;
+}): JSX.Element {
   const rows = spec.stages.map((stage) => ({
     stage: stage.name,
     cells: spec.columns.map((column) => stage.values[column] ?? ''),
@@ -85,7 +116,11 @@ export function SystemsTraceView({ block }: { readonly block: SystemsTraceBlock 
   return (
     <div class="vg-trace vg-trace--systems">
       <p class="vg-trace__title">{block.title}</p>
-      <TraceTable caption={block.title} columns={block.columns} rows={block.rows.map((row) => ({ stage: row.stage, cells: row.cells, emphasis: false }))} />
+      <TraceTable
+        caption={block.title}
+        columns={block.columns}
+        rows={block.rows.map((row) => ({ stage: row.stage, cells: row.cells, emphasis: false }))}
+      />
     </div>
   );
 }

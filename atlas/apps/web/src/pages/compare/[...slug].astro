@@ -65,7 +65,10 @@ const hrefOf = (target: LinkTarget | null): string | null => {
       return null;
   }
 };
-const crumbs = [...doc.route.breadcrumbs, { id: doc.meta.id, title: doc.header.title, number: doc.header.number, url: doc.route.url }];
+const crumbs = [
+  ...doc.route.breadcrumbs,
+  { id: doc.meta.id, title: doc.header.title, number: doc.header.number, url: doc.route.url },
+];
 const sourceHref = siblingsRegion !== null ? `${doc.route.url}#${siblingsRegion.anchor}` : doc.route.url;
 ---
 
@@ -88,7 +91,9 @@ const sourceHref = siblingsRegion !== null ? `${doc.route.url}#${siblingsRegion.
 
     <section class="cmpt gx-inst" aria-labelledby="cmpt-title">
       <p class="gx-head">
-        <span class="gx-head__title" id="cmpt-title">Differentials</span>
+        <span class="gx-head__title" id="cmpt-title">
+          Differentials
+        </span>
         <span class="gx-head__note">
           authored in <a href={sourceHref}>{siblingsRegion?.title ?? 'Siblings'}</a>
         </span>
@@ -100,48 +105,53 @@ const sourceHref = siblingsRegion !== null ? `${doc.route.url}#${siblingsRegion.
       <div class="sh-table-scroll cmpt__scroll">
         <table class="sh-table sh-compare cmpt__table" style={`--cmpt-cols:${String(siblings.length)}`}>
           <caption class="sh-visually-hidden">
-            Differential explanations of {title}: one row per question, one column per alternative.
+            Differential explanations of{title}: one row per question, one column per alternative.
           </caption>
           <thead>
             <tr>
-              <th scope="col" class="sh-compare-corner cmpt__corner">Question</th>
-              {
-                siblings.map((sibling, index) => {
-                  const href = hrefOf(sibling.target);
-                  const glyph = glyphs[index];
-                  return (
-                    <th scope="col" class="sh-compare-head cmpt__head" data-col={index + 1}>
-                      <span class="cmpt__hd">
-                        <span class="cmpt__glyph" aria-hidden="true">
-                          {glyph?.stated.map((on) => (
-                            <i class:list={['cmpt__cell', { 'is-on': on }]} />
-                          ))}
-                        </span>
-                        {href !== null ? <a href={href}>{sibling.name}</a> : <span>{sibling.name}</span>}
+              <th scope="col" class="sh-compare-corner cmpt__corner">
+                Question
+              </th>
+              {siblings.map((sibling, index) => {
+                const href = hrefOf(sibling.target);
+                const glyph = glyphs[index];
+                return (
+                  <th scope="col" class="sh-compare-head cmpt__head" data-col={index + 1}>
+                    <span class="cmpt__hd">
+                      <span class="cmpt__glyph" aria-hidden="true">
+                        {glyph?.stated.map((on) => (
+                          <i class:list={['cmpt__cell', { 'is-on': on }]} />
+                        ))}
                       </span>
-                    </th>
-                  );
-                })
-              }
+                      {href !== null ? <a href={href}>{sibling.name}</a> : <span>{sibling.name}</span>}
+                    </span>
+                  </th>
+                );
+              })}
             </tr>
           </thead>
           <tbody>
-            {
-              rows.map((row, rowIndex) => (
-                <tr class:list={['sh-compare-row', row.differs ? 'sh-compare-row--differs' : 'sh-compare-row--same']} data-row={rowIndex + 1}>
-                  <th scope="row">
-                    <span class="cmpt__q-n">{rowIndex + 1}</span>
-                    <span class="cmpt__q">{row.title}</span>
-                    {!row.differs && row.answered > 1 && <span class="sh-compare-same">same for all</span>}
-                  </th>
-                  {row.cells.map((cell, index) => (
-                    <td data-col={index + 1} data-alt={siblings[index]?.name ?? ''} class:list={{ 'is-missing': cell === null }}>
-                      {cell === null ? <span class="sh-compare-missing">not stated</span> : <Inline nodes={cell} />}
-                    </td>
-                  ))}
-                </tr>
-              ))
-            }
+            {rows.map((row, rowIndex) => (
+              <tr
+                class:list={['sh-compare-row', row.differs ? 'sh-compare-row--differs' : 'sh-compare-row--same']}
+                data-row={rowIndex + 1}
+              >
+                <th scope="row">
+                  <span class="cmpt__q-n">{rowIndex + 1}</span>
+                  <span class="cmpt__q">{row.title}</span>
+                  {!row.differs && row.answered > 1 && <span class="sh-compare-same">same for all</span>}
+                </th>
+                {row.cells.map((cell, index) => (
+                  <td
+                    data-col={index + 1}
+                    data-alt={siblings[index]?.name ?? ''}
+                    class:list={{ 'is-missing': cell === null }}
+                  >
+                    {cell === null ? <span class="sh-compare-missing">not stated</span> : <Inline nodes={cell} />}
+                  </td>
+                ))}
+              </tr>
+            ))}
           </tbody>
         </table>
       </div>

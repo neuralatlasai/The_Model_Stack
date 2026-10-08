@@ -188,7 +188,10 @@ export function parseSystemsTrace(raw: string): ParsedSystemsTrace | null {
   }
   const present = new Set<string>();
   for (const row of parsedRows) for (const key of row.values.keys()) present.add(key);
-  const columns = [...KNOWN_COLUMNS.filter((column) => present.has(column)), ...(present.has(NOTE_COLUMN) ? [NOTE_COLUMN] : [])];
+  const columns = [
+    ...KNOWN_COLUMNS.filter((column) => present.has(column)),
+    ...(present.has(NOTE_COLUMN) ? [NOTE_COLUMN] : []),
+  ];
   const rows = parsedRows.map((row) => ({
     stage: row.stage,
     cells: columns.map((column) => (row.values.get(column) ?? []).join('; ')),

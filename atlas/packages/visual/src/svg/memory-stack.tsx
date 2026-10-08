@@ -25,11 +25,28 @@ import { cls, fracStyle, litClass, NO_STATE, type StateView } from './util.ts';
 
 const SEGMENT_STYLES = 5;
 
-export function Swatch({ index, emphasis = false }: { readonly index: number; readonly emphasis?: boolean }): JSX.Element {
-  return <span class={cls('vg-swatch', emphasis ? 'vg-seg--emph' : `vg-seg--${index % SEGMENT_STYLES}`)} aria-hidden="true" />;
+export function Swatch({
+  index,
+  emphasis = false,
+}: {
+  readonly index: number;
+  readonly emphasis?: boolean;
+}): JSX.Element {
+  return (
+    <span
+      class={cls('vg-swatch', emphasis ? 'vg-seg--emph' : `vg-seg--${index % SEGMENT_STYLES}`)}
+      aria-hidden="true"
+    />
+  );
 }
 
-export function MemoryStackView({ spec, state = NO_STATE }: { readonly spec: MemoryStackSpec; readonly state?: StateView }): JSX.Element {
+export function MemoryStackView({
+  spec,
+  state = NO_STATE,
+}: {
+  readonly spec: MemoryStackSpec;
+  readonly state?: StateView;
+}): JSX.Element {
   const values = evaluateMemoryStack(spec, state.overrides);
   const scale = memoryScale(values);
   const budget = values.budget;

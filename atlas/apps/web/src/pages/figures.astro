@@ -32,5 +32,9 @@ const rail = figures.filter((figure) => figure.placement === 'rail').length;
     meta={`${grouped(figures.length)} figures · ${grouped(live)} live instruments · ${grouped(rail)} in the rail · ${grouped(chapters)} of 66 chapters`}
   />
 
-  {figures.length === 0 ? <p class="sh-empty">No figures are compiled in this bundle.</p> : <FiguresExplorer figures={figures} graph={graph} />}
+  {figures.length === 0 ? (
+    <p class="sh-empty">No figures are compiled in this bundle.</p>
+  ) : (
+    <FiguresExplorer figures={figures} graph={graph} />
+  )}
 </ReaderLayout>

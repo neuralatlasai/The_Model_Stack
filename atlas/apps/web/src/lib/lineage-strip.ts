@@ -132,7 +132,9 @@ export function lineageStrip(entries: readonly StripEntry[], width = 1000): Stri
   });
 
   // Labels: the first year, round years in the compressed span, every year after the split; thinned.
-  const candidates = [...new Set([yMin, ...populated.filter((year) => year % 10 === 0 || year >= split), yMax])].sort((a, b) => a - b);
+  const candidates = [...new Set([yMin, ...populated.filter((year) => year % 10 === 0 || year >= split), yMax])].sort(
+    (a, b) => a - b,
+  );
   const ticks: { year: number; x: number; label: string }[] = [];
   for (const year of candidates) {
     const previous = ticks.at(-1);

@@ -35,7 +35,16 @@ const COUNT_ABBR: Readonly<Partial<Record<OutlineMarkerType, string>>> = {
   definition: 'def',
   code: 'code',
 };
-const COUNT_ORDER: readonly OutlineMarkerType[] = ['figure', 'equation', 'algorithm', 'definition', 'experiment', 'failure-mode', 'open-question', 'code'];
+const COUNT_ORDER: readonly OutlineMarkerType[] = [
+  'figure',
+  'equation',
+  'algorithm',
+  'definition',
+  'experiment',
+  'failure-mode',
+  'open-question',
+  'code',
+];
 const SELF_DESCRIBING: ReadonlySet<string> = new Set(['equation', 'figure', 'algorithm', 'experiment']);
 
 const entries = outline.map((entry) => {
@@ -58,34 +67,40 @@ const entries = outline.map((entry) => {
 });
 ---
 
-{
-  entries.length > 0 && (
-    <nav class="rb-minimap" aria-label="Page outline" {...minimapAttrs(doc.meta.id)}>
-      <p class="rb-minimap__head">On this page</p>
-      <span class="rb-minimap__progress" aria-hidden="true" {...progressAttrs()} />
-      <ol class="rb-minimap__list" role="list">
-        {entries.map(({ entry, ordinal, counts, markers }) => (
-          <li class={`rb-minimap__entry rb-minimap__entry--${entry.role}`} {...depthAttrs(entry.depth)}>
-            <a class="rb-minimap__link" href={`#${entry.anchor}`}>
-              <span class="rb-minimap__tick" aria-hidden="true" />
-              {ordinal !== null && <span class="rb-minimap__ord" aria-hidden="true">{ordinal}</span>}
-              <span class="rb-minimap__title">{entry.title}</span>
-              {counts !== '' && <span class="rb-minimap__count">{counts}</span>}
-            </a>
-            {markers.length > 0 && (
-              <ul class="rb-minimap__markers" role="list">
-                {markers.map((marker) => (
-                  <li>
-                    <a class={`rb-minimap__marker rb-minimap__marker--${marker.type}`} href={`#${marker.anchor}`} title={marker.text}>
-                      {marker.short}
-                    </a>
-                  </li>
-                ))}
-              </ul>
+{entries.length > 0 && (
+  <nav class="rb-minimap" aria-label="Page outline" {...minimapAttrs(doc.meta.id)}>
+    <p class="rb-minimap__head">On this page</p>
+    <span class="rb-minimap__progress" aria-hidden="true" {...progressAttrs()} />
+    <ol class="rb-minimap__list" role="list">
+      {entries.map(({ entry, ordinal, counts, markers }) => (
+        <li class={`rb-minimap__entry rb-minimap__entry--${entry.role}`} {...depthAttrs(entry.depth)}>
+          <a class="rb-minimap__link" href={`#${entry.anchor}`}>
+            <span class="rb-minimap__tick" aria-hidden="true" />
+            {ordinal !== null && (
+              <span class="rb-minimap__ord" aria-hidden="true">
+                {ordinal}
+              </span>
             )}
-          </li>
-        ))}
-      </ol>
-    </nav>
-  )
-}
+            <span class="rb-minimap__title">{entry.title}</span>
+            {counts !== '' && <span class="rb-minimap__count">{counts}</span>}
+          </a>
+          {markers.length > 0 && (
+            <ul class="rb-minimap__markers" role="list">
+              {markers.map((marker) => (
+                <li>
+                  <a
+                    class={`rb-minimap__marker rb-minimap__marker--${marker.type}`}
+                    href={`#${marker.anchor}`}
+                    title={marker.text}
+                  >
+                    {marker.short}
+                  </a>
+                </li>
+              ))}
+            </ul>
+          )}
+        </li>
+      ))}
+    </ol>
+  </nav>
+)}

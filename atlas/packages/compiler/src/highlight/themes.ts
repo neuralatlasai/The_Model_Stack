@@ -75,19 +75,46 @@ function theme(name: string, type: 'light' | 'dark', p: Palette): ThemeRegistrat
         settings: { foreground: p.ink },
       },
       {
-        scope: ['entity.name.function', 'support.function', 'meta.function-call entity.name.function', 'entity.name.type', 'entity.name.class', 'support.class', 'support.type'],
+        scope: [
+          'entity.name.function',
+          'support.function',
+          'meta.function-call entity.name.function',
+          'entity.name.type',
+          'entity.name.class',
+          'support.class',
+          'support.type',
+        ],
         settings: { foreground: p.ink },
       },
       {
-        scope: ['string', 'string.quoted', 'string.template', 'string.unquoted', 'markup.inline.raw', 'constant.character.escape'],
+        scope: [
+          'string',
+          'string.quoted',
+          'string.template',
+          'string.unquoted',
+          'markup.inline.raw',
+          'constant.character.escape',
+        ],
         settings: { foreground: p.string },
       },
       {
-        scope: ['constant.numeric', 'constant.language', 'constant.other', 'support.constant', 'variable.other.constant'],
+        scope: [
+          'constant.numeric',
+          'constant.language',
+          'constant.other',
+          'support.constant',
+          'variable.other.constant',
+        ],
         settings: { foreground: p.number },
       },
       {
-        scope: ['variable', 'variable.parameter', 'variable.other', 'meta.definition.variable', 'entity.other.attribute-name'],
+        scope: [
+          'variable',
+          'variable.parameter',
+          'variable.other',
+          'meta.definition.variable',
+          'entity.other.attribute-name',
+        ],
         settings: { foreground: p.ink2 },
       },
       {

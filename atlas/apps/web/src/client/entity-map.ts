@@ -26,8 +26,12 @@ export function initEntityMap(ctx: PageContext): void {
     meta: out.meta?.textContent ?? '',
     what: out.what?.textContent ?? '',
   };
-  const dots = new Map([...svg.querySelectorAll<SVGAElement>('[data-em-n]')].map((dot) => [dot.dataset['emN'] ?? '', dot]));
-  const rows = new Map([...readout.querySelectorAll<HTMLElement>('[data-em-row]')].map((row) => [row.dataset['emRow'] ?? '', row]));
+  const dots = new Map(
+    [...svg.querySelectorAll<SVGAElement>('[data-em-n]')].map((dot) => [dot.dataset['emN'] ?? '', dot]),
+  );
+  const rows = new Map(
+    [...readout.querySelectorAll<HTMLElement>('[data-em-row]')].map((row) => [row.dataset['emRow'] ?? '', row]),
+  );
   const restN = readout.dataset['emRest'] ?? '';
 
   const write = (kicker: string, title: string, meta: string, what: string): void => {
@@ -47,8 +51,19 @@ export function initEntityMap(ctx: PageContext): void {
     mark('', 'is-rest');
     mark(n, 'is-focus');
     const sections = dot.dataset['emSections'] ?? '';
-    const state = dot.classList.contains('is-used') ? (sections === '' || sections === '0' ? 'listed' : `${sections} §`) : dot.classList.contains('is-planned-use') ? 'planned' : 'not yet';
-    write(`ch ${n.padStart(2, '0')} · ${state}`, dot.dataset['emTitle'] ?? '', dot.dataset['emMeta'] ?? '', dot.dataset['emWhat'] ?? '');
+    const state = dot.classList.contains('is-used')
+      ? sections === '' || sections === '0'
+        ? 'listed'
+        : `${sections} §`
+      : dot.classList.contains('is-planned-use')
+        ? 'planned'
+        : 'not yet';
+    write(
+      `ch ${n.padStart(2, '0')} · ${state}`,
+      dot.dataset['emTitle'] ?? '',
+      dot.dataset['emMeta'] ?? '',
+      dot.dataset['emWhat'] ?? '',
+    );
   };
   const reset = (): void => {
     mark('', 'is-focus');
@@ -57,20 +72,36 @@ export function initEntityMap(ctx: PageContext): void {
   };
   const keyOf = (target: EventTarget | null): string | null => {
     if (!(target instanceof Element)) return null;
-    return target.closest<HTMLElement | SVGElement>('[data-em-n], [data-em-row]')?.getAttribute('data-em-n') ?? target.closest<HTMLElement>('[data-em-row]')?.dataset['emRow'] ?? null;
+    return (
+      target.closest<HTMLElement | SVGElement>('[data-em-n], [data-em-row]')?.getAttribute('data-em-n') ??
+      target.closest<HTMLElement>('[data-em-row]')?.dataset['emRow'] ??
+      null
+    );
   };
   for (const scope of [svg, readout]) {
-    scope.addEventListener('pointerover', (event) => {
-      const n = keyOf(event.target);
-      if (n !== null) show(n);
-    }, { signal });
-    scope.addEventListener('focusin', (event) => {
-      const n = keyOf(event.target);
-      if (n !== null) show(n);
-    }, { signal });
+    scope.addEventListener(
+      'pointerover',
+      (event) => {
+        const n = keyOf(event.target);
+        if (n !== null) show(n);
+      },
+      { signal },
+    );
+    scope.addEventListener(
+      'focusin',
+      (event) => {
+        const n = keyOf(event.target);
+        if (n !== null) show(n);
+      },
+      { signal },
+    );
   }
   root.addEventListener('pointerleave', reset, { signal });
-  root.addEventListener('focusout', (event) => {
-    if (!(event.relatedTarget instanceof Node) || !root.contains(event.relatedTarget)) reset();
-  }, { signal });
+  root.addEventListener(
+    'focusout',
+    (event) => {
+      if (!(event.relatedTarget instanceof Node) || !root.contains(event.relatedTarget)) reset();
+    },
+    { signal },
+  );
 }

@@ -49,10 +49,17 @@ export function initTimelineExplorer(ctx: PageContext): void {
   const markOf = new Map(marks.map((mark) => [mark.dataset['tl'] ?? '', mark]));
   const entryOf = new Map(entries.map((entry) => [entry.dataset['tlEntry'] ?? '', entry]));
   const bandOf = new Map(
-    [...svg.querySelectorAll<SVGAElement>('[data-tlm-year]')].map((link) => [link.dataset['tlmYear'] ?? '', link.querySelector('rect')]),
+    [...svg.querySelectorAll<SVGAElement>('[data-tlm-year]')].map((link) => [
+      link.dataset['tlmYear'] ?? '',
+      link.querySelector('rect'),
+    ]),
   );
-  const segs = new Map([...root.querySelectorAll<HTMLElement>('[data-tlm-seg]')].map((seg) => [seg.dataset['tlmSeg'] ?? '', seg]));
-  const counts = new Map([...root.querySelectorAll<HTMLElement>('[data-tlm-count]')].map((cell) => [cell.dataset['tlmCount'] ?? '', cell]));
+  const segs = new Map(
+    [...root.querySelectorAll<HTMLElement>('[data-tlm-seg]')].map((seg) => [seg.dataset['tlmSeg'] ?? '', seg]),
+  );
+  const counts = new Map(
+    [...root.querySelectorAll<HTMLElement>('[data-tlm-count]')].map((cell) => [cell.dataset['tlmCount'] ?? '', cell]),
+  );
   const total = entries.length;
   const hidden = new Set<string>();
   let pinnedThread: string | null = null;
@@ -64,7 +71,8 @@ export function initTimelineExplorer(ctx: PageContext): void {
     const owner = entry.querySelector<HTMLAnchorElement>('[data-tlc-owner]');
     const chapter = entry.dataset['chapter'] ?? '';
     const thread = entries.filter((other) => other.dataset['chapter'] === chapter).length;
-    if (out.kicker !== null) out.kicker.textContent = `${lead} · ${entry.dataset['year'] ?? ''} · ${RELATION_NAMES[entry.dataset['relation'] ?? ''] ?? ''}`;
+    if (out.kicker !== null)
+      out.kicker.textContent = `${lead} · ${entry.dataset['year'] ?? ''} · ${RELATION_NAMES[entry.dataset['relation'] ?? ''] ?? ''}`;
     if (out.title !== null) out.title.textContent = work;
     if (out.meta !== null) {
       const link = doc.createElement('a');
@@ -72,7 +80,11 @@ export function initTimelineExplorer(ctx: PageContext): void {
       const number = owner?.querySelector('.tlc-owner__n')?.textContent ?? '';
       const title = owner?.querySelector('.tlc-owner__t')?.textContent ?? '';
       link.textContent = `${number} ${title}`.trim();
-      out.meta.replaceChildren('placed by ', link, ` · ${String(thread)} entr${thread === 1 ? 'y' : 'ies'} in its lineage`);
+      out.meta.replaceChildren(
+        'placed by ',
+        link,
+        ` · ${String(thread)} entr${thread === 1 ? 'y' : 'ies'} in its lineage`,
+      );
     }
   };
 
@@ -81,7 +93,8 @@ export function initTimelineExplorer(ctx: PageContext): void {
     const own = entries.filter((entry) => entry.dataset['chapter'] === chapter);
     const yearsOf = own.map((entry) => Number(entry.dataset['year'] ?? Number.NaN)).filter(Number.isFinite);
     const span = yearsOf.length === 0 ? '' : ` · ${String(Math.min(...yearsOf))}–${String(Math.max(...yearsOf))}`;
-    if (out.kicker !== null) out.kicker.textContent = `Chapter ${chip.textContent.trim()} · ${String(own.length)} entr${own.length === 1 ? 'y' : 'ies'}${span}`;
+    if (out.kicker !== null)
+      out.kicker.textContent = `Chapter ${chip.textContent.trim()} · ${String(own.length)} entr${own.length === 1 ? 'y' : 'ies'}${span}`;
     if (out.title !== null) out.title.textContent = chip.dataset['tlxTitle'] ?? '';
     if (out.meta !== null) {
       out.meta.textContent = Object.entries(RELATION_NAMES)
@@ -188,56 +201,83 @@ export function initTimelineExplorer(ctx: PageContext): void {
   // ── pointer ───────────────────────────────────────────────────────────────
   const markFrom = (target: EventTarget | null): SVGAElement | null =>
     target instanceof Element ? target.closest<SVGAElement>('.tlm__mark[data-tl]') : null;
-  svg.addEventListener('pointerover', (event) => {
-    const mark = markFrom(event.target);
-    if (mark !== null) focusEntry(mark.dataset['tl'] ?? '', 'Pointing');
-  }, { signal: ctl.signal });
+  svg.addEventListener(
+    'pointerover',
+    (event) => {
+      const mark = markFrom(event.target);
+      if (mark !== null) focusEntry(mark.dataset['tl'] ?? '', 'Pointing');
+    },
+    { signal: ctl.signal },
+  );
   svg.addEventListener('pointerleave', release, { signal: ctl.signal });
   for (const entry of entries) {
-    entry.addEventListener('pointerenter', () => {
-      focusEntry(entry.dataset['tlEntry'] ?? '', 'Pointing');
-    }, { signal: ctl.signal });
+    entry.addEventListener(
+      'pointerenter',
+      () => {
+        focusEntry(entry.dataset['tlEntry'] ?? '', 'Pointing');
+      },
+      { signal: ctl.signal },
+    );
     entry.addEventListener('pointerleave', release, { signal: ctl.signal });
   }
 
   // Click a dot or a year band: scroll the chronicle there and mark it.
   const reveal = (target: HTMLElement): void => {
     history.replaceState(history.state, '', `#${target.id}`);
-    target.scrollIntoView({ block: target.classList.contains('tlc-entry') ? 'center' : 'start', behavior: reducedMotion() ? 'auto' : 'smooth' });
+    target.scrollIntoView({
+      block: target.classList.contains('tlc-entry') ? 'center' : 'start',
+      behavior: reducedMotion() ? 'auto' : 'smooth',
+    });
     if (target.classList.contains('tlc-entry')) {
       target.classList.remove('is-flash');
       target.getBoundingClientRect(); // restart the flash animation
       target.classList.add('is-flash');
     }
   };
-  svg.addEventListener('click', (event) => {
-    const mark = markFrom(event.target);
-    const band = event.target instanceof Element ? event.target.closest<SVGAElement>('[data-tlm-year]') : null;
-    const target = mark !== null ? entryOf.get(mark.dataset['tl'] ?? '') : band !== null ? doc.getElementById(`year-${band.dataset['tlmYear'] ?? ''}`) : null;
-    if (target === null || target === undefined) return;
-    event.preventDefault();
-    reveal(target);
-  }, { signal: ctl.signal });
+  svg.addEventListener(
+    'click',
+    (event) => {
+      const mark = markFrom(event.target);
+      const band = event.target instanceof Element ? event.target.closest<SVGAElement>('[data-tlm-year]') : null;
+      const target =
+        mark !== null
+          ? entryOf.get(mark.dataset['tl'] ?? '')
+          : band !== null
+            ? doc.getElementById(`year-${band.dataset['tlmYear'] ?? ''}`)
+            : null;
+      if (target === null || target === undefined) return;
+      event.preventDefault();
+      reveal(target);
+    },
+    { signal: ctl.signal },
+  );
 
   // ── filters ───────────────────────────────────────────────────────────────
   const applyFilters = (): void => {
     for (const entry of entries) {
-      const off = hidden.has(entry.dataset['relation'] ?? '') || (pinnedThread !== null && entry.dataset['chapter'] !== pinnedThread);
+      const off =
+        hidden.has(entry.dataset['relation'] ?? '') ||
+        (pinnedThread !== null && entry.dataset['chapter'] !== pinnedThread);
       entry.hidden = off;
     }
-    for (const year of years) year.hidden = [...year.querySelectorAll<HTMLElement>('[data-tl-entry]')].every((entry) => entry.hidden);
+    for (const year of years)
+      year.hidden = [...year.querySelectorAll<HTMLElement>('[data-tl-entry]')].every((entry) => entry.hidden);
     for (const mark of marks) mark.classList.toggle('is-filtered', hidden.has(mark.dataset['relation'] ?? ''));
     current = null;
     schedule();
   };
   for (const chip of root.querySelectorAll<HTMLButtonElement>('[data-tlx-filter]')) {
-    chip.addEventListener('click', () => {
-      const key = chip.dataset['tlxFilter'] ?? '';
-      if (hidden.has(key)) hidden.delete(key);
-      else hidden.add(key);
-      chip.setAttribute('aria-pressed', String(!hidden.has(key)));
-      applyFilters();
-    }, { signal: ctl.signal });
+    chip.addEventListener(
+      'click',
+      () => {
+        const key = chip.dataset['tlxFilter'] ?? '';
+        if (hidden.has(key)) hidden.delete(key);
+        else hidden.add(key);
+        chip.setAttribute('aria-pressed', String(!hidden.has(key)));
+        applyFilters();
+      },
+      { signal: ctl.signal },
+    );
   }
   const threadChips = [...root.querySelectorAll<HTMLButtonElement>('[data-tlx-thread]')];
   for (const chip of threadChips) {
@@ -251,14 +291,20 @@ export function initTimelineExplorer(ctx: PageContext): void {
     chip.addEventListener('focus', preview, { signal: ctl.signal });
     chip.addEventListener('pointerleave', release, { signal: ctl.signal });
     chip.addEventListener('blur', release, { signal: ctl.signal });
-    chip.addEventListener('click', () => {
-      pinnedThread = pinnedThread === chapter ? null : chapter;
-      for (const other of threadChips) other.setAttribute('aria-pressed', String(other.dataset['tlxThread'] === pinnedThread));
-      clearFocus();
-      applyFilters();
-      const first = entries.find((entry) => !entry.hidden);
-      if (pinnedThread !== null && first !== undefined && first.getBoundingClientRect().top < 0) reveal(first.closest<HTMLElement>('.tlc-year') ?? first);
-    }, { signal: ctl.signal });
+    chip.addEventListener(
+      'click',
+      () => {
+        pinnedThread = pinnedThread === chapter ? null : chapter;
+        for (const other of threadChips)
+          other.setAttribute('aria-pressed', String(other.dataset['tlxThread'] === pinnedThread));
+        clearFocus();
+        applyFilters();
+        const first = entries.find((entry) => !entry.hidden);
+        if (pinnedThread !== null && first !== undefined && first.getBoundingClientRect().top < 0)
+          reveal(first.closest<HTMLElement>('.tlc-year') ?? first);
+      },
+      { signal: ctl.signal },
+    );
   }
 
   // ── keyboard: one tab stop, arrows in time order ──────────────────────────
@@ -268,27 +314,42 @@ export function initTimelineExplorer(ctx: PageContext): void {
     return (ea === undefined ? 0 : entries.indexOf(ea)) - (eb === undefined ? 0 : entries.indexOf(eb));
   });
   const STEP: Readonly<Record<string, number>> = { ArrowDown: 1, ArrowRight: 1, ArrowUp: -1, ArrowLeft: -1 };
-  svg.addEventListener('keydown', (event) => {
-    const mark = markFrom(event.target);
-    if (mark === null) return;
-    if (event.key === 'Escape') {
-      release();
-      return;
-    }
-    const visible = ordered.filter((other) => !other.classList.contains('is-filtered'));
-    const at = Math.max(0, visible.indexOf(mark));
-    const step = STEP[event.key];
-    const next = event.key === 'Home' ? visible[0] : event.key === 'End' ? visible.at(-1) : step === undefined ? undefined : visible[Math.max(0, Math.min(visible.length - 1, at + step))];
-    if (next === undefined) return;
-    event.preventDefault();
-    for (const other of marks) other.setAttribute('tabindex', '-1');
-    next.setAttribute('tabindex', '0');
-    next.focus();
-  }, { signal: ctl.signal });
-  svg.addEventListener('focusin', (event) => {
-    const mark = markFrom(event.target);
-    if (mark !== null) focusEntry(mark.dataset['tl'] ?? '', 'Focused');
-  }, { signal: ctl.signal });
+  svg.addEventListener(
+    'keydown',
+    (event) => {
+      const mark = markFrom(event.target);
+      if (mark === null) return;
+      if (event.key === 'Escape') {
+        release();
+        return;
+      }
+      const visible = ordered.filter((other) => !other.classList.contains('is-filtered'));
+      const at = Math.max(0, visible.indexOf(mark));
+      const step = STEP[event.key];
+      const next =
+        event.key === 'Home'
+          ? visible[0]
+          : event.key === 'End'
+            ? visible.at(-1)
+            : step === undefined
+              ? undefined
+              : visible[Math.max(0, Math.min(visible.length - 1, at + step))];
+      if (next === undefined) return;
+      event.preventDefault();
+      for (const other of marks) other.setAttribute('tabindex', '-1');
+      next.setAttribute('tabindex', '0');
+      next.focus();
+    },
+    { signal: ctl.signal },
+  );
+  svg.addEventListener(
+    'focusin',
+    (event) => {
+      const mark = markFrom(event.target);
+      if (mark !== null) focusEntry(mark.dataset['tl'] ?? '', 'Focused');
+    },
+    { signal: ctl.signal },
+  );
 
   // Arriving on #tl-N (from the home strip or a shared link): flash the entry.
   const arrived = /^#tl-\d+$/u.test(location.hash) ? doc.getElementById(location.hash.slice(1)) : null;

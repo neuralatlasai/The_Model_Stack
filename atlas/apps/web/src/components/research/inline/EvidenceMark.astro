@@ -15,4 +15,16 @@ const marker = evidenceMarker(Astro.props.label);
 const abbreviated = marker.short !== marker.label;
 ---
 
-<span class={`rb-label rb-label--${marker.cls}`} title={marker.label} data-evidence={marker.label}><span class="rb-label__glyph" aria-hidden="true">{marker.glyph}</span>{abbreviated ? <Fragment><span aria-hidden="true">{marker.short}</span><span class="rb-vh">{marker.label}</span></Fragment> : marker.short}</span>
+<span class={`rb-label rb-label--${marker.cls}`} title={marker.label} data-evidence={marker.label}>
+  <span class="rb-label__glyph" aria-hidden="true">
+    {marker.glyph}
+  </span>
+  {abbreviated ? (
+    <Fragment>
+      <span aria-hidden="true">{marker.short}</span>
+      <span class="rb-vh">{marker.label}</span>
+    </Fragment>
+  ) : (
+    marker.short
+  )}
+</span>

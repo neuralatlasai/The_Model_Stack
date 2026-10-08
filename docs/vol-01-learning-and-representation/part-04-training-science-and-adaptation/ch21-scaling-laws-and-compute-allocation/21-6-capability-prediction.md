@@ -64,13 +64,23 @@ evidence_summary:
   - UNVERIFIED
   empirically_observed: false
 word_count_target: 2000
-updated_at: '2026-10-08'
+updated_at: '2026-10-09'
 editorial_status: manuscript_draft
 ---
 
 # 21.6 Capability prediction
 
+## Scope
+
 [DERIVED] Predicting next-token loss and predicting task success require different models. A smooth improvement in average cross-entropy does not fix answer extraction, sampling, reasoning strategy, task composition, scoring thresholds or finite-test resolution. A capability forecast must therefore reconstruct the measurement map between a model's behavior and the reported score, then validate that map on unseen models or tasks.
+
+## Why this exists
+
+[PAPER-REPORTED] Apparent emergence studies and observational scaling studies address separate gaps: how scoring creates curve shape, and how benchmark coordinates predict unseen model outcomes. Both require a precise evaluation contract. Reported prediction successes coexist with failed extrapolations at extreme training ratios and selected large-model targets; those failures remain evidence rather than inconvenient exceptions. [R21.13], §§2–4; [R21.14], §§3–5; [R21.3], §5; [R21.17], §§4–6.
+
+## Intuition
+
+[MATHEMATICALLY-DERIVED] Cross-entropy averages log probabilities; exact-match success applies a nonlinear event to a sequence; a benchmark then averages a finite set of those events. Nonlinearity and finite resolution can create steep measured transitions from smooth probability changes. Conversely, averaging can conceal a large change on a rare slice. A response map must therefore be validated separately from the upstream size/loss predictor.
 
 ## Formulation
 
@@ -88,7 +98,35 @@ $$
 
 [MATHEMATICALLY-DERIVED] A thresholded task metric can transform a continuous latent score $z$ into $\mathbf1\{z\ge t\}$. For a distribution of thresholds, aggregate success is a cumulative distribution function evaluated at $z$. Concentrated thresholds can produce a steep rise even when $z$ changes smoothly. Conversely, a continuous aggregate loss can conceal a discontinuity or regression on a small task subset because its contribution receives little weight.
 
-## Methodology
+## Mechanism
+
+```figure
+id: fig-21.11
+kind: diagram
+title: From a model predictor to measured task success
+caption: Task forecasts depend on a response map, decoding and scoring. Finite benchmark resolution and independent validation constrain interpretation of apparent jumps or saturation.
+placement: wide
+evidence: DERIVED
+source: [R21.13, R21.14, R21.15]
+alt: Loss or capability predictors enter a task response map, followed by decoding and scoring, then a finite benchmark score. Independent targets validate the full chain.
+spec:
+  direction: TB
+  nodes:
+    - {id: predictor, kind: model, label: loss or capability predictors}
+    - {id: map, kind: process, label: task response map}
+    - {id: decode, kind: process, label: decoding and answer selection}
+    - {id: metric, kind: metric, label: continuous or thresholded scoring}
+    - {id: test, kind: dataset, label: finite benchmark and slices}
+    - {id: validate, kind: boundary, label: independent model validation}
+  edges:
+    - {from: predictor, to: map}
+    - {from: map, to: decode}
+    - {from: decode, to: metric}
+    - {from: metric, to: test}
+    - {from: test, to: validate}
+```
+
+### Methodology
 
 ### Apparent emergence is a measurement question
 
@@ -125,33 +163,97 @@ $$
 
 [MATHEMATICALLY-DERIVED] Under fixed evaluation mixture weights, $L_{\mathrm{mix}}=\sum_iw_iL_i$. A rare slice with small $w_i$ can change substantially while moving the mixture little. Conversely, reducing loss on common easy material can improve the aggregate without improving a sparse difficult capability. This identity is sufficient to show why an aggregate law alone cannot determine every slice; it does not establish that any specific unmeasured harmful or beneficial behavior has changed.
 
-## Algorithm
-
-```text
-Algorithm 21.6 — Validate a capability forecast and its measurement map
-INPUT: model/predictor table; task scoring contract; independent target models
-OUTPUT: frozen forecasts, calibrated uncertainty and observed extrapolation errors
-STATE: training-only preprocessing; task and model splits; decoding and scoring revisions
-INVARIANT: target outcomes never enter representation fitting or predictor selection
-1. Define the success event, valid answers, prompts, decoding, extraction and sampling budget.
-2. Record continuous signals alongside thresholded metrics where the task permits them.
-3. Split by model family and strength while retaining untouched target releases or runs.
-4. Fit preprocessing, capability representation and response maps using training data only.
-5. Estimate score resolution, item dependence and uncertainty near floor or ceiling.
-6. Freeze predictions and compare them with subsequently revealed target outcomes.
-7. Test metric changes, benchmark slices, saturation and out-of-support model families.
-8. Report failed forecasts and distinguish observational prediction from causal scaling.
-TERMINATION: each predefined target receives a prediction and independent assessment
-COMPLEXITY: linear scoring in evaluated items; representation and fitting costs depend on rank
+```figure
+id: fig-21.12
+kind: calculator
+title: Zero successes and finite benchmark resolution
+caption: >-
+  Equation 21.23 generalizes 0.05 to a supplied tail probability. It assumes
+  independent identically distributed Bernoulli items and zero successes.
+  This analytical bound is not evidence of a named model's capability.
+placement: rail
+anchor: mechanism
+evidence: MATHEMATICALLY-DERIVED
+source: DERIVED:eq-21.23
+alt: >-
+  With zero successes on 1000 independent items, the one-sided 95 percent
+  upper success-probability bound is approximately 0.299 percent.
+spec:
+  tex: p_{\mathrm{upper}}=1-\alpha^{1/M}
+  equation: "21.23"
+  inputs:
+    - {symbol: items, label: independent item count, default: 1000, min: 1, max: 1000000, step: 1, format: integer}
+    - {symbol: tail, label: one-sided tail probability, default: 0.05, min: 0.001, max: 0.5}
+  outputs:
+    - {symbol: upper, label: upper success probability in percent, formula: 100*(1-tail^(1/items)), emphasis: true}
+    - {symbol: resolution, label: one-item score resolution in percent, formula: 100/items}
 ```
 
+```figure
+id: fig-21.13
+kind: chart
+title: Evaluation resolution improves with independent item count
+caption: >-
+  Analytical curves from Equation 21.23 compare zero-success one-sided upper
+  bounds with the one-item resolution of an unweighted score. Both axes are
+  logarithmic. These are mathematical quantities under iid Bernoulli sampling,
+  not observed model results; correlated items do not inherit these bounds.
+placement: wide
+anchor: mechanism
+evidence: MATHEMATICALLY-DERIVED
+source: DERIVED:eq-21.23
+alt: >-
+  Three descending curves show the 99 percent upper bound above the 95 percent
+  upper bound, both above one-item score resolution. At 1024 independent items,
+  zero successes gives a 95 percent upper bound near 0.292 percent, while one
+  item changes the score by about 0.098 percentage points.
+spec:
+  type: line
+  x: {label: independent item count M, scale: log2, format: integer, domain: [16, 65536]}
+  y: {label: success probability or score resolution (%), scale: log10, domain: [0.001, 50]}
+  series:
+    - {id: upper99, label: 99% upper bound after zero successes, formula: "100*(1-0.01^(1/x))", sample: {from: 16, to: 65536, count: 13}}
+    - {id: upper95, label: 95% upper bound after zero successes, formula: "100*(1-0.05^(1/x))", sample: {from: 16, to: 65536, count: 13}, emphasis: true}
+    - {id: resolution, label: one-item score resolution, formula: "100/x", sample: {from: 16, to: 65536, count: 13}, dashed: true}
+  annotations:
+    - {x: 1024, label: "1024 items: 95% upper bound ≈ 0.292%"}
+```
+
+## Algorithm
+
+**Algorithm 21.6 — Freeze a capability forecast.** [DERIVED] Input: training model features/outcomes $(X_{\mathcal T},y_{\mathcal T})$, permitted target predictor features $X_{\mathcal V}$, a fixed scoring contract $\chi$, finite representation rank $d$, and bounded fit routines. Output: forecasts and target assessment. Target predictors may be measured before forecasting; the target outcome being predicted is excluded from those features.
+
+$$
+\begin{aligned}
+1.\quad &\omega\gets\operatorname{fit\_preprocess}(X_{\mathcal T}),\qquad
+ \widetilde X_{\mathcal T}\gets T_\omega(X_{\mathcal T}).\\
+2.\quad &W_d\gets\operatorname{PCA}_d(\widetilde X_{\mathcal T}),\qquad
+ S_{\mathcal T}\gets\widetilde X_{\mathcal T}W_d.\\
+3.\quad &\widehat\beta\gets\operatorname{fit}_J(h_\beta(S_{\mathcal T}),y_{\mathcal T};\chi).\\
+4.\quad &S_{\mathcal V}\gets T_\omega(X_{\mathcal V})W_d,\qquad
+ \widehat y_v\gets h_{\widehat\beta}(S_v).\\
+5.\quad &\mathcal P\gets\operatorname{freeze}
+ (\omega,W_d,\widehat\beta,\chi,\{\widehat y_v,I_v\}_{v\in\mathcal V}).\\
+6.\quad &e_v\gets y_v-\widehat y_v,\qquad
+ c_v\gets\mathbf1\{y_v\in I_v\},\qquad v\in\operatorname{reveal}(\mathcal V).\\
+7.\quad &\operatorname{return}(\mathcal P,\{e_v,c_v,\mathrm{slice\ diagnostics}_v\}).
+\end{aligned}
+$$
+*(Eq. 21.29)*
+
+[DERIVED] $T_\omega$ includes the training-fitted missing-value and centering policy; $I_v$ is an interval constructed under a declared item/model uncertainty procedure. A missing required predictor, out-of-support feature or failed fit yields a flagged/unresolved forecast, not an imputed task success. The response map may be logistic or another preregistered family; the procedure does not assert a causal compute law. The invariant is training-only fitting of every transformation and response coefficient. Finite fit/iteration budgets and a finite target set ensure termination. Dense representation costs follow the PCA/SVD bound below; freezing stores $O(Kd)$ loadings for $K$ features and $O(|\mathcal V|)$ scalar forecasts/intervals. Evaluation generation, extraction and scoring retain their own compute boundaries.
+
 ## Implementation
+
+[DERIVED] Evaluation needs the declared inference/runtime and scoring layer, but no specific Inference / serving engine is necessary for the mathematical forecast. The observational source documents LM Eval Harness and source leaderboard protocols; these are source evaluation tools outside the enumerated §4 training/inference systems, routed through the plan's capability-prediction topic. Their runtime behavior was not inspected or executed here. [R21.14], Appendix B.2.
 
 [DERIVED] Store the model revision, prompt template, task data revision, contamination checks, decoding parameters, answer extractor and score implementation. For stochastic decoding, retain sample counts and random-state policy. Item-level results permit bootstrap or hierarchical uncertainty at the appropriate task/template level. A single rounded percentage prevents examination of dependence, threshold artifacts and slice regressions. Public score tables are discovery inputs until their evaluation contracts are reconciled.
 
 [DERIVED] With $R$ models and $K$ benchmark features, dense PCA or SVD has cost governed by $\min(RK^2,R^2K)$ under standard dense algorithms; a fixed-rank approach can reduce work but must preserve the chosen fit contract. Most practical cost lies in generating reliable task measurements. Adding test-time samples increases evaluation and selection work even when the model weights are unchanged. Hardware and serving assumptions must accompany any comparison framed in wall time or currency.
 
-## Reported experiments
+## Experimental design
+
+### Reported experiments
 
 [PAPER-REPORTED] Schaeffer et al.'s experiments show that particular apparent discontinuities can become smoother under alternative metrics and that metric choices can induce apparent emergence. Ruan et al. separately demonstrate stronger-model and future-release prediction using a low-dimensional benchmark representation. These findings concern different objects: measurement-induced curve shape and statistical cross-model prediction. Neither proves that all capabilities are indefinitely extrapolatable. [R21.13, sections 3–4; R21.14, sections 4–5]
 
@@ -177,34 +279,26 @@ COMPLEXITY: linear scoring in evaluated items; representation and fitting costs 
 
 [DERIVED] Confidence intervals based only on item resampling omit model-training randomness and response-map error. Forecasting beyond the observed family can fail because of data specialization, instruction tuning, tools, context or inference strategies. Reporting only successful forecasts conceals selection. A defensible report retains the failed target, its preregistered prediction, the observed error and any subsequent change to the model as a new version rather than revising the original forecast retroactively.
 
-## Improvements and limits
+## Siblings
+
+[DERIVED] Loss-derived prediction composes an upstream scaling law with a task response; observational prediction uses permitted measured benchmark covariates; causal scaling estimates the effect of a controlled intervention. Exact match, graded score, mean success and oracle pass rate measure different events. Compare forecasts on independently withheld outcomes under one decoding/scoring contract; compare inference strategies on selected-answer quality with their full generation/verifier costs.
+
+## Extensions
+
+### Improvements
 
 [DERIVED] The improvement lineage moves from single size-to-score curves to explicit scoring contracts, paired continuous and thresholded measurements, low-dimensional cross-model predictors, independent stronger-model tests and forecasts frozen before new releases. More informative measurement does not eliminate scientific uncertainty; it exposes which uncertainty belongs to training, prediction or task scoring.
 
 [DERIVED] The chapter's final artifact therefore contains both a conditional loss model and a separate capability validation record if capability is the decision objective. The unexecuted protocol in [verification](verification.md) requires frozen target predictions, fit-family sensitivity and uncertainty coverage. No unseen-model result is claimed until that evidence exists.
 
-```figure
-id: fig-21.6
-kind: diagram
-title: From a model predictor to measured task success
-caption: Task forecasts depend on a response map, decoding and scoring. Finite benchmark resolution and independent validation constrain interpretation of apparent jumps or saturation.
-placement: wide
-evidence: DERIVED
-source: [R21.13, R21.14, R21.15]
-alt: Loss or capability predictors enter a task response map, followed by decoding and scoring, then a finite benchmark score. Independent targets validate the full chain.
-spec:
-  direction: LR
-  nodes:
-    - {id: predictor, kind: model, label: loss or capability predictors}
-    - {id: map, kind: process, label: task response map}
-    - {id: decode, kind: process, label: decoding and answer selection}
-    - {id: metric, kind: metric, label: continuous or thresholded scoring}
-    - {id: test, kind: dataset, label: finite benchmark and slices}
-    - {id: validate, kind: boundary, label: independent model validation}
-  edges:
-    - {from: predictor, to: map}
-    - {from: map, to: decode}
-    - {from: decode, to: metric}
-    - {from: metric, to: test}
-    - {from: test, to: validate}
-```
+## Limitations
+
+[MATHEMATICALLY-DERIVED] A threshold explanation establishes that an apparent transition can arise without a discontinuous latent score; it does not establish that every observed transition has that cause. Three principal components can explain observed benchmark covariance while omitting a specialized unmeasured behavior. Finite iid bounds require their sampling conditions. A prediction beyond support remains conditional even when its numerical interval is narrow.
+
+## Reproducibility
+
+[DERIVED] Preserve item-level outcomes, prompts, answer extraction, valid-answer criteria, model/data/runtime revisions, target predictors, training-only transformations, held-out family identities, frozen forecasts and failures. Record model-training and evaluation randomness separately. The source analyses remain PAPER-REPORTED; this draft has not run capability evaluation, fitted the representation or tested a future release forecast.
+
+## References
+
+[R21.13](references.md#r21-13), §§2–4; [R21.14](references.md#r21-14), §§3–5 and Appendix B; [R21.15](references.md#r21-15), §2; [R21.16](references.md#r21-16), §2; [R21.3](references.md#r21-3), §5; [R21.17](references.md#r21-17), extrapolation results; [verification](verification.md).

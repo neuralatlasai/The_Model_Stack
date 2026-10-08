@@ -58,19 +58,24 @@ export function rebaseHtml(html, base) {
   const escaped = base.replace(/[.*+?^${}()|[\]\\]/gu, '\\$&');
   const attr = new RegExp(`(\\s(?:href|src|action|poster|xlink:href)=)(["'])/(?!/|${escaped.slice(1)})`, 'gu');
   let out = html.replace(attr, `$1$2${base}`);
-  out = out.replace(/(<script\b[^>]*type="application\/(?:ld\+)?json"[^>]*>)([\s\S]*?)(<\/script>)/gu, (whole, open, body, close) => {
-    try {
-      return `${open}${jsonForHtml(rebaseJson(JSON.parse(body), base))}${close}`;
-    } catch {
-      return whole; // not JSON after all: leave untouched
-    }
-  });
+  out = out.replace(
+    /(<script\b[^>]*type="application\/(?:ld\+)?json"[^>]*>)([\s\S]*?)(<\/script>)/gu,
+    (whole, open, body, close) => {
+      try {
+        return `${open}${jsonForHtml(rebaseJson(JSON.parse(body), base))}${close}`;
+      } catch {
+        return whole; // not JSON after all: leave untouched
+      }
+    },
+  );
   return out;
 }
 
 /** @param {string} css @param {string} base */
 export function rebaseCss(css, base) {
-  return css.replace(/url\((["']?)\/(?!\/)/gu, (match, quote, offset) => (css.startsWith(base, offset + 4 + quote.length) ? match : `url(${quote}${base}`));
+  return css.replace(/url\((["']?)\/(?!\/)/gu, (match, quote, offset) =>
+    css.startsWith(base, offset + 4 + quote.length) ? match : `url(${quote}${base}`,
+  );
 }
 
 /** JSON file text with its URL-like values rebased; unparsable text is returned unchanged. @param {string} text @param {string} base */
@@ -105,10 +110,21 @@ export default function rebaseLinks() {
         const root = fileURLToPath(dir);
         let files = 0;
         for await (const path of walk(root)) {
-          const kind = path.endsWith('.html') ? 'html' : path.endsWith('.css') ? 'css' : path.endsWith('.json') ? 'json' : null;
+          const kind = path.endsWith('.html')
+            ? 'html'
+            : path.endsWith('.css')
+              ? 'css'
+              : path.endsWith('.json')
+                ? 'json'
+                : null;
           if (kind === null) continue;
           const text = await readFile(path, 'utf8');
-          const next = kind === 'html' ? rebaseHtml(text, base) : kind === 'css' ? rebaseCss(text, base) : rebaseJsonText(text, base);
+          const next =
+            kind === 'html'
+              ? rebaseHtml(text, base)
+              : kind === 'css'
+                ? rebaseCss(text, base)
+                : rebaseJsonText(text, base);
           if (next !== text) {
             await writeFile(path, next);
             files += 1;

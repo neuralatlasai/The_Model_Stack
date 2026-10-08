@@ -66,13 +66,17 @@ describe('parseFrontmatter', () => {
   });
 
   it('keeps section 14.10 distinct from 14.1 (YAML float hazard)', () => {
-    const result = parseFrontmatter(VALID_YAML.replace('id: ms.section.5.2', 'id: ms.section.14.10').replace('section: 5.2', 'section: 14.10'));
+    const result = parseFrontmatter(
+      VALID_YAML.replace('id: ms.section.5.2', 'id: ms.section.14.10').replace('section: 5.2', 'section: 14.10'),
+    );
     assert.ok(result.ok);
     assert.equal(result.meta.section, '14.10');
   });
 
   it('reports schema violations with field paths', () => {
-    const result = parseFrontmatter(VALID_YAML.replace('editorial_status: manuscript_draft', 'editorial_status: finished'));
+    const result = parseFrontmatter(
+      VALID_YAML.replace('editorial_status: manuscript_draft', 'editorial_status: finished'),
+    );
     assert.ok(!result.ok);
     assert.match(result.message, /editorial_status/u);
   });

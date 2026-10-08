@@ -15,15 +15,40 @@ export interface MeshArrays {
 
 const T = (1 + Math.sqrt(5)) / 2;
 const ICO_VERTICES = [
-  [-1, T, 0], [1, T, 0], [-1, -T, 0], [1, -T, 0],
-  [0, -1, T], [0, 1, T], [0, -1, -T], [0, 1, -T],
-  [T, 0, -1], [T, 0, 1], [-T, 0, -1], [-T, 0, 1],
+  [-1, T, 0],
+  [1, T, 0],
+  [-1, -T, 0],
+  [1, -T, 0],
+  [0, -1, T],
+  [0, 1, T],
+  [0, -1, -T],
+  [0, 1, -T],
+  [T, 0, -1],
+  [T, 0, 1],
+  [-T, 0, -1],
+  [-T, 0, 1],
 ] as const;
 const ICO_FACES = [
-  [0, 11, 5], [0, 5, 1], [0, 1, 7], [0, 7, 10], [0, 10, 11],
-  [1, 5, 9], [5, 11, 4], [11, 10, 2], [10, 7, 6], [7, 1, 8],
-  [3, 9, 4], [3, 4, 2], [3, 2, 6], [3, 6, 8], [3, 8, 9],
-  [4, 9, 5], [2, 4, 11], [6, 2, 10], [8, 6, 7], [9, 8, 1],
+  [0, 11, 5],
+  [0, 5, 1],
+  [0, 1, 7],
+  [0, 7, 10],
+  [0, 10, 11],
+  [1, 5, 9],
+  [5, 11, 4],
+  [11, 10, 2],
+  [10, 7, 6],
+  [7, 1, 8],
+  [3, 9, 4],
+  [3, 4, 2],
+  [3, 2, 6],
+  [3, 6, 8],
+  [3, 8, 9],
+  [4, 9, 5],
+  [2, 4, 11],
+  [6, 2, 10],
+  [8, 6, 7],
+  [9, 8, 1],
 ] as const;
 
 /** Unit icosphere with 10·4^level + 2 shared vertices. */
@@ -101,7 +126,10 @@ export function vertexNormals(position: Float32Array, index: Uint32Array): Float
   return normal;
 }
 
-function sculpt(level: number, point: (x: number, y: number, z: number) => readonly [number, number, number]): MeshArrays {
+function sculpt(
+  level: number,
+  point: (x: number, y: number, z: number) => readonly [number, number, number],
+): MeshArrays {
   const { position, index } = icosphere(level);
   for (let i = 0; i < position.length; i += 3) {
     const [x, y, z] = point(position[i] ?? 0, position[i + 1] ?? 0, position[i + 2] ?? 0);

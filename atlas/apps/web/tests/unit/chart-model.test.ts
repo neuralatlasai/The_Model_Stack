@@ -12,7 +12,15 @@ import {
   type PlotPoint,
 } from '../../src/client/chart-model.ts';
 
-const point = (series: string, x: number, y: number, px: number, py: number): PlotPoint => ({ series, x, y, px, py, xText: null, yText: null });
+const point = (series: string, x: number, y: number, px: number, py: number): PlotPoint => ({
+  series,
+  x,
+  y,
+  px,
+  py,
+  xText: null,
+  yText: null,
+});
 
 // Two series sampled at the same x positions; pixel y grows downwards.
 const POINTS: PlotPoint[] = [
@@ -76,9 +84,17 @@ describe('attribute parsing and readout', () => {
   });
 
   test('readout uses rendered values when present, core formatting otherwise', () => {
-    const axes = { xFormat: 'tokens', yFormat: 'bytes', xLabel: 'sequence length T', yLabel: 'bytes per layer' } as const;
+    const axes = {
+      xFormat: 'tokens',
+      yFormat: 'bytes',
+      xLabel: 'sequence length T',
+      yLabel: 'bytes per layer',
+    } as const;
     // core formatValue separates number and unit with a narrow no-break space (U+202F)
-    assert.equal(readoutText('scores', point('scores', 8192, 4 * 2 ** 30, 0, 0), axes), 'scores — sequence length T 8.19\u202fK · bytes per layer 4\u202fGiB');
+    assert.equal(
+      readoutText('scores', point('scores', 8192, 4 * 2 ** 30, 0, 0), axes),
+      'scores — sequence length T 8.19\u202fK · bytes per layer 4\u202fGiB',
+    );
     assert.equal(
       readoutText('act', { ...point('act', 2, 5, 0, 0), xText: 'FP8', yText: '5 ms' }, { ...axes, xLabel: null }),
       'act — FP8 · bytes per layer 5 ms',

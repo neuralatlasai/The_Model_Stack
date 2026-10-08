@@ -64,7 +64,8 @@ export function initTree(ctx: PageContext): void {
   const firstItem = items[0];
   if (firstItem === undefined) return;
 
-  const idOf = (item: Element): string | null => item.getAttribute(ATTR.treeNode) ?? item.closest(`[${ATTR.treeNode}]`)?.getAttribute(ATTR.treeNode) ?? null;
+  const idOf = (item: Element): string | null =>
+    item.getAttribute(ATTR.treeNode) ?? item.closest(`[${ATTR.treeNode}]`)?.getAttribute(ATTR.treeNode) ?? null;
   const byId = new Map<string, HTMLElement>();
   for (const item of items) {
     const id = idOf(item);
@@ -117,7 +118,8 @@ export function initTree(ctx: PageContext): void {
   };
   for (const item of items) item.setAttribute('tabindex', item === rover ? '0' : '-1');
   // Links and buttons inside a treeitem stay clickable but out of the tab sequence (one tab stop per tree).
-  for (const control of $$('[role="treeitem"] a[href], [role="treeitem"] button', tree)) control.setAttribute('tabindex', '-1');
+  for (const control of $$('[role="treeitem"] a[href], [role="treeitem"] button', tree))
+    control.setAttribute('tabindex', '-1');
 
   if (current !== null) {
     ctl.frame(() => {
@@ -152,7 +154,8 @@ export function initTree(ctx: PageContext): void {
 
   let buffer = '';
   let cancelReset: (() => void) | null = null;
-  const labelOf = (item: HTMLElement): string => ($(`[${HOOK.treeLabel}]`, item) ?? $('.sh-tree-label', item) ?? item).textContent.trim();
+  const labelOf = (item: HTMLElement): string =>
+    ($(`[${HOOK.treeLabel}]`, item) ?? $('.sh-tree-label', item) ?? item).textContent.trim();
 
   tree.addEventListener(
     'keydown',
@@ -221,7 +224,10 @@ export function initTree(ctx: PageContext): void {
       event.preventDefault();
       event.stopPropagation();
       const target = caret.getAttribute(HOOK.treeTarget);
-      const item = (target === null ? null : byId.get(target)) ?? caret.parentElement?.querySelector<HTMLElement>('[role="treeitem"]') ?? null;
+      const item =
+        (target === null ? null : byId.get(target)) ??
+        caret.parentElement?.querySelector<HTMLElement>('[role="treeitem"]') ??
+        null;
       if (item === null) return;
       toggle(item, !isExpanded(item));
       // The caret is pointer-only; keep focus coherent with the roving tabindex.

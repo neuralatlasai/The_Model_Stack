@@ -33,11 +33,9 @@ const knownCitations = new Set<string>(registry.references.map((record) => recor
     meta={`${grouped(registry.lineage.length)} entries · ${String(years.length)} years`}
   />
 
-  {
-    registry.lineage.length === 0 ? (
-      <p class="sh-empty">No lineage entries are recorded in this bundle.</p>
-    ) : (
-      <TimelineExplorer entries={registry.lineage} graph={graph} knownCitations={knownCitations} />
-    )
-  }
+  {registry.lineage.length === 0 ? (
+    <p class="sh-empty">No lineage entries are recorded in this bundle.</p>
+  ) : (
+    <TimelineExplorer entries={registry.lineage} graph={graph} knownCitations={knownCitations} />
+  )}
 </ReaderLayout>

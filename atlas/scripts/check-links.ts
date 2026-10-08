@@ -64,7 +64,12 @@ async function idsOf(file: string): Promise<ReadonlySet<string>> {
   return ids;
 }
 
-const failures = { broken: new Map<string, string>(), outside: new Map<string, string>(), anchors: new Map<string, string>(), data: new Map<string, string>() };
+const failures = {
+  broken: new Map<string, string>(),
+  outside: new Map<string, string>(),
+  anchors: new Map<string, string>(),
+  data: new Map<string, string>(),
+};
 const note = (map: Map<string, string>, key: string, page: string): void => {
   if (!map.has(key)) map.set(key, page);
 };
@@ -79,7 +84,8 @@ function checkData(node: unknown, page: string): void {
   if (node === null || typeof node !== 'object') return;
   for (const [key, value] of Object.entries(node)) {
     if (typeof value === 'string' && URL_KEY.test(key)) {
-      if (value.startsWith('/') && !value.startsWith('//') && !value.startsWith(base)) note(failures.data, `${key}: ${value}`, page);
+      if (value.startsWith('/') && !value.startsWith('//') && !value.startsWith(base))
+        note(failures.data, `${key}: ${value}`, page);
     } else checkData(value, page);
   }
 }
@@ -122,7 +128,9 @@ for (const file of pages) {
   }
 }
 
-console.log(`${String(pages.length)} pages · ${String(links)} internal links · ${String(fragments)} fragments · base ${base}`);
+console.log(
+  `${String(pages.length)} pages · ${String(links)} internal links · ${String(fragments)} fragments · base ${base}`,
+);
 let failed = false;
 for (const [label, map] of [
   ['broken links (no built file)', failures.broken],

@@ -42,11 +42,19 @@ const rows = entries
   })
   .filter((row) => Number.isFinite(row.year));
 const chronological = [...rows].sort((a, b) => a.year - b.year || a.id - b.id);
-const yearGroups = [...new Set(chronological.map((row) => row.year))].map((year) => ({ year, rows: chronological.filter((row) => row.year === year) }));
+const yearGroups = [...new Set(chronological.map((row) => row.year))].map((year) => ({
+  year,
+  rows: chronological.filter((row) => row.year === year),
+}));
 
 // 360 user units = the panel's CSS width, so labels render at their stated size.
 const map = lineageMinimap(
-  rows.map((row) => ({ id: row.id, year: row.year, relation: row.entry.relation, chapter: Number.isFinite(row.n) ? row.n : 0 })),
+  rows.map((row) => ({
+    id: row.id,
+    year: row.year,
+    relation: row.entry.relation,
+    chapter: Number.isFinite(row.n) ? row.n : 0,
+  })),
   360,
   640,
 );
@@ -58,9 +66,17 @@ const RELATIONS = [
   ['superseded approach', 'sup'],
   ['current frontier', 'fro'],
 ] as const;
-const relationCounts = RELATIONS.map(([relation, key]) => ({ relation, key, count: rows.filter((row) => row.key === key).length }));
+const relationCounts = RELATIONS.map(([relation, key]) => ({
+  relation,
+  key,
+  count: rows.filter((row) => row.key === key).length,
+}));
 
-const threads = [...new Map(rows.filter((row) => row.chapter !== null && Number.isFinite(row.n)).map((row) => [row.n, row.chapter])).entries()]
+const threads = [
+  ...new Map(
+    rows.filter((row) => row.chapter !== null && Number.isFinite(row.n)).map((row) => [row.n, row.chapter]),
+  ).entries(),
+]
   .sort((a, b) => a[0] - b[0])
   .map(([n, chapter]) => ({ n, chapter, count: rows.filter((row) => row.n === n).length }));
 const pad = (n: number): string => String(n).padStart(2, '0');
@@ -76,103 +92,106 @@ const yMax = Math.max(...rows.map((row) => row.year));
   <div class="tlx-filters">
     <div class="tlx-filters__row" role="group" aria-label="Show relations">
       <span class="tlx-filters__label">Relations</span>
-      {
-        relationCounts.map(({ relation, key, count }) => (
-          <button type="button" class={`tlx-chip tlx--${key}`} data-tlx-filter={key} aria-pressed="true">
-            <span class="tlx-chip__glyph" aria-hidden="true">
-              {RELATION_GLYPHS[relation]}
-            </span>
-            {relation}
-            <span class="tlx-chip__count">{count}</span>
-          </button>
-        ))
-      }
+      {relationCounts.map(({ relation, key, count }) => (
+        <button type="button" class={`tlx-chip tlx--${key}`} data-tlx-filter={key} aria-pressed="true">
+          <span class="tlx-chip__glyph" aria-hidden="true">
+            {RELATION_GLYPHS[relation]}
+          </span>
+          {relation}
+          <span class="tlx-chip__count">{count}</span>
+        </button>
+      ))}
     </div>
     <div class="tlx-filters__row" role="group" aria-label="Follow one chapter's lineage">
       <span class="tlx-filters__label">Chapters</span>
-      {
-        threads.map(({ n, chapter, count }) => (
-          <button
-            type="button"
-            class="tlx-thread"
-            data-tlx-thread={n}
-            data-tlx-title={chapter?.title ?? ''}
-            data-tlx-short={chapter?.shortTitle ?? ''}
-            data-tlx-url={chapter?.url ?? ''}
-            aria-pressed="false"
-            aria-label={`Chapter ${pad(n)} ${chapter?.shortTitle ?? ''}: ${String(count)} entries`}
-            title={`${pad(n)} ${chapter?.shortTitle ?? ''} · ${String(count)}`}
-          >
-            {pad(n)}
-          </button>
-        ))
-      }
+      {threads.map(({ n, chapter, count }) => (
+        <button
+          type="button"
+          class="tlx-thread"
+          data-tlx-thread={n}
+          data-tlx-title={chapter?.title ?? ''}
+          data-tlx-short={chapter?.shortTitle ?? ''}
+          data-tlx-url={chapter?.url ?? ''}
+          aria-pressed="false"
+          aria-label={`Chapter ${pad(n)} ${chapter?.shortTitle ?? ''}: ${String(count)} entries`}
+          title={`${pad(n)} ${chapter?.shortTitle ?? ''} · ${String(count)}`}
+        >
+          {pad(n)}
+        </button>
+      ))}
     </div>
   </div>
 
   <div class="tlx-body">
     <div class="tlx-chronicle">
-      {
-        yearGroups.map((group) => (
-          <section class="tlc-year" id={`year-${String(group.year)}`} data-year={group.year} aria-labelledby={`year-h-${String(group.year)}`}>
-            <h2 class="tlc-year__label" id={`year-h-${String(group.year)}`}>
-              {group.year}
-              <span class="tlc-year__units" aria-hidden="true">
-                {group.rows.map((row) => <i class={`tlx--${row.key}`} />)}
-              </span>
-              <span class="sh-visually-hidden">
-                , {group.rows.length} {group.rows.length === 1 ? 'entry' : 'entries'}
-              </span>
-            </h2>
-            <ol class="tlc-entries">
-              {group.rows.map(({ entry, id, chapter, n, key }) => {
-                const cite = entry.cite !== null && knownCitations.has(entry.cite) ? entry.cite : null;
-                return (
-                  <li
-                    class={`tlc-entry tlx--${key}`}
-                    id={`tl-${String(id)}`}
-                    data-tl-entry={id}
-                    data-chapter={Number.isFinite(n) ? n : ''}
-                    data-relation={key}
-                    data-year={group.year}
-                  >
-                    <span class="tlc-glyph" aria-hidden="true">
-                      {RELATION_GLYPHS[entry.relation]}
-                    </span>
-                    <p class="tlc-work">
-                      {cite !== null ? <a href={paperUrl(cite)}>{entry.work}</a> : <span>{entry.work}</span>}
-                      {entry.cite !== null && <span class="tlc-key">{entry.cite}</span>}
-                    </p>
-                    {chapter !== null && (
-                      <a class="tlc-owner" href={chapter.url} data-tlc-owner>
-                        <span class="tlc-owner__n">{chapter.number}</span>
-                        <span class="tlc-owner__t">{chapter.shortTitle}</span>
-                      </a>
+      {yearGroups.map((group) => (
+        <section
+          class="tlc-year"
+          id={`year-${String(group.year)}`}
+          data-year={group.year}
+          aria-labelledby={`year-h-${String(group.year)}`}
+        >
+          <h2 class="tlc-year__label" id={`year-h-${String(group.year)}`}>
+            {group.year}
+            <span class="tlc-year__units" aria-hidden="true">
+              {group.rows.map((row) => (
+                <i class={`tlx--${row.key}`} />
+              ))}
+            </span>
+            <span class="sh-visually-hidden">
+              , {group.rows.length} {group.rows.length === 1 ? 'entry' : 'entries'}
+            </span>
+          </h2>
+          <ol class="tlc-entries">
+            {group.rows.map(({ entry, id, chapter, n, key }) => {
+              const cite = entry.cite !== null && knownCitations.has(entry.cite) ? entry.cite : null;
+              return (
+                <li
+                  class={`tlc-entry tlx--${key}`}
+                  id={`tl-${String(id)}`}
+                  data-tl-entry={id}
+                  data-chapter={Number.isFinite(n) ? n : ''}
+                  data-relation={key}
+                  data-year={group.year}
+                >
+                  <span class="tlc-glyph" aria-hidden="true">
+                    {RELATION_GLYPHS[entry.relation]}
+                  </span>
+                  <p class="tlc-work">
+                    {cite !== null ? <a href={paperUrl(cite)}>{entry.work}</a> : <span>{entry.work}</span>}
+                    {entry.cite !== null && <span class="tlc-key">{entry.cite}</span>}
+                  </p>
+                  {chapter !== null && (
+                    <a class="tlc-owner" href={chapter.url} data-tlc-owner>
+                      <span class="tlc-owner__n">{chapter.number}</span>
+                      <span class="tlc-owner__t">{chapter.shortTitle}</span>
+                    </a>
+                  )}
+                  <p class="tlc-meta">
+                    <span class="tlc-rel">{entry.relation}</span>
+                    {entry.year !== String(group.year) && <span class="tlc-range"> · {entry.year}</span>}
+                    {entry.note.length > 0 && (
+                      <span class="tlc-note">
+                        {' '}
+                        · <Inline nodes={entry.note} />
+                      </span>
                     )}
-                    <p class="tlc-meta">
-                      <span class="tlc-rel">{entry.relation}</span>
-                      {entry.year !== String(group.year) && <span class="tlc-range"> · {entry.year}</span>}
-                      {entry.note.length > 0 && (
-                        <span class="tlc-note">
-                          {' '}
-                          · <Inline nodes={entry.note} />
-                        </span>
-                      )}
-                    </p>
-                  </li>
-                );
-              })}
-            </ol>
-          </section>
-        ))
-      }
+                  </p>
+                </li>
+              );
+            })}
+          </ol>
+        </section>
+      ))}
     </div>
 
     <aside class="tlm" aria-label="Lineage minimap">
       <div class="tlm__sticky">
         <p class="tlm__head">
           <span>Lineage minimap</span>
-          <span class="tlm__range">{yMin}–{yMax}</span>
+          <span class="tlm__range">
+            {yMin}–{yMax}
+          </span>
         </p>
         <svg
           class="tlm__svg"
@@ -193,18 +212,36 @@ const yMax = Math.max(...rows.map((row) => row.year));
           <g class="tlm__years">
             {map.years.map((year) => (
               <a href={`#year-${String(year.year)}`} tabindex="-1" data-tlm-year={year.year} aria-hidden="true">
-                <rect class="tlm__band" x={map.axisX} y={year.y0} width={map.width - map.axisX} height={Math.max(2, year.y1 - year.y0)} />
+                <rect
+                  class="tlm__band"
+                  x={map.axisX}
+                  y={year.y0}
+                  width={map.width - map.axisX}
+                  height={Math.max(2, year.y1 - year.y0)}
+                />
               </a>
             ))}
           </g>
           <line class="tlm__axis" x1={map.axisX} x2={map.axisX} y1={map.top - 4} y2={map.bottom} />
-          {map.breakY !== null && <path class="tlm__break" d={`M${String(map.axisX - 4)} ${String(map.breakY - 3)} l8 -4 M${String(map.axisX - 4)} ${String(map.breakY + 3)} l8 -4`} />}
+          {map.breakY !== null && (
+            <path
+              class="tlm__break"
+              d={`M${String(map.axisX - 4)} ${String(map.breakY - 3)} l8 -4 M${String(map.axisX - 4)} ${String(map.breakY + 3)} l8 -4`}
+            />
+          )}
           {map.ticks.map((tick) => (
             <text class="tlm__tick" x={map.axisX - 9} y={tick.y}>
               {tick.year}
             </text>
           ))}
-          <rect class="tlm__view" x={map.axisX + 1} y={map.top} width={map.width - map.axisX - 1} height="0" data-tlm-view />
+          <rect
+            class="tlm__view"
+            x={map.axisX + 1}
+            y={map.top}
+            width={map.width - map.axisX - 1}
+            height="0"
+            data-tlm-view
+          />
           <line class="tlm__cursor" x1={map.axisX - 4} x2={map.width} y1="0" y2="0" data-tlm-cursor />
           <g class="tlm__marks">
             {map.marks.map((mark, index) => {
@@ -218,7 +255,11 @@ const yMax = Math.max(...rows.map((row) => row.year));
                   data-relation={mark.relationKey}
                   data-year={mark.year}
                   tabindex={index === 0 ? 0 : -1}
-                  aria-label={row === undefined ? '' : `${row.entry.year}, ${row.entry.work}, ${row.entry.relation}, Chapter ${pad(mark.chapter)}`}
+                  aria-label={
+                    row === undefined
+                      ? ''
+                      : `${row.entry.year}, ${row.entry.work}, ${row.entry.relation}, Chapter ${pad(mark.chapter)}`
+                  }
                 >
                   <circle class="tlm__hit" cx={mark.x} cy={mark.y} r="4.6" />
                   <circle class="tlm__dot" cx={mark.x} cy={mark.y} r="3" />
@@ -228,9 +269,15 @@ const yMax = Math.max(...rows.map((row) => row.year));
           </g>
         </svg>
         <div class="tlm__readout" data-tlm-readout aria-live="polite">
-          <p class="tlm__readout-kicker" data-tlm-kicker>Reading</p>
-          <p class="tlm__readout-title" data-tlm-title>Scroll the chronicle</p>
-          <p class="tlm__readout-meta" data-tlm-meta>Point at a dot or an entry.</p>
+          <p class="tlm__readout-kicker" data-tlm-kicker>
+            Reading
+          </p>
+          <p class="tlm__readout-title" data-tlm-title>
+            Scroll the chronicle
+          </p>
+          <p class="tlm__readout-meta" data-tlm-meta>
+            Point at a dot or an entry.
+          </p>
         </div>
         <div class="tlm__tally" aria-hidden="true">
           <p class="tlm__tally-head">
@@ -238,21 +285,23 @@ const yMax = Math.max(...rows.map((row) => row.year));
             <span data-tlm-tally-n>0 of {rows.length}</span>
           </p>
           <div class="tlm__bar">
-            {relationCounts.map(({ key }) => <span class={`tlm__seg tlx--${key}`} data-tlm-seg={key} style="flex-grow:0" />)}
+            {relationCounts.map(({ key }) => (
+              <span class={`tlm__seg tlx--${key}`} data-tlm-seg={key} style="flex-grow:0" />
+            ))}
           </div>
           <ul class="tlm__legend" role="list">
-            {
-              relationCounts.map(({ relation, key, count }) => (
-                <li class={`tlx--${key}`}>
-                  <span class="tlm__legend-glyph" aria-hidden="true">{RELATION_GLYPHS[relation]}</span>
-                  <span class="tlm__legend-name">{relation}</span>
-                  <span class="tlm__legend-n" data-tlm-count={key}>
-                    0
-                  </span>
-                  <span class="tlm__legend-of">/{count}</span>
-                </li>
-              ))
-            }
+            {relationCounts.map(({ relation, key, count }) => (
+              <li class={`tlx--${key}`}>
+                <span class="tlm__legend-glyph" aria-hidden="true">
+                  {RELATION_GLYPHS[relation]}
+                </span>
+                <span class="tlm__legend-name">{relation}</span>
+                <span class="tlm__legend-n" data-tlm-count={key}>
+                  0
+                </span>
+                <span class="tlm__legend-of">/{count}</span>
+              </li>
+            ))}
           </ul>
         </div>
       </div>

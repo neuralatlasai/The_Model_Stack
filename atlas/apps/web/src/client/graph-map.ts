@@ -85,7 +85,9 @@ export function initGraphMap(ctx: PageContext): void {
       show(
         source.dataset['gmapKicker'] ?? '',
         source.dataset['gmapTitle'] ?? '',
-        source.dataset['gmapSummary'] === '' ? 'No summary is recorded for this node.' : (source.dataset['gmapSummary'] ?? ''),
+        source.dataset['gmapSummary'] === ''
+          ? 'No summary is recorded for this node.'
+          : (source.dataset['gmapSummary'] ?? ''),
       );
     }
   };
@@ -125,7 +127,10 @@ export function initGraphMap(ctx: PageContext): void {
         let d: string;
         if (stacked) {
           const x = 7;
-          d = role === 'up' ? `M${f(b.l)} ${f(b.cy)} H${f(x)} V${f(c.cy)} H${f(c.l - 1)}` : `M${f(c.l)} ${f(c.cy)} H${f(x)} V${f(b.cy)} H${f(b.l - 1)}`;
+          d =
+            role === 'up'
+              ? `M${f(b.l)} ${f(b.cy)} H${f(x)} V${f(c.cy)} H${f(c.l - 1)}`
+              : `M${f(c.l)} ${f(c.cy)} H${f(x)} V${f(b.cy)} H${f(b.l - 1)}`;
         } else if (role === 'up') {
           const mid = (b.r + c.l) / 2;
           d = `M${f(b.r)} ${f(b.cy)} C${f(mid)} ${f(b.cy)} ${f(mid)} ${f(c.cy)} ${f(c.l - 1)} ${f(c.cy)}`;
@@ -164,22 +169,39 @@ export function initGraphMap(ctx: PageContext): void {
   };
 
   for (const scope of scopes) {
-    scope.addEventListener('pointerover', (event) => {
-      const key = keyFrom(event.target);
-      if (key === null) {
-        if (lit !== null && event.target instanceof Element && event.target.closest('[data-gmap-center]') !== null) reset();
-        return;
-      }
-      if (key !== lit) light(key);
-    }, { signal: ctl.signal });
+    scope.addEventListener(
+      'pointerover',
+      (event) => {
+        const key = keyFrom(event.target);
+        if (key === null) {
+          if (lit !== null && event.target instanceof Element && event.target.closest('[data-gmap-center]') !== null)
+            reset();
+          return;
+        }
+        if (key !== lit) light(key);
+      },
+      { signal: ctl.signal },
+    );
     scope.addEventListener('pointerleave', reset, { signal: ctl.signal });
-    scope.addEventListener('focusin', (event) => {
-      const key = keyFrom(event.target);
-      if (key === null) reset();
-      else light(key);
-    }, { signal: ctl.signal });
-    scope.addEventListener('focusout', (event) => {
-      if (!(event.relatedTarget instanceof Node) || !scopes.some((other) => other.contains(event.relatedTarget as Node))) reset();
-    }, { signal: ctl.signal });
+    scope.addEventListener(
+      'focusin',
+      (event) => {
+        const key = keyFrom(event.target);
+        if (key === null) reset();
+        else light(key);
+      },
+      { signal: ctl.signal },
+    );
+    scope.addEventListener(
+      'focusout',
+      (event) => {
+        if (
+          !(event.relatedTarget instanceof Node) ||
+          !scopes.some((other) => other.contains(event.relatedTarget as Node))
+        )
+          reset();
+      },
+      { signal: ctl.signal },
+    );
   }
 }

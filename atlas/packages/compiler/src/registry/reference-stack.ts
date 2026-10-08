@@ -171,7 +171,10 @@ export function parseReferenceStack(text: string, file: string): ReferenceStack 
   return { labs, systems: layered, aliases, diagnostics };
 }
 
-function checkDuplicates(entries: readonly { readonly id: string; readonly name: string }[], warn: (message: string) => void): void {
+function checkDuplicates(
+  entries: readonly { readonly id: string; readonly name: string }[],
+  warn: (message: string) => void,
+): void {
   const seen = new Map<string, string>();
   for (const entry of entries) {
     const other = seen.get(entry.id);
@@ -216,14 +219,21 @@ function matchToken(token: string, systems: readonly ParsedSystem[]): ParsedSyst
   if (suffix.length === 1) return suffix;
   // `AMD ROCm/HIP`, `Intel Gaudi/oneAPI`: one token naming several entries.
   if (token.includes('/')) {
-    const pieces = token.split('/').map((piece) => piece.trim()).filter((piece) => piece !== '');
+    const pieces = token
+      .split('/')
+      .map((piece) => piece.trim())
+      .filter((piece) => piece !== '');
     const matched = pieces.map((piece) => matchToken(piece, systems));
     if (matched.every((list) => list.length === 1)) return matched.flat();
   }
   return [];
 }
 
-function assignLayers(root: Root, systems: readonly ParsedSystem[], warn: (message: string, line?: number | null) => void): ParsedSystem[] {
+function assignLayers(
+  root: Root,
+  systems: readonly ParsedSystem[],
+  warn: (message: string, line?: number | null) => void,
+): ParsedSystem[] {
   const block = dependencyMap(root);
   if (block === null) {
     warn('§4.1 stack dependency map not found; systems have no stack layer');
@@ -241,7 +251,10 @@ function assignLayers(root: Root, systems: readonly ParsedSystem[], warn: (messa
       return;
     }
     if (current === null) return;
-    for (const token of line.split('|').map((part) => part.trim()).filter((part) => part !== '')) {
+    for (const token of line
+      .split('|')
+      .map((part) => part.trim())
+      .filter((part) => part !== '')) {
       const matched = matchToken(token, systems);
       if (matched.length === 0) {
         warn(`§4.1 entry "${token}" matches no §4 system`, baseLine + index);

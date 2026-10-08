@@ -70,7 +70,7 @@ editorial_status: manuscript_draft
 
 # Chapter 21 verification
 
-[UNVERIFIED] The chapter's mathematical derivations and primary-source reconstructions have been reviewed as manuscript content. No scaling fit, model training, archived-run reconstruction, confidence-interval coverage test or serving benchmark has been executed. The following experiments are original book verification proposals. Their hypotheses, design choices and expected outcomes are not claims attributed to the source papers.
+[UNVERIFIED] This chapter is a source-grounded manuscript draft. No scaling fit, model training, archived-run reconstruction, confidence-interval coverage test or serving benchmark has been executed. The following experiments are original book verification proposals. Their hypotheses, design choices and expected outcomes are not claims attributed to the source papers.
 
 ## 1. Artifact and evidence boundary
 
@@ -146,13 +146,13 @@ editorial_status: manuscript_draft
 |---|---|---|---|
 | 21.1 Loss versus parameters | [Formulation](21-1-empirical-scaling.md#formulation): NLL/KL identity, count convention, finite-model terms and log slopes. | P08, P09 | No new fitted exponent. |
 | 21.1 Loss versus tokens | [Formulation](21-1-empirical-scaling.md#formulation): finite dataset $U$ versus processed presentations $D$. | P08, P09 | Unique-data estimates depend on provenance and deduplication. |
-| 21.1 Loss versus compute | [Methodology](21-1-empirical-scaling.md#methodology): surface versus constrained frontier, dense approximation and omitted operations. | P08, P09, R21.1 | No common hardware benchmark. |
+| 21.1 Loss versus compute | [Methodology](21-1-empirical-scaling.md#mechanism): surface versus constrained frontier, dense approximation and omitted operations. | P08, P09, R21.1 | No common hardware benchmark. |
 | 21.1 Irreducible loss | [What an irreducible term means](21-1-empirical-scaling.md#what-an-irreducible-term-means): entropy bound, fitted offset and identifiability. | P08, P09 | Fitted floor is not established natural-language entropy. |
 | 21.1 Fitting assumptions/domain | [Failure modes](21-1-empirical-scaling.md#failure-modes): mixture dependence, tokenizer, context and recipe. | P08, P09, R21.17 | No cross-domain universal law. |
 | 21.2 Iso-compute curves | [The three original Chinchilla estimators](21-2-compute-optimal-design.md#the-three-original-chinchilla-estimators): envelope, endpoint minima and robust joint fit. | P09 | Original training-loss proxy assumption retained. |
 | 21.2 Optimal allocation | [Formulation](21-2-compute-optimal-design.md#formulation): marginal condition, constants, exponents, feasible boundaries and ratio. | P09 | Continuous optimum must be mapped to feasible configurations. |
 | 21.2 Model/data scaling | [Allocation uncertainty differs from loss uncertainty](21-2-compute-optimal-design.md#allocation-uncertainty-differs-from-loss-uncertainty): curvature and uncertainty. | P09, R21.2 | Allocation interval not empirically estimated here. |
-| 21.2 Recipe sensitivity | [Controlled reconstruction of the Kaplan–Chinchilla disagreement](21-2-compute-optimal-design.md#controlled-reconstruction-of-the-kaplan-chinchilla-disagreement): head, warmup, tuning and disclosure. | R21.1, R21.2 | Ablation findings remain source-specific. |
+| 21.2 Recipe sensitivity | [Controlled reconstruction of the allocation disagreement](21-2-compute-optimal-design.md#controlled-reconstruction-of-the-allocation-disagreement): head, warmup, tuning and disclosure. | R21.1, R21.2 | Ablation findings remain source-specific. |
 | 21.3 Longer training/smaller models | [Formulation](21-3-inference-aware-training.md#formulation): fixed-quality feasible curve, capacity boundary and elasticity. | R21.3 | Extreme training requires validation outside short-run fits. |
 | 21.3 Lifecycle demand | [Break-even is a workload calculation](21-3-inference-aware-training.md#break-even-is-a-workload-calculation): expectation, risk, retirement and endogenous demand. | R21.3 | No actual service demand measured. |
 | 21.3 Deployment cost | [Separate input processing and output generation](21-3-inference-aware-training.md#separate-input-processing-and-output-generation): currency units, utilization, cache and latency. | R21.3 | Serving cost remains analytical without deployment measurements. |
@@ -173,10 +173,25 @@ editorial_status: manuscript_draft
 | 21.6 Continuous/threshold metrics | [Formulation](21-6-capability-prediction.md#formulation): sequence likelihood, rank counterexample and threshold map. | R21.13 plus explicit derivations | No identity between corpus loss and arbitrary task success. |
 | 21.6 Apparent emergence | [Apparent emergence is a measurement question](21-6-capability-prediction.md#apparent-emergence-is-a-measurement-question): historical definition and alternative metrics. | R21.13, R21.16 | Does not claim all transitions are artifacts. |
 | 21.6 Benchmark saturation | [Finite benchmarks impose detection and saturation limits](21-6-capability-prediction.md#finite-benchmarks-impose-detection-and-saturation-limits): zero-success bound, resolution and pass/mean distinction. | R21.13 plus explicit derivations | iid bound requires independent item model. |
-| 21.6 Failed extrapolation | [Reported experiments](21-6-capability-prediction.md#reported-experiments): source failures and separate upstream predictor boundaries. | R21.3, R21.14, R21.17 | No unseen-model forecast executed here. |
+| 21.6 Failed extrapolation | [Reported experiments](21-6-capability-prediction.md#experimental-design): source failures and separate upstream predictor boundaries. | R21.3, R21.14, R21.17 | No unseen-model forecast executed here. |
 
-## 4. Review status
+## 4. Mathematical procedures and visual audit
 
-[DERIVED] A separate read-only scientific review checked the chapter's allocation, curvature, fixed-quality elasticity, currency units, break-even, repetition, multilingual mixture, capability probability and uncertainty derivations. It identified two source-coordinate/provenance issues during drafting: the finite-dataset coordinate in Kaplan and the smoothed-training-loss proxy in Chinchilla. Both are corrected explicitly. Minor domain conditions and the distinction between permitted target covariates and outcome leakage were also tightened.
+[DERIVED] Six mathematical procedures replace the earlier prose-code listings. Equations 21.24–21.29 specify finite record construction, constrained allocation, lifecycle comparison, transfer/repetition evaluation, bounded fitting and frozen capability forecasting. Their inputs, state, output contracts, invariants, termination and failure branches are developed in the owning sections. The bounded fitting procedure is a book-defined numerical reconstruction rather than a claim about a source implementation. Nonfinite starts are excluded from its final selection, failures remain in the audit, and deterministic tie ordering is part of the configuration.
+
+| Section | Authored visual | Analytical inputs and evidential boundary |
+|---|---|---|
+| 21.1 | Figures 21.1–21.2: measurement dependency and floor/slope calculator. | Equation 21.4; floor 2, excess 1, exponent 0.3 are explicitly analytical. |
+| 21.2 | Figures 21.3–21.4: estimator routes and iso-compute penalty. | Equation 21.8; positive exponents and optimum stationarity normalize excess loss. |
+| 21.3 | Figures 21.5–21.6: lifecycle dependencies and break-even. | Equation 21.13; extra cost and per-request savings are analytical currency inputs, not prices. |
+| 21.4 | Figures 21.7–21.8: added coordinates and repetition saturation. | Equation 21.14; chosen corpus units, epochs and repetition scale are not fitted coefficients. |
+| 21.5 | Figures 21.9–21.10: protected targets and exponent sensitivity. | Equation 21.30; shared reference allocation isolates exponent variation without claiming a confidence interval. |
+| 21.6 | Figures 21.11–21.12: response/scoring map and finite zero-success bound. | Equation 21.23; iid Bernoulli conditions are required; no named-model capability is inferred. |
+
+[UNVERIFIED] Figure parsing and manuscript-link checks test authored metadata and navigation. They do not establish browser accessibility, a measured scaling fit or source replication. Rendering checks are performed separately by the UI workflow. The chapter makes no executed experiment or world-best presentation claim.
+
+## 5. Review status
+
+[DERIVED] The authoring audit checks the allocation, curvature, fixed-quality elasticity, currency units, break-even, repetition, multilingual mixture, capability probability and uncertainty derivations against their stated premises. Kaplan's finite available-data coordinate is kept distinct from presentations; Chinchilla's smoothed-training-loss proxy is explicit. Canonical section ownership, source locators, algorithm failure branches and target-covariate versus outcome leakage are also recorded. These checks do not substitute for independent scientific review or empirical validation.
 
 [UNVERIFIED] Independent source-code reproduction, experimental artifact generation and empirical confidence coverage remain outstanding. The chapter retains `manuscript_draft`; a clean content compiler result establishes structural validity rather than scientific replication. Coverage is audited against all six manifest topics and their listed aspects, without claiming that the unexecuted research program is complete.

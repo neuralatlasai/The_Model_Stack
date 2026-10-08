@@ -49,58 +49,62 @@ const MARKED_ENTITIES = new Set(['volume', 'part', 'chapter']);
 const numberWidth = (list: readonly TreeNode[]): number => Math.max(0, ...list.map((item) => item.number?.length ?? 0));
 ---
 
-{
-  nodes.map((node) => {
-    const entity = entityOf(node.id);
-    const onActivePath = state.activePath.has(node.id);
-    const renderChildren = node.children.length > 0 && (node.hasManuscript || entity !== 'chapter' || onActivePath);
-    const expanded = renderChildren && state.expanded.has(node.id);
-    const groupId = domIdFor('tg', node.id);
-    return (
-      <li
-        role="none"
-        class:list={['sh-tree-item', { 'sh-tree-item--planned': !node.hasManuscript }]}
-        data-entity={MARKED_ENTITIES.has(entity) ? entity : undefined}
-        data-domain={entity === 'part' ? node.domain : undefined}
-      >
-        <div class="sh-tree-row">
-          {renderChildren && (
-            <button
-              type="button"
-              class="sh-tree-caret"
-              data-action="tree-toggle"
-              data-tree-target={node.id}
-              tabindex="-1"
-              aria-hidden="true"
-            />
-          )}
-          <a
-            role="treeitem"
-            class="sh-tree-link"
-            href={node.url}
-            data-tree-node={node.id}
-            aria-level={level}
-            aria-expanded={renderChildren ? (expanded ? 'true' : 'false') : undefined}
-            aria-owns={renderChildren ? groupId : undefined}
-            aria-current={state.currentId === node.id ? 'page' : undefined}
-            tabindex={node.id === focusId ? '0' : '-1'}
-          >
-            {node.number !== null ? (
-              <span class="sh-tree-num">{node.number}</span>
-            ) : (
-              numberWidth(nodes) > 0 && <span class="sh-tree-num" aria-hidden="true" />
-            )}
-            <span class="sh-tree-label">{node.shortTitle}</span>
-            {!node.hasManuscript && <span class="sh-visually-hidden"> (planned)</span>}
-            <span class="sh-tree-progress" data-progress={node.id} aria-hidden="true" />
-          </a>
-        </div>
+{nodes.map((node) => {
+  const entity = entityOf(node.id);
+  const onActivePath = state.activePath.has(node.id);
+  const renderChildren = node.children.length > 0 && (node.hasManuscript || entity !== 'chapter' || onActivePath);
+  const expanded = renderChildren && state.expanded.has(node.id);
+  const groupId = domIdFor('tg', node.id);
+  return (
+    <li
+      role="none"
+      class:list={['sh-tree-item', { 'sh-tree-item--planned': !node.hasManuscript }]}
+      data-entity={MARKED_ENTITIES.has(entity) ? entity : undefined}
+      data-domain={entity === 'part' ? node.domain : undefined}
+    >
+      <div class="sh-tree-row">
         {renderChildren && (
-          <ul role="group" id={groupId} class="sh-tree-group" hidden={!expanded} style={`--tree-num:${String(numberWidth(node.children))}ch`}>
-            <Astro.self nodes={node.children} level={level + 1} state={state} focusId={focusId} entityOf={entityOf} />
-          </ul>
+          <button
+            type="button"
+            class="sh-tree-caret"
+            data-action="tree-toggle"
+            data-tree-target={node.id}
+            tabindex="-1"
+            aria-hidden="true"
+          />
         )}
-      </li>
-    );
-  })
-}
+        <a
+          role="treeitem"
+          class="sh-tree-link"
+          href={node.url}
+          data-tree-node={node.id}
+          aria-level={level}
+          aria-expanded={renderChildren ? (expanded ? 'true' : 'false') : undefined}
+          aria-owns={renderChildren ? groupId : undefined}
+          aria-current={state.currentId === node.id ? 'page' : undefined}
+          tabindex={node.id === focusId ? '0' : '-1'}
+        >
+          {node.number !== null ? (
+            <span class="sh-tree-num">{node.number}</span>
+          ) : (
+            numberWidth(nodes) > 0 && <span class="sh-tree-num" aria-hidden="true" />
+          )}
+          <span class="sh-tree-label">{node.shortTitle}</span>
+          {!node.hasManuscript && <span class="sh-visually-hidden"> (planned)</span>}
+          <span class="sh-tree-progress" data-progress={node.id} aria-hidden="true" />
+        </a>
+      </div>
+      {renderChildren && (
+        <ul
+          role="group"
+          id={groupId}
+          class="sh-tree-group"
+          hidden={!expanded}
+          style={`--tree-num:${String(numberWidth(node.children))}ch`}
+        >
+          <Astro.self nodes={node.children} level={level + 1} state={state} focusId={focusId} entityOf={entityOf} />
+        </ul>
+      )}
+    </li>
+  );
+})}

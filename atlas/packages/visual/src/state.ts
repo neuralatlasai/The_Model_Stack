@@ -27,9 +27,24 @@
  *
  * The memory-stack scale is the widest bar total, or the budget when larger.
  */
-import { formatValue, type CalculatorSpec, type ChartSpec, type FigureSpec, type MemoryStackSpec, type StatPanelSpec, type ValueFormat } from '@atlas/core';
+import {
+  formatValue,
+  type CalculatorSpec,
+  type ChartSpec,
+  type FigureSpec,
+  type MemoryStackSpec,
+  type StatPanelSpec,
+  type ValueFormat,
+} from '@atlas/core';
 import { formatTick, resolveChart, seriesValueAt, unitScales } from './chart.ts';
-import { evaluateCalculator, evaluateMemoryStack, formatInputValue, sliderModel, tryEvaluate, withOverrides } from './figure-math.ts';
+import {
+  evaluateCalculator,
+  evaluateMemoryStack,
+  formatInputValue,
+  sliderModel,
+  tryEvaluate,
+  withOverrides,
+} from './figure-math.ts';
 
 export interface FigureStateValue {
   readonly value: number;
@@ -62,7 +77,11 @@ function entry(value: number, text: string, format: ValueFormat, frac?: number):
   return frac === undefined ? { value, text, format } : { value, text, format, frac: round4(clamp01(frac)) };
 }
 
-function statPanel(spec: StatPanelSpec, overrides: Readonly<Record<string, number>> | null, out: Record<string, FigureStateValue>): void {
+function statPanel(
+  spec: StatPanelSpec,
+  overrides: Readonly<Record<string, number>> | null,
+  out: Record<string, FigureStateValue>,
+): void {
   const env = withOverrides(spec.variables, overrides);
   for (const row of spec.rows) {
     if (row.formula === undefined) continue;
@@ -89,7 +108,11 @@ export function memoryScale(values: ReturnType<typeof evaluateMemoryStack>): num
   return values.max > 0 ? values.max : 1;
 }
 
-function memoryStack(spec: MemoryStackSpec, overrides: Readonly<Record<string, number>> | null, out: Record<string, FigureStateValue>): void {
+function memoryStack(
+  spec: MemoryStackSpec,
+  overrides: Readonly<Record<string, number>> | null,
+  out: Record<string, FigureStateValue>,
+): void {
   const values = evaluateMemoryStack(spec, overrides);
   const scale = memoryScale(values);
   const budget = values.budget?.value ?? null;
@@ -97,16 +120,30 @@ function memoryStack(spec: MemoryStackSpec, overrides: Readonly<Record<string, n
     for (const segment of bar.segments) {
       if (segment.value === null) continue;
       const key = segmentKey(bar.label, segment.label);
-      out[key] = entry(segment.value, formatValue(segment.value, spec.format), spec.format, Math.max(0, segment.value) / scale);
-      out[`${key}#share`] = entry(bar.total > 0 ? segment.value / bar.total : 0, shareText(segment.value, bar.total), 'percent');
+      out[key] = entry(
+        segment.value,
+        formatValue(segment.value, spec.format),
+        spec.format,
+        Math.max(0, segment.value) / scale,
+      );
+      out[`${key}#share`] = entry(
+        bar.total > 0 ? segment.value / bar.total : 0,
+        shareText(segment.value, bar.total),
+        'percent',
+      );
     }
     out[bar.label] = entry(bar.total, formatValue(bar.total, spec.format), spec.format, bar.total / scale);
-    if (budget !== null) out[`${bar.label}#budget`] = entry(bar.total - budget, budgetText(bar.total, budget, spec.format), spec.format);
+    if (budget !== null)
+      out[`${bar.label}#budget`] = entry(bar.total - budget, budgetText(bar.total, budget, spec.format), spec.format);
   }
   if (budget !== null) out[BUDGET_KEY] = entry(budget, formatValue(budget, spec.format), spec.format, budget / scale);
 }
 
-function calculator(spec: CalculatorSpec, overrides: Readonly<Record<string, number>> | null, out: Record<string, FigureStateValue>): void {
+function calculator(
+  spec: CalculatorSpec,
+  overrides: Readonly<Record<string, number>> | null,
+  out: Record<string, FigureStateValue>,
+): void {
   const inputs: Record<string, number> = {};
   for (const input of spec.inputs) {
     const given = overrides !== null && Object.hasOwn(overrides, input.symbol) ? overrides[input.symbol] : undefined;
@@ -118,23 +155,34 @@ function calculator(spec: CalculatorSpec, overrides: Readonly<Record<string, num
     out[input.symbol] = entry(value, formatInputValue(value, input.format), input.format, frac);
   }
   for (const output of evaluateCalculator(spec, inputs)) {
-    if (output.value !== null) out[output.symbol] = entry(output.value, formatValue(output.value, output.format), output.format);
+    if (output.value !== null)
+      out[output.symbol] = entry(output.value, formatValue(output.value, output.format), output.format);
   }
 }
 
 /** Chart cursor values: `x` and every series' y at x (empty unless the overrides carry `x`). */
-export function chartCursorValues(spec: ChartSpec, overrides: Readonly<Record<string, number>> | null): Record<string, FigureStateValue> {
+export function chartCursorValues(
+  spec: ChartSpec,
+  overrides: Readonly<Record<string, number>> | null,
+): Record<string, FigureStateValue> {
   const out: Record<string, FigureStateValue> = {};
   chart(spec, overrides, out);
   return out;
 }
 
-function chart(spec: ChartSpec, overrides: Readonly<Record<string, number>> | null, out: Record<string, FigureStateValue>): void {
+function chart(
+  spec: ChartSpec,
+  overrides: Readonly<Record<string, number>> | null,
+  out: Record<string, FigureStateValue>,
+): void {
   const x = overrides === null ? undefined : overrides[CURSOR_VARIABLE];
   if (x === undefined || !Number.isFinite(x)) return;
   const resolved = resolveChart(spec, overrides);
   const unit = unitScales(spec, resolved);
-  const xText = spec.type === 'bar' ? (spec.categories?.[Math.round(x)] ?? formatValue(x, 'raw')) : formatTick(x, spec.x.format, spec.x.scale);
+  const xText =
+    spec.type === 'bar'
+      ? (spec.categories?.[Math.round(x)] ?? formatValue(x, 'raw'))
+      : formatTick(x, spec.x.format, spec.x.scale);
   out[CURSOR_VARIABLE] = entry(x, xText, spec.x.format, unit.x(x));
   for (const series of resolved.series) {
     const y = seriesValueAt(spec, series, x, overrides);
@@ -148,7 +196,10 @@ function chart(spec: ChartSpec, overrides: Readonly<Record<string, number>> | nu
  * defaults (spec variables, calculator input defaults). Values that cannot be
  * computed are omitted. Pure and deterministic; safe on server and client.
  */
-export function evaluateFigureState(spec: FigureSpec, overrides: Readonly<Record<string, number>> | null): FigureStateValues {
+export function evaluateFigureState(
+  spec: FigureSpec,
+  overrides: Readonly<Record<string, number>> | null,
+): FigureStateValues {
   const values: Record<string, FigureStateValue> = {};
   switch (spec.kind) {
     case 'stat-panel':

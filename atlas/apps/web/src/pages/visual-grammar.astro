@@ -13,7 +13,14 @@
  * same attributes from scroll position.
  */
 import { parse as parseYaml } from 'yaml';
-import { EDGE_KINDS, FigureSpecSchema, NODE_KINDS, type CompiledFigure, type EdgeKind, type NodeKind } from '@atlas/core';
+import {
+  EDGE_KINDS,
+  FigureSpecSchema,
+  NODE_KINDS,
+  type CompiledFigure,
+  type EdgeKind,
+  type NodeKind,
+} from '@atlas/core';
 import { describeFigure, layoutFigure } from '@atlas/visual';
 import { EdgeSpecimen, Figure, NodeSpecimen } from '@atlas/visual/svg';
 import { figureHostProps, type FigureHostProps } from '../components/research/lib/figure-host.ts';
@@ -103,7 +110,8 @@ const KINDS: readonly KindCopy[] = [
     kind: 'tensor-flow',
     question: 'What shape does the data have at each step, and what does each step cost?',
     title: 'Shapes through one attention block',
-    caption: 'Only the score product changes the shape class, from [B, H, T, Dh] to [B, H, T, T]; every weight-bearing step costs a multiple of D² per token.',
+    caption:
+      'Only the score product changes the shape class, from [B, H, T, Dh] to [B, H, T, T]; every weight-bearing step costs a multiple of D² per token.',
     alt: 'Tensor flow of one attention block: [B, T, D] to [B, T, 3, H, Dh] by the packed QKV projection, to [B, H, T, T] by QKᵀ/√Dh, to [B, H, T, Dh] by softmax·V, and back to [B, T, D] by merging heads and W_O.',
     source: 'DERIVED:eq-5.4',
   },
@@ -111,7 +119,8 @@ const KINDS: readonly KindCopy[] = [
     kind: 'systems-trace',
     question: 'Where do latency, memory, compute, communication, and failure live along a request or step?',
     title: 'Mixed-precision step, first two stages',
-    caption: 'The cast is a memory-bound pass over the weights; the GEMM is where the tensor cores run and where the activations saved for backward are born.',
+    caption:
+      'The cast is a memory-bound pass over the weights; the GEMM is where the tensor cores run and where the activations saved for backward are born.',
     alt: 'Systems trace with two stages: casting master weights to operands costs one pass over W, adds two bytes per parameter, and overflows if unscaled; the forward GEMM is tensor-core bound and saves activations.',
     source: 'DERIVED:eq-5.8',
   },
@@ -119,7 +128,8 @@ const KINDS: readonly KindCopy[] = [
     kind: 'memory-stack',
     question: 'What occupies memory, and how do the parts compare to a budget?',
     title: 'Training state of a 7B-parameter model',
-    caption: 'Weights are only one eighth of the training state; Adam’s moments alone are half, and the stack overflows an 80 GiB device before any activation is stored.',
+    caption:
+      'Weights are only one eighth of the training state; Adam’s moments alone are half, and the stack overflows an 80 GiB device before any activation is stored.',
     alt: 'Memory stack for mixed-precision Adam at N = 7 billion parameters: BF16 weights 13 GiB, BF16 gradients 13 GiB, FP32 master weights 26.1 GiB, Adam moments 52.2 GiB, 104 GiB in total against an illustrative 80 GiB device.',
     source: 'DERIVED:eq-5.8',
   },
@@ -127,7 +137,8 @@ const KINDS: readonly KindCopy[] = [
     kind: 'stat-panel',
     question: 'What is the state of the configuration being discussed?',
     title: 'Reference configuration',
-    caption: 'One third of every block’s parameters sit in attention and two thirds in the feed-forward network; the dot matrix shows the split at 48 dots.',
+    caption:
+      'One third of every block’s parameters sit in attention and two thirds in the feed-forward network; the dot matrix shows the split at 48 dots.',
     alt: 'Stat panel for the reference configuration in BF16: 12 layers, 84.9 million non-embedding parameters and 38.6 million embedding parameters; 16 of 48 dots mark attention parameters (4·D² per layer) against FFN parameters (8·D² per layer).',
     source: 'DERIVED:eq-5.4',
   },
@@ -135,7 +146,8 @@ const KINDS: readonly KindCopy[] = [
     kind: 'lineage',
     question: 'Where did this come from, and what is the current frontier?',
     title: 'Lineage of exact attention kernels',
-    caption: 'The 2017 block is the ancestor; the 2022 kernel changed where the scores live, not what they are, and the frontier is kernels specialised to one accelerator generation.',
+    caption:
+      'The 2017 block is the ancestor; the 2022 kernel changed where the scores live, not what they are, and the frontier is kernels specialised to one accelerator generation.',
     alt: 'Lineage: 2017 Transformer (P01), conceptual ancestor; 2022 FlashAttention (P19), engineering optimisation; 2025 and later, hardware-specialised attention kernels, current frontier.',
     source: ['P01', 'P19'],
     evidence: 'PAPER-REPORTED',
@@ -144,7 +156,8 @@ const KINDS: readonly KindCopy[] = [
     kind: 'cycle',
     question: 'Which stages feed back into which?',
     title: 'The model lifecycle as a cycle',
-    caption: 'Two loops close the lifecycle: usage data returns to the corpus, and evaluation ablations return to pretraining. Neither is a pipeline stage.',
+    caption:
+      'Two loops close the lifecycle: usage data returns to the corpus, and evaluation ablations return to pretraining. Neither is a pipeline stage.',
     alt: 'Cycle: Data, Pretrain, Post-train, Evaluate, Deploy in a column; feedback from Deploy to Data labelled usage data, and from Evaluate to Pretrain labelled ablations.',
     source: 'DERIVED:eq-5.8',
   },
@@ -152,7 +165,8 @@ const KINDS: readonly KindCopy[] = [
     kind: 'matrix',
     question: 'Which pairs interact?',
     title: 'Causal mask at T = 8',
-    caption: 'Row 5 attends to keys 0 to 5; summing the rows gives T(T+1)/2 = 36 admitted pairs of 64, a fraction that tends to one half as T grows.',
+    caption:
+      'Row 5 attends to keys 0 to 5; summing the rows gives T(T+1)/2 = 36 admitted pairs of 64, a fraction that tends to one half as T grows.',
     alt: 'Causal mask, 8 by 8: query position i admits key positions j ≤ i; 36 of 64 pairs admitted; the cell at row 5, column 2 is highlighted.',
     source: 'DERIVED:eq-5.5',
   },
@@ -160,7 +174,8 @@ const KINDS: readonly KindCopy[] = [
     kind: 'chart',
     question: 'How does one quantity scale with another?',
     title: 'Score bytes against one activation tensor',
-    caption: 'On log axes the score matrix climbs twice as steeply as a [B, T, D] activation; at T = 8192 it is 64 times larger, the ratio T/Dh.',
+    caption:
+      'On log axes the score matrix climbs twice as steeply as a [B, T, D] activation; at T = 8192 it is 64 times larger, the ratio T/Dh.',
     alt: 'Line chart on log2 axes, T from 512 to 131,072: scores B·H·T²·b grow from 16 MiB to 1 TiB per layer, one [B, T, D] tensor from 4 MiB to 1 GiB; at T = 8192 the ratio is 64.',
     source: 'DERIVED:eq-5.8',
   },
@@ -168,7 +183,8 @@ const KINDS: readonly KindCopy[] = [
     kind: 'hierarchy',
     question: 'Through which physical or logical levels does work descend?',
     title: 'Execution topology of one attention call',
-    caption: 'Work descends from the model to the fabric; the emphasised level, HBM, is where the materialised score tensor lives and where its bytes are paid.',
+    caption:
+      'Work descends from the model to the fabric; the emphasised level, HBM, is where the materialised score tensor lives and where its bytes are paid.',
     alt: 'Hierarchy, top down: Model; Operations (GEMM, softmax, norm); Kernel; SM; SRAM or shared memory (on-chip, per SM); HBM (off-chip, device-wide, emphasised); NVLink or fabric.',
     source: 'DERIVED:eq-5.8',
   },
@@ -176,7 +192,8 @@ const KINDS: readonly KindCopy[] = [
     kind: 'compare',
     question: 'On a stated evaluation axis, how do alternatives differ?',
     title: 'Key-value head sharing',
-    caption: 'Only the cache rows differ; the objective row is identical across all three, which is why head sharing is a memory decision rather than a modelling one.',
+    caption:
+      'Only the cache rows differ; the objective row is identical across all three, which is why head sharing is a memory decision rather than a modelling one.',
     alt: 'Comparison of MHA, GQA and MQA on KV bytes per token: KV heads H_q, H_kv < H_q, and 1; KV bytes per token per layer 2·H_q·d_h·b, 2·H_kv·d_h·b, 2·d_h·b; the objective is unchanged in all three.',
     source: 'DERIVED:eq-5.8',
     placement: 'wide',
@@ -257,7 +274,8 @@ const liveStat = await compile({
   kind: 'stat-panel',
   title: 'Reference configuration',
   placement: 'rail',
-  caption: 'The panel follows the section: the configuration, then a deeper and wider model, then a longer context. Parameter rows scale with L·D², the cache row with T.',
+  caption:
+    'The panel follows the section: the configuration, then a deeper and wider model, then a longer context. Parameter rows scale with L·D², the cache row with T.',
   evidence: 'MATHEMATICALLY-DERIVED',
   source: 'DERIVED:eq-5.4',
   alt: 'Stat panel in BF16 at L = 12, D = 768, V = 50,257, T = 1,024: 84.9 million non-embedding and 38.6 million embedding parameters, 236 MiB of weights and a 36 MiB KV cache per sequence; attention holds 16 of 48 parameter dots.',
@@ -283,7 +301,12 @@ const liveStat = await compile({
     },
   },
   states: [
-    { anchor: 'formulation', label: 'L 12 · D 768', highlight: ['layers L', 'model width D'], note: 'The reference configuration of §5.1: twelve layers at width 768.' },
+    {
+      anchor: 'formulation',
+      label: 'L 12 · D 768',
+      highlight: ['layers L', 'model width D'],
+      note: 'The reference configuration of §5.1: twelve layers at width 768.',
+    },
     {
       anchor: 'mechanism',
       label: 'L 24 · D 1024',
@@ -291,7 +314,13 @@ const liveStat = await compile({
       highlight: ['non-embedding params', 'weights'],
       note: 'Twice the depth and 4/3 the width multiply 12·L·D² by 3.6.',
     },
-    { anchor: 'costs', label: 'T = 8K', variables: { T: 8192 }, highlight: ['KV cache / sequence'], note: 'Eight times the context, eight times the cache; the weights do not move.' },
+    {
+      anchor: 'costs',
+      label: 'T = 8K',
+      variables: { T: 8192 },
+      highlight: ['KV cache / sequence'],
+      note: 'Eight times the context, eight times the cache; the weights do not move.',
+    },
   ],
 });
 
@@ -321,9 +350,26 @@ const liveStack = await compile({
     budget: { label: 'illustrative 80 GiB device', formula: '80*2^30' },
   },
   states: [
-    { anchor: 'formulation', label: 'N = 1.3B', highlight: ['per model/BF16 weights'], note: 'At 1.3B parameters the weights are one eighth of the state.' },
-    { anchor: 'mechanism', label: 'N = 5B', variables: { N: 5e9 }, highlight: ['per model/Adam m, v'], note: 'Adam’s two moments are half the stack at any N.' },
-    { anchor: 'costs', label: 'N = 7B', variables: { N: 7e9 }, highlight: ['per model', 'budget'], note: 'At 7B the state alone overflows the device.' },
+    {
+      anchor: 'formulation',
+      label: 'N = 1.3B',
+      highlight: ['per model/BF16 weights'],
+      note: 'At 1.3B parameters the weights are one eighth of the state.',
+    },
+    {
+      anchor: 'mechanism',
+      label: 'N = 5B',
+      variables: { N: 5e9 },
+      highlight: ['per model/Adam m, v'],
+      note: 'Adam’s two moments are half the stack at any N.',
+    },
+    {
+      anchor: 'costs',
+      label: 'N = 7B',
+      variables: { N: 7e9 },
+      highlight: ['per model', 'budget'],
+      note: 'At 7B the state alone overflows the device.',
+    },
   ],
 });
 
@@ -342,14 +388,44 @@ const liveChart = await compile({
     y: { label: 'bytes per layer', scale: 'log2', format: 'bytes' },
     variables: { B: 1, H: 32, D: 4096, b: 2 },
     series: [
-      { id: 'scores', label: 'scores B·H·T²·b', formula: 'B*H*x^2*b', sample: { from: 512, to: 131072, count: 9 }, emphasis: true },
-      { id: 'act', label: 'one [B,T,D] tensor', formula: 'B*x*D*b', sample: { from: 512, to: 131072, count: 9 }, dashed: true },
+      {
+        id: 'scores',
+        label: 'scores B·H·T²·b',
+        formula: 'B*H*x^2*b',
+        sample: { from: 512, to: 131072, count: 9 },
+        emphasis: true,
+      },
+      {
+        id: 'act',
+        label: 'one [B,T,D] tensor',
+        formula: 'B*x*D*b',
+        sample: { from: 512, to: 131072, count: 9 },
+        dashed: true,
+      },
     ],
   },
   states: [
-    { anchor: 'formulation', label: 'T = 2K', variables: { x: 2048 }, highlight: ['scores'], note: 'At T = 2K the scores are 16× one activation.' },
-    { anchor: 'mechanism', label: 'T = 8K', variables: { x: 8192 }, highlight: ['scores'], note: 'At T = 8K the ratio is T/Dh = 64.' },
-    { anchor: 'costs', label: 'T = 32K', variables: { x: 32768 }, highlight: ['scores', 'act'], note: 'At T = 32K one layer’s scores need 64 GiB.' },
+    {
+      anchor: 'formulation',
+      label: 'T = 2K',
+      variables: { x: 2048 },
+      highlight: ['scores'],
+      note: 'At T = 2K the scores are 16× one activation.',
+    },
+    {
+      anchor: 'mechanism',
+      label: 'T = 8K',
+      variables: { x: 8192 },
+      highlight: ['scores'],
+      note: 'At T = 8K the ratio is T/Dh = 64.',
+    },
+    {
+      anchor: 'costs',
+      label: 'T = 32K',
+      variables: { x: 32768 },
+      highlight: ['scores', 'act'],
+      note: 'At T = 32K one layer’s scores need 64 GiB.',
+    },
   ],
 });
 
@@ -374,8 +450,18 @@ const liveHier = await compile({
   },
   states: [
     { anchor: 'formulation', label: 'naive', highlight: ['HBM'], note: 'The naive kernel writes [B, H, T, T] to HBM.' },
-    { anchor: 'mechanism', label: 'tiled', highlight: ['SRAM', 'Kernel'], note: 'The tiled kernel keeps each score tile in SRAM.' },
-    { anchor: 'costs', label: 'sharded', highlight: ['NVLink'], note: 'Across devices, heads are sharded and only outputs move.' },
+    {
+      anchor: 'mechanism',
+      label: 'tiled',
+      highlight: ['SRAM', 'Kernel'],
+      note: 'The tiled kernel keeps each score tile in SRAM.',
+    },
+    {
+      anchor: 'costs',
+      label: 'sharded',
+      highlight: ['NVLink'],
+      note: 'Across devices, heads are sharded and only outputs move.',
+    },
   ],
 });
 
@@ -431,13 +517,18 @@ const PREFIX = (kind: NodeKind): string => `[${kind.charAt(0).toUpperCase()}${ki
 
   {problems.length > 0 && (
     <section class="vgr-problems" aria-label="Examples that failed to parse">
-      {problems.map((problem) => <p>{problem}</p>)}
+      {problems.map((problem) => (
+        <p>{problem}</p>
+      ))}
     </section>
   )}
 
   <section class="sh-section vgr-section" aria-labelledby="vgr-primitives" data-kind="primitives">
     <h2 id="vgr-primitives">Node primitives</h2>
-    <p class="vgr-lede">One glyph per kind, the same in every diagram, cycle, hierarchy, and concept map. Mermaid label prefixes map onto these kinds.</p>
+    <p class="vgr-lede">
+      One glyph per kind, the same in every diagram, cycle, hierarchy, and concept map. Mermaid label prefixes map onto
+      these kinds.
+    </p>
     <div class="vgr-table-scroll" role="region" aria-label="Node primitives" tabindex="0">
       <table class="vgr-specimens">
         <thead>
@@ -491,25 +582,38 @@ const PREFIX = (kind: NodeKind): string => `[${kind.charAt(0).toUpperCase()}${ki
 
   <section class="sh-section vgr-section" aria-labelledby="vgr-kinds">
     <h2 id="vgr-kinds">Figure kinds</h2>
-    <p class="vgr-lede">Each kind answers one question. The examples are the grammar’s own YAML, parsed, laid out, and drawn exactly as a chapter would draw them.</p>
-    {
-      kindFigures.map(({ copy, figure }) => (
-        <section class:list={['vgr-kind', { 'vgr-kind--wide': copy.placement === 'wide' }]} data-kind={copy.kind} aria-labelledby={`vgr-kind-${copy.kind}`}>
-          <h3 id={`vgr-kind-${copy.kind}`} class="vgr-kind__head">
-            <code>{copy.kind}</code>
-            <span class="vgr-kind__question">{copy.question}</span>
-          </h3>
-          {figure === null ? <p class="vgr-missing">Example did not parse.</p> : <Figure figure={figure} nodeHref={host(figure).nodeHref} {...host(figure).tex} />}
-        </section>
-      ))
-    }
+    <p class="vgr-lede">
+      Each kind answers one question. The examples are the grammar’s own YAML, parsed, laid out, and drawn exactly as a
+      chapter would draw them.
+    </p>
+    {kindFigures.map(({ copy, figure }) => (
+      <section
+        class:list={['vgr-kind', { 'vgr-kind--wide': copy.placement === 'wide' }]}
+        data-kind={copy.kind}
+        aria-labelledby={`vgr-kind-${copy.kind}`}
+      >
+        <h3 id={`vgr-kind-${copy.kind}`} class="vgr-kind__head">
+          <code>{copy.kind}</code>
+          <span class="vgr-kind__question">{copy.question}</span>
+        </h3>
+        {figure === null ? (
+          <p class="vgr-missing">Example did not parse.</p>
+        ) : (
+          <Figure figure={figure} nodeHref={host(figure).nodeHref} {...host(figure).tex} />
+        )}
+      </section>
+    ))}
     <section class="vgr-kind" data-kind="calculator" aria-labelledby="vgr-kind-calculator">
       <h3 id="vgr-kind-calculator" class="vgr-kind__head">
         <code>calculator</code>
         <span class="vgr-kind__question">What happens to this equation’s value when I change a variable?</span>
       </h3>
       <div class="vgr-rail-sample">
-        {calculatorFigure === null ? <p class="vgr-missing">Example did not parse.</p> : <Figure figure={calculatorFigure} {...host(calculatorFigure).tex} />}
+        {calculatorFigure === null ? (
+          <p class="vgr-missing">Example did not parse.</p>
+        ) : (
+          <Figure figure={calculatorFigure} {...host(calculatorFigure).tex} />
+        )}
       </div>
     </section>
     <section class="vgr-kind vgr-kind--wide" data-kind="diagram-groups" aria-labelledby="vgr-kind-diagram-groups">
@@ -524,26 +628,36 @@ const PREFIX = (kind: NodeKind): string => `[${kind.charAt(0).toUpperCase()}${ki
   <section class="sh-section vgr-section" aria-labelledby="vgr-live">
     <h2 id="vgr-live">Live instruments</h2>
     <p class="vgr-lede">
-      Rail figures carry scroll states. As the reader crosses a region, the instrument lights the parts that region discusses, recomputes its numbers, and replaces its state line. The stepper under each instrument drives the same contract by hand.
+      Rail figures carry scroll states. As the reader crosses a region, the instrument lights the parts that region
+      discusses, recomputes its numbers, and replaces its state line. The stepper under each instrument drives the same
+      contract by hand.
     </p>
     <div class="vgr-live">
-      {
-        live.map((figure) => (
-          <div class="vgr-live__item" data-kind={`live-${figure.spec.kind}`}>
-            <div class="vgr-rail-sample">
-              <Figure figure={figure} {...host(figure).tex} />
-            </div>
-            <div class="vgr-stepper" role="group" aria-label={`States of ${figure.spec.title}`} data-vgr-for={figure.anchor}>
-              {figure.spec.states.map((state, index) => (
-                <button type="button" class="vgr-stepper__btn" data-vgr-state={String(index)} aria-pressed={index === 0 ? 'true' : 'false'}>
-                  <span class="vgr-stepper__anchor">{state.anchor}</span>
-                  <span class="vgr-stepper__label">{state.label ?? `state ${index + 1}`}</span>
-                </button>
-              ))}
-            </div>
+      {live.map((figure) => (
+        <div class="vgr-live__item" data-kind={`live-${figure.spec.kind}`}>
+          <div class="vgr-rail-sample">
+            <Figure figure={figure} {...host(figure).tex} />
           </div>
-        ))
-      }
+          <div
+            class="vgr-stepper"
+            role="group"
+            aria-label={`States of ${figure.spec.title}`}
+            data-vgr-for={figure.anchor}
+          >
+            {figure.spec.states.map((state, index) => (
+              <button
+                type="button"
+                class="vgr-stepper__btn"
+                data-vgr-state={String(index)}
+                aria-pressed={index === 0 ? 'true' : 'false'}
+              >
+                <span class="vgr-stepper__anchor">{state.anchor}</span>
+                <span class="vgr-stepper__label">{state.label ?? `state ${index + 1}`}</span>
+              </button>
+            ))}
+          </div>
+        </div>
+      ))}
     </div>
   </section>
 </ReaderLayout>
@@ -580,7 +694,8 @@ const PREFIX = (kind: NodeKind): string => `[${kind.charAt(0).toUpperCase()}${ki
       const selector = CSS.escape(key);
       for (const element of root.querySelectorAll(`[data-vg-value="${selector}"]`)) element.textContent = value.text;
       if (value.frac !== undefined) {
-        for (const element of root.querySelectorAll<HTMLElement | SVGElement>(`[data-vg-frac="${selector}"]`)) element.style.setProperty('--vg-frac', String(value.frac));
+        for (const element of root.querySelectorAll<HTMLElement | SVGElement>(`[data-vg-frac="${selector}"]`))
+          element.style.setProperty('--vg-frac', String(value.frac));
       }
     }
     const cursor = root.querySelector('[data-vg-cursor]');
@@ -601,7 +716,8 @@ const PREFIX = (kind: NodeKind): string => `[${kind.charAt(0).toUpperCase()}${ki
         const state = states[Number(button.dataset['vgrState'])];
         if (state === undefined) return;
         applyState(root, state);
-        for (const other of stepper.querySelectorAll('[data-vgr-state]')) other.setAttribute('aria-pressed', other === button ? 'true' : 'false');
+        for (const other of stepper.querySelectorAll('[data-vgr-state]'))
+          other.setAttribute('aria-pressed', other === button ? 'true' : 'false');
       });
     }
   }

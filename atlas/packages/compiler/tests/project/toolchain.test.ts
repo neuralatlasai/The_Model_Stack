@@ -81,14 +81,23 @@ describe('cli argument boundary', () => {
     assert.equal(await main(['--nope'], io), EXIT_CODES.usage);
     assert.equal(await main(['--docs', 'x'], io), EXIT_CODES.usage);
     assert.match(io.text(), /--reference-stack is required/u);
-    assert.equal(await main(['--docs', 'x', '--reference-stack', 'y', '--out', 'z', '--compiled-at', 'yesterday'], io), EXIT_CODES.usage);
-    assert.equal(await main(['--docs', 'x', '--reference-stack', 'y', '--out', 'z', '--concurrency', '64'], io), EXIT_CODES.usage);
+    assert.equal(
+      await main(['--docs', 'x', '--reference-stack', 'y', '--out', 'z', '--compiled-at', 'yesterday'], io),
+      EXIT_CODES.usage,
+    );
+    assert.equal(
+      await main(['--docs', 'x', '--reference-stack', 'y', '--out', 'z', '--concurrency', '64'], io),
+      EXIT_CODES.usage,
+    );
   });
 
   it('exits 3 when an input cannot be read', async () => {
     const io = capture();
     assert.equal(
-      await main(['--docs', 'definitely-missing-docs', '--reference-stack', 'missing.md', '--out', 'never-written', '--quiet'], io),
+      await main(
+        ['--docs', 'definitely-missing-docs', '--reference-stack', 'missing.md', '--out', 'never-written', '--quiet'],
+        io,
+      ),
       EXIT_CODES.fatal,
     );
     assert.match(io.text(), /atlas-manifest\.json/u);

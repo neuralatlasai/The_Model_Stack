@@ -118,7 +118,8 @@ function glyphsFor(scope: Element, key: SymbolKey): Element[] {
   const hits: Element[] = [];
   for (const glyph of $$(GLYPH_SELECTOR, scope)) {
     if (glyph.childElementCount > 0 || glyph.closest('.msupsub') !== null) continue;
-    const sub = glyph.nextElementSibling?.classList.contains('msupsub') === true ? glyph.nextElementSibling.textContent : '';
+    const sub =
+      glyph.nextElementSibling?.classList.contains('msupsub') === true ? glyph.nextElementSibling.textContent : '';
     if (!matchesRendered(key, glyph.textContent, sub)) continue;
     hits.push(sub === '' ? glyph : (glyph.parentElement ?? glyph));
   }
@@ -132,6 +133,7 @@ function renderedKey(glyph: HTMLElement): SymbolKey | null {
   if (Array.from(base).length !== 1 || !/\p{L}/u.test(base)) return null;
   const next = glyph.nextElementSibling;
   // A superscript shares the `.msupsub` box and renders first (`H_{kv}^2` → "2kv"): drop leading non-letters.
-  const sub = next?.classList.contains('msupsub') === true ? cleanRendered(next.textContent).replace(/^[^A-Za-z]+/u, '') : '';
+  const sub =
+    next?.classList.contains('msupsub') === true ? cleanRendered(next.textContent).replace(/^[^A-Za-z]+/u, '') : '';
   return { base, sub };
 }

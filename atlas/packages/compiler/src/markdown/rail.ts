@@ -23,7 +23,13 @@ import { slugify } from './slug.ts';
 import type { CompileState } from './state.ts';
 import { walkAllInline, walkBlocks } from './walk.ts';
 
-const POSITION_ROLES: ReadonlySet<RegionRole> = new Set<RegionRole>(['scope', 'why', 'why-chapter', 'concept-map', 'position']);
+const POSITION_ROLES: ReadonlySet<RegionRole> = new Set<RegionRole>([
+  'scope',
+  'why',
+  'why-chapter',
+  'concept-map',
+  'position',
+]);
 const EQUATION_ROLES: ReadonlySet<RegionRole> = new Set<RegionRole>(['formulation', 'mechanism']);
 
 export interface RegionTally {
@@ -98,8 +104,10 @@ function derived(role: RegionRole, tally: RegionTally): RailInstrument[] {
   const out: RailInstrument[] = [];
   if (EQUATION_ROLES.has(role) && tally.equations.length > 0) out.push({ kind: 'equations', anchors: tally.equations });
   if (role === 'siblings' && tally.siblings.length > 0) out.push({ kind: 'siblings', anchors: tally.siblings });
-  if (role === 'failure-modes' && tally.failureModes.length > 0) out.push({ kind: 'failure-modes', anchors: tally.failureModes });
-  if (role === 'observations' && Object.keys(tally.labels).length > 0) out.push({ kind: 'evidence', counts: tally.labels });
+  if (role === 'failure-modes' && tally.failureModes.length > 0)
+    out.push({ kind: 'failure-modes', anchors: tally.failureModes });
+  if (role === 'observations' && Object.keys(tally.labels).length > 0)
+    out.push({ kind: 'evidence', counts: tally.labels });
   if (POSITION_ROLES.has(role)) out.push({ kind: 'position' });
   if (tally.terms.length > 0) out.push({ kind: 'terms', slugs: tally.terms });
   if (tally.citations.length > 0) out.push({ kind: 'citations', keys: tally.citations });
@@ -124,7 +132,9 @@ export function buildRail(
         headingLines.get(region.anchor) ?? null,
       );
     }
-    const instruments: RailInstrument[] = authored.slice(0, MAX_RAIL_INSTRUMENTS).map((figure) => ({ kind: 'figure', figureId: figure.id }));
+    const instruments: RailInstrument[] = authored
+      .slice(0, MAX_RAIL_INSTRUMENTS)
+      .map((figure) => ({ kind: 'figure', figureId: figure.id }));
     for (const instrument of derived(region.role, tallyRegion(region, st))) {
       if (instruments.length >= MAX_RAIL_INSTRUMENTS) break;
       instruments.push(instrument);

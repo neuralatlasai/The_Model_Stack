@@ -30,8 +30,20 @@ interface Props {
 
 const { registry, graph } = Astro.props;
 
-const TYPE_ORDER = ['paper', 'technical report', 'dataset card', 'model card', 'repository', 'documentation', 'course', 'measurement source'];
-const types = [...TYPE_ORDER, ...new Set(registry.references.map((record) => record.type).filter((type) => !TYPE_ORDER.includes(type)))];
+const TYPE_ORDER = [
+  'paper',
+  'technical report',
+  'dataset card',
+  'model card',
+  'repository',
+  'documentation',
+  'course',
+  'measurement source',
+];
+const types = [
+  ...TYPE_ORDER,
+  ...new Set(registry.references.map((record) => record.type).filter((type) => !TYPE_ORDER.includes(type))),
+];
 const STATUS: Readonly<Record<string, { key: string; label: string }>> = {
   'peer-reviewed': { key: 'peer', label: 'peer-reviewed' },
   preprint: { key: 'pre', label: 'preprint' },
@@ -75,28 +87,45 @@ const works = registry.references
   })
   .sort((x, y) => x.order - y.order);
 
-const fieldWorks = works.map((work) => ({ key: work.record.key, type: work.record.type, year: work.year, weight: work.chapters.length }));
+const fieldWorks = works.map((work) => ({
+  key: work.record.key,
+  type: work.record.type,
+  year: work.year,
+  weight: work.chapters.length,
+}));
 const drawings: { variant: 'wide' | 'compact'; field: FieldGeometry }[] = [
   { variant: 'wide', field: citationField(fieldWorks, types, { lanePad: 11 }) },
-  { variant: 'compact', field: citationField(fieldWorks, types, { width: 400, labelW: 18, labelTop: 17, undatedW: 58 }) },
+  {
+    variant: 'compact',
+    field: citationField(fieldWorks, types, { width: 400, labelW: 18, labelTop: 17, undatedW: 58 }),
+  },
 ];
 
 const chapterNodes = new Map(
-  nodesOfType(graph, 'chapter').map((node) => [node.number === null ? Number.NaN : Number.parseInt(node.number, 10), node]),
+  nodesOfType(graph, 'chapter').map((node) => [
+    node.number === null ? Number.NaN : Number.parseInt(node.number, 10),
+    node,
+  ]),
 );
 const citingChapters = [...new Set(works.flatMap((work) => work.chapters))]
   .sort((a, b) => a - b)
   .map((n) => ({ n, node: chapterNodes.get(n), count: works.filter((work) => work.chapters.includes(n)).length }));
 const maxCount = Math.max(1, ...citingChapters.map((chapter) => chapter.count));
 const pad = (n: number): string => String(n).padStart(2, '0');
-const typeCounts = types.map((type) => ({ type, count: works.filter((work) => work.record.type === type).length })).filter((entry) => entry.count > 0);
-const statusCounts = Object.values(STATUS).map((status) => ({ ...status, count: works.filter((work) => work.status.key === status.key).length }));
+const typeCounts = types
+  .map((type) => ({ type, count: works.filter((work) => work.record.type === type).length }))
+  .filter((entry) => entry.count > 0);
+const statusCounts = Object.values(STATUS).map((status) => ({
+  ...status,
+  count: works.filter((work) => work.status.key === status.key).length,
+}));
 const spineCount = works.filter((work) => work.record.spine).length;
 const slug = (type: string) => type.replace(/[^a-z0-9]+/giu, '-').toLowerCase();
 
 // The readout rests on the work cited on the most pages (ties: registry order).
 const top = [...works].sort((a, b) => b.record.citedBy.length - a.record.citedBy.length || a.order - b.order)[0];
-const usedText = (work: (typeof works)[number]): string => work.record.uses[0]?.usedFor.replace(/\s+/gu, ' ').slice(0, 280) ?? '';
+const usedText = (work: (typeof works)[number]): string =>
+  work.record.uses[0]?.usedFor.replace(/\s+/gu, ' ').slice(0, 280) ?? '';
 ---
 
 <section class="pfx" data-papers-explorer aria-label="Cited works">
@@ -106,135 +135,168 @@ const usedText = (work: (typeof works)[number]): string => work.record.uses[0]?.
         <span>Citation field</span>
         <span class="pfx-field__note">dot size = chapters drawing on it</span>
       </figcaption>
-      {
-        drawings.map(({ variant, field }) => {
-          const markOf = new Map(field.marks.map((mark) => [mark.key, mark]));
-          const topMark = top === undefined ? undefined : markOf.get(top.record.key);
-          const hatch = `pfx-hatch-${variant}`;
-          const undatedX0 = field.x1 + 16;
-          return (
-            <div class={`pfx-plot pfx-plot--${variant}`}>
-              <svg
-                class="pfx-svg"
-                viewBox={`0 0 ${String(field.width)} ${String(field.height)}`}
-                role="group"
-                aria-label={`${String(works.length)} cited works by year and type. Arrow keys step through them; Enter opens a work.`}
-                data-pfx-svg={variant}
-              >
-                <defs>
-                  <pattern id={hatch} width="6" height="6" patternUnits="userSpaceOnUse" patternTransform="rotate(45)">
-                    <line class="pfx-hatch" x1="0" y1="0" x2="0" y2="6" />
-                  </pattern>
-                </defs>
-                {field.undatedX !== null && (
-                  <rect class="pfx-undated__band" x={undatedX0} y="0" width={field.width - undatedX0 - 2} height={field.axisY} fill={`url(#${hatch})`} />
-                )}
-                {field.lanes.map((lane, index) => (
-                  <g class="pfx-lane" data-pfx-lane={slug(lane.type)}>
-                    {index > 0 && <line class="pfx-lane__rule" x1="0" x2={field.width} y1={lane.y0} y2={lane.y0} />}
-                    <line class="pfx-lane__axis" x1={field.x0 - 6} x2={field.x1 + 6} y1={lane.cy} y2={lane.cy} />
-                    <text class="pfx-lane__label" x={variant === 'compact' ? 2 : 0} y={lane.ly}>
-                      {lane.type}
-                      <tspan class="pfx-lane__n" dx="6">
-                        {lane.count}
-                      </tspan>
-                    </text>
-                  </g>
-                ))}
-                {field.undatedX !== null && <line class="pfx-undated" x1={undatedX0} x2={undatedX0} y1="0" y2={field.axisY} />}
-                <line class="pfx-axis" x1={field.x0 - 6} x2={field.width - 2} y1={field.axisY} y2={field.axisY} />
-                {field.breakX !== null && (
-                  <path class="pfx-break" d={`M${String(field.breakX - 5)} ${String(field.axisY + 4)} l4 -8 M${String(field.breakX + 1)} ${String(field.axisY + 4)} l4 -8`} />
-                )}
-                {field.ticks.map((tick) => (
-                  <text class:list={['pfx-tick', { 'is-undated': tick.label === 'undated' }]} x={tick.x} y={field.axisY + 15}>
-                    {tick.label}
+      {drawings.map(({ variant, field }) => {
+        const markOf = new Map(field.marks.map((mark) => [mark.key, mark]));
+        const topMark = top === undefined ? undefined : markOf.get(top.record.key);
+        const hatch = `pfx-hatch-${variant}`;
+        const undatedX0 = field.x1 + 16;
+        return (
+          <div class={`pfx-plot pfx-plot--${variant}`}>
+            <svg
+              class="pfx-svg"
+              viewBox={`0 0 ${String(field.width)} ${String(field.height)}`}
+              role="group"
+              aria-label={`${String(works.length)} cited works by year and type. Arrow keys step through them; Enter opens a work.`}
+              data-pfx-svg={variant}
+            >
+              <defs>
+                <pattern id={hatch} width="6" height="6" patternUnits="userSpaceOnUse" patternTransform="rotate(45)">
+                  <line class="pfx-hatch" x1="0" y1="0" x2="0" y2="6" />
+                </pattern>
+              </defs>
+              {field.undatedX !== null && (
+                <rect
+                  class="pfx-undated__band"
+                  x={undatedX0}
+                  y="0"
+                  width={field.width - undatedX0 - 2}
+                  height={field.axisY}
+                  fill={`url(#${hatch})`}
+                />
+              )}
+              {field.lanes.map((lane, index) => (
+                <g class="pfx-lane" data-pfx-lane={slug(lane.type)}>
+                  {index > 0 && <line class="pfx-lane__rule" x1="0" x2={field.width} y1={lane.y0} y2={lane.y0} />}
+                  <line class="pfx-lane__axis" x1={field.x0 - 6} x2={field.x1 + 6} y1={lane.cy} y2={lane.cy} />
+                  <text class="pfx-lane__label" x={variant === 'compact' ? 2 : 0} y={lane.ly}>
+                    {lane.type}
+                    <tspan class="pfx-lane__n" dx="6">
+                      {lane.count}
+                    </tspan>
                   </text>
-                ))}
-                {topMark !== undefined && <circle class="pfx-rest" cx={topMark.x} cy={topMark.y} r={topMark.r + 4.5} data-pfx-rest />}
-                <g class="pfx-marks">
-                  {works.map((work, index) => {
-                    const mark = markOf.get(work.record.key);
-                    if (mark === undefined) return null;
-                    return (
-                      <a
-                        class:list={['pfx-mark', `pfx-st--${work.status.key}`, { 'is-spine': work.record.spine }]}
-                        href={work.record.atlasUrl}
-                        data-pfx-key={work.record.key}
-                        tabindex={index === 0 ? 0 : -1}
-                        aria-label={`${work.record.key}, ${work.record.work}, ${work.record.venue}, ${work.status.label}, ${String(work.chapters.length)} chapters`}
-                      >
-                        <circle class="pfx-mark__hit" cx={mark.x} cy={mark.y} r={Math.max(mark.r + 1.5, 4.5)} />
-                        <circle class="pfx-mark__dot" cx={mark.x} cy={mark.y} r={mark.r} />
-                      </a>
-                    );
-                  })}
                 </g>
-              </svg>
-            </div>
-          );
-        })
-      }
+              ))}
+              {field.undatedX !== null && (
+                <line class="pfx-undated" x1={undatedX0} x2={undatedX0} y1="0" y2={field.axisY} />
+              )}
+              <line class="pfx-axis" x1={field.x0 - 6} x2={field.width - 2} y1={field.axisY} y2={field.axisY} />
+              {field.breakX !== null && (
+                <path
+                  class="pfx-break"
+                  d={`M${String(field.breakX - 5)} ${String(field.axisY + 4)} l4 -8 M${String(field.breakX + 1)} ${String(field.axisY + 4)} l4 -8`}
+                />
+              )}
+              {field.ticks.map((tick) => (
+                <text
+                  class:list={['pfx-tick', { 'is-undated': tick.label === 'undated' }]}
+                  x={tick.x}
+                  y={field.axisY + 15}
+                >
+                  {tick.label}
+                </text>
+              ))}
+              {topMark !== undefined && (
+                <circle class="pfx-rest" cx={topMark.x} cy={topMark.y} r={topMark.r + 4.5} data-pfx-rest />
+              )}
+              <g class="pfx-marks">
+                {works.map((work, index) => {
+                  const mark = markOf.get(work.record.key);
+                  if (mark === undefined) return null;
+                  return (
+                    <a
+                      class:list={['pfx-mark', `pfx-st--${work.status.key}`, { 'is-spine': work.record.spine }]}
+                      href={work.record.atlasUrl}
+                      data-pfx-key={work.record.key}
+                      tabindex={index === 0 ? 0 : -1}
+                      aria-label={`${work.record.key}, ${work.record.work}, ${work.record.venue}, ${work.status.label}, ${String(work.chapters.length)} chapters`}
+                    >
+                      <circle class="pfx-mark__hit" cx={mark.x} cy={mark.y} r={Math.max(mark.r + 1.5, 4.5)} />
+                      <circle class="pfx-mark__dot" cx={mark.x} cy={mark.y} r={mark.r} />
+                    </a>
+                  );
+                })}
+              </g>
+            </svg>
+          </div>
+        );
+      })}
       <p class="pfx-legend" aria-hidden="true">
-        <span><i class="pfx-key pfx-st--peer"></i>peer-reviewed</span>
-        <span><i class="pfx-key pfx-st--pre"></i>preprint</span>
-        <span><i class="pfx-key pfx-st--doc"></i>official documentation</span>
-        <span><i class="pfx-key pfx-st--unv"></i>unverified</span>
-        <span><i class="pfx-key pfx-st--peer is-spine"></i>spine paper</span>
-        <span><i class="pfx-key pfx-key--hatch"></i>undated</span>
+        <span>
+          <i class="pfx-key pfx-st--peer"></i>peer-reviewed
+        </span>
+        <span>
+          <i class="pfx-key pfx-st--pre"></i>preprint
+        </span>
+        <span>
+          <i class="pfx-key pfx-st--doc"></i>official documentation
+        </span>
+        <span>
+          <i class="pfx-key pfx-st--unv"></i>unverified
+        </span>
+        <span>
+          <i class="pfx-key pfx-st--peer is-spine"></i>spine paper
+        </span>
+        <span>
+          <i class="pfx-key pfx-key--hatch"></i>undated
+        </span>
       </p>
     </figure>
 
     <aside class="pfx-panel" aria-label="Work readout and citing chapters">
       <div class="pfx-readout" aria-live="polite" data-pfx-readout>
         <p class="pfx-readout__kicker" data-pfx-kicker>
-          {top === undefined ? 'No work cited yet' : `Most cited · ${top.record.key} · ${String(top.record.citedBy.length)} pages`}
+          {top === undefined
+            ? 'No work cited yet'
+            : `Most cited · ${top.record.key} · ${String(top.record.citedBy.length)} pages`}
         </p>
-        <p class="pfx-readout__title" data-pfx-title>{top?.record.work ?? ''}</p>
-        <p class="pfx-readout__meta" data-pfx-meta>{top === undefined ? '' : [top.record.authors, top.record.venue, top.status.label].filter((part) => part !== '').join(' · ')}</p>
+        <p class="pfx-readout__title" data-pfx-title>
+          {top?.record.work ?? ''}
+        </p>
+        <p class="pfx-readout__meta" data-pfx-meta>
+          {top === undefined
+            ? ''
+            : [top.record.authors, top.record.venue, top.status.label].filter((part) => part !== '').join(' · ')}
+        </p>
         <p class="pfx-readout__used" data-pfx-used>
-          {
-            top !== undefined && (
-              <>
-                <b>{top.chapters.length === 0 ? 'no chapter yet' : `ch ${top.chapters.map(pad).join(' ')}`}</b>
-                {usedText(top) === '' ? '' : ` · used for: ${usedText(top)}`}
-              </>
-            )
-          }
+          {top !== undefined && (
+            <>
+              <b>{top.chapters.length === 0 ? 'no chapter yet' : `ch ${top.chapters.map(pad).join(' ')}`}</b>
+              {usedText(top) === '' ? '' : ` · used for: ${usedText(top)}`}
+            </>
+          )}
         </p>
       </div>
       <div class="pfx-chapters">
         <p class="pfx-chapters__head">
-          <span>Chapters citing</span><span>works</span>
+          <span>Chapters citing</span>
+          <span>works</span>
         </p>
         <ol class="pfx-chapters__list" role="list">
-          {
-            citingChapters.map(({ n, node, count }) => {
-              const title = node?.shortTitle ?? `Chapter ${pad(n)}`;
-              return (
-                <li>
-                  <button
-                    type="button"
-                    class="pfx-ch"
-                    data-pfx-chapter={n}
-                    aria-pressed="false"
-                    style={`--f:${(count / maxCount).toFixed(3)}`}
-                    aria-label={`Chapter ${pad(n)}, ${title}: ${String(count)} works. Click to filter the ledger.`}
-                    title={node?.title}
-                  >
-                    <span class="pfx-ch__n">{pad(n)}</span>
-                    <span class="pfx-ch__bar" aria-hidden="true">
+          {citingChapters.map(({ n, node, count }) => {
+            const title = node?.shortTitle ?? `Chapter ${pad(n)}`;
+            return (
+              <li>
+                <button
+                  type="button"
+                  class="pfx-ch"
+                  data-pfx-chapter={n}
+                  aria-pressed="false"
+                  style={`--f:${(count / maxCount).toFixed(3)}`}
+                  aria-label={`Chapter ${pad(n)}, ${title}: ${String(count)} works. Click to filter the ledger.`}
+                  title={node?.title}
+                >
+                  <span class="pfx-ch__n">{pad(n)}</span>
+                  <span class="pfx-ch__bar" aria-hidden="true">
+                    <span class="pfx-ch__t">{title}</span>
+                    <span class="pfx-ch__fill">
                       <span class="pfx-ch__t">{title}</span>
-                      <span class="pfx-ch__fill">
-                        <span class="pfx-ch__t">{title}</span>
-                      </span>
                     </span>
-                    <span class="pfx-ch__c">{count}</span>
-                  </button>
-                </li>
-              );
-            })
-          }
+                  </span>
+                  <span class="pfx-ch__c">{count}</span>
+                </button>
+              </li>
+            );
+          })}
         </ol>
       </div>
     </aside>
@@ -243,24 +305,20 @@ const usedText = (work: (typeof works)[number]): string => work.record.uses[0]?.
   <div class="pfx-filters">
     <div class="pfx-filters__row" role="group" aria-label="Types">
       <span class="pfx-filters__label">Type</span>
-      {
-        typeCounts.map(({ type, count }) => (
-          <button type="button" class="pfx-chip" id={`type-${slug(type)}`} data-pfx-type={type} aria-pressed="false">
-            {type} <span class="pfx-chip__n">{count}</span>
-          </button>
-        ))
-      }
+      {typeCounts.map(({ type, count }) => (
+        <button type="button" class="pfx-chip" id={`type-${slug(type)}`} data-pfx-type={type} aria-pressed="false">
+          {type} <span class="pfx-chip__n">{count}</span>
+        </button>
+      ))}
     </div>
     <div class="pfx-filters__row" role="group" aria-label="Status">
       <span class="pfx-filters__label">Status</span>
-      {
-        statusCounts.map(({ key, label, count }) => (
-          <button type="button" class={`pfx-chip pfx-st--${key}`} data-pfx-status={key} aria-pressed="false">
-            <i class="pfx-key" aria-hidden="true" />
-            {label} <span class="pfx-chip__n">{count}</span>
-          </button>
-        ))
-      }
+      {statusCounts.map(({ key, label, count }) => (
+        <button type="button" class={`pfx-chip pfx-st--${key}`} data-pfx-status={key} aria-pressed="false">
+          <i class="pfx-key" aria-hidden="true" />
+          {label} <span class="pfx-chip__n">{count}</span>
+        </button>
+      ))}
       <button type="button" class="pfx-chip" data-pfx-spine aria-pressed="false">
         <i class="pfx-key pfx-st--peer is-spine" aria-hidden="true"></i>
         spine only <span class="pfx-chip__n">{spineCount}</span>
@@ -268,9 +326,17 @@ const usedText = (work: (typeof works)[number]): string => work.record.uses[0]?.
       <span class="pfx-find">
         <label class="pfx-search">
           <span class="sh-visually-hidden">Filter works by key, title, author, or venue</span>
-          <input type="search" placeholder="Key, title, author, venue" data-pfx-search autocomplete="off" spellcheck="false" />
+          <input
+            type="search"
+            placeholder="Key, title, author, venue"
+            data-pfx-search
+            autocomplete="off"
+            spellcheck="false"
+          />
         </label>
-        <span class="pfx-shown" data-pfx-shown aria-live="polite">{works.length} of {works.length}</span>
+        <span class="pfx-shown" data-pfx-shown aria-live="polite">
+          {works.length} of {works.length}
+        </span>
       </span>
     </div>
   </div>
@@ -288,62 +354,72 @@ const usedText = (work: (typeof works)[number]): string => work.record.uses[0]?.
       </colgroup>
       <thead>
         <tr>
-          <th scope="col" aria-sort="ascending"><button type="button" data-pfx-sort="key">Key</button></th>
+          <th scope="col" aria-sort="ascending">
+            <button type="button" data-pfx-sort="key">
+              Key
+            </button>
+          </th>
           <th scope="col">Work</th>
-          <th scope="col" aria-sort="none"><button type="button" data-pfx-sort="year">Year</button></th>
+          <th scope="col" aria-sort="none">
+            <button type="button" data-pfx-sort="year">
+              Year
+            </button>
+          </th>
           <th scope="col">Type · status</th>
           <th scope="col">Chapters</th>
-          <th scope="col" class="pfx-num" aria-sort="none"><button type="button" data-pfx-sort="cited">Pages</button></th>
+          <th scope="col" class="pfx-num" aria-sort="none">
+            <button type="button" data-pfx-sort="cited">
+              Pages
+            </button>
+          </th>
         </tr>
       </thead>
       <tbody>
-        {
-          works.map((work) => (
-            <tr
-              class:list={['pfx-row', `pfx-st--${work.status.key}`]}
-              data-pfx-row={work.record.key}
-              data-type={work.record.type}
-              data-status={work.status.key}
-              data-spine={work.record.spine ? 'yes' : 'no'}
-              data-chapters={` ${work.chapters.join(' ')} `}
-              data-key-order={work.order}
-              data-year={work.year ?? ''}
-              data-cited={work.record.citedBy.length}
-              data-text={`${work.record.key} ${work.record.work} ${work.record.authors} ${work.record.venue}`.toLowerCase()}
-              data-used={usedText(work)}
-              data-venue={work.record.venue}
-            >
-              <th scope="row" class="pfx-key-cell">
-                <a href={work.record.atlasUrl}>{work.record.key}</a>
-              </th>
-              <td class="pfx-work">
-                <a href={work.record.atlasUrl}>{work.record.work}</a>
-                {work.record.authors !== '' && <span class="pfx-authors">{work.record.authors}</span>}
-              </td>
-              <td class="pfx-year">{work.year ?? '—'}</td>
-              <td class="pfx-type">
-                {work.record.type}
-                <span class="pfx-status">
-                  <i class="pfx-key" aria-hidden="true" />
-                  {work.status.label}
-                </span>
-              </td>
-              <td class="pfx-chs">
-                {work.chapters.map((n) => {
-                  const node = chapterNodes.get(n);
-                  return node === undefined ? (
-                    <span class="pfx-chs__n">{pad(n)}</span>
-                  ) : (
-                    <a class="pfx-chs__n" href={node.url} title={node.title}>
-                      {pad(n)}
-                    </a>
-                  );
-                })}
-              </td>
-              <td class="pfx-num">{work.record.citedBy.length}</td>
-            </tr>
-          ))
-        }
+        {works.map((work) => (
+          <tr
+            class:list={['pfx-row', `pfx-st--${work.status.key}`]}
+            data-pfx-row={work.record.key}
+            data-type={work.record.type}
+            data-status={work.status.key}
+            data-spine={work.record.spine ? 'yes' : 'no'}
+            data-chapters={` ${work.chapters.join(' ')} `}
+            data-key-order={work.order}
+            data-year={work.year ?? ''}
+            data-cited={work.record.citedBy.length}
+            data-text={`${work.record.key} ${work.record.work} ${work.record.authors} ${work.record.venue}`.toLowerCase()}
+            data-used={usedText(work)}
+            data-venue={work.record.venue}
+          >
+            <th scope="row" class="pfx-key-cell">
+              <a href={work.record.atlasUrl}>{work.record.key}</a>
+            </th>
+            <td class="pfx-work">
+              <a href={work.record.atlasUrl}>{work.record.work}</a>
+              {work.record.authors !== '' && <span class="pfx-authors">{work.record.authors}</span>}
+            </td>
+            <td class="pfx-year">{work.year ?? '—'}</td>
+            <td class="pfx-type">
+              {work.record.type}
+              <span class="pfx-status">
+                <i class="pfx-key" aria-hidden="true" />
+                {work.status.label}
+              </span>
+            </td>
+            <td class="pfx-chs">
+              {work.chapters.map((n) => {
+                const node = chapterNodes.get(n);
+                return node === undefined ? (
+                  <span class="pfx-chs__n">{pad(n)}</span>
+                ) : (
+                  <a class="pfx-chs__n" href={node.url} title={node.title}>
+                    {pad(n)}
+                  </a>
+                );
+              })}
+            </td>
+            <td class="pfx-num">{work.record.citedBy.length}</td>
+          </tr>
+        ))}
       </tbody>
     </table>
   </div>

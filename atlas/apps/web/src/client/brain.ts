@@ -37,7 +37,9 @@ export function initBrain(ctx: PageContext, fig: HTMLElement, reduced: boolean):
   if (svg === null || layer === null) return;
   const signal = ctl.signal;
 
-  const neurons = [...svg.querySelectorAll<SVGAElement>('.hb-n')].sort((a, b) => Number(a.dataset['n']) - Number(b.dataset['n']));
+  const neurons = [...svg.querySelectorAll<SVGAElement>('.hb-n')].sort(
+    (a, b) => Number(a.dataset['n']) - Number(b.dataset['n']),
+  );
   const byN = new Map(neurons.map((a) => [Number(a.dataset['n']), a]));
   const pos = new Map(
     neurons.map((a) => {
@@ -58,7 +60,11 @@ export function initBrain(ctx: PageContext, fig: HTMLElement, reduced: boolean):
 
   // ── readout and tag ────────────────────────────────────────────────────────
   const readout = fig.querySelector('[data-brain-readout]');
-  const slots = { k: readout?.querySelector('[data-k]') ?? null, t: readout?.querySelector('[data-t]') ?? null, m: readout?.querySelector('[data-m]') ?? null };
+  const slots = {
+    k: readout?.querySelector('[data-k]') ?? null,
+    t: readout?.querySelector('[data-t]') ?? null,
+    m: readout?.querySelector('[data-m]') ?? null,
+  };
   const idle = { k: slots.k?.textContent ?? '', t: slots.t?.textContent ?? '', m: slots.m?.textContent ?? '' };
   const tag = svg.querySelector<SVGGElement>('[data-tag]');
   const tagRect = tag?.querySelector('rect') ?? null;
@@ -187,12 +193,16 @@ export function initBrain(ctx: PageContext, fig: HTMLElement, reduced: boolean):
     for (const dendrite of dendrites) if (dendrite.dataset['c'] === key) dendrite.classList.add('is-lit');
     const written = a.classList.contains('is-written');
     const title = a.dataset['title'] ?? '';
-    if (slots.k !== null) slots.k.textContent = `Chapter ${pad(n)} · ${a.dataset['region'] ?? ''} · ${written ? 'written' : 'planned'}`;
+    if (slots.k !== null)
+      slots.k.textContent = `Chapter ${pad(n)} · ${a.dataset['region'] ?? ''} · ${written ? 'written' : 'planned'}`;
     if (slots.t !== null) slots.t.textContent = title;
     if (slots.m !== null) {
       const count = Number(a.dataset['concepts'] ?? 0);
       const links = `builds on ${String(ins.length)} · unlocks ${String(outs.length)}`;
-      slots.m.textContent = count > 0 ? `${links} · ${String(count)} concepts: ${names.join(', ')}${count > names.length ? '…' : ''}` : `${links} · ${written ? 'no glossary terms owned' : 'manuscript planned'}`;
+      slots.m.textContent =
+        count > 0
+          ? `${links} · ${String(count)} concepts: ${names.join(', ')}${count > names.length ? '…' : ''}`
+          : `${links} · ${written ? 'no glossary terms owned' : 'manuscript planned'}`;
     }
     placeTag(n, `${pad(n)} · ${title.length > 38 ? `${title.slice(0, 36)}…` : title}`);
     if (fire) {
@@ -207,45 +217,78 @@ export function initBrain(ctx: PageContext, fig: HTMLElement, reduced: boolean):
 
   // ── pointer, focus, keys ───────────────────────────────────────────────────
   let engaged = false;
-  const neuronFrom = (target: EventTarget | null): SVGAElement | null => (target instanceof Element ? target.closest<SVGAElement>('.hb-n') : null);
-  svg.addEventListener('pointerover', (event) => {
-    const a = neuronFrom(event.target);
-    engaged = true;
-    if (a !== null && Number(a.dataset['n']) !== active) activate(Number(a.dataset['n']), true);
-  }, { signal });
-  svg.addEventListener('pointerleave', () => {
-    engaged = false;
-    activate(null, false);
-  }, { signal });
-  svg.addEventListener('focusin', (event) => {
-    const a = neuronFrom(event.target);
-    if (a !== null) {
+  const neuronFrom = (target: EventTarget | null): SVGAElement | null =>
+    target instanceof Element ? target.closest<SVGAElement>('.hb-n') : null;
+  svg.addEventListener(
+    'pointerover',
+    (event) => {
+      const a = neuronFrom(event.target);
       engaged = true;
-      activate(Number(a.dataset['n']), true);
-    }
-  }, { signal });
-  svg.addEventListener('focusout', () => {
-    engaged = false;
-  }, { signal });
-  svg.addEventListener('keydown', (event) => {
-    const a = neuronFrom(event.target);
-    if (a === null) return;
-    const step = event.key === 'ArrowRight' || event.key === 'ArrowDown' ? 1 : event.key === 'ArrowLeft' || event.key === 'ArrowUp' ? -1 : 0;
-    if (step === 0) return;
-    event.preventDefault();
-    const next = neurons[(neurons.indexOf(a) + step + neurons.length) % neurons.length];
-    if (next === undefined) return;
-    for (const other of neurons) other.setAttribute('tabindex', '-1');
-    next.setAttribute('tabindex', '0');
-    next.focus();
-  }, { signal });
+      if (a !== null && Number(a.dataset['n']) !== active) activate(Number(a.dataset['n']), true);
+    },
+    { signal },
+  );
+  svg.addEventListener(
+    'pointerleave',
+    () => {
+      engaged = false;
+      activate(null, false);
+    },
+    { signal },
+  );
+  svg.addEventListener(
+    'focusin',
+    (event) => {
+      const a = neuronFrom(event.target);
+      if (a !== null) {
+        engaged = true;
+        activate(Number(a.dataset['n']), true);
+      }
+    },
+    { signal },
+  );
+  svg.addEventListener(
+    'focusout',
+    () => {
+      engaged = false;
+    },
+    { signal },
+  );
+  svg.addEventListener(
+    'keydown',
+    (event) => {
+      const a = neuronFrom(event.target);
+      if (a === null) return;
+      const step =
+        event.key === 'ArrowRight' || event.key === 'ArrowDown'
+          ? 1
+          : event.key === 'ArrowLeft' || event.key === 'ArrowUp'
+            ? -1
+            : 0;
+      if (step === 0) return;
+      event.preventDefault();
+      const next = neurons[(neurons.indexOf(a) + step + neurons.length) % neurons.length];
+      if (next === undefined) return;
+      for (const other of neurons) other.setAttribute('tabindex', '-1');
+      next.setAttribute('tabindex', '0');
+      next.focus();
+    },
+    { signal },
+  );
 
   // ── ambient life: firing, and a slow tour of the written chapters ─────────
   if (reduced) return;
   let visible = false;
-  ctl.observe(new IntersectionObserver((entries) => {
-    visible = entries.some((entry) => entry.isIntersecting);
-  }, { threshold: 0.15 })).observe(fig);
+  ctl
+    .observe(
+      new IntersectionObserver(
+        (entries) => {
+          visible = entries.some((entry) => entry.isIntersecting);
+        },
+        { threshold: 0.15 },
+      ),
+    )
+    .observe(fig);
   const awake = (): boolean => visible && doc.visibilityState === 'visible';
   const ambient = setInterval(() => {
     if (!awake() || live.length === 0 || pulses.length >= 10) return;

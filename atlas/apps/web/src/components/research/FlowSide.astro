@@ -34,31 +34,35 @@ const total = groups.reduce((sum, group) => sum + group.items.length, 0);
     {label}
     {total > 0 && <span class="pm-side__count">{total}</span>}
   </p>
-  {
-    groups.length === 0 ? (
-      <p class="pm-side__none">{none}</p>
-    ) : (
-      groups.map((group) => (
-        <div class="pm-group">
-          <p class="pm-group__head">
-            <span class="sh-visually-hidden">Part </span>
-            {group.numeral}
-          </p>
-          <ul class="pm-chips" role="list">
-            {group.items.map(({ n, via }) => {
-              const chapter = chapters.get(n);
-              return (
-                <li>
-                  <a class:list={['pm-chip', { 'is-written': chapter?.written === true }]} href={chapter?.url} data-pm-ext={n} data-pm-via={via.join(' ')} title={chapter?.title}>
-                    <span class="pm-chip__n">{pad2(n)}</span>
-                    <span class="pm-chip__t">{chapter?.short}</span>
-                  </a>
-                </li>
-              );
-            })}
-          </ul>
-        </div>
-      ))
-    )
-  }
+  {groups.length === 0 ? (
+    <p class="pm-side__none">{none}</p>
+  ) : (
+    groups.map((group) => (
+      <div class="pm-group">
+        <p class="pm-group__head">
+          <span class="sh-visually-hidden">Part </span>
+          {group.numeral}
+        </p>
+        <ul class="pm-chips" role="list">
+          {group.items.map(({ n, via }) => {
+            const chapter = chapters.get(n);
+            return (
+              <li>
+                <a
+                  class:list={['pm-chip', { 'is-written': chapter?.written === true }]}
+                  href={chapter?.url}
+                  data-pm-ext={n}
+                  data-pm-via={via.join(' ')}
+                  title={chapter?.title}
+                >
+                  <span class="pm-chip__n">{pad2(n)}</span>
+                  <span class="pm-chip__t">{chapter?.short}</span>
+                </a>
+              </li>
+            );
+          })}
+        </ul>
+      </div>
+    ))
+  )}
 </div>

@@ -136,7 +136,8 @@ export function buildStackModel(
   registry: Registry,
   routes: readonly { readonly label: string; readonly route: string; readonly why: string }[],
 ): StackModel {
-  const byType = (type: GraphNode['entityType']): GraphNode[] => graph.order.map((id) => graph.nodes[id]).filter((n): n is GraphNode => n?.entityType === type);
+  const byType = (type: GraphNode['entityType']): GraphNode[] =>
+    graph.order.map((id) => graph.nodes[id]).filter((n): n is GraphNode => n?.entityType === type);
   const volumes = byType('volume');
   const parts = byType('part');
   const chapterNodes = byType('chapter');
@@ -145,7 +146,9 @@ export function buildStackModel(
   for (const chapter of chapterNodes) {
     const n = chapterNumberOfId(chapter.id);
     if (n === null) continue;
-    const set = new Set<number>(parseChapterList(chapter.plan?.prerequisitesText).filter((p) => p !== n && p >= 1 && p <= 66));
+    const set = new Set<number>(
+      parseChapterList(chapter.plan?.prerequisitesText).filter((p) => p !== n && p >= 1 && p <= 66),
+    );
     prereqs.set(n, set);
   }
   for (const edge of graph.edges) {
@@ -165,7 +168,9 @@ export function buildStackModel(
   for (const chapter of chapterNodes) {
     const n = chapterNumberOfId(chapter.id);
     if (n === null) continue;
-    const sections = chapter.children.map((id) => graph.nodes[id]).filter((c): c is GraphNode => c?.entityType === 'section');
+    const sections = chapter.children
+      .map((id) => graph.nodes[id])
+      .filter((c): c is GraphNode => c?.entityType === 'section');
     const owned = new Set<string>([chapter.id, ...chapter.children]);
     const partNumber = chapter.parent === null ? 0 : Number(/\d+$/u.exec(chapter.parent)?.[0] ?? 0);
     chapters[String(n)] = {
@@ -199,7 +204,9 @@ export function buildStackModel(
       const chapterId = node?.entityType === 'chapter' ? node.id : (node?.parent ?? '');
       const chapter = chapterNumberOfId(chapterId);
       const year = Number(/\d{4}/u.exec(entry.year)?.[0] ?? Number.NaN);
-      return chapter === null || !Number.isFinite(year) ? null : { id, year, work: entry.work, relation: entry.relation, chapter };
+      return chapter === null || !Number.isFinite(year)
+        ? null
+        : { id, year, work: entry.work, relation: entry.relation, chapter };
     })
     .filter((entry): entry is StackLineage => entry !== null)
     .sort((a, b) => a.year - b.year);
@@ -245,8 +252,14 @@ export async function getStackModel(): Promise<StackModel> {
   if (cached?.graph !== graph) {
     const model = (async () => {
       const registry = await getRegistry();
-      const routesDoc = (await hasDocument('ms.frontmatter.reading-routes')) ? await getDocument('ms.frontmatter.reading-routes') : null;
-      return buildStackModel(graph, registry, routesDoc === null ? [] : routeTables(routesDoc).flatMap((table) => table.rows));
+      const routesDoc = (await hasDocument('ms.frontmatter.reading-routes'))
+        ? await getDocument('ms.frontmatter.reading-routes')
+        : null;
+      return buildStackModel(
+        graph,
+        registry,
+        routesDoc === null ? [] : routeTables(routesDoc).flatMap((table) => table.rows),
+      );
     })();
     cached = { graph, model };
   }

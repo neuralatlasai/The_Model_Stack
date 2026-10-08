@@ -45,9 +45,14 @@ interface OutputFile {
 export function bundleFiles(result: CompiledAtlas): OutputFile[] {
   const manifest = BundleManifestSchema.safeParse(result.manifest);
   if (!manifest.success) {
-    throw new BundleWriteError(`bundle manifest failed validation: ${manifest.error.issues.map((issue) => issue.message).join('; ')}`);
+    throw new BundleWriteError(
+      `bundle manifest failed validation: ${manifest.error.issues.map((issue) => issue.message).join('; ')}`,
+    );
   }
-  const files: OutputFile[] = result.documents.map((doc) => ({ relative: docFilePath(doc.meta.id), content: stableStringify(doc) }));
+  const files: OutputFile[] = result.documents.map((doc) => ({
+    relative: docFilePath(doc.meta.id),
+    content: stableStringify(doc),
+  }));
   files.push(
     { relative: BUNDLE_FILES.graph, content: stableStringify(result.graph) },
     { relative: BUNDLE_FILES.registry, content: stableStringify(result.registry) },
@@ -62,14 +67,30 @@ export function bundleFiles(result: CompiledAtlas): OutputFile[] {
 
 function isSwapRefusal(error: unknown): boolean {
   if (error === null || typeof error !== 'object' || !('code' in error)) return false;
-  return error.code === 'EPERM' || error.code === 'EBUSY' || error.code === 'EACCES' || error.code === 'EXDEV' || error.code === 'ENOTEMPTY';
+  return (
+    error.code === 'EPERM' ||
+    error.code === 'EBUSY' ||
+    error.code === 'EACCES' ||
+    error.code === 'EXDEV' ||
+    error.code === 'ENOTEMPTY'
+  );
 }
 
-async function writeAll(dir: string, files: readonly OutputFile[], concurrency: number, signal?: AbortSignal): Promise<void> {
+async function writeAll(
+  dir: string,
+  files: readonly OutputFile[],
+  concurrency: number,
+  signal?: AbortSignal,
+): Promise<void> {
   await mkdir(path.join(dir, BUNDLE_FILES.docsDir), { recursive: true });
   const manifestFile = files.find((file) => file.relative === BUNDLE_FILES.manifest);
   const rest = files.filter((file) => file.relative !== BUNDLE_FILES.manifest);
-  await mapLimit(rest, concurrency, async (file) => writeFile(path.join(dir, file.relative), file.content, { encoding: 'utf8', signal }), signal);
+  await mapLimit(
+    rest,
+    concurrency,
+    async (file) => writeFile(path.join(dir, file.relative), file.content, { encoding: 'utf8', signal }),
+    signal,
+  );
   if (manifestFile !== undefined) {
     await writeFile(path.join(dir, manifestFile.relative), manifestFile.content, { encoding: 'utf8', signal });
   }
@@ -90,7 +111,8 @@ async function removeStaleDocs(outDir: string, files: readonly OutputFile[]): Pr
   const keep = new Set(files.map((file) => path.basename(file.relative)));
   const docsDir = path.join(outDir, BUNDLE_FILES.docsDir);
   const existing = await readdir(docsDir).catch((error: unknown) => {
-    if (error !== null && typeof error === 'object' && 'code' in error && error.code === 'ENOENT') return [] as string[];
+    if (error !== null && typeof error === 'object' && 'code' in error && error.code === 'ENOENT')
+      return [] as string[];
     throw error;
   });
   for (const name of existing) {
@@ -98,7 +120,11 @@ async function removeStaleDocs(outDir: string, files: readonly OutputFile[]): Pr
   }
 }
 
-export async function writeBundle(result: CompiledAtlas, outDir: string, options: WriteBundleOptions = {}): Promise<WriteReport> {
+export async function writeBundle(
+  result: CompiledAtlas,
+  outDir: string,
+  options: WriteBundleOptions = {},
+): Promise<WriteReport> {
   const files = bundleFiles(result);
   const bytes = files.reduce((sum, file) => sum + Buffer.byteLength(file.content, 'utf8'), 0);
   const concurrency = options.concurrency ?? 8;
@@ -136,7 +162,9 @@ export async function writeBundle(result: CompiledAtlas, outDir: string, options
     await rm(retired, { recursive: true, force: true });
     return { outDir: target, files: files.length, bytes, mode: 'atomic' };
   } catch (error: unknown) {
-    throw error instanceof BundleWriteError ? error : new BundleWriteError(`could not write the bundle to ${target}`, { cause: error });
+    throw error instanceof BundleWriteError
+      ? error
+      : new BundleWriteError(`could not write the bundle to ${target}`, { cause: error });
   } finally {
     await rm(staging, { recursive: true, force: true });
   }

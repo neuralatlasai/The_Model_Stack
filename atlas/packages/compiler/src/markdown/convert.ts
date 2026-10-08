@@ -7,7 +7,15 @@
  * field list, a proposition + its proof, `<details>` … `</details>`, a sibling
  * head + a split-off differential, and the four observation paragraphs.
  */
-import type { Block, ExpansionBlock, HeadingBlock, Inline, ListBlock, ParagraphBlock } from '@atlas/core';
+import {
+  objectAnchor,
+  type Block,
+  type ExpansionBlock,
+  type HeadingBlock,
+  type Inline,
+  type ListBlock,
+  type ParagraphBlock,
+} from '@atlas/core';
 import type { Heading, List, Paragraph, PhrasingContent, RootContent } from 'mdast';
 import { toString } from 'mdast-util-to-string';
 import { convertBlockquote } from './blocks/quote.ts';
@@ -22,6 +30,7 @@ import { convertPhrasing, htmlAsInline } from './inline.ts';
 import { plainText, trimInline } from './inline-utils.ts';
 import { isDetailsClose, isDetailsOpen, parseRaw, summaryText } from './parse.ts';
 import { slugify } from './slug.ts';
+import { mathematicalAlgorithmNumber } from './number-index.ts';
 import { depthOf, type CompileState, type FlowEnv } from './state.ts';
 
 export function createFlowConverter(st: CompileState): FlowConverter {
@@ -50,9 +59,17 @@ function headingBlock(node: Heading, st: CompileState, env: FlowEnv): HeadingBlo
     kind: 'heading',
     level,
     content,
-    anchor: claimHeadingAnchor(plainText(content).trim(), st, st.lineOf(node)),
+    anchor: mathAlgorithmAnchor(node, st) ?? claimHeadingAnchor(plainText(content).trim(), st, st.lineOf(node)),
     depth: depthOf('heading', env),
   };
+}
+
+function mathAlgorithmAnchor(node: Heading | Paragraph, st: CompileState): string | null {
+  const offset = node.position?.start.offset;
+  if (offset === undefined) return null;
+  const firstLine = st.input.body.slice(offset).split(/\r?\n/u, 1)[0] ?? '';
+  const number = mathematicalAlgorithmNumber(firstLine);
+  return number === null ? null : st.anchors.claim(objectAnchor('alg', number));
 }
 
 function listBlock(node: List, env: FlowEnv, flow: FlowConverter): ListBlock {
@@ -81,7 +98,13 @@ interface DetailsRange {
   readonly end: number;
 }
 
-function collectDetails(nodes: readonly RootContent[], start: number, st: CompileState, env: FlowEnv, flow: FlowConverter): DetailsRange {
+function collectDetails(
+  nodes: readonly RootContent[],
+  start: number,
+  st: CompileState,
+  env: FlowEnv,
+  flow: FlowConverter,
+): DetailsRange {
   let depth = 0;
   let end = -1;
   for (let j = start; j < nodes.length; j += 1) {
@@ -97,7 +120,11 @@ function collectDetails(nodes: readonly RootContent[], start: number, st: Compil
     }
   }
   if (end === -1) {
-    st.report('block-malformed', '<details> is never closed; the rest of the region is placed inside the expansion', st.lineOf(nodes[start]));
+    st.report(
+      'block-malformed',
+      '<details> is never closed; the rest of the region is placed inside the expansion',
+      st.lineOf(nodes[start]),
+    );
     end = nodes.length - 1;
   }
   let inner = nodes.slice(start + 1, end + (isClose(nodes[end]) ? 0 : 1));
@@ -109,7 +136,11 @@ function collectDetails(nodes: readonly RootContent[], start: number, st: Compil
     inner = inner.slice(1);
   }
   const summaryPlain = plainText(summary).trim();
-  const variant = /^Derivation\b/iu.test(summaryPlain) ? 'derivation' : /\bProof\b/iu.test(summaryPlain) ? 'proof' : 'expansion';
+  const variant = /^Derivation\b/iu.test(summaryPlain)
+    ? 'derivation'
+    : /\bProof\b/iu.test(summaryPlain)
+      ? 'proof'
+      : 'expansion';
   return {
     block: {
       kind: 'expansion',
@@ -147,7 +178,10 @@ function convertSequence(nodes: readonly RootContent[], env: FlowEnv, st: Compil
         if (env.role === 'observations' && observationPartOf(node) !== null) {
           const members = nodes
             .slice(i)
-            .filter((item): item is Paragraph => item.type === 'paragraph' && !consumed.has(item) && observationPartOf(item) !== null);
+            .filter(
+              (item): item is Paragraph =>
+                item.type === 'paragraph' && !consumed.has(item) && observationPartOf(item) !== null,
+            );
           for (const member of members) consumed.add(member);
           out.push(buildObservationLayer(members, st, env, st.lineOf(node)));
           break;
@@ -161,7 +195,7 @@ function convertSequence(nodes: readonly RootContent[], env: FlowEnv, st: Compil
           }
         }
         const content = convertPhrasing(node.children, st);
-        if (content.length > 0) out.push(paragraphBlock(content, env));
+        if (content.length > 0) out.push({ ...paragraphBlock(content, env), anchor: mathAlgorithmAnchor(node, st) });
         break;
       }
       case 'heading': {

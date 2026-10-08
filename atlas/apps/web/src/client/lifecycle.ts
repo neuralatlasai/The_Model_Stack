@@ -117,7 +117,11 @@ export function frameScheduler(ctl: Controller, fn: () => void): () => void {
 }
 
 /** Trailing-edge debounce owned by the controller. `flush()` runs a pending call immediately. */
-export function debounce(ctl: Controller, fn: () => void, ms: number): { readonly call: () => void; readonly flush: () => void } {
+export function debounce(
+  ctl: Controller,
+  fn: () => void,
+  ms: number,
+): { readonly call: () => void; readonly flush: () => void } {
   let cancel: (() => void) | null = null;
   const run = (): void => {
     cancel = null;

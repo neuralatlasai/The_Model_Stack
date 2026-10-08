@@ -128,7 +128,9 @@
 
 .em-layer.is-here {
   border-color: color-mix(in oklab, var(--ink) 55%, var(--paper));
-  box-shadow: 0 3px 0 -1px color-mix(in oklab, var(--ink) 16%, var(--paper)), 0 3px 0 0 color-mix(in oklab, var(--ink) 30%, var(--paper));
+  box-shadow:
+    0 3px 0 -1px color-mix(in oklab, var(--ink) 16%, var(--paper)),
+    0 3px 0 0 color-mix(in oklab, var(--ink) 30%, var(--paper));
   color: var(--ink);
 }
 

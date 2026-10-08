@@ -21,7 +21,10 @@ export interface TermName {
 
 /** Forms a term's name answers to, longest first. */
 export function termForms(name: string): string[] {
-  const bare = name.replace(/\s*\([^)]*\)/gu, ' ').replace(/\s+/gu, ' ').trim();
+  const bare = name
+    .replace(/\s*\([^)]*\)/gu, ' ')
+    .replace(/\s+/gu, ' ')
+    .trim();
   const parts = bare
     .split(/\s+\/\s+|\s*;\s*|,\s+|\s+and\s+/u)
     .map((part) => part.trim())
@@ -46,7 +49,10 @@ export function matchers(terms: readonly TermName[]): Matcher[] {
         slug: term.slug,
         form,
         // Acronyms match case-sensitively; words and phrases do not.
-        re: new RegExp(`(?<![\\p{L}\\p{N}-])${escape(form)}(?:e?s)?(?![\\p{L}\\p{N}-])`, /^[\p{Lu}\d]{2,}$/u.test(form) ? 'gu' : 'giu'),
+        re: new RegExp(
+          `(?<![\\p{L}\\p{N}-])${escape(form)}(?:e?s)?(?![\\p{L}\\p{N}-])`,
+          /^[\p{Lu}\d]{2,}$/u.test(form) ? 'gu' : 'giu',
+        ),
       })),
     )
     .sort((a, b) => b.form.length - a.form.length);
@@ -108,12 +114,18 @@ export function proseOf(nodes: readonly Inline[]): string {
 }
 
 /** Mentions out of every definition (slug → mentioned slugs, in order of first mention). */
-export function mentionGraph(terms: readonly (TermName & { readonly definition: readonly Inline[] })[]): Map<string, string[]> {
+export function mentionGraph(
+  terms: readonly (TermName & { readonly definition: readonly Inline[] })[],
+): Map<string, string[]> {
   const all = matchers(terms);
   return new Map(
     terms.map((term) => [
       term.slug,
-      [...new Set(segment(proseOf(term.definition), all, term.slug).flatMap((part) => (part.slug === null ? [] : [part.slug])))],
+      [
+        ...new Set(
+          segment(proseOf(term.definition), all, term.slug).flatMap((part) => (part.slug === null ? [] : [part.slug])),
+        ),
+      ],
     ]),
   );
 }

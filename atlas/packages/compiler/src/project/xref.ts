@@ -60,17 +60,25 @@ export function buildXRefIndex(sources: readonly XRefSource[]): XRefIndex {
         if (owner !== undefined) {
           if (kind === 'figure') {
             diagnostics.push(
-              diagnostic('figure-duplicate-id', `fig-${number} is already defined in ${owner}; figure ids are unique across the book`, {
-                file: source.sourcePath,
-                nodeId: source.nodeId,
-              }),
+              diagnostic(
+                'figure-duplicate-id',
+                `fig-${number} is already defined in ${owner}; figure ids are unique across the book`,
+                {
+                  file: source.sourcePath,
+                  nodeId: source.nodeId,
+                },
+              ),
             );
           } else if (kind === 'equation') {
             diagnostics.push(
-              diagnostic('equation-duplicate-number', `Eq. ${number} is already defined in ${owner}; references resolve to the first`, {
-                file: source.sourcePath,
-                nodeId: source.nodeId,
-              }),
+              diagnostic(
+                'equation-duplicate-number',
+                `Eq. ${number} is already defined in ${owner}; references resolve to the first`,
+                {
+                  file: source.sourcePath,
+                  nodeId: source.nodeId,
+                },
+              ),
             );
           }
           continue;

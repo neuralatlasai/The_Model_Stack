@@ -20,7 +20,9 @@ import { getStackModel } from '../../lib/stack.ts';
 
 const [graph, stackModel] = await Promise.all([getGraph(), getStackModel()]);
 const parts = nodesOfType(graph, 'part');
-const reference = [...nodesOfType(graph, 'frontmatter'), ...nodesOfType(graph, 'appendix')].filter((node) => node.id !== 'ms.root');
+const reference = [...nodesOfType(graph, 'frontmatter'), ...nodesOfType(graph, 'appendix')].filter(
+  (node) => node.id !== 'ms.root',
+);
 const chaptersOf = (part: GraphNode) => childrenOf(graph, part).filter((child) => child.entityType === 'chapter');
 /** "Part I — Scientific Foundations" → "Scientific Foundations" (the numeral is drawn separately). */
 const partTitle = (part: GraphNode): string => part.title.replace(/^Part\s+[IVXLC]+\s*[—–-]\s*/u, '');
@@ -45,46 +47,44 @@ const partTitle = (part: GraphNode): string => part.title.replace(/^Part\s+[IVXL
   <section class="sh-section gx-parts sh-universe" aria-labelledby="gx-parts-title">
     <h2 id="gx-parts-title">Every node’s map</h2>
     <ol class="gx-parts__list" role="list">
-      {
-        parts.map((part) => (
-          <li class="gx-part" data-domain={part.domain}>
-            <a class="gx-part__head" href={mapUrl(part.url)}>
-              <span class="gx-part__num">{part.number}</span>
-              <span class="gx-part__title">{partTitle(part)}</span>
-            </a>
-            <ol class="gx-part__chapters" role="list">
-              {chaptersOf(part).map((chapter) => (
-                <li class:list={['sh-universe-chapter', 'gx-part__chapter', { 'is-planned': !chapter.hasManuscript }]}>
-                  <a href={mapUrl(chapter.url)} data-chapter-link={chapter.id}>
-                    <span class="sh-universe-chapter-num">{chapter.number}</span>
-                    <span class="gx-part__name">{chapter.shortTitle}</span>
-                  </a>
-                </li>
-              ))}
-            </ol>
-          </li>
-        ))
-      }
-      {
-        reference.length > 0 && (
-          <li class="gx-part" data-domain="reference">
-            <span class="gx-part__head">
-              <span class="gx-part__num" aria-hidden="true">·</span>
-              <span class="gx-part__title">{DOMAIN_LABELS.reference}</span>
+      {parts.map((part) => (
+        <li class="gx-part" data-domain={part.domain}>
+          <a class="gx-part__head" href={mapUrl(part.url)}>
+            <span class="gx-part__num">{part.number}</span>
+            <span class="gx-part__title">{partTitle(part)}</span>
+          </a>
+          <ol class="gx-part__chapters" role="list">
+            {chaptersOf(part).map((chapter) => (
+              <li class:list={['sh-universe-chapter', 'gx-part__chapter', { 'is-planned': !chapter.hasManuscript }]}>
+                <a href={mapUrl(chapter.url)} data-chapter-link={chapter.id}>
+                  <span class="sh-universe-chapter-num">{chapter.number}</span>
+                  <span class="gx-part__name">{chapter.shortTitle}</span>
+                </a>
+              </li>
+            ))}
+          </ol>
+        </li>
+      ))}
+      {reference.length > 0 && (
+        <li class="gx-part" data-domain="reference">
+          <span class="gx-part__head">
+            <span class="gx-part__num" aria-hidden="true">
+              ·
             </span>
-            <ol class="gx-part__chapters" role="list">
-              {reference.map((node) => (
-                <li class:list={['gx-part__chapter', { 'is-planned': !node.hasManuscript }]}>
-                  <a href={mapUrl(node.url)}>
-                    <span class="sh-universe-chapter-num">{node.number ?? ''}</span>
-                    <span class="gx-part__name">{node.shortTitle}</span>
-                  </a>
-                </li>
-              ))}
-            </ol>
-          </li>
-        )
-      }
+            <span class="gx-part__title">{DOMAIN_LABELS.reference}</span>
+          </span>
+          <ol class="gx-part__chapters" role="list">
+            {reference.map((node) => (
+              <li class:list={['gx-part__chapter', { 'is-planned': !node.hasManuscript }]}>
+                <a href={mapUrl(node.url)}>
+                  <span class="sh-universe-chapter-num">{node.number ?? ''}</span>
+                  <span class="gx-part__name">{node.shortTitle}</span>
+                </a>
+              </li>
+            ))}
+          </ol>
+        </li>
+      )}
     </ol>
   </section>
 </ReaderLayout>

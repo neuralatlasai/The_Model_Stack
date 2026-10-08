@@ -165,18 +165,42 @@
 }
 
 /* Page domain (set on <body data-domain> by the layout). */
-body[data-domain='foundations'] { --domain: var(--domain-foundations); }
-body[data-domain='data'] { --domain: var(--domain-data); }
-body[data-domain='architecture'] { --domain: var(--domain-architecture); }
-body[data-domain='training'] { --domain: var(--domain-training); }
-body[data-domain='hardware'] { --domain: var(--domain-hardware); }
-body[data-domain='post-training'] { --domain: var(--domain-post-training); }
-body[data-domain='inference'] { --domain: var(--domain-inference); }
-body[data-domain='serving'] { --domain: var(--domain-serving); }
-body[data-domain='agents'] { --domain: var(--domain-agents); }
-body[data-domain='embodied'] { --domain: var(--domain-embodied); }
-body[data-domain='evaluation'] { --domain: var(--domain-evaluation); }
-body[data-domain='reference'] { --domain: var(--domain-reference); }
+body[data-domain='foundations'] {
+  --domain: var(--domain-foundations);
+}
+body[data-domain='data'] {
+  --domain: var(--domain-data);
+}
+body[data-domain='architecture'] {
+  --domain: var(--domain-architecture);
+}
+body[data-domain='training'] {
+  --domain: var(--domain-training);
+}
+body[data-domain='hardware'] {
+  --domain: var(--domain-hardware);
+}
+body[data-domain='post-training'] {
+  --domain: var(--domain-post-training);
+}
+body[data-domain='inference'] {
+  --domain: var(--domain-inference);
+}
+body[data-domain='serving'] {
+  --domain: var(--domain-serving);
+}
+body[data-domain='agents'] {
+  --domain: var(--domain-agents);
+}
+body[data-domain='embodied'] {
+  --domain: var(--domain-embodied);
+}
+body[data-domain='evaluation'] {
+  --domain: var(--domain-evaluation);
+}
+body[data-domain='reference'] {
+  --domain: var(--domain-reference);
+}
 
 /*
  * Custom properties inherit computed values, so a token that references

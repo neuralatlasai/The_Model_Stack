@@ -3,7 +3,19 @@ import { describe, test } from 'node:test';
 import { brainMeshes, icosphere } from '../../src/lib/brain-mesh.ts';
 import { brainLayout, hemispherePoint, insideBrain, simplex3 } from '../../src/lib/brain3d.ts';
 
-const DOMAINS = ['foundations', 'data', 'architecture', 'training', 'hardware', 'post-training', 'inference', 'serving', 'agents', 'embodied', 'evaluation'];
+const DOMAINS = [
+  'foundations',
+  'data',
+  'architecture',
+  'training',
+  'hardware',
+  'post-training',
+  'inference',
+  'serving',
+  'agents',
+  'embodied',
+  'evaluation',
+];
 const chapters = Array.from({ length: 66 }, (_, i) => ({
   n: i + 1,
   title: `Chapter ${String(i + 1)}`,
@@ -23,7 +35,8 @@ describe('3D brain', () => {
     });
     assert.equal(brain.neurons.length, 66);
     assert.equal(brain.concepts.length, 222);
-    for (const point of [...brain.neurons, ...brain.concepts]) assert.ok(insideBrain(point.p[0], point.p[1], point.p[2], 0.9), JSON.stringify(point.p));
+    for (const point of [...brain.neurons, ...brain.concepts])
+      assert.ok(insideBrain(point.p[0], point.p[1], point.p[2], 0.9), JSON.stringify(point.p));
     assert.equal(brain.fibres.length, 65);
   });
 
@@ -59,7 +72,10 @@ describe('cortex mesh', () => {
     for (const mesh of meshes) {
       const V = mesh.position.length / 3;
       assert.ok(Math.max(...mesh.index) < V);
-      for (let i = 0; i < mesh.normal.length; i += 300) assert.ok(Math.abs(Math.hypot(mesh.normal[i] ?? 0, mesh.normal[i + 1] ?? 0, mesh.normal[i + 2] ?? 0) - 1) < 1e-4);
+      for (let i = 0; i < mesh.normal.length; i += 300)
+        assert.ok(
+          Math.abs(Math.hypot(mesh.normal[i] ?? 0, mesh.normal[i + 1] ?? 0, mesh.normal[i + 2] ?? 0) - 1) < 1e-4,
+        );
     }
   });
 });

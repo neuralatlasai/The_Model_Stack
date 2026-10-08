@@ -67,7 +67,12 @@ export async function compileMarkdown(input: MarkdownInput, ctx: CompileContext)
     title: plan.title,
     anchor: plan.anchor,
     depth: plan.depth,
-    blocks: flow(plan.nodes, { role: plan.role, depth: plan.depth, regionAnchor: plan.anchor, regionTitle: plan.title }),
+    blocks: flow(plan.nodes, {
+      role: plan.role,
+      depth: plan.depth,
+      regionAnchor: plan.anchor,
+      regionTitle: plan.title,
+    }),
   }));
 
   for (const [index, region] of regions.entries()) {
@@ -82,7 +87,9 @@ export async function compileMarkdown(input: MarkdownInput, ctx: CompileContext)
 
   const scope = regions.find((region) => region.role === 'scope');
   const finalHeader =
-    input.meta.entityType === 'section' ? { ...header, thesis: scope === undefined ? null : objectiveSentence(scope.blocks) } : header;
+    input.meta.entityType === 'section'
+      ? { ...header, thesis: scope === undefined ? null : objectiveSentence(scope.blocks) }
+      : header;
 
   await runLayouts(st);
 
@@ -104,4 +111,3 @@ export async function compileMarkdown(input: MarkdownInput, ctx: CompileContext)
     diagnostics: st.diagnostics,
   };
 }
-

@@ -14,15 +14,33 @@
   margin-top: 1.75rem;
 }
 
-.eco-d--general { --eco-c: var(--domain-architecture); }
-.eco-d--reasoning { --eco-c: var(--domain-training); }
-.eco-d--coding { --eco-c: var(--domain-inference); }
-.eco-d--agents { --eco-c: var(--domain-serving); }
-.eco-d--work { --eco-c: var(--domain-hardware); }
-.eco-d--multimodal { --eco-c: var(--domain-post-training); }
-.eco-d--context { --eco-c: var(--domain-data); }
-.eco-d--safety { --eco-c: var(--accent); }
-.eco-d--apps { --eco-c: var(--domain-evaluation); }
+.eco-d--general {
+  --eco-c: var(--domain-architecture);
+}
+.eco-d--reasoning {
+  --eco-c: var(--domain-training);
+}
+.eco-d--coding {
+  --eco-c: var(--domain-inference);
+}
+.eco-d--agents {
+  --eco-c: var(--domain-serving);
+}
+.eco-d--work {
+  --eco-c: var(--domain-hardware);
+}
+.eco-d--multimodal {
+  --eco-c: var(--domain-post-training);
+}
+.eco-d--context {
+  --eco-c: var(--domain-data);
+}
+.eco-d--safety {
+  --eco-c: var(--accent);
+}
+.eco-d--apps {
+  --eco-c: var(--domain-evaluation);
+}
 
 .eco-provenance {
   max-width: var(--measure);

@@ -35,7 +35,9 @@ export function railReducer(state: RailState, event: RailEvent): RailState {
       if (state.mode === 'inspecting') {
         return state.anchor === event.anchor ? state : { ...state, anchor: event.anchor };
       }
-      return state.mode === 'region' && state.anchor === event.anchor ? state : { mode: 'region', anchor: event.anchor };
+      return state.mode === 'region' && state.anchor === event.anchor
+        ? state
+        : { mode: 'region', anchor: event.anchor };
     case 'inspect':
       if (state.mode === 'inspecting' && sameTarget(state.target, event.target)) return state;
       return { mode: 'inspecting', anchor: railAnchor(state), target: event.target };

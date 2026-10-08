@@ -14,7 +14,15 @@ import { cls, litClass, NO_STATE, type StateView } from './util.ts';
 type Metric = 'capacity' | 'bandwidth' | 'latency';
 const METRICS: readonly Metric[] = ['capacity', 'bandwidth', 'latency'];
 
-export function HierarchyView({ spec, caption, state = NO_STATE }: { readonly spec: HierarchySpec; readonly caption: string; readonly state?: StateView }): JSX.Element {
+export function HierarchyView({
+  spec,
+  caption,
+  state = NO_STATE,
+}: {
+  readonly spec: HierarchySpec;
+  readonly caption: string;
+  readonly state?: StateView;
+}): JSX.Element {
   const metrics = METRICS.filter((metric) => spec.levels.some((level) => level[metric] !== undefined));
   const last = spec.levels.length - 1;
   return (
@@ -36,23 +44,29 @@ export function HierarchyView({ spec, caption, state = NO_STATE }: { readonly sp
         <tbody>
           {spec.levels.map((level, index) => (
             <tr
-              class={cls('vg-hier__level', level.emphasis && 'vg-hier__level--emph', index === 0 && 'vg-hier__level--first', index === last && 'vg-hier__level--last', litClass(state, level.label))}
+              class={cls(
+                'vg-hier__level',
+                level.emphasis && 'vg-hier__level--emph',
+                index === 0 && 'vg-hier__level--first',
+                index === last && 'vg-hier__level--last',
+                litClass(state, level.label),
+              )}
               data-vg-key={level.label}
               key={`${index}:${level.label}`}
             >
               <th scope="row" class="vg-hier__name">
                 <span class="vg-hier__namewrap">
-                <span class="vg-hier__idx" aria-hidden="true">
-                  {String(spec.direction === 'down' ? index : last - index).padStart(2, '0')}
-                </span>
-                <span class="vg-hier__glyph">
-                  <GlyphIcon kind={level.kind} emphasis={level.emphasis} />
-                </span>
-                <span class="vg-hier__text">
-                  <span class="vg-hier__label">{level.label}</span>
-                  <span class="vg-visually-hidden"> ({level.kind})</span>
-                  {level.note !== undefined && <span class="vg-hier__note">{level.note}</span>}
-                </span>
+                  <span class="vg-hier__idx" aria-hidden="true">
+                    {String(spec.direction === 'down' ? index : last - index).padStart(2, '0')}
+                  </span>
+                  <span class="vg-hier__glyph">
+                    <GlyphIcon kind={level.kind} emphasis={level.emphasis} />
+                  </span>
+                  <span class="vg-hier__text">
+                    <span class="vg-hier__label">{level.label}</span>
+                    <span class="vg-visually-hidden"> ({level.kind})</span>
+                    {level.note !== undefined && <span class="vg-hier__note">{level.note}</span>}
+                  </span>
                 </span>
               </th>
               {metrics.map((metric) => (

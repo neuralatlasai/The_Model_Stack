@@ -55,7 +55,9 @@ export function identityLine(graph: AtlasGraph, node: GraphNode): string {
         break;
       case 'part':
         // part titles already read "Part I — …"; keep one "PART I —"
-        segments.push(`PART ${item.number ?? ''} — ${item.title.replace(/^Part\s+[IVXLC]+\s*[—–-]\s*/u, '').toUpperCase()}`.trim());
+        segments.push(
+          `PART ${item.number ?? ''} — ${item.title.replace(/^Part\s+[IVXLC]+\s*[—–-]\s*/u, '').toUpperCase()}`.trim(),
+        );
         break;
       case 'chapter':
         segments.push(`CHAPTER ${item.number ?? ''}`.trim());
@@ -111,7 +113,11 @@ export function treeState(graph: AtlasGraph, currentId: NodeId | null): TreeStat
       if (graph.nodes[root.id]?.entityType === 'volume') expanded.add(root.id);
     }
   }
-  return { expanded, activePath, currentId: currentId !== null && graph.nodes[currentId] !== undefined ? currentId : null };
+  return {
+    expanded,
+    activePath,
+    currentId: currentId !== null && graph.nodes[currentId] !== undefined ? currentId : null,
+  };
 }
 
 /** Depth-first search of the tree for a node (used to locate roving-tabindex focus). */

@@ -22,7 +22,10 @@ const terms = instrument.slugs.map((slug) => {
   const entry = pageData?.terms[slug];
   // Defined on this page: jump to it. Defined elsewhere: link to the owning page's definition.
   // Defined on this page: jump to it. Defined elsewhere: the owning page. Defined nowhere yet: plain text.
-  const href = definition !== null && definition !== undefined ? `#${definition.anchor ?? termAnchor(slug)}` : (entry?.url ?? null);
+  const href =
+    definition !== null && definition !== undefined
+      ? `#${definition.anchor ?? termAnchor(slug)}`
+      : (entry?.url ?? null);
   return {
     slug,
     term: definition?.term ?? entry?.term ?? slug,
@@ -31,25 +34,23 @@ const terms = instrument.slugs.map((slug) => {
 });
 ---
 
-{
-  terms.length > 0 && (
-    <div class="rb-instrument rb-instrument--terms" {...instrumentAttrs('terms')}>
-      <InstrumentHead title="Terms defined here" meta={String(terms.length)} />
-      <ul class="rb-terms" role="list">
-        {terms.map((term) => (
-          <li>
-            {term.href === null ? (
-              <span class="rb-terms__link rb-terms__link--undefined" title="No glossary definition yet">
-                {term.term}
-              </span>
-            ) : (
-              <a class="rb-terms__link" href={term.href} {...termAttrs(term.slug)}>
-                {term.term}
-              </a>
-            )}
-          </li>
-        ))}
-      </ul>
-    </div>
-  )
-}
+{terms.length > 0 && (
+  <div class="rb-instrument rb-instrument--terms" {...instrumentAttrs('terms')}>
+    <InstrumentHead title="Terms defined here" meta={String(terms.length)} />
+    <ul class="rb-terms" role="list">
+      {terms.map((term) => (
+        <li>
+          {term.href === null ? (
+            <span class="rb-terms__link rb-terms__link--undefined" title="No glossary definition yet">
+              {term.term}
+            </span>
+          ) : (
+            <a class="rb-terms__link" href={term.href} {...termAttrs(term.slug)}>
+              {term.term}
+            </a>
+          )}
+        </li>
+      ))}
+    </ul>
+  </div>
+)}

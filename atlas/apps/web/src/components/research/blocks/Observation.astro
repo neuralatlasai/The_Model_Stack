@@ -13,5 +13,14 @@ const { block } = Astro.props;
 ---
 
 <div class="rb-observation" id={block.anchor ?? undefined} {...depthAttrs(block.depth)}>
-  <p class="rb-observation__text"><span class="rb-lead">Observation</span>{block.label !== null && <Fragment> <EvidenceMark label={block.label} /></Fragment>} <Inline nodes={block.content} /></p>
+  <p class="rb-observation__text">
+    <span class="rb-lead">Observation</span>
+    {block.label !== null && (
+      <Fragment>
+        {' '}
+        <EvidenceMark label={block.label} />
+      </Fragment>
+    )}{' '}
+    <Inline nodes={block.content} />
+  </p>
 </div>

@@ -18,13 +18,13 @@ const lang = block.lang ?? 'text';
 <figure class="rb-code" id={block.anchor ?? undefined} data-lang={lang} {...depthAttrs(block.depth)}>
   <figcaption class="rb-code__bar">
     <span class="rb-code__lang">{lang}</span>
-    <button type="button" class="rb-code__copy" {...actionAttrs('copy-code')}>copy</button>
+    <button type="button" class="rb-code__copy" {...actionAttrs('copy-code')}>
+      copy
+    </button>
   </figcaption>
-  {
-    block.html !== null ? (
-      <div class="rb-code__body" set:html={block.html} />
-    ) : (
-      <pre class="rb-code__body rb-code__plain" tabindex="0"><code>{block.code}</code></pre>
-    )
-  }
+  {block.html !== null ? (
+    <div class="rb-code__body" set:html={block.html} />
+  ) : (
+    <pre class="rb-code__body rb-code__plain" tabindex="0"><code>{block.code}</code></pre>
+  )}
 </figure>

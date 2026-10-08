@@ -39,9 +39,9 @@ editorial_status: manuscript_draft
 | P13 | paper | DeepSeek-V3 Technical Report | DeepSeek-AI | Technical report, 2024/2025 | [Primary source](https://arxiv.org/html/2412.19437v2) | - | preprint | 2026-10-08 | Router control, FP8 ablations, production schedule |
 | R20.1 | paper | Adam: A Method for Stochastic Optimization | Diederik P. Kingma; Jimmy Ba | ICLR 2015 | [Primary source](https://arxiv.org/pdf/1412.6980v9) | - | peer-reviewed | 2026-10-08 | Raw moments, bias correction, original algorithm |
 | R20.2 | paper | Decoupled Weight Decay Regularization | Ilya Loshchilov; Frank Hutter | ICLR 2019 | [Primary source](https://arxiv.org/html/1711.05101v3) | - | peer-reviewed | 2026-10-08 | AdamW versus coupled L2 regularization |
-| R20.3 | paper | Adafactor: Adaptive Learning Rates with Sublinear Memory Cost | Noam Shazeer; Mitchell Stern | 2018 | [Primary source](https://arxiv.org/pdf/1804.04235v1) | - | preprint | 2026-10-08 | Factored statistics, update clipping, relative steps, WMT ablations |
+| R20.3 | paper | Adafactor: Adaptive Learning Rates with Sublinear Memory Cost | Noam Shazeer; Mitchell Stern | ICML 2018; PMLR 80:4596-4604 | [Primary source](https://proceedings.mlr.press/v80/shazeer18a/shazeer18a.pdf) | - | peer-reviewed | 2026-10-08 | Factored statistics, update clipping, relative steps, WMT ablations |
 | R20.4 | paper | Muon is Scalable for LLM Training | Moonshot AI research team | 2025 | [Primary source](https://arxiv.org/html/2502.16982v1) | - | preprint | 2026-10-08 | Moonlight, rectangular calibration, distributed state, compute fit |
-| R20.5 | paper | Tensor Programs V: Tuning Large Neural Networks via Zero-Shot Hyperparameter Transfer | Greg Yang et al. | 2022 | [Primary source](https://arxiv.org/pdf/2203.03466) | - | preprint | 2026-10-08 | Maximal-update parameterization and IWSLT transfer protocol |
+| R20.5 | paper | Tensor Programs V: Tuning Large Neural Networks via Zero-Shot Hyperparameter Transfer | Greg Yang et al. | 2022 | [Primary source](https://arxiv.org/pdf/2203.03466v2) | - | preprint | 2026-10-08 | Maximal-update parameterization and IWSLT transfer protocol |
 | R20.6 | paper | An Empirical Model of Large-Batch Training | Sam McCandlish; Jared Kaplan; Dario Amodei; OpenAI Dota Team | OpenAI, 2018 | [Primary source](https://arxiv.org/pdf/1812.06162) | - | preprint | 2026-10-08 | Gradient-noise scale, curvature-aware and simplified proxies |
 | R20.7 | paper | Scaling Laws and Compute-Optimal Training Beyond Fixed Training Durations | Alexander Hagele et al. | NeurIPS 2024 | [Primary source](https://arxiv.org/html/2405.18392v3) | - | peer-reviewed | 2026-10-08 | Reusable cooldowns, 1-sqrt schedule, duration ablations |
 | R20.8 | paper | Understanding Warmup-Stable-Decay Learning Rates: A River Valley Loss Landscape Perspective | Kaiyue Wen; Zhiyuan Li; Jason Wang; David Hall; Percy Liang; Tengyu Ma | 2024 | [Primary source](https://arxiv.org/html/2410.05192v3) | - | preprint | 2026-10-08 | WSD, WSD-S, reciprocal cooldown, branch-budget comparisons |
@@ -73,24 +73,24 @@ editorial_status: manuscript_draft
 
 | Source | Revision and inspected locators | Boundary |
 |---|---|---|
-| P13 | v 2; Sections 2.1, 3.3, 4.2; full HTML | Source-reported methods/results; no independent execution. |
+| P13 | v 2; Sections 2.1.2, 3.3, 4.2 and Appendix B.2; full HTML | Router control, FP8 method and divergence ablation, production schedule; no independent execution. |
 | R20.1 | v 9, 2017-01-30; Algorithm 1, Sections 2-3, 6; full PDF | Source-reported methods/results; no independent execution. |
 | R20.2 | v 3; Section 2, Algorithm 2, Section 4; full HTML | Source-reported methods/results; no independent execution. |
-| R20.3 | v 1, 2018-04-11; Algorithms 4-6, Section 3, Table 2; full PDF | Source-reported methods/results; no independent execution. |
+| R20.3 | Archival ICML 2018 PDF, PMLR 80:4596-4604; Algorithms 4-6, Sections 3 and 8-9, Table 2; arXiv v 1 also inspected | Conference text is the citation basis; no independent execution. |
 | R20.4 | v 1; Sections 2-3 and appendices; full HTML; v 2 HTML unavailable at inspection | Source-reported methods/results; no independent execution. |
-| R20.5 | Retrieved full PDF; Tables 3, 8-9, Section 7, Appendix D; no unverified revision identifier assigned | Source-reported methods/results; no independent execution. |
+| R20.5 | v 2, PDF header 2022-03-28; Tables 3, 8-9, Section 7, Appendix D; full PDF | Raw and implementation parameterizations and IWSLT transfer protocol; no independent execution. |
 | R20.6 | Retrieved full PDF; Section 2, Equations 2.5-2.10, Section 3, Appendices A-B | Source-reported methods/results; no independent execution. |
 | R20.7 | v 2 and v 3 full HTML inspected; v 3 Sections 3-4, Figures 3-6, Appendix B | Source-reported methods/results; no independent execution. |
 | R20.8 | v 2 and v 3 full HTML inspected; Section 5 and experimental appendices | Source-reported methods/results; no independent execution. |
 | R20.9 | v 1 and v 2 full HTML inspected; v 2 Sections 3-6, Figures 5-8, Appendix C | Source-reported methods/results; no independent execution. |
-| R20.10 | v 2; Section 3.3 and Figures 3-10; full HTML | Source-reported methods/results; no independent execution. |
+| R20.10 | v 2; Sections 3.1-3.4 and Figures 3-10; full HTML | Repetition, initialization, norms, z-loss discrepancy, and epsilon ablations; no independent execution. |
 | R20.11 | v 2, 2026-02-03; Section 2.1, Algorithm 1, Appendix D; full HTML | Source-reported methods/results; no independent execution. |
 | R20.12 | v 2; theory sections, convolution/ViT experiments and depth ablations; full HTML | Source-reported methods/results; no independent execution. |
 | R20.13 | v 1 and v 2 full HTML inspected; v 2 Sections 3-4, Appendices B, E, H | Source-reported methods/results; no independent execution. |
-| R20.14 | v 1; Sections 2-3, Table 1, Appendix C; full HTML | Source-reported methods/results; no independent execution. |
+| R20.14 | v 1; Sections 2-3, Table 1, Appendix C; full HTML; arXiv header 2025-12-26, rendered cover 2026-08-24 | Report revision is pinned; the discrepant rendered cover date is not treated as a new revision identifier. |
 | R20.15 | v 1 and v 3 full HTML inspected; v 3 Sections 2-3, Tables 1-2, Appendix C/E/F; revision 2026-05-14 | Source-reported methods/results; no independent execution. |
 | R20.16 | v 1 and v 2 full HTML inspected; v 2 Section 3, Appendix A; revision 2026-06-05 | Source-reported methods/results; no independent execution. |
-| R20.17 | v 1 and v 3 full HTML inspected; v 3 Sections 2-4, Tables 1-2, Appendices B-E; revision 2026-08-26; v 2 withdrawn | Source-reported methods/results; no independent execution. |
+| R20.17 | v 1 and v 3 full HTML inspected; v 3 Sections 2-4, especially 3.3, Tables 1-2, Appendices B-E; revision 2026-08-26; v 2 withdrawn | Periodic row geometry, fixed-final-step versus best-checkpoint distinction, optimizer versus whole-step timing; no independent execution. |
 | R20.18 | v 1, 2019-04-19; Sections 3-5 and proof appendices; full PDF | Source-reported methods/results; no independent execution. |
 | R20.19 | Versioned 2.14 page; algorithm, options, state_dict/load_state_dict; full page | Documented interface/design; no runtime test. |
 | R20.20 | Versioned 2.14 page; algorithm, warnings, adjust_lr_fn, state loading; full page | Documented interface/design; no runtime test. |
@@ -103,7 +103,7 @@ editorial_status: manuscript_draft
 | R20.27 | v 3; Sections 3.3.2-3.3.4; full HTML; 466 interruptions, 47 planned, 419 unexpected | Source-reported methods/results; no independent execution. |
 | R20.28 | Spring 2026 course page inspected; curriculum only, not a source of experimental claims | Documented interface/design; no runtime test. |
 | R20.29 | v 2; scaling and WSD sections, experimental appendices; full HTML | Source-reported methods/results; no independent execution. |
-| R20.30 | Full author article; code and update definition; not used as a convergence theorem | Documented interface/design; no runtime test. |
+| R20.30 | Unversioned author article; finite update definition inspected 2026-10-08; no immutable commit assigned | Documented design; no runtime test or convergence theorem claimed. |
 | R20.31 | v 2; Sections 3-4, Tables 1-4, Appendix B/G; full 108-page PDF; arXiv stamp 2025-09-04, cover 2025-09-08 | Source-reported methods/results; no independent execution. |
 
 ## Version and evidence limits

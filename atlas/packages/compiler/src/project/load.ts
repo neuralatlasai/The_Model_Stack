@@ -44,7 +44,12 @@ export async function loadProject(docsDir: string, concurrency: number, signal?:
     const split = splitFrontmatter(file.text);
     if (split === null) {
       if (!file.path.includes('/')) continue; // root-level authoring contracts, not pages
-      diagnostics.push(diagnostic('frontmatter-missing', 'file has no YAML frontmatter block (--- … ---) on line 1', { file: file.path, line: 1 }));
+      diagnostics.push(
+        diagnostic('frontmatter-missing', 'file has no YAML frontmatter block (--- … ---) on line 1', {
+          file: file.path,
+          line: 1,
+        }),
+      );
       continue;
     }
     const parsed = parseFrontmatter(split.yaml);
@@ -52,7 +57,13 @@ export async function loadProject(docsDir: string, concurrency: number, signal?:
       diagnostics.push(diagnostic('frontmatter-invalid', parsed.message, { file: file.path, line: parsed.line }));
       continue;
     }
-    sources.push({ path: file.path, meta: parsed.meta, body: split.body, bodyStartLine: split.bodyStartLine, text: file.text });
+    sources.push({
+      path: file.path,
+      meta: parsed.meta,
+      body: split.body,
+      bodyStartLine: split.bodyStartLine,
+      text: file.text,
+    });
   }
   return { manifest, sources, fileCount: files.length, diagnostics };
 }

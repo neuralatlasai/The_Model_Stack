@@ -37,7 +37,11 @@ describe('recordProgress', () => {
   test('drops the least recently updated entries beyond the cap', () => {
     const state: StoredProgress = {};
     for (let i = 0; i < MAX_PROGRESS_ENTRIES; i += 1) {
-      state[`ms.section.1.${String(i + 1)}`] = { max: 0.5, anchor: '', at: `2026-01-01T00:00:${String(i % 60).padStart(2, '0')}.${String(i).padStart(3, '0')}Z` };
+      state[`ms.section.1.${String(i + 1)}`] = {
+        max: 0.5,
+        anchor: '',
+        at: `2026-01-01T00:00:${String(i % 60).padStart(2, '0')}.${String(i).padStart(3, '0')}Z`,
+      };
     }
     const next = recordProgress(state, 'ms.section.9.9', 0.1, null, NOW);
     assert.equal(Object.keys(next).length, MAX_PROGRESS_ENTRIES);
@@ -47,7 +51,11 @@ describe('recordProgress', () => {
 
 describe('pushRecent', () => {
   test('moves the node to the front, deduplicated, capped', () => {
-    let list = Array.from({ length: MAX_RECENT }, (_, i) => ({ nodeId: `ms.section.1.${String(i + 1)}`, url: `/s${String(i)}/`, title: `S${String(i)}` }));
+    let list = Array.from({ length: MAX_RECENT }, (_, i) => ({
+      nodeId: `ms.section.1.${String(i + 1)}`,
+      url: `/s${String(i)}/`,
+      title: `S${String(i)}`,
+    }));
     list = pushRecent(list, { nodeId: 'ms.section.1.5', url: '/s4/', title: 'S4' });
     assert.equal(list[0]?.nodeId, 'ms.section.1.5');
     assert.equal(list.length, MAX_RECENT);

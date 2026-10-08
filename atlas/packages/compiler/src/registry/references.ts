@@ -27,7 +27,15 @@ const COLUMNS = {
   key: ['key'],
   type: ['type'],
   work: ['work', 'title'],
-  authors: ['authors / organisation', 'authors / organization', 'authors/organisation', 'authors/organization', 'authors', 'organisation', 'organization'],
+  authors: [
+    'authors / organisation',
+    'authors / organization',
+    'authors/organisation',
+    'authors/organization',
+    'authors',
+    'organisation',
+    'organization',
+  ],
   venue: ['venue / year', 'venue/year', 'venue', 'year'],
   url: ['primary url', 'url'],
   code: ['official code', 'code'],
@@ -102,24 +110,38 @@ export function parseReferencesFile(input: ReferencesFileInput): { rows: Referen
   const diagnostics: Diagnostic[] = [];
   const root = parseMarkdown(input.body);
   const lineOf = (row: TableRowValue): number | null => (row.line === null ? null : row.line + input.bodyStartLine - 1);
-  const at = (line: number | null): { file: string; line: number | null; nodeId: NodeId | null } => ({ file: input.file, line, nodeId: input.nodeId });
+  const at = (line: number | null): { file: string; line: number | null; nodeId: NodeId | null } => ({
+    file: input.file,
+    line,
+    nodeId: input.nodeId,
+  });
 
   for (const table of extractTables(root)) {
     const columns = mapColumns<Column>(table.headers, COLUMNS);
     if (columns.key === undefined || columns.work === undefined) continue;
-    const missing = (['type', 'authors', 'venue', 'url', 'status', 'usedFor'] as const).filter((field) => columns[field] === undefined);
+    const missing = (['type', 'authors', 'venue', 'url', 'status', 'usedFor'] as const).filter(
+      (field) => columns[field] === undefined,
+    );
     if (missing.length > 0) {
       diagnostics.push(
-        diagnostic('reference-row-malformed', `references table lacks column(s): ${missing.join(', ')}`, at(table.line === null ? null : table.line + input.bodyStartLine - 1)),
+        diagnostic(
+          'reference-row-malformed',
+          `references table lacks column(s): ${missing.join(', ')}`,
+          at(table.line === null ? null : table.line + input.bodyStartLine - 1),
+        ),
       );
     }
 
     for (const row of table.rows) {
       const line = lineOf(row);
-      const rawKey = cellText(row, columns.key).replace(/[*`[\]]/gu, '').trim();
+      const rawKey = cellText(row, columns.key)
+        .replace(/[*`[\]]/gu, '')
+        .trim();
       if (rawKey === '') continue;
       if (!isCitationKey(rawKey)) {
-        diagnostics.push(diagnostic('reference-row-malformed', `"${rawKey}" is not a citation key (P01–P52 or R<ch>.<n>)`, at(line)));
+        diagnostics.push(
+          diagnostic('reference-row-malformed', `"${rawKey}" is not a citation key (P01–P52 or R<ch>.<n>)`, at(line)),
+        );
         continue;
       }
       const work = cellText(row, columns.work);
@@ -130,25 +152,45 @@ export function parseReferencesFile(input: ReferencesFileInput): { rows: Referen
       const keyChapter = chapterNumberOf(rawKey);
       if (keyChapter !== null && keyChapter !== input.chapter) {
         diagnostics.push(
-          diagnostic('reference-row-malformed', `${rawKey} is a chapter-${String(keyChapter)} key listed in chapter ${String(input.chapter)}'s references`, at(line)),
+          diagnostic(
+            'reference-row-malformed',
+            `${rawKey} is a chapter-${String(keyChapter)} key listed in chapter ${String(input.chapter)}'s references`,
+            at(line),
+          ),
         );
       }
       const typeText = cellText(row, columns.type);
       const type = canonicalValue(typeText, REFERENCE_TYPES) ?? typeText;
       if (typeText !== '' && type === typeText && !(REFERENCE_TYPES as readonly string[]).includes(type)) {
-        diagnostics.push(diagnostic('reference-row-malformed', `${rawKey}: type "${typeText}" is not one of ${REFERENCE_TYPES.join(' · ')}`, at(line)));
+        diagnostics.push(
+          diagnostic(
+            'reference-row-malformed',
+            `${rawKey}: type "${typeText}" is not one of ${REFERENCE_TYPES.join(' · ')}`,
+            at(line),
+          ),
+        );
       }
       const statusText = cellText(row, columns.status);
       const status = canonicalValue(statusText, REFERENCE_STATUSES) ?? statusText;
       if (statusText !== '' && status === statusText && !(REFERENCE_STATUSES as readonly string[]).includes(status)) {
         diagnostics.push(
-          diagnostic('reference-row-malformed', `${rawKey}: status "${statusText}" is not one of ${REFERENCE_STATUSES.join(' · ')}`, at(line)),
+          diagnostic(
+            'reference-row-malformed',
+            `${rawKey}: status "${statusText}" is not one of ${REFERENCE_STATUSES.join(' · ')}`,
+            at(line),
+          ),
         );
       }
       const urlText = cellText(row, columns.url);
       const url = urlCell(urlText, cellLinks(row, columns.url));
       if (url === null && !isNullish(urlText)) {
-        diagnostics.push(diagnostic('reference-row-malformed', `${rawKey}: Primary URL cell "${urlText}" contains no http(s) URL`, at(line)));
+        diagnostics.push(
+          diagnostic(
+            'reference-row-malformed',
+            `${rawKey}: Primary URL cell "${urlText}" contains no http(s) URL`,
+            at(line),
+          ),
+        );
       }
       const accessed = cellText(row, columns.accessed);
       rows.push({
@@ -177,7 +219,8 @@ export function compareCitationKeys(a: string, b: string): number {
     const spine = /^P(\d+)$/u.exec(key);
     if (spine?.[1] !== undefined) return [0, Number.parseInt(spine[1], 10), 0];
     const chapter = /^R(\d+)\.(\d+)$/u.exec(key);
-    if (chapter?.[1] !== undefined && chapter[2] !== undefined) return [1, Number.parseInt(chapter[1], 10), Number.parseInt(chapter[2], 10)];
+    if (chapter?.[1] !== undefined && chapter[2] !== undefined)
+      return [1, Number.parseInt(chapter[1], 10), Number.parseInt(chapter[2], 10)];
     return [2, 0, 0];
   };
   const [a0, a1, a2] = rank(a);
@@ -221,7 +264,9 @@ export function mergeReferences(
       uses.set(row.key, [{ chapter: row.chapter, usedFor: row.usedFor, accessed: row.accessed }]);
       continue;
     }
-    const differing = COMPARED_FIELDS.filter((field) => comparable(first[field]) !== comparable(row[field]) && row[field] !== null && row[field] !== '');
+    const differing = COMPARED_FIELDS.filter(
+      (field) => comparable(first[field]) !== comparable(row[field]) && row[field] !== null && row[field] !== '',
+    );
     if (differing.length > 0) {
       diagnostics.push(
         diagnostic(
@@ -238,7 +283,10 @@ export function mergeReferences(
     } else {
       const existing = list[sameChapter];
       if (existing !== undefined && row.usedFor !== '' && !existing.usedFor.includes(row.usedFor)) {
-        list[sameChapter] = { ...existing, usedFor: existing.usedFor === '' ? row.usedFor : `${existing.usedFor}; ${row.usedFor}` };
+        list[sameChapter] = {
+          ...existing,
+          usedFor: existing.usedFor === '' ? row.usedFor : `${existing.usedFor}; ${row.usedFor}`,
+        };
       }
     }
     uses.set(row.key, list);

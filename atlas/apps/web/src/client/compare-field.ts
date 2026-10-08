@@ -19,7 +19,9 @@ export function initCompareField(ctx: PageContext): void {
   const scopes = [field, ...(list === null ? [] : [list])];
   const slot = (name: string): HTMLElement | null => readout.querySelector<HTMLElement>(`[data-cmp-${name}]`);
   const out = { kicker: slot('rk'), title: slot('rt'), text: slot('rx'), change: slot('rc'), answers: slot('ra') };
-  const initial = Object.fromEntries(Object.entries(out).map(([key, element]) => [key, element?.textContent ?? ''])) as Record<keyof typeof out, string>;
+  const initial = Object.fromEntries(
+    Object.entries(out).map(([key, element]) => [key, element?.textContent ?? '']),
+  ) as Record<keyof typeof out, string>;
 
   const members = new Map<string, HTMLElement[]>();
   for (const scope of scopes) {
@@ -88,24 +90,43 @@ export function initCompareField(ctx: PageContext): void {
   };
 
   for (const scope of scopes) {
-    scope.addEventListener('pointerover', (event) => {
-      const target = event.target instanceof Element ? event.target : null;
-      const alt = target?.closest<HTMLElement>('[data-cmp-alt]') ?? null;
-      if (alt !== null) {
-        if (alt !== litAlt) showAlt(alt);
-        return;
-      }
-      const key = target?.closest<HTMLElement>('[data-cmp-id]')?.dataset['cmpId'];
-      if (key !== undefined && (key !== litKey || litAlt !== null)) showNode(key);
-    }, { signal: ctl.signal });
+    scope.addEventListener(
+      'pointerover',
+      (event) => {
+        const target = event.target instanceof Element ? event.target : null;
+        const alt = target?.closest<HTMLElement>('[data-cmp-alt]') ?? null;
+        if (alt !== null) {
+          if (alt !== litAlt) showAlt(alt);
+          return;
+        }
+        const key = target?.closest<HTMLElement>('[data-cmp-id]')?.dataset['cmpId'];
+        if (key !== undefined && (key !== litKey || litAlt !== null)) showNode(key);
+      },
+      { signal: ctl.signal },
+    );
     scope.addEventListener('pointerleave', reset, { signal: ctl.signal });
-    scope.addEventListener('focusin', (event) => {
-      const key = event.target instanceof Element ? event.target.closest<HTMLElement>('[data-cmp-id]')?.dataset['cmpId'] : undefined;
-      if (key === undefined) reset();
-      else showNode(key);
-    }, { signal: ctl.signal });
-    scope.addEventListener('focusout', (event) => {
-      if (!(event.relatedTarget instanceof Node) || !scopes.some((other) => other.contains(event.relatedTarget as Node))) reset();
-    }, { signal: ctl.signal });
+    scope.addEventListener(
+      'focusin',
+      (event) => {
+        const key =
+          event.target instanceof Element
+            ? event.target.closest<HTMLElement>('[data-cmp-id]')?.dataset['cmpId']
+            : undefined;
+        if (key === undefined) reset();
+        else showNode(key);
+      },
+      { signal: ctl.signal },
+    );
+    scope.addEventListener(
+      'focusout',
+      (event) => {
+        if (
+          !(event.relatedTarget instanceof Node) ||
+          !scopes.some((other) => other.contains(event.relatedTarget as Node))
+        )
+          reset();
+      },
+      { signal: ctl.signal },
+    );
   }
 }

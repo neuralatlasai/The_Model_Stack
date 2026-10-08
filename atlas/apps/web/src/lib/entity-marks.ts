@@ -14,7 +14,17 @@ import type { LabRow, SystemRow } from './entity-model.ts';
 import { monograms } from './monogram.ts';
 
 /** Vendor prefixes a system's mark leaves out ("NVIDIA NCCL" → "NCCL"). */
-export const SYSTEM_VENDORS: readonly string[] = ['NVIDIA', 'AMD', 'Intel', 'Google', 'Microsoft', 'Apple', 'PyTorch', 'MosaicML', 'ROCm'];
+export const SYSTEM_VENDORS: readonly string[] = [
+  'NVIDIA',
+  'AMD',
+  'Intel',
+  'Google',
+  'Microsoft',
+  'Apple',
+  'PyTorch',
+  'MosaicML',
+  'ROCm',
+];
 
 export function systemMarks(systems: readonly SystemRow[]): Map<string, string> {
   const marks = monograms(
@@ -32,7 +42,8 @@ export function labMarks(labs: readonly LabRow[]): Map<string, string> {
 export function systemFootprint(system: SystemRow): number {
   return system.chapters.reduce((sum, n) => {
     const rows = system.uses.filter((use) => use.ch === n);
-    const counted = rows.length > 0 ? rows.reduce((total, use) => total + use.count, 0) : (system.listedIn[String(n)]?.length ?? 0);
+    const counted =
+      rows.length > 0 ? rows.reduce((total, use) => total + use.count, 0) : (system.listedIn[String(n)]?.length ?? 0);
     return sum + Math.max(1, counted);
   }, 0);
 }

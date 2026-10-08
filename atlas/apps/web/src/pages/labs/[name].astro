@@ -46,52 +46,53 @@ const identity = ['Lab', lab.rank === null ? null : `reference-stack position ${
   <article class="sh-article">
     <PageHeader identity={identity} title={lab.name}>
       <div class="em-brand">
-        {
-          mark !== '' && (
-            <span class:list={['em-mark', { 'is-idle': (labRow?.chapters.length ?? 0) === 0 }]} aria-hidden="true">
-              {mark}
-            </span>
-          )
-        }
+        {mark !== '' && (
+          <span class:list={['em-mark', { 'is-idle': (labRow?.chapters.length ?? 0) === 0 }]} aria-hidden="true">
+            {mark}
+          </span>
+        )}
         <span class="em-brand__fact">
-          {
-            labRow === null || labRow.chapters.length === 0 ? (
-              'not yet drawn on by a written chapter'
-            ) : (
-              <>
-                <b>{labRow.chapters.length}</b> written {labRow.chapters.length === 1 ? 'chapter' : 'chapters'} · <b>{labRow.sections}</b>{' '}
-                {labRow.sections === 1 ? 'section' : 'sections'}
-              </>
-            )
-          }
+          {labRow === null || labRow.chapters.length === 0 ? (
+            'not yet drawn on by a written chapter'
+          ) : (
+            <>
+              <b>{labRow.chapters.length}</b> written {labRow.chapters.length === 1 ? 'chapter' : 'chapters'} ·{' '}
+              <b>{labRow.sections}</b> {labRow.sections === 1 ? 'section' : 'sections'}
+            </>
+          )}
         </span>
-        {
-          lab.surfaces.length > 0 && (
-            <ul class="sh-actions">
-              {lab.surfaces.map((surface) => (
-                <li>
-                  <a href={surface.url} rel="external">
-                    {surface.label}
-                  </a>
-                </li>
-              ))}
-            </ul>
-          )
-        }
+        {lab.surfaces.length > 0 && (
+          <ul class="sh-actions">
+            {lab.surfaces.map((surface) => (
+              <li>
+                <a href={surface.url} rel="external">
+                  {surface.label}
+                </a>
+              </li>
+            ))}
+          </ul>
+        )}
       </div>
     </PageHeader>
 
-    {labRow !== null && <EntityMap kind="lab" name={lab.name} chapters={labsModel.chapters} parts={labsModel.parts} used={labRow.chapters} uses={labRow.uses} />}
+    {labRow !== null && (
+      <EntityMap
+        kind="lab"
+        name={lab.name}
+        chapters={labsModel.chapters}
+        parts={labsModel.parts}
+        used={labRow.chapters}
+        uses={labRow.uses}
+      />
+    )}
 
     <section class="sh-section" aria-labelledby="takes-heading">
       <h2 id="takes-heading">What chapters take from it</h2>
-      {
-        lab.uses.length === 0 ? (
-          <p class="sh-empty">No chapter's reference-stack coverage table names this lab yet.</p>
-        ) : (
-          <StackUses uses={lab.uses} graph={graph} />
-        )
-      }
+      {lab.uses.length === 0 ? (
+        <p class="sh-empty">No chapter's reference-stack coverage table names this lab yet.</p>
+      ) : (
+        <StackUses uses={lab.uses} graph={graph} />
+      )}
     </section>
   </article>
 </ReaderLayout>

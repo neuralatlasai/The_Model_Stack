@@ -46,7 +46,14 @@ const ChapterSchema = z.object({
   part: Int,
   written: z.boolean(),
 });
-const PartSchema = z.object({ n: Int, numeral: z.string(), title: z.string(), url: Href, volume: Int, chapters: z.array(Int) });
+const PartSchema = z.object({
+  n: Int,
+  numeral: z.string(),
+  title: z.string(),
+  url: Href,
+  volume: Int,
+  chapters: z.array(Int),
+});
 const SystemSchema = z.object({
   key: z.string(),
   name: z.string(),
@@ -117,7 +124,12 @@ function parseModel<T>(root: HTMLElement, schema: z.ZodType<T>): T | null {
 
 type Child = string | Node;
 
-function make<K extends keyof HTMLElementTagNameMap>(doc: Document, tag: K, className = '', ...children: Child[]): HTMLElementTagNameMap[K] {
+function make<K extends keyof HTMLElementTagNameMap>(
+  doc: Document,
+  tag: K,
+  className = '',
+  ...children: Child[]
+): HTMLElementTagNameMap[K] {
   const node = doc.createElement(tag);
   if (className !== '') node.className = className;
   node.append(...children);
@@ -144,7 +156,9 @@ interface ReadoutView {
   readonly title: string;
   readonly sub: string;
   readonly rows: readonly (readonly [string, readonly Child[]])[];
-  readonly list: { readonly uses: readonly UseEntry[]; readonly empty: string; readonly more?: string } | { readonly nodes: readonly Node[] };
+  readonly list:
+    | { readonly uses: readonly UseEntry[]; readonly empty: string; readonly more?: string }
+    | { readonly nodes: readonly Node[] };
   readonly foot: readonly Child[];
 }
 
@@ -166,7 +180,9 @@ function createReadout(doc: Document, root: HTMLElement): Readout | null {
     fields.set(field, node);
   }
   const get = (field: Field): HTMLElement => fields.get(field) ?? panel;
-  const initial = new Map(FIELDS.map((field) => [field, [...get(field).childNodes].map((node) => node.cloneNode(true))] as const));
+  const initial = new Map(
+    FIELDS.map((field) => [field, [...get(field).childNodes].map((node) => node.cloneNode(true))] as const),
+  );
   const initialLong = get('title').classList.contains('is-long');
 
   const lineHeight = (node: HTMLElement): number => Number.parseFloat(getComputedStyle(node).lineHeight) || 17;
@@ -231,7 +247,8 @@ function createReadout(doc: Document, root: HTMLElement): Readout | null {
       else list.replaceChildren(...view.list.nodes);
     },
     reset() {
-      for (const field of FIELDS) get(field).replaceChildren(...(initial.get(field) ?? []).map((node) => node.cloneNode(true)));
+      for (const field of FIELDS)
+        get(field).replaceChildren(...(initial.get(field) ?? []).map((node) => node.cloneNode(true)));
       get('title').classList.toggle('is-long', initialLong);
       get('title').removeAttribute('title');
     },
@@ -301,7 +318,11 @@ function initSystems(ctx: PageContext, root: HTMLElement, model: SystemsModel): 
   const written = Object.values(model.chapters).filter((chapter) => chapter.written).length;
   const total = Object.keys(model.chapters).length;
 
-  const byData = <T extends Element>(scope: ParentNode, attr: string, key: (value: string) => string | number = (v) => v): Map<string | number, T> => {
+  const byData = <T extends Element>(
+    scope: ParentNode,
+    attr: string,
+    key: (value: string) => string | number = (v) => v,
+  ): Map<string | number, T> => {
     const map = new Map<string | number, T>();
     for (const node of scope.querySelectorAll<T>(`[${attr}]`)) map.set(key(node.getAttribute(attr) ?? ''), node);
     return map;
@@ -314,12 +335,15 @@ function initSystems(ctx: PageContext, root: HTMLElement, model: SystemsModel): 
   const laneWires = byData<SVGLineElement>(grid, 'data-es-lanewire', Number);
   const partLinks = byData<SVGAElement>(grid, 'data-es-part', Number);
   const ledger = doc.querySelector<HTMLElement>('[data-es-ledger]');
-  const ledgerRows = ledger === null ? new Map<string | number, HTMLElement>() : byData<HTMLElement>(ledger, 'data-es-row');
+  const ledgerRows =
+    ledger === null ? new Map<string | number, HTMLElement>() : byData<HTMLElement>(ledger, 'data-es-row');
 
   // ── geometry: wires from chips to part lanes, routed through the gutter ──
   const dotCentre = (n: number): { x: number; y: number } | null => {
     const circle = dots.get(n)?.querySelector('.es-dot__c');
-    return circle === null || circle === undefined ? null : { x: Number(circle.getAttribute('cx')), y: Number(circle.getAttribute('cy')) };
+    return circle === null || circle === undefined
+      ? null
+      : { x: Number(circle.getAttribute('cx')), y: Number(circle.getAttribute('cy')) };
   };
   const sideBySide = (): boolean => grid.getBoundingClientRect().left >= stack.getBoundingClientRect().right - 2;
   const toBody = (x: number, y: number): { x: number; y: number } => {
@@ -396,13 +420,17 @@ function initSystems(ctx: PageContext, root: HTMLElement, model: SystemsModel): 
   /** Lights each touched part lane from its entry to the farthest chapter reached. */
   const lightLanes = (chapters: readonly number[], planned: readonly number[] = []): void => {
     const reach = new Map<number, { x: number; plan: boolean }>();
-    for (const [list, plan] of [[chapters, false], [planned, true]] as const) {
+    for (const [list, plan] of [
+      [chapters, false],
+      [planned, true],
+    ] as const) {
       for (const n of list) {
         const part = partOf(n)?.n;
         const centre = dotCentre(n);
         if (part === undefined || centre === null) continue;
         const current = reach.get(part);
-        if (current === undefined || centre.x > current.x) reach.set(part, { x: centre.x, plan: current === undefined ? plan : current.plan && plan });
+        if (current === undefined || centre.x > current.x)
+          reach.set(part, { x: centre.x, plan: current === undefined ? plan : current.plan && plan });
         else if (!plan) reach.set(part, { ...current, plan: false });
       }
     }
@@ -493,8 +521,14 @@ function initSystems(ctx: PageContext, root: HTMLElement, model: SystemsModel): 
   // ── readout pieces ──
   const chapterChip = (n: number, plan = false): HTMLAnchorElement => {
     const chapter = chapterOf(n);
-    const link = anchor(doc, chapter?.url ?? '#', plan || chapter?.written !== true ? 'en-chap en-chap--plan' : 'en-chap', chapter?.number ?? pad(n));
-    link.title = chapter === undefined ? '' : `${chapter.number} ${chapter.title}${chapter.written ? '' : ' (planned)'}`;
+    const link = anchor(
+      doc,
+      chapter?.url ?? '#',
+      plan || chapter?.written !== true ? 'en-chap en-chap--plan' : 'en-chap',
+      chapter?.number ?? pad(n),
+    );
+    link.title =
+      chapter === undefined ? '' : `${chapter.number} ${chapter.title}${chapter.written ? '' : ' (planned)'}`;
     link.dataset['peekCh'] = String(n);
     return link;
   };
@@ -521,7 +555,13 @@ function initSystems(ctx: PageContext, root: HTMLElement, model: SystemsModel): 
     return [...byLayer.entries()]
       .sort((a, b) => b[0] - a[0])
       .map(([layer, list]) =>
-        make(doc, 'div', 'en-ro__group', make(doc, 'span', '', layerTag(layer)), make(doc, 'span', 'en-ro__links', ...list.map((system) => make(doc, 'span', '', systemLink(system))))),
+        make(
+          doc,
+          'div',
+          'en-ro__group',
+          make(doc, 'span', '', layerTag(layer)),
+          make(doc, 'span', 'en-ro__links', ...list.map((system) => make(doc, 'span', '', systemLink(system)))),
+        ),
       );
   };
 
@@ -553,7 +593,8 @@ function initSystems(ctx: PageContext, root: HTMLElement, model: SystemsModel): 
   /** What the readout says about one system (its uses fitted to the reserved list height). */
   function systemView(system: System): ReadoutView {
     const layerName = layers.get(system.layer)?.name ?? 'Layer not stated';
-    const planNote = system.planned.length > 0 ? ` The plan of ${system.planned.map(pad).join(', ')} also names it.` : '';
+    const planNote =
+      system.planned.length > 0 ? ` The plan of ${system.planned.map(pad).join(', ')} also names it.` : '';
     const entries: UseEntry[] = system.chapters.map((n) => {
       const use = system.uses.find((candidate) => candidate.ch === n);
       const listed = system.listedIn[String(n)];
@@ -566,7 +607,13 @@ function initSystems(ctx: PageContext, root: HTMLElement, model: SystemsModel): 
             what: 'Listed among the implementations of this chapter; its coverage table has no row for it.',
           };
     });
-    for (const n of system.planned) entries.push({ who: chapterChip(n, true), meta: 'planned chapter', tag: '', what: 'Named in the chapter plan’s implementations; not yet written.' });
+    for (const n of system.planned)
+      entries.push({
+        who: chapterChip(n, true),
+        meta: 'planned chapter',
+        tag: '',
+        what: 'Named in the chapter plan’s implementations; not yet written.',
+      });
     return {
       kicker: `${layerTag(system.layer)} · ${layerName}${system.rank === null ? '' : ` · #${String(system.rank)}`}`,
       title: system.name,
@@ -576,9 +623,19 @@ function initSystems(ctx: PageContext, root: HTMLElement, model: SystemsModel): 
           : `Not yet analysed by a written chapter — ${String(written)} of ${String(total)} chapters are written.${planNote}`,
       rows: [
         ['surfaces', surfaces(system)],
-        ['chapters', system.chapters.length === 0 && system.planned.length === 0 ? ['—'] : [...system.chapters.map((n) => chapterChip(n)), ...system.planned.map((n) => chapterChip(n, true))]],
+        [
+          'chapters',
+          system.chapters.length === 0 && system.planned.length === 0
+            ? ['—']
+            : [...system.chapters.map((n) => chapterChip(n)), ...system.planned.map((n) => chapterChip(n, true))],
+        ],
       ],
-      list: { uses: entries, empty: 'No written chapter names this system yet; its page links the documentation and code the reference stack lists.', more: 'on the system’s page' },
+      list: {
+        uses: entries,
+        empty:
+          'No written chapter names this system yet; its page links the documentation and code the reference stack lists.',
+        more: 'on the system’s page',
+      },
       foot: [openLink(system.url, `open ${system.name} →`), ' · Esc clears'],
     };
   }
@@ -624,9 +681,31 @@ function initSystems(ctx: PageContext, root: HTMLElement, model: SystemsModel): 
           : 'Planned — not yet written; no system is recorded for it yet.',
       rows: [
         ['status', [chapter.written ? 'written' : 'planned']],
-        ['layers', [layersTouched.size === 0 ? '—' : [...layersTouched].sort((a, b) => a - b).map(layerTag).join(' ')]],
+        [
+          'layers',
+          [
+            layersTouched.size === 0
+              ? '—'
+              : [...layersTouched]
+                  .sort((a, b) => a - b)
+                  .map(layerTag)
+                  .join(' '),
+          ],
+        ],
       ],
-      list: { nodes: layerLines(keys).length > 0 ? layerLines(keys) : [make(doc, 'p', 'en-ro__legend', 'Nothing to wire yet: the stack lights here once the chapter names a system.')] },
+      list: {
+        nodes:
+          layerLines(keys).length > 0
+            ? layerLines(keys)
+            : [
+                make(
+                  doc,
+                  'p',
+                  'en-ro__legend',
+                  'Nothing to wire yet: the stack lights here once the chapter names a system.',
+                ),
+              ],
+      },
       foot: [openLink(chapter.url, `open chapter ${chapter.number} →`), ' · Esc clears'],
     });
   };
@@ -641,7 +720,9 @@ function initSystems(ctx: PageContext, root: HTMLElement, model: SystemsModel): 
     activate();
     labels.get(index)?.classList.add('is-focus');
     bands.get(index)?.classList.add('is-focus');
-    const members = layer.systems.map((key) => systems.get(key)).filter((system): system is System => system !== undefined);
+    const members = layer.systems
+      .map((key) => systems.get(key))
+      .filter((system): system is System => system !== undefined);
     const chapters = new Set<number>();
     const planned = new Set<number>();
     for (const system of members) {
@@ -677,7 +758,10 @@ function initSystems(ctx: PageContext, root: HTMLElement, model: SystemsModel): 
         ),
       );
     readout.show({
-      kicker: index < 0 ? 'Layer not stated in the reference stack' : `Layer ${String(index + 1)} of ${String(model.layers.filter((entry) => entry.index >= 0).length)} · ${layerTag(index)}`,
+      kicker:
+        index < 0
+          ? 'Layer not stated in the reference stack'
+          : `Layer ${String(index + 1)} of ${String(model.layers.filter((entry) => entry.index >= 0).length)} · ${layerTag(index)}`,
       title: layer.name,
       sub: `${String(used.length)} of ${plural(members.length, 'system')} analysed by a written chapter; ${plural(chapters.size, 'chapter')} touch this layer.`,
       rows: [
@@ -701,13 +785,18 @@ function initSystems(ctx: PageContext, root: HTMLElement, model: SystemsModel): 
     const writtenHere = part.chapters.filter((n) => chapterOf(n)?.written === true);
     for (const n of part.chapters) dots.get(n)?.classList.add('is-lit');
     const used = model.systems.filter((system) => system.chapters.some((n) => part.chapters.includes(n)));
-    const planned = model.systems.filter((system) => !used.includes(system) && system.planned.some((n) => part.chapters.includes(n)));
+    const planned = model.systems.filter(
+      (system) => !used.includes(system) && system.planned.some((n) => part.chapters.includes(n)),
+    );
     for (const system of [...used, ...planned]) {
       chips.get(system.key)?.classList.add('is-lit');
       meters.get(system.key)?.classList.add('is-hit');
     }
     countHits([...used, ...planned].map((system) => system.key));
-    lightLanes(writtenHere, part.chapters.filter((n) => !writtenHere.includes(n)));
+    lightLanes(
+      writtenHere,
+      part.chapters.filter((n) => !writtenHere.includes(n)),
+    );
     drawWires(
       [...used, ...planned].flatMap((system) => {
         const chip = chips.get(system.key);
@@ -725,7 +814,13 @@ function initSystems(ctx: PageContext, root: HTMLElement, model: SystemsModel): 
         'div',
         'en-ro__group',
         make(doc, 'span', '', chapterChip(n)),
-        make(doc, 'span', 'en-ro__links', make(doc, 'span', '', chapter?.short ?? ''), make(doc, 'span', 'en-ro__n', chapter?.written === true ? plural(count, 'system') : 'planned')),
+        make(
+          doc,
+          'span',
+          'en-ro__links',
+          make(doc, 'span', '', chapter?.short ?? ''),
+          make(doc, 'span', 'en-ro__n', chapter?.written === true ? plural(count, 'system') : 'planned'),
+        ),
       );
     });
     readout.show({
@@ -764,114 +859,158 @@ function initSystems(ctx: PageContext, root: HTMLElement, model: SystemsModel): 
   };
   for (const scope of [stack, grid]) {
     scope.addEventListener('pointerover', onOver, { signal });
-    scope.addEventListener('focusin', (event) => {
-      lastItem = itemOf(event.target);
-      focusItem(lastItem);
-    }, { signal });
+    scope.addEventListener(
+      'focusin',
+      (event) => {
+        lastItem = itemOf(event.target);
+        focusItem(lastItem);
+      },
+      { signal },
+    );
   }
   for (const label of labels.values()) {
-    label.addEventListener('click', () => {
-      focusLayer(Number(label.dataset['esLayer']));
-    }, { signal });
+    label.addEventListener(
+      'click',
+      () => {
+        focusLayer(Number(label.dataset['esLayer']));
+      },
+      { signal },
+    );
   }
-  root.addEventListener('pointerleave', () => {
-    lastItem = null;
-    if (!root.contains(doc.activeElement)) reset();
-  }, { signal });
-  root.addEventListener('focusout', (event) => {
-    if (!(event.relatedTarget instanceof Node) || !root.contains(event.relatedTarget)) {
+  root.addEventListener(
+    'pointerleave',
+    () => {
       lastItem = null;
-      if (!root.matches(':hover')) reset();
-    }
-  }, { signal });
+      if (!root.contains(doc.activeElement)) reset();
+    },
+    { signal },
+  );
+  root.addEventListener(
+    'focusout',
+    (event) => {
+      if (!(event.relatedTarget instanceof Node) || !root.contains(event.relatedTarget)) {
+        lastItem = null;
+        if (!root.matches(':hover')) reset();
+      }
+    },
+    { signal },
+  );
 
   // Links in the readout preview their chip or chapter.
-  root.querySelector('[data-en-readout]')?.addEventListener('pointerover', (event) => {
-    const link = event.target instanceof Element ? event.target.closest<HTMLElement>('[data-peek-sys], [data-peek-ch]') : null;
-    for (const chip of chips.values()) chip.classList.remove('is-peek');
-    for (const dot of dots.values()) dot.classList.remove('is-peek');
-    if (link === null) return;
-    const sys = link.dataset['peekSys'];
-    const ch = link.dataset['peekCh'];
-    if (sys !== undefined) chips.get(sys)?.classList.add('is-peek');
-    if (ch !== undefined) dots.get(Number(ch))?.classList.add('is-peek');
-  }, { signal });
+  root.querySelector('[data-en-readout]')?.addEventListener(
+    'pointerover',
+    (event) => {
+      const link =
+        event.target instanceof Element ? event.target.closest<HTMLElement>('[data-peek-sys], [data-peek-ch]') : null;
+      for (const chip of chips.values()) chip.classList.remove('is-peek');
+      for (const dot of dots.values()) dot.classList.remove('is-peek');
+      if (link === null) return;
+      const sys = link.dataset['peekSys'];
+      const ch = link.dataset['peekCh'];
+      if (sys !== undefined) chips.get(sys)?.classList.add('is-peek');
+      if (ch !== undefined) dots.get(Number(ch))?.classList.add('is-peek');
+    },
+    { signal },
+  );
 
   // The ledger answers the same question as the chips.
   if (ledger !== null) {
     const rowOf = (target: EventTarget | null): string | null =>
       target instanceof Element ? (target.closest<HTMLElement>('[data-es-row]')?.dataset['esRow'] ?? null) : null;
-    ledger.addEventListener('pointerover', (event) => {
-      const key = rowOf(event.target);
-      if (key !== null) focusSystem(key);
-    }, { signal });
-    ledger.addEventListener('focusin', (event) => {
-      const key = rowOf(event.target);
-      if (key !== null) focusSystem(key);
-    }, { signal });
+    ledger.addEventListener(
+      'pointerover',
+      (event) => {
+        const key = rowOf(event.target);
+        if (key !== null) focusSystem(key);
+      },
+      { signal },
+    );
+    ledger.addEventListener(
+      'focusin',
+      (event) => {
+        const key = rowOf(event.target);
+        if (key !== null) focusSystem(key);
+      },
+      { signal },
+    );
     ledger.addEventListener('pointerleave', reset, { signal });
-    ledger.addEventListener('focusout', (event) => {
-      if (!(event.relatedTarget instanceof Node) || !ledger.contains(event.relatedTarget)) reset();
-    }, { signal });
+    ledger.addEventListener(
+      'focusout',
+      (event) => {
+        if (!(event.relatedTarget instanceof Node) || !ledger.contains(event.relatedTarget)) reset();
+      },
+      { signal },
+    );
   }
 
   // ── keyboard: the stack and the chapter grid are one tab stop each ──
-  const stackRows = (): Element[][] => [...stack.querySelectorAll('.es-band')].map((band) => [...band.querySelectorAll('[data-es-layer], [data-es-sys]')]);
+  const stackRows = (): Element[][] =>
+    [...stack.querySelectorAll('.es-band')].map((band) => [...band.querySelectorAll('[data-es-layer], [data-es-sys]')]);
   const stackAll = (): Element[] => stackRows().flat();
-  stack.addEventListener('keydown', (event) => {
-    const item = itemOf(event.target);
-    if (item === null) return;
-    if (event.key === 'Escape') {
-      reset();
-      return;
-    }
-    const rows = stackRows();
-    const r = rows.findIndex((row) => row.includes(item));
-    const row = rows[r] ?? [];
-    const c = row.indexOf(item);
-    let next: Element | undefined;
-    if (event.key === 'ArrowRight') next = row[c + 1];
-    else if (event.key === 'ArrowLeft') next = row[c - 1];
-    else if (event.key === 'ArrowUp') next = nearestByX(rows[r - 1] ?? [], centreX(item));
-    else if (event.key === 'ArrowDown') next = nearestByX(rows[r + 1] ?? [], centreX(item));
-    else if (event.key === 'Home') next = rows[0]?.[0];
-    else if (event.key === 'End') next = rows.at(-1)?.at(-1);
-    else return;
-    event.preventDefault();
-    if (next instanceof HTMLElement) rove(stackAll(), next);
-  }, { signal });
+  stack.addEventListener(
+    'keydown',
+    (event) => {
+      const item = itemOf(event.target);
+      if (item === null) return;
+      if (event.key === 'Escape') {
+        reset();
+        return;
+      }
+      const rows = stackRows();
+      const r = rows.findIndex((row) => row.includes(item));
+      const row = rows[r] ?? [];
+      const c = row.indexOf(item);
+      let next: Element | undefined;
+      if (event.key === 'ArrowRight') next = row[c + 1];
+      else if (event.key === 'ArrowLeft') next = row[c - 1];
+      else if (event.key === 'ArrowUp') next = nearestByX(rows[r - 1] ?? [], centreX(item));
+      else if (event.key === 'ArrowDown') next = nearestByX(rows[r + 1] ?? [], centreX(item));
+      else if (event.key === 'Home') next = rows[0]?.[0];
+      else if (event.key === 'End') next = rows.at(-1)?.at(-1);
+      else return;
+      event.preventDefault();
+      if (next instanceof HTMLElement) rove(stackAll(), next);
+    },
+    { signal },
+  );
 
   const gridRows = model.parts.map((part) =>
-    [partLinks.get(part.n), ...part.chapters.map((n) => dots.get(n))].filter((node): node is SVGAElement => node !== undefined),
+    [partLinks.get(part.n), ...part.chapters.map((n) => dots.get(n))].filter(
+      (node): node is SVGAElement => node !== undefined,
+    ),
   );
   const gridAll = gridRows.flat();
-  grid.addEventListener('keydown', (event) => {
-    const item = itemOf(event.target);
-    if (item === null) return;
-    if (event.key === 'Escape') {
-      reset();
-      return;
-    }
-    const r = gridRows.findIndex((row) => row.some((node) => node === item));
-    const c = gridRows[r]?.findIndex((node) => node === item) ?? -1;
-    const at = (row: number, column: number): SVGAElement | undefined => {
-      const lane = gridRows[Math.max(0, Math.min(gridRows.length - 1, row))] ?? [];
-      return lane[Math.max(0, Math.min(lane.length - 1, column))];
-    };
-    const moves: Readonly<Record<string, readonly [number, number]>> = {
-      ArrowRight: [r, c + 1],
-      ArrowLeft: [r, c - 1],
-      ArrowDown: [r + 1, c],
-      ArrowUp: [r - 1, c],
-      Home: [0, 1],
-      End: [gridRows.length - 1, 6],
-    };
-    const move = moves[event.key];
-    if (move === undefined) return;
-    event.preventDefault();
-    const next = at(move[0], move[1]);
-    if (next !== undefined) rove(gridAll, next);
-  }, { signal });
+  grid.addEventListener(
+    'keydown',
+    (event) => {
+      const item = itemOf(event.target);
+      if (item === null) return;
+      if (event.key === 'Escape') {
+        reset();
+        return;
+      }
+      const r = gridRows.findIndex((row) => row.some((node) => node === item));
+      const c = gridRows[r]?.findIndex((node) => node === item) ?? -1;
+      const at = (row: number, column: number): SVGAElement | undefined => {
+        const lane = gridRows[Math.max(0, Math.min(gridRows.length - 1, row))] ?? [];
+        return lane[Math.max(0, Math.min(lane.length - 1, column))];
+      };
+      const moves: Readonly<Record<string, readonly [number, number]>> = {
+        ArrowRight: [r, c + 1],
+        ArrowLeft: [r, c - 1],
+        ArrowDown: [r + 1, c],
+        ArrowUp: [r - 1, c],
+        Home: [0, 1],
+        End: [gridRows.length - 1, 6],
+      };
+      const move = moves[event.key];
+      if (move === undefined) return;
+      event.preventDefault();
+      const next = at(move[0], move[1]);
+      if (next !== undefined) rove(gridAll, next);
+    },
+    { signal },
+  );
 
   // Layout changes (resize, container breakpoint) redraw the current state's wires.
   let frame = 0;
@@ -910,7 +1049,10 @@ function initSystems(ctx: PageContext, root: HTMLElement, model: SystemsModel): 
   // never started under reduced motion.
   const cycle = [...model.systems]
     .filter((system) => system.chapters.length > 0)
-    .sort((a, b) => (model.footprints[b.key] ?? 0) - (model.footprints[a.key] ?? 0) || b.chapters.length - a.chapters.length)
+    .sort(
+      (a, b) =>
+        (model.footprints[b.key] ?? 0) - (model.footprints[a.key] ?? 0) || b.chapters.length - a.chapters.length,
+    )
     .slice(0, 8);
   if (!reducedMotion() && cycle.length > 1) {
     let onScreen = false;
@@ -923,7 +1065,14 @@ function initSystems(ctx: PageContext, root: HTMLElement, model: SystemsModel): 
       )
       .observe(body);
     const timer = setInterval(() => {
-      if (!onScreen || doc.hidden || root.matches(':hover') || root.contains(doc.activeElement) || body.classList.contains('is-active')) return;
+      if (
+        !onScreen ||
+        doc.hidden ||
+        root.matches(':hover') ||
+        root.contains(doc.activeElement) ||
+        body.classList.contains('is-active')
+      )
+        return;
       step = (step + 1) % cycle.length;
       const system = cycle[step];
       if (system !== undefined) feature(system, `Footprint ${String(step + 1)} of ${String(cycle.length)}`);
@@ -961,15 +1110,22 @@ function initLabs(ctx: PageContext, root: HTMLElement, model: LabsModel): void {
   const axisParts = model.axis.map(partByN).filter((part): part is Part => part !== undefined);
   const chapterList = Object.values(model.chapters);
   const written = chapterList.filter((chapter) => chapter.written).length;
-  const visible = (): HTMLTableElement | undefined => tables.find((table) => getComputedStyle(table).display !== 'none') ?? tables[0];
-  const rowsOf = (table: HTMLTableElement): HTMLTableRowElement[] => [...table.querySelectorAll<HTMLTableRowElement>('tbody tr[data-el-row]')];
+  const visible = (): HTMLTableElement | undefined =>
+    tables.find((table) => getComputedStyle(table).display !== 'none') ?? tables[0];
+  const rowsOf = (table: HTMLTableElement): HTMLTableRowElement[] => [
+    ...table.querySelectorAll<HTMLTableRowElement>('tbody tr[data-el-row]'),
+  ];
   const idleLinks = [...root.querySelectorAll<HTMLAnchorElement>('[data-el-idle]')];
   const allDiscs = svgs.flatMap((svg) => [...svg.querySelectorAll<SVGAElement>('[data-lc-lab]')]);
   const discsOf = (key: string): SVGAElement[] => allDiscs.filter((disc) => disc.dataset['lcLab'] === key);
   const centreOf = (svg: SVGSVGElement, key: string): { x: number; y: number; r: number } | null => {
     const circle = svg.querySelector(`[data-lc-lab="${CSS.escape(key)}"] .lc-mark__disc`);
     if (circle === null) return null;
-    return { x: Number(circle.getAttribute('cx')), y: Number(circle.getAttribute('cy')), r: Number(circle.getAttribute('r')) };
+    return {
+      x: Number(circle.getAttribute('cx')),
+      y: Number(circle.getAttribute('cy')),
+      r: Number(circle.getAttribute('r')),
+    };
   };
   const shared = (a: Lab, b: Lab): number => a.chapters.filter((n) => b.chapters.includes(n)).length;
   const neighbours = (lab: Lab): { lab: Lab; shared: number }[] =>
@@ -987,7 +1143,12 @@ function initLabs(ctx: PageContext, root: HTMLElement, model: LabsModel): void {
   };
   const chapterChip = (n: number, href?: string): HTMLAnchorElement => {
     const chapter = chapterOf(n);
-    const link = anchor(doc, href ?? chapter?.url ?? '#', chapter?.written === true ? 'en-chap' : 'en-chap en-chap--plan', chapter?.number ?? pad(n));
+    const link = anchor(
+      doc,
+      href ?? chapter?.url ?? '#',
+      chapter?.written === true ? 'en-chap' : 'en-chap en-chap--plan',
+      chapter?.number ?? pad(n),
+    );
     link.title = chapter === undefined ? '' : `${chapter.number} ${chapter.title}`;
     return link;
   };
@@ -1015,7 +1176,10 @@ function initLabs(ctx: PageContext, root: HTMLElement, model: LabsModel): void {
   /** The lab's sections split by part: one stacked bar, each segment labelled under itself. */
   const partSplit = (lab: Lab): HTMLElement => {
     const split = axisParts
-      .map((part) => ({ part, sections: part.chapters.reduce((sum, n) => sum + (lab.sectionsByChapter[String(n)] ?? 0), 0) }))
+      .map((part) => ({
+        part,
+        sections: part.chapters.reduce((sum, n) => sum + (lab.sectionsByChapter[String(n)] ?? 0), 0),
+      }))
       .filter((entry) => entry.sections > 0);
     const block = make(doc, 'div', 'lc-split');
     const bar = make(doc, 'span', 'lc-split__bar');
@@ -1052,7 +1216,15 @@ function initLabs(ctx: PageContext, root: HTMLElement, model: LabsModel): void {
       ...list.map(({ lab: other, shared: count }) => {
         const bar = make(doc, 'span', 'lc-share__bar');
         bar.style.setProperty('--f', (count / most).toFixed(3));
-        const row = make(doc, 'div', 'lc-share', monoChip(other), labLink(other), bar, make(doc, 'span', 'lc-share__n', `${String(count)} ch`));
+        const row = make(
+          doc,
+          'div',
+          'lc-share',
+          monoChip(other),
+          labLink(other),
+          bar,
+          make(doc, 'span', 'lc-share__n', `${String(count)} ch`),
+        );
         return row;
       }),
     ];
@@ -1139,7 +1311,8 @@ function initLabs(ctx: PageContext, root: HTMLElement, model: LabsModel): void {
     currentCol = null;
     for (const table of tables) {
       table.classList.remove('is-active', 'is-colmode');
-      for (const node of table.querySelectorAll('.is-lit, .is-focus, .is-col, .is-colfocus, .is-peek, .is-rest')) node.classList.remove('is-lit', 'is-focus', 'is-col', 'is-colfocus', 'is-peek', 'is-rest');
+      for (const node of table.querySelectorAll('.is-lit, .is-focus, .is-col, .is-colfocus, .is-peek, .is-rest'))
+        node.classList.remove('is-lit', 'is-focus', 'is-col', 'is-colfocus', 'is-peek', 'is-rest');
     }
     for (const link of idleLinks) link.classList.remove('is-focus');
     for (const disc of allDiscs) disc.classList.remove('is-rest', 'is-focus', 'is-lit');
@@ -1152,9 +1325,11 @@ function initLabs(ctx: PageContext, root: HTMLElement, model: LabsModel): void {
   const tint = (selector: string): void => {
     for (const table of tables) for (const node of table.querySelectorAll(selector)) node.classList.add('is-col');
   };
-  const rowsFor = (key: string): HTMLTableRowElement[] => tables.flatMap((table) => [...table.querySelectorAll<HTMLTableRowElement>(`tr[data-el-row="${CSS.escape(key)}"]`)]);
+  const rowsFor = (key: string): HTMLTableRowElement[] =>
+    tables.flatMap((table) => [...table.querySelectorAll<HTMLTableRowElement>(`tr[data-el-row="${CSS.escape(key)}"]`)]);
   const lightTicks = (chapters: readonly number[]): void => {
-    for (const svg of svgs) for (const n of chapters) svg.querySelector(`[data-lc-tick="${String(n)}"]`)?.classList.add('is-on');
+    for (const svg of svgs)
+      for (const n of chapters) svg.querySelector(`[data-lc-tick="${String(n)}"]`)?.classList.add('is-on');
   };
 
   /** A lab at rest or on the idle cycle: ringed, its arcs drawn quietly, its row marked; nothing dimmed. */
@@ -1208,7 +1383,8 @@ function initLabs(ctx: PageContext, root: HTMLElement, model: LabsModel): void {
     tint(`[data-el-col="${String(n)}"]`);
     const users = model.labs.filter((lab) => lab.chapters.includes(n));
     for (const lab of users) for (const row of rowsFor(lab.key)) row.classList.add('is-lit');
-    for (const table of tables) table.querySelector(`[data-el-part="${String(partOf(n)?.n ?? 0)}"]`)?.classList.add('is-colfocus');
+    for (const table of tables)
+      table.querySelector(`[data-el-part="${String(partOf(n)?.n ?? 0)}"]`)?.classList.add('is-colfocus');
     lightDiscs(null, new Set(users.map((lab) => lab.key)));
     lightTicks([n]);
     const part = partOf(n);
@@ -1226,8 +1402,16 @@ function initLabs(ctx: PageContext, root: HTMLElement, model: LabsModel): void {
         ['labs', users.length === 0 ? ['—'] : users.map((lab) => monoChip(lab))],
       ],
       list: {
-        uses: users.flatMap((lab) => useEntries(lab, lab.uses.filter((use) => use.ch === n), 'lab')),
-        empty: chapter.written ? 'No lab is named in this chapter’s coverage table.' : 'This column fills when the chapter is written.',
+        uses: users.flatMap((lab) =>
+          useEntries(
+            lab,
+            lab.uses.filter((use) => use.ch === n),
+            'lab',
+          ),
+        ),
+        empty: chapter.written
+          ? 'No lab is named in this chapter’s coverage table.'
+          : 'This column fills when the chapter is written.',
         more: 'in the chapter’s references',
       },
       foot: [openLink(chapter.url, `open chapter ${chapter.number} →`), ' · Esc clears'],
@@ -1242,7 +1426,8 @@ function initLabs(ctx: PageContext, root: HTMLElement, model: LabsModel): void {
     for (const table of tables) table.classList.add('is-active', 'is-colmode');
     tint(part.chapters.map((c) => `[data-el-col="${String(c)}"]`).join(', '));
     tint(`td[data-el-part="${String(n)}"], th.el-pcol[data-el-part="${String(n)}"]`);
-    for (const table of tables) for (const node of table.querySelectorAll(`th[data-el-part="${String(n)}"]`)) node.classList.add('is-focus');
+    for (const table of tables)
+      for (const node of table.querySelectorAll(`th[data-el-part="${String(n)}"]`)) node.classList.add('is-focus');
     const users = model.labs.filter((lab) => lab.chapters.some((c) => part.chapters.includes(c)));
     for (const lab of users) for (const row of rowsFor(lab.key)) row.classList.add('is-lit');
     lightDiscs(null, new Set(users.map((lab) => lab.key)));
@@ -1262,9 +1447,17 @@ function initLabs(ctx: PageContext, root: HTMLElement, model: LabsModel): void {
         uses: users.map((lab) => {
           const here = lab.chapters.filter((c) => part.chapters.includes(c));
           const sections = here.reduce((sum, c) => sum + (lab.sectionsByChapter[String(c)] ?? 0), 0);
-          return { who: labLink(lab), meta: here.map(pad).join(' '), tag: '', what: `${plural(here.length, 'chapter')} · ${plural(sections, 'section')}` };
+          return {
+            who: labLink(lab),
+            meta: here.map(pad).join(' '),
+            tag: '',
+            what: `${plural(here.length, 'chapter')} · ${plural(sections, 'section')}`,
+          };
         }),
-        empty: writtenHere.length === 0 ? 'No chapter of this part is written yet, so it draws on no lab yet.' : 'No lab is named in these chapters’ coverage tables.',
+        empty:
+          writtenHere.length === 0
+            ? 'No chapter of this part is written yet, so it draws on no lab yet.'
+            : 'No lab is named in these chapters’ coverage tables.',
       },
       foot: [openLink(part.url, `open Part ${part.numeral} →`), ' · Esc clears'],
     });
@@ -1315,7 +1508,9 @@ function initLabs(ctx: PageContext, root: HTMLElement, model: LabsModel): void {
       kicker: `${lab.name} × Part ${part.numeral}`,
       title: part.title,
       sub: `${plural(new Set(uses.map((use) => use.ch)).size, 'written chapter')} of this part draw on ${lab.name}.`,
-      rows: [['chapters', [...new Set(uses.map((use) => use.ch))].map((c) => chapterChip(c, `${lab.url}#ch-${pad(c)}`))]],
+      rows: [
+        ['chapters', [...new Set(uses.map((use) => use.ch))].map((c) => chapterChip(c, `${lab.url}#ch-${pad(c)}`))],
+      ],
       list: { uses: useEntries(lab, uses, 'chapter'), empty: '' },
       foot: [openLink(lab.url, `open ${lab.name} →`)],
     });
@@ -1353,7 +1548,14 @@ function initLabs(ctx: PageContext, root: HTMLElement, model: LabsModel): void {
       const cell = target.closest<HTMLElement>('td[data-el-col], td[data-el-part]');
       const col = cell?.dataset['elCol'];
       const part = cell?.dataset['elPart'];
-      focusLab(key, col !== undefined ? `[data-el-col="${col}"]` : part !== undefined ? `td[data-el-part="${part}"], th.el-pcol[data-el-part="${part}"]` : null);
+      focusLab(
+        key,
+        col !== undefined
+          ? `[data-el-col="${col}"]`
+          : part !== undefined
+            ? `td[data-el-part="${part}"], th.el-pcol[data-el-part="${part}"]`
+            : null,
+      );
       return;
     }
     const head = target.closest<HTMLElement>('th[data-el-col], th[data-el-part]');
@@ -1363,100 +1565,159 @@ function initLabs(ctx: PageContext, root: HTMLElement, model: LabsModel): void {
     else if (part !== undefined) focusPart(Number(part));
   };
   for (const scope of [wrap, ...svgs]) {
-    scope.addEventListener('pointerover', (event) => {
-      dispatch(event.target);
-    }, { signal });
-    scope.addEventListener('focusin', (event) => {
-      dispatch(event.target);
-    }, { signal });
+    scope.addEventListener(
+      'pointerover',
+      (event) => {
+        dispatch(event.target);
+      },
+      { signal },
+    );
+    scope.addEventListener(
+      'focusin',
+      (event) => {
+        dispatch(event.target);
+      },
+      { signal },
+    );
   }
   // A click anywhere on a row that is not itself a link opens the lab.
-  wrap.addEventListener('click', (event) => {
-    if (!(event.target instanceof Element) || event.target.closest('a') !== null) return;
-    const key = event.target.closest<HTMLElement>('tr[data-el-row]')?.dataset['elRow'];
-    const lab = key === undefined ? undefined : labs.get(key);
-    if (lab !== undefined) window.location.assign(lab.url);
-  }, { signal });
+  wrap.addEventListener(
+    'click',
+    (event) => {
+      if (!(event.target instanceof Element) || event.target.closest('a') !== null) return;
+      const key = event.target.closest<HTMLElement>('tr[data-el-row]')?.dataset['elRow'];
+      const lab = key === undefined ? undefined : labs.get(key);
+      if (lab !== undefined) window.location.assign(lab.url);
+    },
+    { signal },
+  );
   for (const link of idleLinks) {
     const key = link.dataset['elIdle'] ?? '';
-    link.addEventListener('pointerenter', () => {
-      focusIdle(key, link);
-    }, { signal });
-    link.addEventListener('focus', () => {
-      focusIdle(key, link);
-    }, { signal });
+    link.addEventListener(
+      'pointerenter',
+      () => {
+        focusIdle(key, link);
+      },
+      { signal },
+    );
+    link.addEventListener(
+      'focus',
+      () => {
+        focusIdle(key, link);
+      },
+      { signal },
+    );
   }
-  root.addEventListener('pointerleave', () => {
-    if (!root.contains(doc.activeElement)) reset();
-  }, { signal });
-  root.addEventListener('focusout', (event) => {
-    if ((!(event.relatedTarget instanceof Node) || !root.contains(event.relatedTarget)) && !root.matches(':hover')) reset();
-  }, { signal });
-  root.querySelector('[data-en-readout]')?.addEventListener('pointerover', (event) => {
-    const link = event.target instanceof Element ? event.target.closest<HTMLElement>('[data-peek-row]') : null;
-    for (const table of tables) for (const node of table.querySelectorAll('.is-peek')) node.classList.remove('is-peek');
-    for (const disc of allDiscs) disc.classList.remove('is-peek');
-    const key = link?.dataset['peekRow'];
-    if (key === undefined) return;
-    for (const row of rowsFor(key)) row.classList.add('is-peek');
-    for (const disc of discsOf(key)) disc.classList.add('is-peek');
-  }, { signal });
+  root.addEventListener(
+    'pointerleave',
+    () => {
+      if (!root.contains(doc.activeElement)) reset();
+    },
+    { signal },
+  );
+  root.addEventListener(
+    'focusout',
+    (event) => {
+      if ((!(event.relatedTarget instanceof Node) || !root.contains(event.relatedTarget)) && !root.matches(':hover'))
+        reset();
+    },
+    { signal },
+  );
+  root.querySelector('[data-en-readout]')?.addEventListener(
+    'pointerover',
+    (event) => {
+      const link = event.target instanceof Element ? event.target.closest<HTMLElement>('[data-peek-row]') : null;
+      for (const table of tables)
+        for (const node of table.querySelectorAll('.is-peek')) node.classList.remove('is-peek');
+      for (const disc of allDiscs) disc.classList.remove('is-peek');
+      const key = link?.dataset['peekRow'];
+      if (key === undefined) return;
+      for (const row of rowsFor(key)) row.classList.add('is-peek');
+      for (const disc of discsOf(key)) disc.classList.add('is-peek');
+    },
+    { signal },
+  );
 
   // ── keyboard: each drawing of the constellation and each table are one tab stop ──
   for (const svg of svgs) {
-    const byX = [...svg.querySelectorAll<SVGAElement>('[data-lc-lab]')].sort((a, b) => Number(a.dataset['lcX']) - Number(b.dataset['lcX']));
-    svg.addEventListener('keydown', (event) => {
-      const disc = event.target instanceof Element ? event.target.closest<SVGAElement>('[data-lc-lab]') : null;
-      if (disc === null) return;
+    const byX = [...svg.querySelectorAll<SVGAElement>('[data-lc-lab]')].sort(
+      (a, b) => Number(a.dataset['lcX']) - Number(b.dataset['lcX']),
+    );
+    svg.addEventListener(
+      'keydown',
+      (event) => {
+        const disc = event.target instanceof Element ? event.target.closest<SVGAElement>('[data-lc-lab]') : null;
+        if (disc === null) return;
+        if (event.key === 'Escape') {
+          reset();
+          return;
+        }
+        const at = byX.indexOf(disc);
+        const move =
+          event.key === 'ArrowRight' || event.key === 'ArrowDown'
+            ? 1
+            : event.key === 'ArrowLeft' || event.key === 'ArrowUp'
+              ? -1
+              : 0;
+        const next =
+          event.key === 'Home'
+            ? byX[0]
+            : event.key === 'End'
+              ? byX.at(-1)
+              : move === 0
+                ? undefined
+                : byX[Math.max(0, Math.min(byX.length - 1, at + move))];
+        if (next === undefined) return;
+        event.preventDefault();
+        rove(byX, next);
+      },
+      { signal },
+    );
+  }
+
+  const navRows = (table: HTMLTableElement): HTMLElement[][] =>
+    rowsOf(table).map((row) => [...row.querySelectorAll<HTMLElement>('[data-el-nav]')]);
+  const columnOf = (item: HTMLElement): number => Number(item.dataset['elCell'] ?? item.dataset['elPcell'] ?? 0);
+  wrap.addEventListener(
+    'keydown',
+    (event) => {
+      const item = event.target instanceof HTMLElement ? event.target.closest<HTMLElement>('[data-el-nav]') : null;
+      const table = item?.closest('table');
+      if (item === null || table === null || table === undefined) return;
       if (event.key === 'Escape') {
         reset();
         return;
       }
-      const at = byX.indexOf(disc);
-      const move = event.key === 'ArrowRight' || event.key === 'ArrowDown' ? 1 : event.key === 'ArrowLeft' || event.key === 'ArrowUp' ? -1 : 0;
-      const next = event.key === 'Home' ? byX[0] : event.key === 'End' ? byX.at(-1) : move === 0 ? undefined : byX[Math.max(0, Math.min(byX.length - 1, at + move))];
-      if (next === undefined) return;
+      const rows = navRows(table);
+      const r = rows.findIndex((row) => row.includes(item));
+      const row = rows[r] ?? [];
+      const c = row.indexOf(item);
+      const nearest = (candidates: readonly HTMLElement[]): HTMLElement | undefined => {
+        const col = columnOf(item);
+        return [...candidates].sort((a, b) => Math.abs(columnOf(a) - col) - Math.abs(columnOf(b) - col))[0];
+      };
+      let next: HTMLElement | undefined;
+      if (event.key === 'ArrowRight') next = row[c + 1];
+      else if (event.key === 'ArrowLeft') next = row[c - 1];
+      else if (event.key === 'ArrowUp') next = nearest(rows[r - 1] ?? []);
+      else if (event.key === 'ArrowDown') next = nearest(rows[r + 1] ?? []);
+      else if (event.key === 'Home') next = rows[0]?.[0];
+      else if (event.key === 'End') next = rows.at(-1)?.[0];
+      else return;
       event.preventDefault();
-      rove(byX, next);
-    }, { signal });
-  }
-
-  const navRows = (table: HTMLTableElement): HTMLElement[][] => rowsOf(table).map((row) => [...row.querySelectorAll<HTMLElement>('[data-el-nav]')]);
-  const columnOf = (item: HTMLElement): number => Number(item.dataset['elCell'] ?? item.dataset['elPcell'] ?? 0);
-  wrap.addEventListener('keydown', (event) => {
-    const item = event.target instanceof HTMLElement ? event.target.closest<HTMLElement>('[data-el-nav]') : null;
-    const table = item?.closest('table');
-    if (item === null || table === null || table === undefined) return;
-    if (event.key === 'Escape') {
-      reset();
-      return;
-    }
-    const rows = navRows(table);
-    const r = rows.findIndex((row) => row.includes(item));
-    const row = rows[r] ?? [];
-    const c = row.indexOf(item);
-    const nearest = (candidates: readonly HTMLElement[]): HTMLElement | undefined => {
-      const col = columnOf(item);
-      return [...candidates].sort((a, b) => Math.abs(columnOf(a) - col) - Math.abs(columnOf(b) - col))[0];
-    };
-    let next: HTMLElement | undefined;
-    if (event.key === 'ArrowRight') next = row[c + 1];
-    else if (event.key === 'ArrowLeft') next = row[c - 1];
-    else if (event.key === 'ArrowUp') next = nearest(rows[r - 1] ?? []);
-    else if (event.key === 'ArrowDown') next = nearest(rows[r + 1] ?? []);
-    else if (event.key === 'Home') next = rows[0]?.[0];
-    else if (event.key === 'End') next = rows.at(-1)?.[0];
-    else return;
-    event.preventDefault();
-    if (next !== undefined) rove(rows.flat(), next);
-  }, { signal });
+      if (next !== undefined) rove(rows.flat(), next);
+    },
+    { signal },
+  );
 
   // ── ordering: reference-stack position (default) or footprint ──
   const sortbar = root.querySelector<HTMLElement>('[data-el-sortbar]');
   const buttons = [...root.querySelectorAll<HTMLButtonElement>('[data-el-sort]')];
   const applyOrder = (order: Order, animate: boolean): void => {
     const shown = visible();
-    const before = new Map(shown === undefined ? [] : rowsOf(shown).map((row) => [row, row.getBoundingClientRect().top] as const));
+    const before = new Map(
+      shown === undefined ? [] : rowsOf(shown).map((row) => [row, row.getBoundingClientRect().top] as const),
+    );
     for (const table of tables) {
       const tbody = table.querySelector('tbody');
       if (tbody === null) continue;
@@ -1486,25 +1747,37 @@ function initLabs(ctx: PageContext, root: HTMLElement, model: LabsModel): void {
     const initial = new URLSearchParams(window.location.search).get('order') === 'footprint' ? 'footprint' : 'rank';
     if (initial !== 'rank') applyOrder(initial, false);
     for (const button of buttons) {
-      button.addEventListener('click', () => {
-        const order: Order = button.dataset['elSort'] === 'footprint' ? 'footprint' : 'rank';
-        reset();
-        applyOrder(order, true);
-        const url = new URL(window.location.href);
-        if (order === 'rank') url.searchParams.delete('order');
-        else url.searchParams.set('order', order);
-        history.replaceState(history.state, '', url);
-      }, { signal });
+      button.addEventListener(
+        'click',
+        () => {
+          const order: Order = button.dataset['elSort'] === 'footprint' ? 'footprint' : 'rank';
+          reset();
+          applyOrder(order, true);
+          const url = new URL(window.location.href);
+          if (order === 'rank') url.searchParams.delete('order');
+          else url.searchParams.set('order', order);
+          history.replaceState(history.state, '', url);
+        },
+        { signal },
+      );
     }
   }
 
   // ── alive: at rest a slow highlight cycles through the broadest footprints ──
   // Paused while the pointer or focus is inside the instrument, while it is off-screen or the tab
   // hidden, and never started under reduced motion.
-  const cycle = [...active].sort((a, b) => b.chapters.length * 1000 + b.sections - (a.chapters.length * 1000 + a.sections)).slice(0, CYCLE_TOP);
+  const cycle = [...active]
+    .sort((a, b) => b.chapters.length * 1000 + b.sections - (a.chapters.length * 1000 + a.sections))
+    .slice(0, CYCLE_TOP);
   let onScreen = false;
   let step = 0;
-  const idleNow = (): boolean => onScreen && !doc.hidden && !root.matches(':hover') && !root.contains(doc.activeElement) && currentKey === null && currentCol === null;
+  const idleNow = (): boolean =>
+    onScreen &&
+    !doc.hidden &&
+    !root.matches(':hover') &&
+    !root.contains(doc.activeElement) &&
+    currentKey === null &&
+    currentCol === null;
   if (!reducedMotion() && cycle.length > 1) {
     const observer = ctl.observe(
       new IntersectionObserver((entries) => {
@@ -1516,7 +1789,8 @@ function initLabs(ctx: PageContext, root: HTMLElement, model: LabsModel): void {
       if (!idleNow()) return;
       step = (step + 1) % cycle.length;
       const lab = cycle[step];
-      if (lab !== undefined) feature(lab, `Footprint ${String(step + 1)} of ${String(active.length)} · ${String(lab.sections)} §`);
+      if (lab !== undefined)
+        feature(lab, `Footprint ${String(step + 1)} of ${String(active.length)} · ${String(lab.sections)} §`);
     }, CYCLE_MS);
     ctl.defer(() => {
       clearInterval(timer);

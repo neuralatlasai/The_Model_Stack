@@ -52,7 +52,11 @@ export function tryEvaluate(source: string, env: Readonly<Record<string, number>
     return { value: null, error: `${compiled.message}${where}` };
   }
   const unbound = compiled.variables.filter((name) => !Object.hasOwn(env, name));
-  if (unbound.length > 0) return { value: null, error: `unbound identifier${unbound.length > 1 ? 's' : ''} ${unbound.map((n) => `'${n}'`).join(', ')}` };
+  if (unbound.length > 0)
+    return {
+      value: null,
+      error: `unbound identifier${unbound.length > 1 ? 's' : ''} ${unbound.map((n) => `'${n}'`).join(', ')}`,
+    };
   try {
     return { value: compiled.evaluate(env), error: null };
   } catch (error) {
@@ -72,7 +76,8 @@ const COUNT_FORMATS: ReadonlySet<ValueFormat> = new Set<ValueFormat>(['tokens', 
  * shared formatter.
  */
 export function formatInputParts(value: number, format: ValueFormat): FormattedValue {
-  if (COUNT_FORMATS.has(format) && Number.isInteger(value) && Math.abs(value) < 1e6) return formatParts(value, 'integer');
+  if (COUNT_FORMATS.has(format) && Number.isInteger(value) && Math.abs(value) < 1e6)
+    return formatParts(value, 'integer');
   return formatParts(value, format);
 }
 
@@ -101,7 +106,10 @@ export interface CalculatorOutputValue {
 }
 
 /** Evaluates outputs in order; later outputs may read earlier ones (VISUAL_GRAMMAR §5.5). */
-export function evaluateCalculator(spec: CalculatorSpec, inputs: Readonly<Record<string, number>>): CalculatorOutputValue[] {
+export function evaluateCalculator(
+  spec: CalculatorSpec,
+  inputs: Readonly<Record<string, number>>,
+): CalculatorOutputValue[] {
   const env: Record<string, number> = {};
   for (const input of spec.inputs) {
     const given = Object.hasOwn(inputs, input.symbol) ? inputs[input.symbol] : undefined;
@@ -157,7 +165,8 @@ export function sliderModel(input: CalculatorInput): SliderModel {
       max: Math.max(lo, hi),
       step: 1,
       toValue: (position) => 2 ** Math.round(position),
-      toPosition: (value) => Math.min(Math.max(lo, hi), Math.max(lo, Math.round(Math.log2(Math.max(value, Number.MIN_VALUE))))),
+      toPosition: (value) =>
+        Math.min(Math.max(lo, hi), Math.max(lo, Math.round(Math.log2(Math.max(value, Number.MIN_VALUE))))),
     };
   }
   if (input.scale === 'log10' && input.min > 0 && input.max > 0) {
@@ -173,7 +182,9 @@ export function sliderModel(input: CalculatorInput): SliderModel {
     };
   }
   const integerFormat = input.format === 'integer' || input.format === 'tokens' || input.format === 'params';
-  const step = input.step ?? (integerFormat ? Math.max(1, Math.round((input.max - input.min) / 200)) : (input.max - input.min) / 200 || 1);
+  const step =
+    input.step ??
+    (integerFormat ? Math.max(1, Math.round((input.max - input.min) / 200)) : (input.max - input.min) / 200 || 1);
   return {
     min: input.min,
     max: input.max,
@@ -193,7 +204,10 @@ export interface StatRowValue {
 }
 
 /** Formula environment: the spec's variables with state overrides on top. */
-export function withOverrides(variables: Readonly<Record<string, number>>, overrides: Readonly<Record<string, number>> | null | undefined): Record<string, number> {
+export function withOverrides(
+  variables: Readonly<Record<string, number>>,
+  overrides: Readonly<Record<string, number>> | null | undefined,
+): Record<string, number> {
   const env: Record<string, number> = { ...variables };
   if (overrides !== null && overrides !== undefined) {
     for (const [name, value] of Object.entries(overrides)) if (Number.isFinite(value)) env[name] = value;
@@ -201,7 +215,10 @@ export function withOverrides(variables: Readonly<Record<string, number>>, overr
   return env;
 }
 
-export function evaluateStatPanel(spec: StatPanelSpec, overrides: Readonly<Record<string, number>> | null = null): StatRowValue[] {
+export function evaluateStatPanel(
+  spec: StatPanelSpec,
+  overrides: Readonly<Record<string, number>> | null = null,
+): StatRowValue[] {
   const env = withOverrides(spec.variables, overrides);
   return spec.rows.map((row) => {
     if (row.formula === undefined) {
@@ -234,11 +251,15 @@ export interface StackValues {
   readonly max: number;
 }
 
-export function evaluateMemoryStack(spec: MemoryStackSpec, overrides: Readonly<Record<string, number>> | null = null): StackValues {
+export function evaluateMemoryStack(
+  spec: MemoryStackSpec,
+  overrides: Readonly<Record<string, number>> | null = null,
+): StackValues {
   const env = withOverrides(spec.variables, overrides);
   const bars = spec.bars.map((bar) => {
     const segments = bar.segments.map((segment): StackSegmentValue => {
-      if (segment.value !== undefined) return { label: segment.label, kind: segment.kind, value: segment.value, error: null };
+      if (segment.value !== undefined)
+        return { label: segment.label, kind: segment.kind, value: segment.value, error: null };
       const result = tryEvaluate(segment.formula ?? '', env);
       return { label: segment.label, kind: segment.kind, ...result };
     });
@@ -265,7 +286,9 @@ export function allocateCells(weights: readonly number[], cells: number): number
   const exact = weights.map((weight) => (weight / total) * cells);
   const floors = exact.map((value) => Math.floor(value));
   let remaining = cells - floors.reduce((sum, value) => sum + value, 0);
-  const order = exact.map((value, index) => ({ index, frac: value - Math.floor(value) })).sort((a, b) => b.frac - a.frac || a.index - b.index);
+  const order = exact
+    .map((value, index) => ({ index, frac: value - Math.floor(value) }))
+    .sort((a, b) => b.frac - a.frac || a.index - b.index);
   for (const entry of order) {
     if (remaining <= 0) break;
     floors[entry.index] = (floors[entry.index] ?? 0) + 1;

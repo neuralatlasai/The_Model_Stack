@@ -26,8 +26,18 @@ export function observationPartOf(paragraph: Paragraph): ObservationPart | null 
   return null;
 }
 
-export function buildObservationLayer(paragraphs: readonly Paragraph[], st: CompileState, env: FlowEnv, line: number | null): ObservationLayerBlock {
-  const parts: Record<ObservationPart, Inline[] | null> = { claims: null, evidence: null, inference: null, unknown: null };
+export function buildObservationLayer(
+  paragraphs: readonly Paragraph[],
+  st: CompileState,
+  env: FlowEnv,
+  line: number | null,
+): ObservationLayerBlock {
+  const parts: Record<ObservationPart, Inline[] | null> = {
+    claims: null,
+    evidence: null,
+    inference: null,
+    unknown: null,
+  };
   for (const paragraph of paragraphs) {
     const part = observationPartOf(paragraph);
     if (part === null) continue;

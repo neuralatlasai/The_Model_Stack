@@ -38,8 +38,19 @@ const ModelSchema = z.object({
       accessed: z.array(z.string()),
     }),
   ),
-  cocited: z.array(z.object({ key: z.string(), work: z.string(), chapters: z.array(z.number().int()), shared: z.array(PageSchema) })),
-  lineage: z.array(z.object({ index: z.number().int(), year: z.string(), relation: z.string(), work: z.string(), note: z.string(), chapter: z.number().int().nullable() })),
+  cocited: z.array(
+    z.object({ key: z.string(), work: z.string(), chapters: z.array(z.number().int()), shared: z.array(PageSchema) }),
+  ),
+  lineage: z.array(
+    z.object({
+      index: z.number().int(),
+      year: z.string(),
+      relation: z.string(),
+      work: z.string(),
+      note: z.string(),
+      chapter: z.number().int().nullable(),
+    }),
+  ),
 });
 type Model = z.output<typeof ModelSchema>;
 type Page = z.output<typeof PageSchema>;
@@ -70,14 +81,27 @@ export function initPaperPage(ctx: PageContext): void {
   const dots = new Map<number, SVGAElement>();
   for (const dot of svg.querySelectorAll<SVGAElement>('[data-pp-n]')) dots.set(Number(dot.dataset['ppN']), dot);
   const rows = new Map<number, HTMLTableRowElement>();
-  for (const row of root.querySelectorAll<HTMLTableRowElement>('[data-pp-row]')) rows.set(Number(row.dataset['ppRow']), row);
+  for (const row of root.querySelectorAll<HTMLTableRowElement>('[data-pp-row]'))
+    rows.set(Number(row.dataset['ppRow']), row);
   const coRows = [...root.querySelectorAll<HTMLAnchorElement>('[data-pp-co]')];
 
   // ── readout ───────────────────────────────────────────────────────────────
   const slot = (name: string): HTMLElement | null => readout.querySelector<HTMLElement>(`[data-pp-${name}]`);
-  const out = { kicker: slot('kicker'), title: slot('title'), text: slot('text'), listhead: slot('listhead'), list: slot('list'), foot: slot('foot') };
+  const out = {
+    kicker: slot('kicker'),
+    title: slot('title'),
+    text: slot('text'),
+    listhead: slot('listhead'),
+    list: slot('list'),
+    foot: slot('foot'),
+  };
   const initial = new Map<HTMLElement, Node[]>();
-  for (const el of Object.values(out)) if (el !== null) initial.set(el, [...el.childNodes].map((node) => node.cloneNode(true)));
+  for (const el of Object.values(out))
+    if (el !== null)
+      initial.set(
+        el,
+        [...el.childNodes].map((node) => node.cloneNode(true)),
+      );
   const set = (el: HTMLElement | null, value: string): void => {
     if (el !== null) el.textContent = value;
   };
@@ -103,7 +127,10 @@ export function initPaperPage(ctx: PageContext): void {
         return item;
       }),
     );
-    set(out.foot, pages.length > LIST_ROWS ? `+${String(pages.length - LIST_ROWS)} more — all in “Used for” below` : '');
+    set(
+      out.foot,
+      pages.length > LIST_ROWS ? `+${String(pages.length - LIST_ROWS)} more — all in “Used for” below` : '',
+    );
   };
   // Rest: the chapter the page opens on (most citing pages), ringed in the grid and marked in the table.
   const restN = Number(readout.dataset['ppRest'] ?? Number.NaN);
@@ -135,7 +162,10 @@ export function initPaperPage(ctx: PageContext): void {
     svg.classList.add('has-focus');
     dots.get(n)?.classList.add('is-focus');
     rows.get(n)?.classList.add('is-on');
-    set(out.kicker, `Chapter ${chapter.number} · ${chapter.pages.length === 0 ? 'no citing page' : plural(chapter.pages.length, 'citing page')}`);
+    set(
+      out.kicker,
+      `Chapter ${chapter.number} · ${chapter.pages.length === 0 ? 'no citing page' : plural(chapter.pages.length, 'citing page')}`,
+    );
     set(out.title, chapter.title);
     set(
       out.text,
@@ -143,7 +173,14 @@ export function initPaperPage(ctx: PageContext): void {
         ? `No use is recorded in this chapter's references; ${model.key} is cited on the pages below.`
         : `Used for: ${chapter.uses.join(' · ')}`,
     );
-    listHead('Citing pages', chapter.uses.length === 0 ? 'no use recorded' : chapter.accessed.length > 0 ? `accessed ${chapter.accessed.join(', ')}` : 'not accessed — UNVERIFIED');
+    listHead(
+      'Citing pages',
+      chapter.uses.length === 0
+        ? 'no use recorded'
+        : chapter.accessed.length > 0
+          ? `accessed ${chapter.accessed.join(', ')}`
+          : 'not accessed — UNVERIFIED',
+    );
     pageList(chapter.pages);
   };
 
@@ -205,23 +242,49 @@ export function initPaperPage(ctx: PageContext): void {
     const lin = target.closest<HTMLElement>('[data-pp-lin]');
     if (lin !== null) showLineage(Number(lin.dataset['ppLin']));
   };
-  root.addEventListener('pointerover', (event) => {
-    route(event.target);
-  }, { signal });
-  root.addEventListener('focusin', (event) => {
-    route(event.target);
-  }, { signal });
+  root.addEventListener(
+    'pointerover',
+    (event) => {
+      route(event.target);
+    },
+    { signal },
+  );
+  root.addEventListener(
+    'focusin',
+    (event) => {
+      route(event.target);
+    },
+    { signal },
+  );
   root.addEventListener('pointerleave', reset, { signal });
-  root.addEventListener('focusout', (event) => {
-    if (!(event.relatedTarget instanceof Node) || !root.contains(event.relatedTarget)) reset();
-  }, { signal });
+  root.addEventListener(
+    'focusout',
+    (event) => {
+      if (!(event.relatedTarget instanceof Node) || !root.contains(event.relatedTarget)) reset();
+    },
+    { signal },
+  );
 
   // ── keyboard ──────────────────────────────────────────────────────────────
   const lit = [...dots.entries()].sort((a, b) => a[0] - b[0]).map(([, dot]) => dot);
-  const roving = (items: readonly (HTMLElement | SVGElement)[], from: Element, key: string, forward: readonly string[], back: readonly string[]): boolean => {
+  const roving = (
+    items: readonly (HTMLElement | SVGElement)[],
+    from: Element,
+    key: string,
+    forward: readonly string[],
+    back: readonly string[],
+  ): boolean => {
     const at = items.findIndex((item) => item === from);
     if (at === -1) return false;
-    const to = forward.includes(key) ? at + 1 : back.includes(key) ? at - 1 : key === 'Home' ? 0 : key === 'End' ? items.length - 1 : null;
+    const to = forward.includes(key)
+      ? at + 1
+      : back.includes(key)
+        ? at - 1
+        : key === 'Home'
+          ? 0
+          : key === 'End'
+            ? items.length - 1
+            : null;
     if (to === null) return false;
     const next = items[Math.max(0, Math.min(items.length - 1, to))];
     if (next === undefined) return false;
@@ -230,26 +293,34 @@ export function initPaperPage(ctx: PageContext): void {
     next.focus();
     return true;
   };
-  svg.addEventListener('keydown', (event) => {
-    const dot = event.target instanceof Element ? event.target.closest<SVGAElement>('[data-pp-n]') : null;
-    if (dot === null) return;
-    if (event.key === 'Escape') {
-      reset();
-      return;
-    }
-    if (roving(lit, dot, event.key, ['ArrowRight', 'ArrowDown'], ['ArrowLeft', 'ArrowUp'])) event.preventDefault();
-  }, { signal });
+  svg.addEventListener(
+    'keydown',
+    (event) => {
+      const dot = event.target instanceof Element ? event.target.closest<SVGAElement>('[data-pp-n]') : null;
+      if (dot === null) return;
+      if (event.key === 'Escape') {
+        reset();
+        return;
+      }
+      if (roving(lit, dot, event.key, ['ArrowRight', 'ArrowDown'], ['ArrowLeft', 'ArrowUp'])) event.preventDefault();
+    },
+    { signal },
+  );
 
   coRows.forEach((row, index) => {
     row.tabIndex = index === 0 ? 0 : -1;
   });
-  root.querySelector('[data-pp-co-list]')?.addEventListener('keydown', (event) => {
-    const row = event.target instanceof Element ? event.target.closest<HTMLAnchorElement>('[data-pp-co]') : null;
-    if (row === null || !(event instanceof KeyboardEvent)) return;
-    if (event.key === 'Escape') {
-      reset();
-      return;
-    }
-    if (roving(coRows, row, event.key, ['ArrowDown'], ['ArrowUp'])) event.preventDefault();
-  }, { signal });
+  root.querySelector('[data-pp-co-list]')?.addEventListener(
+    'keydown',
+    (event) => {
+      const row = event.target instanceof Element ? event.target.closest<HTMLAnchorElement>('[data-pp-co]') : null;
+      if (row === null || !(event instanceof KeyboardEvent)) return;
+      if (event.key === 'Escape') {
+        reset();
+        return;
+      }
+      if (roving(coRows, row, event.key, ['ArrowDown'], ['ArrowUp'])) event.preventDefault();
+    },
+    { signal },
+  );
 }

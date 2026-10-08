@@ -12,7 +12,13 @@ import { cls, litClass, NO_STATE, type StateView } from './util.ts';
 const IDENT = /[\p{L}][\p{L}\p{M}\p{N}_]*/uy;
 
 /** Renders shape text with dimension symbols inside brackets wrapped as `data-dim` tokens. */
-export function ShapeText({ text, dims }: { readonly text: string; readonly dims: ReadonlySet<string> | null }): JSX.Element {
+export function ShapeText({
+  text,
+  dims,
+}: {
+  readonly text: string;
+  readonly dims: ReadonlySet<string> | null;
+}): JSX.Element {
   const parts: (string | JSX.Element)[] = [];
   let buffer = '';
   let depth = 0;
@@ -84,13 +90,27 @@ function rankOf(shape: string): number {
  * more than once, as the score tensor carries T twice). Read down a column to
  * see where a dimension is born, split, squared, or merged away.
  */
-function Signature({ counts, dims }: { readonly counts: ReadonlyMap<string, number>; readonly dims: readonly string[] }): JSX.Element {
+function Signature({
+  counts,
+  dims,
+}: {
+  readonly counts: ReadonlyMap<string, number>;
+  readonly dims: readonly string[];
+}): JSX.Element {
   return (
     <span class="vg-sig" aria-hidden="true">
       {dims.map((dim) => {
         const count = counts.get(dim) ?? 0;
         return (
-          <span class={cls('vg-sig__cell', 'vg-dim', count === 0 ? 'vg-sig__cell--0' : count === 1 ? 'vg-sig__cell--1' : 'vg-sig__cell--n')} data-dim={dim} key={dim}>
+          <span
+            class={cls(
+              'vg-sig__cell',
+              'vg-dim',
+              count === 0 ? 'vg-sig__cell--0' : count === 1 ? 'vg-sig__cell--1' : 'vg-sig__cell--n',
+            )}
+            data-dim={dim}
+            key={dim}
+          >
             {count > 1 ? <span class="vg-sig__count">{count}</span> : null}
           </span>
         );
@@ -106,7 +126,13 @@ function Signature({ counts, dims }: { readonly counts: ReadonlyMap<string, numb
  * operation and its cost along the spine. Steps are keyed `data-vg-key="0"`,
  * `"1"`, … for live-instrument states.
  */
-export function TensorFlowView({ spec, state = NO_STATE }: { readonly spec: TensorFlowSpec; readonly state?: StateView }): JSX.Element {
+export function TensorFlowView({
+  spec,
+  state = NO_STATE,
+}: {
+  readonly spec: TensorFlowSpec;
+  readonly state?: StateView;
+}): JSX.Element {
   const dimList = Object.keys(spec.dims);
   const dims = new Set(dimList);
   return (
@@ -123,7 +149,11 @@ export function TensorFlowView({ spec, state = NO_STATE }: { readonly spec: Tens
       </div>
       <ol class="vg-tensor__steps">
         {spec.steps.map((step, index) => (
-          <li class={cls('vg-tensor__step', index === 0 && 'vg-tensor__step--first', litClass(state, String(index)))} data-vg-key={String(index)} key={`${index}:${step.shape}`}>
+          <li
+            class={cls('vg-tensor__step', index === 0 && 'vg-tensor__step--first', litClass(state, String(index)))}
+            data-vg-key={String(index)}
+            key={`${index}:${step.shape}`}
+          >
             {step.op !== undefined && (
               <div class="vg-tensor__op">
                 <span class="vg-tensor__opname">{step.op}</span>

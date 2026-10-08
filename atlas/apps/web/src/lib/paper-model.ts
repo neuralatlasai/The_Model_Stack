@@ -64,7 +64,14 @@ export interface PaperGridLane {
   readonly numeral: string;
   readonly title: string;
   readonly url: string;
-  readonly chapters: readonly { readonly n: number; readonly number: string; readonly short: string; readonly title: string; readonly url: string; readonly written: boolean }[];
+  readonly chapters: readonly {
+    readonly n: number;
+    readonly number: string;
+    readonly short: string;
+    readonly title: string;
+    readonly url: string;
+    readonly written: boolean;
+  }[];
 }
 
 export interface PaperModel {
@@ -103,7 +110,12 @@ function pageRef(node: GraphNode): PaperPageRef {
 /** Graph order for stable page ordering (chapter page, sections, verification, references). */
 const orderIndex = (graph: AtlasGraph): Map<string, number> => new Map(graph.order.map((id, index) => [id, index]));
 
-export function buildPaperModel(record: ReferenceRecord, graph: AtlasGraph, registry: Registry, stack: StackModel): PaperModel {
+export function buildPaperModel(
+  record: ReferenceRecord,
+  graph: AtlasGraph,
+  registry: Registry,
+  stack: StackModel,
+): PaperModel {
   const order = orderIndex(graph);
   const byOrder = (a: PaperPageRef, b: PaperPageRef): number => (order.get(a.id) ?? 0) - (order.get(b.id) ?? 0);
   const chapterOfId = (id: string): number | null => chapterNumber(enclosing(graph, id as NodeId, 'chapter'));
@@ -118,7 +130,8 @@ export function buildPaperModel(record: ReferenceRecord, graph: AtlasGraph, regi
     else pagesBy.set(n, [...(pagesBy.get(n) ?? []), pageRef(node)]);
   }
   const usesBy = new Map<number, PaperUse[]>();
-  for (const use of record.uses) usesBy.set(use.chapter, [...(usesBy.get(use.chapter) ?? []), { usedFor: use.usedFor, accessed: use.accessed }]);
+  for (const use of record.uses)
+    usesBy.set(use.chapter, [...(usesBy.get(use.chapter) ?? []), { usedFor: use.usedFor, accessed: use.accessed }]);
 
   const chapters: PaperChapter[] = [...new Set([...pagesBy.keys(), ...usesBy.keys()])]
     .sort((a, b) => a - b)
@@ -155,7 +168,12 @@ export function buildPaperModel(record: ReferenceRecord, graph: AtlasGraph, regi
     .filter((other) => other.key !== record.key)
     .map((other) => ({ other, shared: other.citedBy.filter((id) => mine.has(id)) }))
     .filter((entry) => entry.shared.length > 0)
-    .sort((a, b) => b.shared.length - a.shared.length || Number(b.other.spine) - Number(a.other.spine) || compareStrings(a.other.key, b.other.key));
+    .sort(
+      (a, b) =>
+        b.shared.length - a.shared.length ||
+        Number(b.other.spine) - Number(a.other.spine) ||
+        compareStrings(a.other.key, b.other.key),
+    );
   const cocited: PaperCocited[] = ranked.slice(0, COCITED_SHOWN).map(({ other, shared }) => {
     const refs = shared
       .map((id) => graph.nodes[id])

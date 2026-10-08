@@ -44,7 +44,9 @@ export function MatrixView({ spec, title, desc, idPrefix }: MatrixViewProps): JS
   const litRows = new Set(highlights.map((h) => h.row));
   const litCols = new Set(highlights.map((h) => h.col));
   let widestRowTick = 0;
-  for (let i = 0; i < spec.rows; i += 1) if (i % rowStride === 0 || litRows.has(i)) widestRowTick = Math.max(widestRowTick, textWidth(rowTick(i), TICK_FONT, 'mono'));
+  for (let i = 0; i < spec.rows; i += 1)
+    if (i % rowStride === 0 || litRows.has(i))
+      widestRowTick = Math.max(widestRowTick, textWidth(rowTick(i), TICK_FONT, 'mono'));
   const left = Math.ceil(24 + widestRowTick + 8);
   const top = 40;
   const gridW = spec.cols * cell;
@@ -82,13 +84,33 @@ export function MatrixView({ spec, title, desc, idPrefix }: MatrixViewProps): JS
         const on = (row[j] ?? 0) > 0;
         if (on && start < 0) start = j;
         if (!on && start >= 0) {
-          tiles.push(<rect class="vg-cell vg-cell--on" x={left + start * cell} y={top + i * cell} width={(j - start) * cell} height={cell} key={`${i}:${start}`} />);
+          tiles.push(
+            <rect
+              class="vg-cell vg-cell--on"
+              x={left + start * cell}
+              y={top + i * cell}
+              width={(j - start) * cell}
+              height={cell}
+              key={`${i}:${start}`}
+            />,
+          );
           start = -1;
         }
       }
     } else {
       row.forEach((value, j) => {
-        if (value > 0) tiles.push(<rect class="vg-cell vg-cell--on" x={left + j * cell} y={top + i * cell} width={cell} height={cell} fill-opacity={r1(value)} key={`${i}:${j}`} />);
+        if (value > 0)
+          tiles.push(
+            <rect
+              class="vg-cell vg-cell--on"
+              x={left + j * cell}
+              y={top + i * cell}
+              width={cell}
+              height={cell}
+              fill-opacity={r1(value)}
+              key={`${i}:${j}`}
+            />,
+          );
       });
     }
   });
@@ -97,7 +119,14 @@ export function MatrixView({ spec, title, desc, idPrefix }: MatrixViewProps): JS
   for (let i = 0; i < spec.rows; i += 1) {
     if (i % rowStride !== 0 && !litRows.has(i)) continue;
     ticks.push(
-      <text class={cls('vg-tick', litRows.has(i) && 'vg-tick--lit')} x={left - 6} y={r1(top + i * cell + cell / 2)} text-anchor="end" dominant-baseline="central" key={`rt${i}`}>
+      <text
+        class={cls('vg-tick', litRows.has(i) && 'vg-tick--lit')}
+        x={left - 6}
+        y={r1(top + i * cell + cell / 2)}
+        text-anchor="end"
+        dominant-baseline="central"
+        key={`rt${i}`}
+      >
         {rowTick(i)}
       </text>,
     );
@@ -105,7 +134,13 @@ export function MatrixView({ spec, title, desc, idPrefix }: MatrixViewProps): JS
   for (let j = 0; j < spec.cols; j += 1) {
     if (j % colStride !== 0 && !litCols.has(j)) continue;
     ticks.push(
-      <text class={cls('vg-tick', litCols.has(j) && 'vg-tick--lit')} x={r1(left + j * cell + cell / 2)} y={top - 6} text-anchor="middle" key={`ct${j}`}>
+      <text
+        class={cls('vg-tick', litCols.has(j) && 'vg-tick--lit')}
+        x={r1(left + j * cell + cell / 2)}
+        y={top - 6}
+        text-anchor="middle"
+        key={`ct${j}`}
+      >
         {colTick(j)}
       </text>,
     );
@@ -145,8 +180,19 @@ export function MatrixView({ spec, title, desc, idPrefix }: MatrixViewProps): JS
           const cy = top + h.row * cell + cell / 2;
           return (
             <g class="vg-cell-hl" key={`h${h.row}:${h.col}`}>
-              <path class="vg-cell-hl__cross" d={`M${r1(left - 2)} ${r1(cy)} H${r1(cx - cell / 2)} M${r1(cx)} ${r1(top - 2)} V${r1(cy - cell / 2)}`} />
-              <rect class="vg-cell vg-cell--hl" x={r1(left + h.col * cell + gap / 2)} y={r1(top + h.row * cell + gap / 2)} width={r1(cell - gap)} height={r1(cell - gap)} rx="1" ry="1" />
+              <path
+                class="vg-cell-hl__cross"
+                d={`M${r1(left - 2)} ${r1(cy)} H${r1(cx - cell / 2)} M${r1(cx)} ${r1(top - 2)} V${r1(cy - cell / 2)}`}
+              />
+              <rect
+                class="vg-cell vg-cell--hl"
+                x={r1(left + h.col * cell + gap / 2)}
+                y={r1(top + h.row * cell + gap / 2)}
+                width={r1(cell - gap)}
+                height={r1(cell - gap)}
+                rx="1"
+                ry="1"
+              />
             </g>
           );
         })}

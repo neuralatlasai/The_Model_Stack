@@ -51,7 +51,7 @@ const GENERIC = new Set([
 const capitals = (word: string): string => word.replace(/[^A-Z]/gu, '');
 const titled = (word: string, length: number): string => {
   const letters = word.replace(/[^\p{L}\p{N}]/gu, '');
-  return (letters.charAt(0).toUpperCase() + letters.slice(1, length).toLowerCase()) || word.slice(0, length);
+  return letters.charAt(0).toUpperCase() + letters.slice(1, length).toLowerCase() || word.slice(0, length);
 };
 
 /** The name's leading form: before " / " or " – ", without a parenthetical. */
@@ -65,7 +65,9 @@ export function monogram(name: string, options: MonogramOptions = {}): string {
     const head = paren.split('-')[0] ?? paren;
     if (/^[\p{L}\p{N}]{2,5}$/u.test(head)) return head;
   }
-  let words = leadingName(name).split(/\s+/u).filter((word) => word !== '');
+  let words = leadingName(name)
+    .split(/\s+/u)
+    .filter((word) => word !== '');
   for (const vendor of options.vendors ?? []) {
     const parts = vendor.split(/\s+/u);
     if (words.length > parts.length && parts.every((part, index) => words[index] === part)) {
@@ -88,7 +90,9 @@ export function monogram(name: string, options: MonogramOptions = {}): string {
     if (inner.length >= 2) return inner.slice(0, 3);
     return titled(word, 2);
   }
-  const initials = pool.map((word) => (capitals(word).length >= 2 ? capitals(word) : (word.charAt(0).toUpperCase() || ''))).join('');
+  const initials = pool
+    .map((word) => (capitals(word).length >= 2 ? capitals(word) : word.charAt(0).toUpperCase() || ''))
+    .join('');
   return initials.slice(0, 3);
 }
 

@@ -32,8 +32,10 @@
 }
 
 .bs-sticky {
-  overflow: clip;
-  overflow-clip-margin: 6px;
+  overflow-x: hidden;
+  overflow-y: auto;
+  scrollbar-width: thin;
+  scrollbar-gutter: stable;
   position: sticky;
   inset-block-start: calc(var(--sh-topbar-h, 52px) + 0.75rem);
   display: flex;
@@ -402,7 +404,6 @@
   margin: 0;
 }
 
-
 /* faint particle field around the brain */
 
 .hb-stage {
@@ -491,7 +492,9 @@
   stroke: #e7e2d8;
   stroke-opacity: 0.075;
   stroke-width: 0.8;
-  transition: stroke-opacity var(--t-state) ease, stroke-width var(--t-state) ease;
+  transition:
+    stroke-opacity var(--t-state) ease,
+    stroke-width var(--t-state) ease;
 }
 
 .hb-dendrites path {
@@ -505,7 +508,9 @@
   opacity: 0.78;
   transform-box: fill-box;
   transform-origin: center;
-  transition: opacity var(--t-state) ease, transform var(--t-state) ease;
+  transition:
+    opacity var(--t-state) ease,
+    transform var(--t-state) ease;
 }
 
 .hb-glows circle {
@@ -527,7 +532,9 @@
   stroke-width: 1.25;
   transform-box: fill-box;
   transform-origin: center;
-  transition: transform var(--t-panel) cubic-bezier(0.2, 0.7, 0.2, 1), opacity var(--t-state) ease;
+  transition:
+    transform var(--t-panel) cubic-bezier(0.2, 0.7, 0.2, 1),
+    opacity var(--t-state) ease;
 }
 
 .hb-n.is-written .hb-n__core {
@@ -739,7 +746,6 @@
 }
 
 @media (max-width: 640px) {
-
   .hb-readout__t {
     font-size: 17px;
   }
@@ -782,7 +788,11 @@ html[data-gl='1'] .hb:not(.is-2d) .hb-stage {
   position: absolute;
   inset: 8% 10% 14%;
   border-radius: 50%;
-  background: radial-gradient(closest-side, color-mix(in oklab, var(--domain-architecture) 12%, transparent), transparent);
+  background: radial-gradient(
+    closest-side,
+    color-mix(in oklab, var(--domain-architecture) 12%, transparent),
+    transparent
+  );
   filter: blur(18px);
   opacity: 0;
   transition: opacity 1.4s ease;
@@ -835,7 +845,10 @@ html[data-gl='1'] .hb:not(.is-2d) .hb-stage {
   text-transform: uppercase;
   white-space: nowrap;
   color: var(--ink);
-  text-shadow: 0 0 2px var(--paper), 0 0 6px var(--paper), 0 0 12px var(--paper);
+  text-shadow:
+    0 0 2px var(--paper),
+    0 0 6px var(--paper),
+    0 0 12px var(--paper);
   will-change: transform, opacity;
 }
 
@@ -846,7 +859,10 @@ html[data-gl='1'] .hb:not(.is-2d) .hb-stage {
   font: 600 13px var(--font-sans);
   white-space: nowrap;
   color: var(--ink);
-  text-shadow: 0 0 2px var(--paper), 0 0 6px var(--paper), 0 0 14px var(--paper);
+  text-shadow:
+    0 0 2px var(--paper),
+    0 0 6px var(--paper),
+    0 0 14px var(--paper);
   opacity: 0;
   transition: opacity var(--t-state) ease;
   will-change: transform;
@@ -876,7 +892,7 @@ html[data-gl='1'] .hb:not(.is-2d) .hb-stage {
 .dx-field {
   position: relative;
   flex: 1 1 auto;
-  min-block-size: 200px;
+  min-block-size: 240px;
   container-type: size;
 }
 
@@ -972,6 +988,11 @@ html[data-gl='1'] .dx-brain .hb:not(.is-2d) .hb3 {
 }
 
 .dx-brain .hb-stage {
+  block-size: 100%;
+}
+
+.dx-brain .hb-svg {
+  inline-size: 100%;
   block-size: 100%;
 }
 
@@ -1182,9 +1203,11 @@ html[data-gl='1'] .dx-brain .hb:not(.is-2d) .hb3 {
 /* ── tiles and donut ───────────────────────────────────────────────────── */
 .dx-mid {
   display: grid;
-  grid-template-columns: minmax(0, 1fr) auto;
+  grid-template-columns: minmax(0, 1fr) minmax(176px, 0.65fr);
   gap: 1.25rem;
   align-items: center;
+  padding-block: 1rem;
+  border-block: 1px solid var(--rule);
 }
 
 .dx-tiles {
@@ -1194,7 +1217,7 @@ html[data-gl='1'] .dx-brain .hb:not(.is-2d) .hb3 {
 }
 
 .dx-tiles.is-parts {
-  grid-template-columns: repeat(3, minmax(0, 1fr));
+  grid-template-columns: repeat(2, minmax(0, 1fr));
 }
 
 .dx-tile {
@@ -1274,8 +1297,10 @@ html[data-gl='1'] .dx-brain .hb:not(.is-2d) .hb3 {
   display: grid;
   grid-template-columns: auto;
   justify-items: center;
-  gap: 0.35rem;
+  gap: 0.65rem;
   margin: 0;
+  padding-inline-start: 1rem;
+  border-inline-start: 1px solid var(--rule);
 }
 
 .dx-donut svg {
@@ -1325,7 +1350,7 @@ html[data-gl='1'] .dx-brain .hb:not(.is-2d) .hb3 {
   display: grid;
   gap: 2px;
   font: 500 10px var(--font-mono);
-  color: var(--ink-3);
+  color: var(--ink-2);
 }
 
 .dx-donut__key span {
@@ -1626,5 +1651,45 @@ html[data-gl='1'] .dx-brain .hb:not(.is-2d) .hb3 {
 
   .dx-badge {
     font-size: 13px;
+  }
+}
+
+/* Dashboard sections retain their own flow instead of competing for height.
+ * Short desktop windows scroll within the sticky instrument, keeping every
+ * category and evidence key available at its normal readable size. */
+@media (min-width: 900px) {
+  .dx > :not(.dx-field) {
+    flex-shrink: 0;
+  }
+
+  .dx-field {
+    flex-shrink: 0;
+  }
+
+  .dx-tiles.is-parts .dx-tile__t {
+    padding-inline: 0.4rem;
+    font-size: 12px;
+    text-overflow: clip;
+  }
+}
+
+@media (min-width: 900px) and (max-width: 1100px) {
+  .dx-mid {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .dx-donut {
+    grid-template-columns: 70px minmax(0, 1fr);
+    align-items: center;
+    justify-items: stretch;
+    padding-inline-start: 0;
+    padding-block-start: 0.75rem;
+    border-inline-start: 0;
+    border-block-start: 1px solid var(--rule);
+  }
+
+  .dx-donut svg {
+    inline-size: 70px;
+    block-size: 70px;
   }
 }

@@ -38,7 +38,10 @@ export interface ParsedLineageLine {
 export function parseLineageText(text: string): ParsedLineageLine | string {
   const firstSep = text.indexOf(SEPARATOR);
   if (firstSep === -1) return 'expected "year · work · relation"';
-  const year = text.slice(0, firstSep).trim().replace(/\s*[-–]\s*/u, '–');
+  const year = text
+    .slice(0, firstSep)
+    .trim()
+    .replace(/\s*[-–]\s*/u, '–');
   // A single year, an open frontier (`2025+`), or a span (`2021–2023`) sorted by its first year.
   if (!/^\d{4}(?:\+|–\d{4})?$/u.test(year)) return `"${year}" is not a year (YYYY, YYYY+, or YYYY–YYYY)`;
 
@@ -84,7 +87,10 @@ function itemInline(item: ListItem): readonly Inline[] | null {
 }
 
 /** Extracts lineage entries from every chapter page's `lineage` region, sorted by year (stable). */
-export function collectLineage(compiled: readonly CompiledSource[]): { lineage: LineageEntry[]; diagnostics: Diagnostic[] } {
+export function collectLineage(compiled: readonly CompiledSource[]): {
+  lineage: LineageEntry[];
+  diagnostics: Diagnostic[];
+} {
   const lineage: LineageEntry[] = [];
   const diagnostics: Diagnostic[] = [];
   for (const { source, body } of compiled) {
@@ -100,11 +106,23 @@ export function collectLineage(compiled: readonly CompiledSource[]): { lineage: 
           const text = inlineToText(content);
           const parsed = parseLineageText(text);
           if (typeof parsed === 'string') {
-            diagnostics.push(diagnostic('block-malformed', `lineage entry "${text.slice(0, 80)}": ${parsed}`, { file: source.path, nodeId }));
+            diagnostics.push(
+              diagnostic('block-malformed', `lineage entry "${text.slice(0, 80)}": ${parsed}`, {
+                file: source.path,
+                nodeId,
+              }),
+            );
             continue;
           }
           const note = parsed.noteStart === null ? [] : trimInline(sliceInline(content, parsed.noteStart), '()—–.*_');
-          lineage.push({ year: parsed.year, work: parsed.work, relation: parsed.relation, cite: parsed.cite, nodeId, note });
+          lineage.push({
+            year: parsed.year,
+            work: parsed.work,
+            relation: parsed.relation,
+            cite: parsed.cite,
+            nodeId,
+            note,
+          });
         }
       }
     }

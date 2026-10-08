@@ -37,6 +37,7 @@ const { nodeHref, tex } = await figureHostProps(figure);
 <div
   class:list={['rb-figure', `rb-figure--${figure.placement}`, { 'rb-wide': figure.placement === 'wide' }]}
   id={rail ? figure.anchor : undefined}
+  style={figure.scene === null ? undefined : `--figure-readable-width: ${Math.round(figure.scene.width * 0.8)}px`}
   {...depthAttrs(depth)}
 >
   {scalable && (

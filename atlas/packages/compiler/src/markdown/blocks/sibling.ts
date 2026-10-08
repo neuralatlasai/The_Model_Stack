@@ -24,11 +24,26 @@ const AT_BOUNDARY = String.raw`(?<=^|\n|[.;!?)\]]\s+)`;
 
 export const SIBLING_MARKERS: readonly InlineMarker<SiblingField>[] = [
   { key: 'whyExists', text: new RegExp(String.raw`${AT_BOUNDARY}Why\b[^:\n.]{0,40}?\bexists?\b[^:\n.]{0,30}:`, 'u') },
-  { key: 'assumptionChanged', text: new RegExp(String.raw`${AT_BOUNDARY}(?:What assumptions?|Assumptions?) changed\b[^:\n.]{0,40}:`, 'u') },
-  { key: 'objectiveChanged', text: new RegExp(String.raw`${AT_BOUNDARY}(?:What objectives?|Objectives?) changed\b[^:\n.]{0,40}:`, 'u') },
-  { key: 'problemSolved', text: new RegExp(String.raw`${AT_BOUNDARY}(?:What problems?\b|Problems? solved\b)[^:\n.]{0,40}:`, 'u') },
-  { key: 'newFailureMode', text: new RegExp(String.raw`${AT_BOUNDARY}(?:What new|New) failure modes?\b[^:\n.]{0,40}:`, 'u') },
-  { key: 'changedPrimitive', text: new RegExp(String.raw`${AT_BOUNDARY}(?:Changed primitives?|Primitives? changed)\b[^:\n.]{0,40}:`, 'u') },
+  {
+    key: 'assumptionChanged',
+    text: new RegExp(String.raw`${AT_BOUNDARY}(?:What assumptions?|Assumptions?) changed\b[^:\n.]{0,40}:`, 'u'),
+  },
+  {
+    key: 'objectiveChanged',
+    text: new RegExp(String.raw`${AT_BOUNDARY}(?:What objectives?|Objectives?) changed\b[^:\n.]{0,40}:`, 'u'),
+  },
+  {
+    key: 'problemSolved',
+    text: new RegExp(String.raw`${AT_BOUNDARY}(?:What problems?\b|Problems? solved\b)[^:\n.]{0,40}:`, 'u'),
+  },
+  {
+    key: 'newFailureMode',
+    text: new RegExp(String.raw`${AT_BOUNDARY}(?:What new|New) failure modes?\b[^:\n.]{0,40}:`, 'u'),
+  },
+  {
+    key: 'changedPrimitive',
+    text: new RegExp(String.raw`${AT_BOUNDARY}(?:Changed primitives?|Primitives? changed)\b[^:\n.]{0,40}:`, 'u'),
+  },
 ];
 
 const STARTS_WITH_DIFFERENTIAL = /^\s*Why\b[^:\n.]{0,40}?\bexists?\b[^:\n.]{0,30}:/u;
@@ -49,7 +64,9 @@ function readHead(paragraph: Paragraph, st: CompileState): Head | null {
   const after = others[0];
   const dashAfter = after?.type === 'text' && /^\s*[—–]/u.test(after.value);
   if (dashInStrong === null && !dashAfter) return null;
-  const name = (dashInStrong === null ? strongText : strongText.slice(0, dashInStrong.index)).replace(/[.:]+$/u, '').trim();
+  const name = (dashInStrong === null ? strongText : strongText.slice(0, dashInStrong.index))
+    .replace(/[.:]+$/u, '')
+    .trim();
   if (name === '') return null;
   return { name, strong: convertPhrasing(lead.children, st, {}), rest: convertPhrasing(others, st) };
 }
@@ -77,7 +94,11 @@ export function convertSibling(
     extra = 1;
   }
   if (split.parts.length === 0) {
-    st.report('sibling-missing-field', `sibling "${head.name}" has no differential fields (Why it exists: … Changed primitive: …); kept as prose`, line);
+    st.report(
+      'sibling-missing-field',
+      `sibling "${head.name}" has no differential fields (Why it exists: … Changed primitive: …); kept as prose`,
+      line,
+    );
     return null;
   }
   const differential: Record<SiblingField, Inline[] | null> = {
@@ -91,7 +112,8 @@ export function convertSibling(
   for (const part of split.parts) {
     if (part.content.length === 0) continue;
     const existing = differential[part.key];
-    differential[part.key] = existing === null ? part.content : [...existing, { kind: 'text', value: ' ' }, ...part.content];
+    differential[part.key] =
+      existing === null ? part.content : [...existing, { kind: 'text', value: ' ' }, ...part.content];
   }
   const missing = SIBLING_FIELDS.filter((field) => differential[field] === null);
   if (missing.length > 0) {

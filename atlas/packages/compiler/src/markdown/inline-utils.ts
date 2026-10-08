@@ -142,7 +142,10 @@ export function sliceInline(nodes: readonly Inline[], start: number, end: number
     offset = nodeEnd;
     if (nodeEnd <= start || nodeStart >= end) continue;
     if (node.kind === 'text') {
-      out.push({ kind: 'text', value: node.value.slice(Math.max(0, start - nodeStart), Math.min(length, end - nodeStart)) });
+      out.push({
+        kind: 'text',
+        value: node.value.slice(Math.max(0, start - nodeStart), Math.min(length, end - nodeStart)),
+      });
     } else if (isContainer(node)) {
       const children = sliceInline(node.children, start - nodeStart, end - nodeStart);
       if (children.length > 0) out.push(withChildren(node, children));
@@ -200,8 +203,15 @@ function isStyledMarker<K extends string>(node: Inline, markers: readonly Inline
   return markers.some((marker) => marker.styled?.test(text) === true);
 }
 
-function containsStyledMarker<K extends string>(nodes: readonly Inline[], markers: readonly InlineMarker<K>[]): boolean {
-  return nodes.some((node) => isStyledMarker(node, markers) || ((node.kind === 'emphasis' || node.kind === 'strong') && containsStyledMarker(node.children, markers)));
+function containsStyledMarker<K extends string>(
+  nodes: readonly Inline[],
+  markers: readonly InlineMarker<K>[],
+): boolean {
+  return nodes.some(
+    (node) =>
+      isStyledMarker(node, markers) ||
+      ((node.kind === 'emphasis' || node.kind === 'strong') && containsStyledMarker(node.children, markers)),
+  );
 }
 
 /**
@@ -212,7 +222,11 @@ function containsStyledMarker<K extends string>(nodes: readonly Inline[], marker
 function hoistMarkers<K extends string>(nodes: readonly Inline[], markers: readonly InlineMarker<K>[]): Inline[] {
   const out: Inline[] = [];
   for (const node of nodes) {
-    if ((node.kind === 'emphasis' || node.kind === 'strong') && !isStyledMarker(node, markers) && containsStyledMarker(node.children, markers)) {
+    if (
+      (node.kind === 'emphasis' || node.kind === 'strong') &&
+      !isStyledMarker(node, markers) &&
+      containsStyledMarker(node.children, markers)
+    ) {
       out.push(...hoistMarkers(node.children, markers));
     } else {
       out.push(node);
@@ -226,7 +240,10 @@ function hoistMarkers<K extends string>(nodes: readonly Inline[], markers: reado
  * trimmed of joining punctuation (`:`, `·`, whitespace) at its start and of
  * trailing joiners (`·`, dashes) before the next marker.
  */
-export function splitByMarkers<K extends string>(input: readonly Inline[], markers: readonly InlineMarker<K>[]): MarkerSplit<K> {
+export function splitByMarkers<K extends string>(
+  input: readonly Inline[],
+  markers: readonly InlineMarker<K>[],
+): MarkerSplit<K> {
   const nodes = hoistMarkers(input, markers);
   const textMarkers = markers
     .filter((marker): marker is InlineMarker<K> & { readonly text: RegExp } => marker.text !== undefined)
@@ -269,7 +286,8 @@ export function splitByMarkers<K extends string>(input: readonly Inline[], marke
     current().push(node);
   }
 
-  const clean = (content: readonly Inline[]): Inline[] => trimInline(stripTrail(stripLead(content, LEAD_JOINERS), TRAIL_JOINERS));
+  const clean = (content: readonly Inline[]): Inline[] =>
+    trimInline(stripTrail(stripLead(content, LEAD_JOINERS), TRAIL_JOINERS));
   const [head, ...rest] = segments;
   const parts: MarkerPart<K>[] = [];
   for (const segment of rest) {

@@ -31,7 +31,8 @@ export interface CalculatorModel {
   isAtDefaults(values: Readonly<Record<string, number>>): boolean;
 }
 
-type Compiled = { readonly ok: true; readonly formula: CompiledFormula } | { readonly ok: false; readonly error: string };
+type Compiled =
+  { readonly ok: true; readonly formula: CompiledFormula } | { readonly ok: false; readonly error: string };
 
 export function createCalculatorModel(spec: CalculatorSpec): CalculatorModel {
   const inputs = new Map<string, Input>(spec.inputs.map((input) => [input.symbol, input]));
@@ -87,7 +88,10 @@ export function createCalculatorModel(spec: CalculatorSpec): CalculatorModel {
         };
       });
     },
-    isAtDefaults: (values) => spec.inputs.every((input) => (Object.hasOwn(values, input.symbol) ? values[input.symbol] : input.default) === input.default),
+    isAtDefaults: (values) =>
+      spec.inputs.every(
+        (input) => (Object.hasOwn(values, input.symbol) ? values[input.symbol] : input.default) === input.default,
+      ),
   };
 }
 

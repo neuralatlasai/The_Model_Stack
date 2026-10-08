@@ -39,7 +39,10 @@ describe('header anatomy', () => {
     assert.equal(body.header.identityLine, 'VOLUME I / PART I — SCIENTIFIC FOUNDATIONS / CHAPTER 05');
     assert.equal(body.header.number, '05');
     assert.equal(body.header.title, 'A minimal Transformer and its execution trace');
-    assert.equal(inlineToText(body.header.thesis ?? []), 'A decoder-only Transformer is fully specified by a short list of typed tensors (P01).');
+    assert.equal(
+      inlineToText(body.header.thesis ?? []),
+      'A decoder-only Transformer is fully specified by a short list of typed tensors (P01).',
+    );
     assert.match(inlineToText(body.header.metaLine ?? []), /^6 sections · 2 spine papers/u);
     assert.deepEqual(
       body.lead.map((block) => (block.kind === 'paragraph' ? inlineToText(block.content) : block.kind)),
@@ -63,13 +66,28 @@ describe('header anatomy', () => {
   it('splits numbered titles of every entity type', () => {
     const meta = makeMeta();
     assert.deepEqual(splitTitle('5.2 Attention calculation', meta), { number: '5.2', title: 'Attention calculation' });
+    for (const separator of ['\u2014', '\u2013', '-', ':']) {
+      assert.deepEqual(splitTitle(`24.4 ${separator} Model editing`, meta), { number: '24.4', title: 'Model editing' });
+    }
     assert.deepEqual(splitTitle('05 — A minimal Transformer', meta), { number: '05', title: 'A minimal Transformer' });
-    assert.deepEqual(splitTitle('Appendix A — Research organizations', meta), { number: 'A', title: 'Research organizations' });
-    assert.deepEqual(splitTitle('Part III — Model architectures', meta), { number: 'III', title: 'Model architectures' });
-    assert.deepEqual(splitTitle('Notation and the shared mathematical contract', makeMeta({ entityType: 'frontmatter', section: null })), {
-      number: null,
-      title: 'Notation and the shared mathematical contract',
+    assert.deepEqual(splitTitle('Appendix A — Research organizations', meta), {
+      number: 'A',
+      title: 'Research organizations',
     });
+    assert.deepEqual(splitTitle('Part III — Model architectures', meta), {
+      number: 'III',
+      title: 'Model architectures',
+    });
+    assert.deepEqual(
+      splitTitle(
+        'Notation and the shared mathematical contract',
+        makeMeta({ entityType: 'frontmatter', section: null }),
+      ),
+      {
+        number: null,
+        title: 'Notation and the shared mathematical contract',
+      },
+    );
   });
 
   it('warns when a document has no H1', async () => {
@@ -91,7 +109,9 @@ describe('regions, anchors, and depth', () => {
       ],
     );
     assert.deepEqual(codes(body), ['heading-unknown-region']);
-    const volume = await compile('# Volume I — Learning\n\n## Parts\n\nText.', { meta: { id: 'ms.volume.1', entityType: 'volume', section: null, chapter: null } });
+    const volume = await compile('# Volume I — Learning\n\n## Parts\n\nText.', {
+      meta: { id: 'ms.volume.1', entityType: 'volume', section: null, chapter: null },
+    });
     assert.deepEqual(codes(volume), [], 'free headings are fine outside the section/chapter/verification vocabulary');
     const terms = body.rail.find((binding) => binding.regionAnchor === 'terms-owned-here');
     assert.deepEqual(terms?.instruments, [{ kind: 'terms', slugs: ['attention-score-matrix'] }]);
@@ -153,8 +173,14 @@ describe('regions, anchors, and depth', () => {
         ['code', 'implementation'],
       ],
     );
-    assert.deepEqual(implementation?.blocks.map((block) => block.depth), ['implementation']);
-    assert.deepEqual(siblings?.blocks.map((block) => block.depth), ['research']);
+    assert.deepEqual(
+      implementation?.blocks.map((block) => block.depth),
+      ['implementation'],
+    );
+    assert.deepEqual(
+      siblings?.blocks.map((block) => block.depth),
+      ['research'],
+    );
     assert.deepEqual(
       body.outline.map((entry) => [entry.anchor, entry.depth, entry.markers.map((marker) => marker.type)]),
       [
@@ -178,7 +204,9 @@ describe('regions, anchors, and depth', () => {
 
 describe('evidence rules', () => {
   it('forbids EMPIRICALLY-OBSERVED as a label but not a negated mention', async () => {
-    const used = await compile('# 5.2 T\n\n## Observations\n\n> **Claim [EMPIRICALLY-OBSERVED · P01].** We measured it.');
+    const used = await compile(
+      '# 5.2 T\n\n## Observations\n\n> **Claim [EMPIRICALLY-OBSERVED · P01].** We measured it.',
+    );
     assert.deepEqual(codes(used, 'error'), ['label-forbidden']);
     const mentioned = await compile(
       '# 5.2 T\n\n## Status\n\nNo result is EMPIRICALLY-OBSERVED in this edition. Every label is DERIVED, and EMPIRICALLY-OBSERVED does not appear. `EMPIRICALLY-OBSERVED` in code is fine.',
@@ -189,7 +217,9 @@ describe('evidence rules', () => {
   it('requires a commit next to CODE-VERIFIED', async () => {
     const bare = await compile('# 5.2 T\n\n## Implementation\n\nThe kernel dispatch is CODE-VERIFIED.');
     assert.deepEqual(codes(bare, 'error'), ['code-verified-without-commit']);
-    const pinned = await compile('# 5.2 T\n\n## Implementation\n\nCODE-VERIFIED: vllm-project/vllm at commit 1ca2583, by running the unit test.');
+    const pinned = await compile(
+      '# 5.2 T\n\n## Implementation\n\nCODE-VERIFIED: vllm-project/vllm at commit 1ca2583, by running the unit test.',
+    );
     assert.deepEqual(codes(pinned, 'error'), []);
     const negated = await compile('# 5.2 T\n\n## Status\n\nNo code was executed, so CODE-VERIFIED is not used.');
     assert.deepEqual(codes(negated, 'error'), []);
@@ -207,10 +237,11 @@ describe('evidence rules', () => {
   it('carries file, line, and node id on every diagnostic', async () => {
     const body = await compile('# 5.2 T\n\n## Implementation\n\nThe dispatch is CODE-VERIFIED.', { bodyStartLine: 45 });
     const [diagnostic] = body.diagnostics;
-    assert.deepEqual(
-      diagnostic === undefined ? null : [diagnostic.file, diagnostic.line, diagnostic.nodeId],
-      ['fixture.md', 49, 'ms.section.5.2'],
-    );
+    assert.deepEqual(diagnostic === undefined ? null : [diagnostic.file, diagnostic.line, diagnostic.nodeId], [
+      'fixture.md',
+      49,
+      'ms.section.5.2',
+    ]);
   });
 });
 
@@ -219,7 +250,11 @@ describe('document projections', () => {
     const body = await compile(
       '# 5.2 T\n\n## Scope\n\nObjective: one two three (R5.13).\n\n## Mechanism\n\nFour five (P19) six `not counted` and $x+y$ R5.13 P01.\n',
     );
-    assert.equal(body.stats.words, 12, 'Objective one two three R5.13 | Four five P19 six and R5.13 P01 (code and math excluded)');
+    assert.equal(
+      body.stats.words,
+      12,
+      'Objective one two three R5.13 | Four five P19 six and R5.13 P01 (code and math excluded)',
+    );
     assert.equal(body.stats.readingMinutes, 1);
     assert.deepEqual(body.citations, ['R5.13', 'P19', 'P01']);
     assert.equal(body.stats.citations, 3);

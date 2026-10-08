@@ -84,7 +84,16 @@ export async function layoutDiagram(spec: DiagramSpec): Promise<Scene> {
     targets: [edge.to],
     ...(edge.label === undefined || edge.label === ''
       ? {}
-      : { labels: [{ id: `e${index}:label`, text: edge.label, width: Math.ceil(textWidth(edge.label, EDGE_LABEL_FONT, 'mono')) + 8, height: EDGE_LABEL_HEIGHT }] }),
+      : {
+          labels: [
+            {
+              id: `e${index}:label`,
+              text: edge.label,
+              width: Math.ceil(textWidth(edge.label, EDGE_LABEL_FONT, 'mono')) + 8,
+              height: EDGE_LABEL_HEIGHT,
+            },
+          ],
+        }),
   }));
 
   const graph: ElkNode = { id: 'root', layoutOptions: rootOptions(spec.direction), children, edges };
@@ -124,7 +133,14 @@ export async function layoutDiagram(spec: DiagramSpec): Promise<Scene> {
     .filter((group) => boxes.has(`group:${group.id}`))
     .map((group) => {
       const box = boxes.get(`group:${group.id}`) ?? { x: 0, y: 0, width: 0, height: 0 };
-      return { id: group.id, label: group.label, x: round1(box.x), y: round1(box.y), width: round1(box.width), height: round1(box.height) };
+      return {
+        id: group.id,
+        label: group.label,
+        x: round1(box.x),
+        y: round1(box.y),
+        width: round1(box.width),
+        height: round1(box.height),
+      };
     });
 
   const centre = new Map(nodes.map((node) => [node.id, { x: node.x + node.width / 2, y: node.y + node.height / 2 }]));
@@ -153,7 +169,10 @@ export async function layoutDiagram(spec: DiagramSpec): Promise<Scene> {
     const labelAt =
       label === undefined || edge.label === undefined
         ? null
-        : { x: round1((label.x ?? 0) + offset.x + (label.width ?? 0) / 2), y: round1((label.y ?? 0) + offset.y + (label.height ?? 0) / 2) };
+        : {
+            x: round1((label.x ?? 0) + offset.x + (label.width ?? 0) / 2),
+            y: round1((label.y ?? 0) + offset.y + (label.height ?? 0) / 2),
+          };
     // A flow edge drawn against the layout direction returns information upstream (VISUAL_GRAMMAR §3.2).
     const upstream = spec.direction === 'LR' ? to.x < from.x - 1 : to.y < from.y - 1;
     const kind: EdgeKind = edge.kind === 'flow' && upstream ? 'feedback' : edge.kind;

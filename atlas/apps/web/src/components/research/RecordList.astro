@@ -65,54 +65,63 @@ const records = table.rows.map((row) => {
       .map((cell, index) => ({ cell, index }))
       .filter(({ cell, index }) => slotOf[index] === slot && !isEmpty(cell))
       .map(({ cell, index }) => ({ cell, label: labelOf[index] ?? '' }));
-  return { kicker: pick('kicker'), title: pick('title'), subtitle: pick('subtitle'), body: pick('body'), meta: pick('meta') };
+  return {
+    kicker: pick('kicker'),
+    title: pick('title'),
+    subtitle: pick('subtitle'),
+    body: pick('body'),
+    meta: pick('meta'),
+  };
 });
 ---
 
 <ol class={`rb-records rb-records--${layout}`} role="list">
-  {
-    records.map((record) => (
-      <li class="rb-records__item">
-        <p class="rb-records__head">
-          {record.kicker.map(({ cell }) => (
-            <span class="rb-records__kicker">
+  {records.map((record) => (
+    <li class="rb-records__item">
+      <p class="rb-records__head">
+        {record.kicker.map(({ cell }) => (
+          <span class="rb-records__kicker">
+            <Inline nodes={cell} />
+          </span>
+        ))}
+        {record.title.map(({ cell }) => (
+          <span class="rb-records__title">
+            <Inline nodes={cell} />
+          </span>
+        ))}
+      </p>
+      {record.subtitle.length > 0 && (
+        <p class="rb-records__sub">
+          {record.subtitle.map(({ cell }, index) => (
+            <>
+              {index > 0 && (
+                <span class="rb-records__sep" aria-hidden="true">
+                  {' '}
+                  ·{' '}
+                </span>
+              )}
               <Inline nodes={cell} />
-            </span>
-          ))}
-          {record.title.map(({ cell }) => (
-            <span class="rb-records__title">
-              <Inline nodes={cell} />
-            </span>
+            </>
           ))}
         </p>
-        {record.subtitle.length > 0 && (
-          <p class="rb-records__sub">
-            {record.subtitle.map(({ cell }, index) => (
-              <>
-                {index > 0 && <span class="rb-records__sep" aria-hidden="true"> · </span>}
+      )}
+      {record.body.map(({ cell }) => (
+        <p class="rb-records__body">
+          <Inline nodes={cell} />
+        </p>
+      ))}
+      {record.meta.length > 0 && (
+        <dl class="rb-records__meta">
+          {record.meta.map(({ cell, label }) => (
+            <div class="rb-records__field">
+              <dt>{label}</dt>
+              <dd>
                 <Inline nodes={cell} />
-              </>
-            ))}
-          </p>
-        )}
-        {record.body.map(({ cell }) => (
-          <p class="rb-records__body">
-            <Inline nodes={cell} />
-          </p>
-        ))}
-        {record.meta.length > 0 && (
-          <dl class="rb-records__meta">
-            {record.meta.map(({ cell, label }) => (
-              <div class="rb-records__field">
-                <dt>{label}</dt>
-                <dd>
-                  <Inline nodes={cell} />
-                </dd>
-              </div>
-            ))}
-          </dl>
-        )}
-      </li>
-    ))
-  }
+              </dd>
+            </div>
+          ))}
+        </dl>
+      )}
+    </li>
+  ))}
 </ol>

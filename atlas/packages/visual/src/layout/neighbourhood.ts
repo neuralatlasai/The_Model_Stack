@@ -68,7 +68,15 @@ interface Draft {
   readonly emphasis: boolean;
 }
 
-function draft(id: string, title: string, sub: string | null, href: string | null, width: number, maxLines: number, emphasis = false): Draft {
+function draft(
+  id: string,
+  title: string,
+  sub: string | null,
+  href: string | null,
+  width: number,
+  maxLines: number,
+  emphasis = false,
+): Draft {
   const textW = width - 2 * NODE_TYPE.padX;
   const label = wrapText(title, textW, NODE_TYPE.labelSize, 'sans', maxLines).join(' ');
   const size = measureNode('node', label, sub, textW);
@@ -77,7 +85,9 @@ function draft(id: string, title: string, sub: string | null, href: string | nul
 
 function capped(role: Role, nodes: readonly GraphNode[], width: number): Draft[] {
   const shown = nodes.length > NEIGHBOURHOOD_CAP ? nodes.slice(0, NEIGHBOURHOOD_CAP - 1) : nodes;
-  const drafts = shown.map((node) => draft(`${role}:${node.id}`, node.shortTitle || node.title, numberTag(node), node.url, width, 2));
+  const drafts = shown.map((node) =>
+    draft(`${role}:${node.id}`, node.shortTitle || node.title, numberTag(node), node.url, width, 2),
+  );
   if (nodes.length > shown.length) {
     drafts.push(draft(`${role}:more`, `+${nodes.length - shown.length} more`, null, null, width, 1));
   }
@@ -128,7 +138,15 @@ export function layoutNeighbourhood(input: NeighbourhoodInput): Scene {
   const dep = capped('dependents', input.dependents, COL_W);
   const sib = capped('siblings', input.siblings, ROW_W);
   const alt = capped('alternatives', input.alternatives, ROW_W);
-  const center = draft(input.center.id, input.center.shortTitle || input.center.title, numberTag(input.center), input.center.url, CENTER_W, 3, true);
+  const center = draft(
+    input.center.id,
+    input.center.shortTitle || input.center.title,
+    numberTag(input.center),
+    input.center.url,
+    CENTER_W,
+    3,
+    true,
+  );
 
   const leftX = PAD;
   const centerX = leftX + COL_W + COL_GAP;
@@ -153,12 +171,20 @@ export function layoutNeighbourhood(input: NeighbourhoodInput): Scene {
     const members = nodes.filter((node) => node.group === 'siblings');
     const minX = Math.min(...members.map((node) => node.x));
     const maxX = Math.max(...members.map((node) => node.x + node.width));
-    groups.push({ id: 'siblings', label: NEIGHBOURHOOD_HEADINGS.siblings, x: round1(minX), y: round1(bandTop), width: round1(maxX - minX), height: round1(HEADING + h) });
+    groups.push({
+      id: 'siblings',
+      label: NEIGHBOURHOOD_HEADINGS.siblings,
+      x: round1(minX),
+      y: round1(bandTop),
+      width: round1(maxX - minX),
+      height: round1(HEADING + h),
+    });
     y = bandTop + HEADING + h + BAND_GAP;
   }
 
   // Middle band: columns under headings, centre vertically centred on the taller column.
-  const columnHeight = (drafts: Draft[]): number => drafts.reduce((sum, d) => sum + d.height, 0) + Math.max(0, drafts.length - 1) * STACK_GAP;
+  const columnHeight = (drafts: Draft[]): number =>
+    drafts.reduce((sum, d) => sum + d.height, 0) + Math.max(0, drafts.length - 1) * STACK_GAP;
   const bandTop = y;
   const colTop = bandTop + HEADING;
   const bandInner = Math.max(columnHeight(pre), columnHeight(dep), center.height);
@@ -181,7 +207,14 @@ export function layoutNeighbourhood(input: NeighbourhoodInput): Scene {
     }
     const top = Math.min(...placed.map((node) => node.y));
     const bottom = Math.max(...placed.map((node) => node.y + node.height));
-    groups.push({ id: role, label: NEIGHBOURHOOD_HEADINGS[role], x: round1(x + shift), y: round1(Math.min(bandTop, top - HEADING)), width: COL_W, height: round1(bottom - Math.min(bandTop, top - HEADING)) });
+    groups.push({
+      id: role,
+      label: NEIGHBOURHOOD_HEADINGS[role],
+      x: round1(x + shift),
+      y: round1(Math.min(bandTop, top - HEADING)),
+      width: COL_W,
+      height: round1(bottom - Math.min(bandTop, top - HEADING)),
+    });
     for (const node of placed) {
       if (node.href === null && node.id.endsWith(':more')) continue;
       const mid = round1(node.y + node.height / 2);
@@ -231,7 +264,14 @@ export function layoutNeighbourhood(input: NeighbourhoodInput): Scene {
     const members = nodes.filter((node) => node.group === 'alternatives');
     const minX = Math.min(...members.map((node) => node.x));
     const maxX = Math.max(...members.map((node) => node.x + node.width));
-    groups.push({ id: 'alternatives', label: NEIGHBOURHOOD_HEADINGS.alternatives, x: round1(minX), y: round1(altTop), width: round1(maxX - minX), height: round1(HEADING + h) });
+    groups.push({
+      id: 'alternatives',
+      label: NEIGHBOURHOOD_HEADINGS.alternatives,
+      x: round1(minX),
+      y: round1(altTop),
+      width: round1(maxX - minX),
+      height: round1(HEADING + h),
+    });
     y = altTop + HEADING + h + BAND_GAP;
   }
 

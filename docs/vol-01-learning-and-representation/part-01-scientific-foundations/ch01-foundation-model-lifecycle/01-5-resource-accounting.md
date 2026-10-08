@@ -391,7 +391,7 @@ Chinchilla's three estimation approaches yield similar but non-identical allocat
 
 PagedAttention evaluates OPT and LLaMA serving on configurations ranging from one to eight A100 GPUs (P36, §6.1, Table 1). ShareGPT and Alpaca supply prompt/response-length distributions; because source conversations lack request timestamps, arrivals are generated with a Poisson process. The paper compares against FasterTransformer and reimplemented Orca variants, including different maximum-length assumptions. Reported throughput and latency are conditional on those configurations and synthesized arrivals. The evaluation does not establish performance under arbitrary production burstiness or a current unpinned engine release.
 
-The chapter's proposed batch/precision/power sweep is specified in [verification](verification.md#experiment-15-resource-model-check). No such load test or energy measurement was performed for this manuscript.
+The chapter's proposed batch/precision/power sweep is specified in [verification](verification.md#exp-1-5). No such load test or energy measurement was performed for this manuscript.
 
 ## Observations
 

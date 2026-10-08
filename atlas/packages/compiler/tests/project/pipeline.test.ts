@@ -17,7 +17,10 @@ describe('pipeline on real docs (stub Markdown engine)', () => {
   let atlas: CompiledAtlas;
 
   before(async () => {
-    atlas = await runPipeline({ docsDir: DOCS_DIR, referenceStackPath: REFERENCE_STACK, compiledAt: FIXED_COMPILED_AT }, stubEngine);
+    atlas = await runPipeline(
+      { docsDir: DOCS_DIR, referenceStackPath: REFERENCE_STACK, compiledAt: FIXED_COMPILED_AT },
+      stubEngine,
+    );
   });
 
   it('produces a valid bundle manifest', () => {
@@ -68,15 +71,32 @@ describe('pipeline on real docs (stub Markdown engine)', () => {
     const ch05 = atlas.graph.tree[0]?.children[0]?.children.find((node) => node.id === 'ms.chapter.5');
     assert.deepEqual(
       ch05?.children.map((node) => node.id),
-      ['ms.section.5.1', 'ms.section.5.2', 'ms.section.5.3', 'ms.section.5.4', 'ms.section.5.5', 'ms.section.5.6', 'ms.verification.5', 'ms.references.5'],
+      [
+        'ms.section.5.1',
+        'ms.section.5.2',
+        'ms.section.5.3',
+        'ms.section.5.4',
+        'ms.section.5.5',
+        'ms.section.5.6',
+        'ms.verification.5',
+        'ms.references.5',
+      ],
     );
-    const ch42 = atlas.graph.tree[1]?.children.flatMap((part) => part.children).find((node) => node.id === 'ms.chapter.42');
+    const ch42 = atlas.graph.tree[1]?.children
+      .flatMap((part) => part.children)
+      .find((node) => node.id === 'ms.chapter.42');
     assert.equal(ch42?.children.length, 6, 'planned satellites are not listed in the tree');
   });
 
   it('derives typed edges from frontmatter and keeps the neighbourhood local', () => {
-    assert.ok(atlas.graph.edges.some((edge) => edge.from === 'ms.chapter.5' && edge.to === 'ms.chapter.4' && edge.type === 'prerequisite'));
-    assert.ok(atlas.graph.external.some((relation) => relation.from === 'ms.chapter.5' && relation.target === 'paper.P01'));
+    assert.ok(
+      atlas.graph.edges.some(
+        (edge) => edge.from === 'ms.chapter.5' && edge.to === 'ms.chapter.4' && edge.type === 'prerequisite',
+      ),
+    );
+    assert.ok(
+      atlas.graph.external.some((relation) => relation.from === 'ms.chapter.5' && relation.target === 'paper.P01'),
+    );
     const local = neighbourhood(atlas.graph, 'ms.chapter.5');
     assert.ok(local !== null);
     assert.ok(local.prerequisites.some((node) => node.id === 'ms.chapter.4'));
@@ -151,7 +171,10 @@ describe('pipeline on real docs (stub Markdown engine)', () => {
   });
 
   it('is deterministic for a fixed compiledAt', async () => {
-    const again = await runPipeline({ docsDir: DOCS_DIR, referenceStackPath: REFERENCE_STACK, compiledAt: FIXED_COMPILED_AT }, stubEngine);
+    const again = await runPipeline(
+      { docsDir: DOCS_DIR, referenceStackPath: REFERENCE_STACK, compiledAt: FIXED_COMPILED_AT },
+      stubEngine,
+    );
     assert.equal(again.searchIndex, atlas.searchIndex);
     assert.deepEqual(again.manifest, atlas.manifest);
     assert.deepEqual(again.graph, atlas.graph);
@@ -161,18 +184,32 @@ describe('pipeline on real docs (stub Markdown engine)', () => {
     const controller = new AbortController();
     controller.abort(new Error('stop'));
     await assert.rejects(
-      runPipeline({ docsDir: DOCS_DIR, referenceStackPath: REFERENCE_STACK, compiledAt: FIXED_COMPILED_AT, signal: controller.signal }, stubEngine),
+      runPipeline(
+        {
+          docsDir: DOCS_DIR,
+          referenceStackPath: REFERENCE_STACK,
+          compiledAt: FIXED_COMPILED_AT,
+          signal: controller.signal,
+        },
+        stubEngine,
+      ),
       /stop/u,
     );
   });
 
   it('fails with stable codes on unreadable inputs', async () => {
     await assert.rejects(
-      runPipeline({ docsDir: DOCS_DIR, referenceStackPath: `${REFERENCE_STACK}.missing`, compiledAt: FIXED_COMPILED_AT }, stubEngine),
+      runPipeline(
+        { docsDir: DOCS_DIR, referenceStackPath: `${REFERENCE_STACK}.missing`, compiledAt: FIXED_COMPILED_AT },
+        stubEngine,
+      ),
       (error: unknown) => error instanceof Error && 'code' in error && error.code === 'reference-stack-unreadable',
     );
     await assert.rejects(
-      runPipeline({ docsDir: `${DOCS_DIR}-missing`, referenceStackPath: REFERENCE_STACK, compiledAt: FIXED_COMPILED_AT }, stubEngine),
+      runPipeline(
+        { docsDir: `${DOCS_DIR}-missing`, referenceStackPath: REFERENCE_STACK, compiledAt: FIXED_COMPILED_AT },
+        stubEngine,
+      ),
       (error: unknown) => error instanceof Error && 'code' in error && error.code === 'manifest-invalid',
     );
   });

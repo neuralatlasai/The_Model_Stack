@@ -19,4 +19,9 @@ export async function layoutFigure(spec: FigureSpec): Promise<Scene | null> {
 }
 
 export { layoutCycle, layoutDiagram };
-export { layoutNeighbourhood, NEIGHBOURHOOD_CAP, NEIGHBOURHOOD_HEADINGS, type NeighbourhoodInput } from './neighbourhood.ts';
+export {
+  layoutNeighbourhood,
+  NEIGHBOURHOOD_CAP,
+  NEIGHBOURHOOD_HEADINGS,
+  type NeighbourhoodInput,
+} from './neighbourhood.ts';

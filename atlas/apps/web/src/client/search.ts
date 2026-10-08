@@ -38,7 +38,8 @@ export function initSearch(ctx: PageContext): void {
   doc.addEventListener(
     'keydown',
     (event) => {
-      if (event.key.toLowerCase() !== 'k' || !(event.metaKey || event.ctrlKey) || event.altKey || event.shiftKey) return;
+      if (event.key.toLowerCase() !== 'k' || !(event.metaKey || event.ctrlKey) || event.altKey || event.shiftKey)
+        return;
       event.preventDefault();
       open(doc.activeElement instanceof HTMLElement ? doc.activeElement : null);
     },

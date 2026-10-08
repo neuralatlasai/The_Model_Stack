@@ -16,14 +16,12 @@ const { links, current } = Astro.props;
 
 <nav class="sh-modes" aria-label="Views of this node">
   <ul class="sh-modes-list">
-    {
-      MODES.map((mode) => (
-        <li>
-          <a class="sh-mode" href={links[mode]} data-view={mode} aria-current={mode === current ? 'page' : undefined}>
-            {MODE_LABELS[mode]}
-          </a>
-        </li>
-      ))
-    }
+    {MODES.map((mode) => (
+      <li>
+        <a class="sh-mode" href={links[mode]} data-view={mode} aria-current={mode === current ? 'page' : undefined}>
+          {MODE_LABELS[mode]}
+        </a>
+      </li>
+    ))}
   </ul>
 </nav>

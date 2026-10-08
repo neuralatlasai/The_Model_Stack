@@ -5,6 +5,8 @@
  *
  *   *(Eq. 5.4)* …                      equation tag line
  *   Algorithm 5.2 — …                  first line of a fenced block
+ *   ### Algorithm 5.2 — …              mathematical procedure heading
+ *   [DERIVED] **Algorithm 5.2 — …**     mathematical procedure title
  *   id: fig-5.3                        inside a ```figure block
  *   ### Experiment 5.1 — …             H3–H6
  *   > **Proposition 7.1.**             also Theorem / Lemma / Corollary
@@ -18,11 +20,24 @@ import type { MarkdownInput, NumberedObjectIndex } from './contract.ts';
 const NUMBER = String.raw`(?:\d+|[A-Z])\.\d+[a-z]?`;
 const EQUATION_TAG = new RegExp(String.raw`^\s*(?:[*_]{1,2})?\(\s*Eq\.?\s*(${NUMBER})\s*\)(?:[*_]{1,2})?`, 'u');
 const ALGORITHM_TITLE = new RegExp(String.raw`^\s*Algorithm\s+(${NUMBER})(?![\d.])`, 'u');
+const MATH_ALGORITHM = new RegExp(
+  String.raw`^\s{0,3}(?:#{3,6}\s+Algorithm\s+(${NUMBER})\s+[—–-]\s+\S|(?:\[[A-Z][A-Z-]*\]\s+)?\*\*Algorithm\s+(${NUMBER})\s+[—–-]\s+\S)`,
+  'u',
+);
+
+/** Explicit definition titles only; a prose mention never defines an object. */
+export function mathematicalAlgorithmNumber(line: string): string | null {
+  const match = MATH_ALGORITHM.exec(line);
+  return match?.[1] ?? match?.[2] ?? null;
+}
 const FIGURE_ID = /^\s*id\s*:\s*["']?fig-(\d+\.\d+)["']?\s*(?:#.*)?$/u;
 const EXPERIMENT_HEADING = new RegExp(String.raw`^\s{0,3}#{3,6}\s+Experiments?\s+(${NUMBER})(?![\d.])`, 'u');
-const PROPOSITION = new RegExp(String.raw`^\s*(?:>\s*)+\*\*(?:Proposition|Theorem|Lemma|Corollary)\s+(${NUMBER})\.?\*\*`, 'u');
+const PROPOSITION = new RegExp(
+  String.raw`^\s*(?:>\s*)+\*\*(?:Proposition|Theorem|Lemma|Corollary)\s+(${NUMBER})\.?\*\*`,
+  'u',
+);
 const FENCE = /^\s{0,3}(`{3,}|~{3,})\s*([^\s`]*)/u;
-/** Algorithms are recognised only in plain-text fences, as in the full compile. */
+/** Legacy fenced algorithms are recognised only in plain-text fences. */
 const PLAIN_LANGS: ReadonlySet<string> = new Set(['', 'text', 'txt', 'plain', 'plaintext']);
 
 function pushUnique(list: string[], value: string | undefined): void {
@@ -43,7 +58,11 @@ export function indexNumberedObjects(source: string | MarkdownInput): NumberedOb
     if (fence !== null) {
       const close = FENCE.exec(line);
       const marker = close?.[1];
-      if (marker?.startsWith(fence.marker.charAt(0)) && marker.length >= fence.marker.length && (close?.[2] ?? '') === '') {
+      if (
+        marker?.startsWith(fence.marker.charAt(0)) &&
+        marker.length >= fence.marker.length &&
+        (close?.[2] ?? '') === ''
+      ) {
         fence = null;
         continue;
       }
@@ -60,6 +79,7 @@ export function indexNumberedObjects(source: string | MarkdownInput): NumberedOb
       continue;
     }
     pushUnique(equations, EQUATION_TAG.exec(line)?.[1]);
+    pushUnique(algorithms, mathematicalAlgorithmNumber(line) ?? undefined);
     pushUnique(experiments, EXPERIMENT_HEADING.exec(line)?.[1]);
     pushUnique(propositions, PROPOSITION.exec(line)?.[1]);
   }

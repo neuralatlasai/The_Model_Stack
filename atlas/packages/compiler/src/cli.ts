@@ -76,7 +76,9 @@ const OPTIONS = {
 } as const;
 
 function parseCliArgs(argv: readonly string[]): CliArgs | 'help' {
-  let parsedArgs: ReturnType<typeof parseArgs<{ args: string[]; strict: true; allowPositionals: false; options: typeof OPTIONS }>>;
+  let parsedArgs: ReturnType<
+    typeof parseArgs<{ args: string[]; strict: true; allowPositionals: false; options: typeof OPTIONS }>
+  >;
   try {
     parsedArgs = parseArgs({ args: [...argv], strict: true, allowPositionals: false, options: OPTIONS });
   } catch (error: unknown) {
@@ -113,7 +115,8 @@ function report(atlas: CompiledAtlas, written: WriteReport, args: CliArgs): stri
   const { counts, diagnostics } = atlas.manifest;
   const lines: string[] = [];
   const shown = atlas.diagnostics.filter(
-    (item) => item.severity === 'error' || (!args.quiet && item.severity === 'warning') || (args.verbose && !args.quiet),
+    (item) =>
+      item.severity === 'error' || (!args.quiet && item.severity === 'warning') || (args.verbose && !args.quiet),
   );
   if (!args.quiet) {
     lines.push(
@@ -133,7 +136,10 @@ function report(atlas: CompiledAtlas, written: WriteReport, args: CliArgs): stri
     }
   }
   if (!args.quiet && !args.verbose && diagnostics.info > 0) {
-    lines.push('', `  ${String(diagnostics.info)} info diagnostics not listed (use --verbose, or read diagnostics.json)`);
+    lines.push(
+      '',
+      `  ${String(diagnostics.info)} info diagnostics not listed (use --verbose, or read diagnostics.json)`,
+    );
   }
   return lines.length === 0 ? '' : `${lines.join('\n')}\n`;
 }
@@ -207,7 +213,9 @@ if (import.meta.main) {
       process.exitCode = code;
     },
     (error: unknown) => {
-      process.stderr.write(`atlas-compile: unexpected failure: ${error instanceof Error ? (error.stack ?? error.message) : String(error)}\n`);
+      process.stderr.write(
+        `atlas-compile: unexpected failure: ${error instanceof Error ? (error.stack ?? error.message) : String(error)}\n`,
+      );
       process.exitCode = EXIT_CODES.fatal;
     },
   );

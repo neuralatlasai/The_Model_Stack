@@ -6,8 +6,7 @@ import { brainMeshes } from '../lib/brain-mesh.ts';
 
 self.addEventListener('message', (event: MessageEvent<{ small: boolean }>) => {
   const meshes = brainMeshes(event.data.small);
-  self.postMessage(
-    meshes,
-    { transfer: meshes.flatMap((mesh) => [mesh.position.buffer, mesh.normal.buffer, mesh.index.buffer]) },
-  );
+  self.postMessage(meshes, {
+    transfer: meshes.flatMap((mesh) => [mesh.position.buffer, mesh.normal.buffer, mesh.index.buffer]),
+  });
 });

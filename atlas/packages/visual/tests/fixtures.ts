@@ -44,8 +44,10 @@ export function allFences(): Fence[] {
 }
 
 export const mermaidBlocks = (): Fence[] => allFences().filter((fence) => fence.lang === 'mermaid');
-export const tensorTraceBlocks = (): Fence[] => allFences().filter((fence) => fence.lang === 'text' && /^Tensor trace\b/u.test(fence.body));
-export const systemsTraceBlocks = (): Fence[] => allFences().filter((fence) => fence.lang === 'text' && /^Systems trace\b/u.test(fence.body));
+export const tensorTraceBlocks = (): Fence[] =>
+  allFences().filter((fence) => fence.lang === 'text' && /^Tensor trace\b/u.test(fence.body));
+export const systemsTraceBlocks = (): Fence[] =>
+  allFences().filter((fence) => fence.lang === 'text' && /^Systems trace\b/u.test(fence.body));
 
 const GRAMMAR = (): string => readFileSync(join(DOCS_DIR, 'VISUAL_GRAMMAR.md'), 'utf8').replace(/\r\n?/gu, '\n');
 
@@ -89,7 +91,12 @@ export function grammarKindExamples(): KindExample[] {
 }
 
 /** Wraps a kind example in a valid envelope for chapter 5. */
-export function envelope(kind: string, spec: unknown, n: number, overrides: Record<string, unknown> = {}): Record<string, unknown> {
+export function envelope(
+  kind: string,
+  spec: unknown,
+  n: number,
+  overrides: Record<string, unknown> = {},
+): Record<string, unknown> {
   return {
     id: `fig-5.${n}`,
     kind,

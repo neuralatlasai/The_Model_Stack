@@ -70,7 +70,7 @@ editorial_status: manuscript_draft
 
 # Chapter 21 references
 
-[DERIVED] This ledger records primary sources actually opened during preparation on 2026-10-08. Revision pins identify the text used for the stated method; they are not a blanket claim that every paper was comprehensively surveyed through all subsequent literature. Full primary HTML/PDF was accessible and the indicated method, experimental and limitation locations were inspected. Abstract pages were additionally used to check the revisions of the more recent sources. No source training program, released checkpoint or fitting implementation was executed.
+[DERIVED] This ledger records primary sources reopened and inspected during preparation on 2026-10-08. Revision pins identify the text used for the stated method; they are not a blanket claim that every paper was comprehensively surveyed through all subsequent literature. Full primary HTML/PDF was accessible and the indicated method, experimental and limitation locations were inspected. Abstract metadata was additionally checked for data-constrained scaling, fine-grained MoE, ATLAS and the apparent-emergence study. An unpinned PDF retrieval is identified even when current metadata gives its latest revision. No source training program, released checkpoint or fitting implementation was executed.
 
 ## Source ledger
 
@@ -88,7 +88,7 @@ editorial_status: manuscript_draft
 | R21.7 | paper | Scaling Laws for Multilingual Language Models | Yifei He et al. | arXiv, 2024 | https://arxiv.org/html/2410.12883v2 | Not inspected | preprint | 2026-10-08 | Family grouping, mixture-share law and optimal sampling ratios. |
 | R21.8 | paper | ATLAS: Adaptive Transfer Scaling Laws for Multilingual Pretraining, Finetuning, and Decoding the Curse of Multilinguality | Shayne Longpre et al. | ICLR, 2026 | https://arxiv.org/pdf/2510.22037 | Not inspected | peer-reviewed | 2026-10-08 | Transfer/repetition effective data, multilingual holdouts and measured transfer statistics. |
 | R21.9 | paper | Effective Long-Context Scaling of Foundation Models | Wenhan Xiong et al., Meta | NAACL, 2024 | https://aclanthology.org/2024.naacl-long.260.pdf | Not inspected | peer-reviewed | 2026-10-08 | Positional adaptation, 400B-token continuation, context-dependent loss and evaluations. |
-| R21.10 | paper | Distillation Scaling Laws | Dan Busbridge et al., Apple | ICML, 2025 | https://arxiv.org/html/2502.08606v2 | Not inspected | peer-reviewed | 2026-10-08 | Teacher-conditioned law, capacity gap, experiment grids and cost amortization. |
+| R21.10 | paper | Distillation Scaling Laws | Dan Busbridge et al., Apple | ICML, 2025 | https://arxiv.org/html/2502.08606v2 | Not inspected | peer-reviewed | 2026-10-08 | Teacher-conditioned law, capacity gap, experiment grids and attention/head-aware cost amortization. |
 | R21.11 | paper | The Art of Scaling Reinforcement Learning Compute for LLMs | Devvrit Khatri et al., Meta | arXiv, 2025 | https://arxiv.org/html/2510.13786v1 | Not inspected | preprint | 2026-10-08 | Sigmoid RL scaling, ScaleRL, GPU-hour boundary, mean@16 and extrapolation. |
 | R21.12 | paper | Scaling LLM Test-Time Compute Optimally can be More Effective than Scaling Model Parameters | Charlie Snell, Jaehoon Lee, Kelvin Xu, Aviral Kumar | arXiv, 2024 | https://arxiv.org/pdf/2408.03314 | Not inspected | preprint | 2026-10-08 | Difficulty-conditional strategies, verifier behavior, cross-validation and excluded estimation cost. |
 | R21.13 | paper | Are Emergent Abilities of Large Language Models a Mirage? | Rylan Schaeffer, Brando Miranda, Sanmi Koyejo | NeurIPS, 2023 | https://arxiv.org/pdf/2304.15004 | Not inspected | peer-reviewed | 2026-10-08 | Metric-induced appearance, finite resolution and alternative scoring. |
@@ -100,29 +100,131 @@ editorial_status: manuscript_draft
 
 ## Inspection and revision ledger
 
-| Key | Inspected text and locators | Evidence boundary |
-|---|---|---|
-| P07 | HTML v4; training-scale tables, data curation methods, main controlled comparisons and appendices. | Source-reported curation experiments. Data processing, benchmarks and code not independently run. |
-| P08 | Historical HTML v1; sections 1.2, 2–4 and computation/architecture appendices. | Available dataset size in its finite-data law is separated from processed tokens in its time analysis. |
-| P09 | HTML v1; Introduction footnote 2, sections 3.1–3.3 and 4, Appendices C–D including D.2. | Smoothed training loss is the source's test-loss proxy under its stated less-than-one-epoch assumption. |
-| R21.1 | HTML v4, revision 2025-01-19; sections 3–4, Table 1 and Appendices B–C. | Original controlled runs; includes source disclosure of repetition in some auxiliary/OWT runs. |
-| R21.2 | HTML v2; digitization, optimizer reconstruction, bootstrap and coefficient discussion. | Partial observations recovered from a published figure; no original training reproduction. |
-| R21.3 | HTML v3, revision 2025-04-14; lifecycle and currency derivation, experiment grid, fit ablations and appendices. | Original 47-run sweep plus analytical serving scenarios; scenario utilization is not a universal measurement. |
-| R21.4 | Retrieved full PDF stamped v5, 2025-06-28; effective-data/model equations, experimental setup and repetition comparisons. | Original runs; effective-data saturation does not represent every overfitting regime. |
-| R21.5 | Retrieved full PDF; routed law, saturation and interaction analysis, experimental grid. No revision number asserted here. | Fixed-data scaling; cannot identify optimal token allocation by itself. |
-| R21.6 | Retrieved full PDF and abstract metadata confirming v1; sections 4–6, granularity law and compute model. | Original fine-grained MoE runs at fixed expansion; no hardware-independent latency optimum. |
-| R21.7 | HTML v2, revision 2024-12-03; family grouping, mixture intervention, fitted law and ratio optimization. | Grouping-dependent transfer hypothesis; not absence of transfer between all individual languages. |
-| R21.8 | Retrieved full PDF and metadata confirming v2, 2026-02-25; sections 3–5, Table 1, multilingual and held-out protocols. | Original training/finetuning study; measured transfer scores distinguished from fitted transfer coefficients. |
-| R21.9 | Full NAACL proceedings PDF; sections 2–4, context fit, continuation protocol and evaluation. | Continuation changes both training and context; short-task gains do not isolate context alone. |
-| R21.10 | HTML v2, revision 2025-07-25; sections 3–4, Eq.8, experiment grids, capacity gap and compute boundaries. | Original distillation experiments; teacher creation versus incremental student cost kept separate. |
-| R21.11 | HTML v1; sections 2–5, recipe, rollout protocol, scaling fit, ablations and extrapolation. | GPU-hour scaling within its systems and recipe; mean@16 is not pass@16. |
-| R21.12 | Retrieved full PDF; sections 3–5 and appendices on difficulty bins, search, revision and verifier generalization. No revision number asserted here. | Main strategy budget excludes difficulty-estimation work; deployment must account for it. |
-| R21.13 | Retrieved full PDF, v2 confirmed through metadata; sections 2–4 and metric experiments. | Particular apparent-emergence explanations, not a proof that all capability transitions are artifacts. |
-| R21.14 | HTML v3, revision 2024-10-01; sections 3–5, response fitting, splits, future-model validation and appendices. | Observational prediction; reference-equivalent compute is not actual measured training compute. |
-| R21.15 | Retrieved full proceedings PDF; predictability and narrower-behavior arguments and limitations. | Primary conceptual analysis; no task-specific numerical law imported from its secondary citations. |
-| R21.16 | Retrieved full PDF; emergence definition, examples and limitations. No revision number asserted here. | Historical framing only; task measurements are not treated as newly reproduced primary experiments. |
-| R21.17 | Full PDF v2, revision 2025-06-02; sections 2–8, archive, squared-loss estimation, largest-size holdouts and Appendix E. | Retrospective analysis of published models, not 485 newly trained models. |
-| R21.18 | Official portal index, accessed 2026-10-08. | Discovery context only; individual dataset methodology and downloadable data not audited. |
+### P07
+
+[PAPER-REPORTED] Inspected text: HTML v4; training-scale tables, data curation methods, main controlled comparisons and appendices.
+
+[DERIVED] Evidence boundary: Source-reported curation experiments. Data processing, benchmarks and code not independently run.
+
+### P08
+
+[PAPER-REPORTED] Inspected text: Historical HTML v1; sections 1.2, 2–4 and computation/architecture appendices.
+
+[DERIVED] Evidence boundary: Available dataset size in its finite-data law is separated from processed tokens in its time analysis.
+
+### P09
+
+[PAPER-REPORTED] Inspected text: HTML v1; Introduction footnote 2, sections 3.1–3.3 and 4, Appendices C–D including D.2.
+
+[DERIVED] Evidence boundary: Smoothed training loss is the source's test-loss proxy under its stated less-than-one-epoch assumption.
+
+### R21.1
+
+[PAPER-REPORTED] Inspected text: HTML v4, revision 2025-01-19; sections 3–4, Table 1 and Appendices B–C.
+
+[DERIVED] Evidence boundary: Original controlled runs; includes source disclosure of repetition in some auxiliary/OWT runs.
+
+### R21.2
+
+[PAPER-REPORTED] Inspected text: HTML v2; digitization, optimizer reconstruction, bootstrap and coefficient discussion.
+
+[DERIVED] Evidence boundary: Partial observations recovered from a published figure; no original training reproduction.
+
+### R21.3
+
+[PAPER-REPORTED] Inspected text: HTML v3, revision 2025-04-14; lifecycle and currency derivation, experiment grid, fit ablations and appendices.
+
+[DERIVED] Evidence boundary: Original 47-run sweep plus analytical serving scenarios; scenario utilization is not a universal measurement.
+
+### R21.4
+
+[PAPER-REPORTED] Inspected text: Unpinned PDF retrieval; arXiv metadata confirms latest v5, 2025-06-28; effective-data/model equations, experimental setup and repetition comparisons.
+
+[DERIVED] Evidence boundary: Original runs; effective-data saturation does not represent every overfitting regime.
+
+### R21.5
+
+[PAPER-REPORTED] Inspected text: Retrieved full PDF; routed law, saturation and interaction analysis, experimental grid. No revision number asserted here.
+
+[DERIVED] Evidence boundary: Fixed-data scaling; cannot identify optimal token allocation by itself.
+
+### R21.6
+
+[PAPER-REPORTED] Inspected text: Unpinned PDF retrieval; arXiv metadata confirms v1; sections 4–6, granularity law and compute model.
+
+[DERIVED] Evidence boundary: Original fine-grained MoE runs at fixed expansion; no hardware-independent latency optimum.
+
+### R21.7
+
+[PAPER-REPORTED] Inspected text: HTML v2, revision 2024-12-03; family grouping, mixture intervention, fitted law and ratio optimization.
+
+[DERIVED] Evidence boundary: Grouping-dependent transfer hypothesis; not absence of transfer between all individual languages.
+
+### R21.8
+
+[PAPER-REPORTED] Inspected text: Unpinned PDF retrieval; arXiv metadata confirms latest v2, 2026-02-25; sections 3–5, Table 1, multilingual and held-out protocols.
+
+[DERIVED] Evidence boundary: Original training/finetuning study; measured transfer scores distinguished from fitted transfer coefficients.
+
+### R21.9
+
+[PAPER-REPORTED] Inspected text: Full NAACL proceedings PDF; sections 2–4, context fit, continuation protocol and evaluation.
+
+[DERIVED] Evidence boundary: Continuation changes both training and context; short-task gains do not isolate context alone.
+
+### R21.10
+
+[PAPER-REPORTED] Inspected text: HTML v2, revision 2025-07-25; sections 3–5, Equations 8–9, experiment grids, capacity gap, Table 2 and Appendix H.1 attention/head-aware compute boundaries.
+
+[DERIVED] Evidence boundary: Original distillation experiments; teacher creation versus incremental student cost kept separate.
+
+### R21.11
+
+[PAPER-REPORTED] Inspected text: HTML v1; sections 2–5, recipe, rollout protocol, scaling fit, ablations and extrapolation.
+
+[DERIVED] Evidence boundary: GPU-hour scaling within its systems and recipe; mean@16 is not pass@16.
+
+### R21.12
+
+[PAPER-REPORTED] Inspected text: Retrieved full PDF; sections 3–5 and appendices on difficulty bins, search, revision and verifier generalization. No revision number asserted here.
+
+[DERIVED] Evidence boundary: Main strategy budget excludes difficulty-estimation work; deployment must account for it.
+
+### R21.13
+
+[PAPER-REPORTED] Inspected text: Unpinned PDF retrieval, latest v2 confirmed through metadata; sections 2–4 and metric experiments.
+
+[DERIVED] Evidence boundary: Particular apparent-emergence explanations, not a proof that all capability transitions are artifacts.
+
+### R21.14
+
+[PAPER-REPORTED] Inspected text: HTML v3, revision 2024-10-01; sections 3–5, response fitting, splits, future-model validation and appendices.
+
+[DERIVED] Evidence boundary: Observational prediction; reference-equivalent compute is not actual measured training compute.
+
+### R21.15
+
+[PAPER-REPORTED] Inspected text: Retrieved full arXiv PDF; predictability and narrower-behavior arguments and limitations.
+
+[DERIVED] Evidence boundary: Primary conceptual analysis; no task-specific numerical law imported from its secondary citations.
+
+### R21.16
+
+[PAPER-REPORTED] Inspected text: Retrieved full PDF; emergence definition, examples and limitations. No revision number asserted here.
+
+[DERIVED] Evidence boundary: Historical framing only; task measurements are not treated as newly reproduced primary experiments.
+
+### R21.17
+
+[PAPER-REPORTED] Inspected text: Full PDF v2, revision 2025-06-02; sections 2–8, archive, squared-loss estimation, largest-size holdouts and Appendix E.
+
+[DERIVED] Evidence boundary: Retrospective analysis of published models, not 485 newly trained models.
+
+### R21.18
+
+[PAPER-REPORTED] Inspected text: Official portal index, accessed 2026-10-08.
+
+[DERIVED] Evidence boundary: Discovery context only; individual dataset methodology and downloadable data not audited.
 
 ## What this inspection does and does not establish
 

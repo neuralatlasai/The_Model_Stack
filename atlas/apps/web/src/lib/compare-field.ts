@@ -46,7 +46,13 @@ export function fieldAlternative(sibling: SiblingBlock): FieldAlternative {
   };
 }
 
-export function fieldNode(input: { id: string; number: string | null; title: string; href: string; siblings: readonly SiblingBlock[] }): FieldNode {
+export function fieldNode(input: {
+  id: string;
+  number: string | null;
+  title: string;
+  href: string;
+  siblings: readonly SiblingBlock[];
+}): FieldNode {
   const alternatives = input.siblings.map(fieldAlternative);
   return {
     id: input.id,

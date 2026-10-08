@@ -164,7 +164,7 @@ export function neighbourhood(graph: AtlasGraph, id: NodeId): Neighbourhood | nu
   };
 
   const ancestors: GraphNode[] = [];
-  for (let cursor = node.parent; cursor !== null; ) {
+  for (let cursor = node.parent; cursor !== null;) {
     const parent = get(cursor);
     if (parent === undefined) break;
     ancestors.unshift(parent);

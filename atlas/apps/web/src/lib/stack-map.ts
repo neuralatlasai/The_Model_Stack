@@ -59,7 +59,10 @@ export interface StackFacts {
 
 export function stackFacts(chapters: readonly StackChapter[]): StackFacts {
   const pick = (score: (chapter: StackChapter) => number): StackChapter | null =>
-    chapters.reduce<StackChapter | null>((best, chapter) => (best === null || score(chapter) > score(best) ? chapter : best), null);
+    chapters.reduce<StackChapter | null>(
+      (best, chapter) => (best === null || score(chapter) > score(best) ? chapter : best),
+      null,
+    );
   return {
     written: chapters.filter((chapter) => chapter.written).length,
     total: chapters.length,

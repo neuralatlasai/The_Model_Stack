@@ -49,7 +49,9 @@ function assignLanes(edges: Routed[]): number {
     for (;;) {
       const taken = lanes[lane] ?? [];
       // Spans may share an end node (their stubs use different ports); a self-loop blocks its node.
-      const clash = taken.some(([a, b]) => (lo === hi || a === b ? a <= hi && lo <= b : Math.max(a, lo) < Math.min(b, hi)));
+      const clash = taken.some(([a, b]) =>
+        lo === hi || a === b ? a <= hi && lo <= b : Math.max(a, lo) < Math.min(b, hi),
+      );
       if (!clash) break;
       lane += 1;
     }
@@ -87,7 +89,10 @@ export function layoutCycle(spec: CycleSpec): Scene {
     let cursor = FIRST_LANE;
     for (let lane = 0; lane < count; lane += 1) {
       offsets.push(cursor);
-      const widest = Math.max(0, ...edges.filter((edge) => edge.lane === lane).map((edge) => labelWidth(spec.edges[edge.index]?.label)));
+      const widest = Math.max(
+        0,
+        ...edges.filter((edge) => edge.lane === lane).map((edge) => labelWidth(spec.edges[edge.index]?.label)),
+      );
       cursor += Math.max(LANE_GAP, widest === 0 ? LANE_GAP : widest + LABEL_OFFSET + 8);
     }
     offsets.push(cursor);
@@ -96,7 +101,10 @@ export function layoutCycle(spec: CycleSpec): Scene {
   const rightOffsets = laneOffsets(right, rightLanes);
   const leftOffsets = laneOffsets(left, leftLanes);
   const leftExtent = leftLanes === 0 ? 0 : (leftOffsets[leftLanes] ?? 0);
-  const straightLabel = Math.max(0, ...routed.filter((edge) => edge.side === 'straight').map((edge) => labelWidth(spec.edges[edge.index]?.label)));
+  const straightLabel = Math.max(
+    0,
+    ...routed.filter((edge) => edge.side === 'straight').map((edge) => labelWidth(spec.edges[edge.index]?.label)),
+  );
 
   const colLeft = PAD + leftExtent;
   const cx = colLeft + colWidth / 2;
@@ -130,8 +138,10 @@ export function layoutCycle(spec: CycleSpec): Scene {
     nodes.forEach((node, n) => {
       const attached: { key: string; up: boolean; lane: number; order: number }[] = [];
       for (const edge of edges) {
-        if (edge.from === n) attached.push({ key: `${edge.index}:from`, up: edge.to < n, lane: edge.lane, order: edge.index });
-        if (edge.to === n) attached.push({ key: `${edge.index}:to`, up: edge.from < n, lane: edge.lane, order: edge.index });
+        if (edge.from === n)
+          attached.push({ key: `${edge.index}:from`, up: edge.to < n, lane: edge.lane, order: edge.index });
+        if (edge.to === n)
+          attached.push({ key: `${edge.index}:to`, up: edge.from < n, lane: edge.lane, order: edge.index });
       }
       attached.sort((a, b) => {
         if (a.up !== b.up) return a.up ? -1 : 1;
@@ -167,7 +177,8 @@ export function layoutCycle(spec: CycleSpec): Scene {
     } else {
       const side: Side = edge.side;
       const offsets = side === 'right' ? rightOffsets : leftOffsets;
-      const laneX = side === 'right' ? colRight + (offsets[edge.lane] ?? FIRST_LANE) : colLeft - (offsets[edge.lane] ?? FIRST_LANE);
+      const laneX =
+        side === 'right' ? colRight + (offsets[edge.lane] ?? FIRST_LANE) : colLeft - (offsets[edge.lane] ?? FIRST_LANE);
       const edgeX = (node: SceneNode): number => (side === 'right' ? node.x + node.width : node.x);
       const y0 = ports.get(`${side}:${edge.index}:from`) ?? source.y + source.height / 2;
       const y1 = ports.get(`${side}:${edge.index}:to`) ?? target.y + target.height / 2;

@@ -18,32 +18,48 @@ const { block } = Astro.props;
 const nameView =
   block.target === null
     ? null
-    : inlineView({ kind: 'link', target: block.target, children: [{ kind: 'text', value: block.name }] }, import.meta.env.BASE_URL);
+    : inlineView(
+        { kind: 'link', target: block.target, children: [{ kind: 'text', value: block.name }] },
+        import.meta.env.BASE_URL,
+      );
 const link = nameView !== null && nameView.kind === 'link' ? nameView : null;
 const primitive = block.differential.changedPrimitive;
 const fields = SIBLING_FIELDS.flatMap((field) => {
   const content = block.differential[field];
-  return field === 'changedPrimitive' || content === null ? [] : [{ field, title: SIBLING_FIELD_TITLES[field], content }];
+  return field === 'changedPrimitive' || content === null
+    ? []
+    : [{ field, title: SIBLING_FIELD_TITLES[field], content }];
 });
 ---
 
 <div class="rb-sib" id={block.anchor ?? undefined} {...depthAttrs(block.depth)}>
-  <p class="rb-sib__name">{link !== null ? <a class={link.className} href={link.href} title={link.title} rel={link.rel}>{block.name}</a> : block.name}</p>
-  {
-    primitive !== null && (
-      <p class="rb-sib__prim"><span class="rb-sib__prim-label">Changed primitive</span> <span class="rb-sib__prim-value"><Inline nodes={primitive} /></span></p>
-    )
-  }
-  {
-    fields.length > 0 && (
-      <dl class="rb-grid rb-sib__grid">
-        {fields.map((row) => (
-          <div class="rb-grid__row">
-            <dt class="rb-grid__key">{row.title}</dt>
-            <dd class="rb-grid__value"><Inline nodes={row.content} /></dd>
-          </div>
-        ))}
-      </dl>
-    )
-  }
+  <p class="rb-sib__name">
+    {link !== null ? (
+      <a class={link.className} href={link.href} title={link.title} rel={link.rel}>
+        {block.name}
+      </a>
+    ) : (
+      block.name
+    )}
+  </p>
+  {primitive !== null && (
+    <p class="rb-sib__prim">
+      <span class="rb-sib__prim-label">Changed primitive</span>{' '}
+      <span class="rb-sib__prim-value">
+        <Inline nodes={primitive} />
+      </span>
+    </p>
+  )}
+  {fields.length > 0 && (
+    <dl class="rb-grid rb-sib__grid">
+      {fields.map((row) => (
+        <div class="rb-grid__row">
+          <dt class="rb-grid__key">{row.title}</dt>
+          <dd class="rb-grid__value">
+            <Inline nodes={row.content} />
+          </dd>
+        </div>
+      ))}
+    </dl>
+  )}
 </div>

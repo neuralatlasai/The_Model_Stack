@@ -17,14 +17,19 @@ const { block } = Astro.props;
 const showImpl = block.variant === 'implementation' && (block.impl !== null || block.version !== null);
 ---
 
-<div class={`rb-note rb-note--${block.variant}`} role="note" id={block.anchor ?? undefined} {...depthAttrs(block.depth)}>
-  {
-    showImpl && (
-      <p class="rb-note__impl">
-        {block.impl !== null && <span class="rb-note__impl-id">{block.impl}</span>}
-        {block.version !== null && <span class="rb-note__version">{block.version}</span>}
-      </p>
-    )
-  }
-  <p class="rb-note__text"><span class="rb-lead">{NOTE_TITLES[block.variant]}</span> <Inline nodes={block.content} /></p>
+<div
+  class={`rb-note rb-note--${block.variant}`}
+  role="note"
+  id={block.anchor ?? undefined}
+  {...depthAttrs(block.depth)}
+>
+  {showImpl && (
+    <p class="rb-note__impl">
+      {block.impl !== null && <span class="rb-note__impl-id">{block.impl}</span>}
+      {block.version !== null && <span class="rb-note__version">{block.version}</span>}
+    </p>
+  )}
+  <p class="rb-note__text">
+    <span class="rb-lead">{NOTE_TITLES[block.variant]}</span> <Inline nodes={block.content} />
+  </p>
 </div>

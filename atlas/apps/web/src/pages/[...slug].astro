@@ -18,7 +18,17 @@ type Props = { readonly kind: 'document' | 'planned'; readonly id: NodeId };
 export const getStaticPaths = (async () => {
   // getStaticPaths runs in its own scope: constants it needs are declared inside it.
   /** First path segments owned by atlas views; a node URL must never shadow them. */
-  const RESERVED = new Set(['graph', 'compare', 'papers', 'systems', 'labs', 'terms', 'library', 'timeline', 'evidence']);
+  const RESERVED = new Set([
+    'graph',
+    'compare',
+    'papers',
+    'systems',
+    'labs',
+    'terms',
+    'library',
+    'timeline',
+    'evidence',
+  ]);
   const [manifest, graph, documents] = await Promise.all([getManifest(), getGraph(), listDocuments()]);
   const compiled = new Set<string>(manifest.documents);
   const seen = new Set<string>();

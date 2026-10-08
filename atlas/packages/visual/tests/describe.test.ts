@@ -1,7 +1,17 @@
 import assert from 'node:assert/strict';
 import { describe, it } from 'node:test';
 import { FIGURE_KINDS, formatValue, type FigureSpec } from '@atlas/core';
-import { allocateCells, describeFigure, evaluateCalculator, logTicks, makeScale, matrixSummary, niceLinearTicks, parseFigure, sliderModel } from '../src/index.ts';
+import {
+  allocateCells,
+  describeFigure,
+  evaluateCalculator,
+  logTicks,
+  makeScale,
+  matrixSummary,
+  niceLinearTicks,
+  parseFigure,
+  sliderModel,
+} from '../src/index.ts';
 import { envelope, grammarFigureExample, grammarKindExamples, specOf } from './fixtures.ts';
 
 /** Grammar examples with the YAML quoting fixes applied (see validate.test.ts). */
@@ -48,7 +58,10 @@ describe('describeFigure', () => {
     assert.match(text('diagram'), /normalised stream \[B, T, D\] → QKV projection 6·D² FLOPs\/token/u);
     assert.match(text('diagram'), /\(main path\) “QKᵀ\/√Dh”/u);
     assert.match(text('tensor-flow'), /Step 2: packed QKV projection → \[B, T, 3, H, Dh\]; cost 6·D² FLOPs\/token\./u);
-    assert.match(text('systems-trace'), /Stage 2, GEMM forward \(emphasised\): memory activations saved; compute tensor-core bound\./u);
+    assert.match(
+      text('systems-trace'),
+      /Stage 2, GEMM forward \(emphasised\): memory activations saved; compute tensor-core bound\./u,
+    );
     assert.match(text('stat-panel'), /non-embedding params 84\.9\sM/u);
     assert.match(text('stat-panel'), /Dot glyph: 12 of 48 filled/u);
     assert.match(text('lineage'), /2025\+: hardware-specialised attention kernels — current frontier\./u);
@@ -83,9 +96,26 @@ describe('numeric helpers', () => {
   });
 
   it('log2 sliders move in powers of two; option sliders by index', () => {
-    const t = sliderModel({ symbol: 'T', label: 't', default: 8192, min: 512, max: 131072, scale: 'log2', format: 'tokens' });
+    const t = sliderModel({
+      symbol: 'T',
+      label: 't',
+      default: 8192,
+      min: 512,
+      max: 131072,
+      scale: 'log2',
+      format: 'tokens',
+    });
     assert.deepEqual([t.min, t.max, t.step, t.toPosition(8192), t.toValue(15)], [9, 17, 1, 13, 32768]);
-    const b = sliderModel({ symbol: 'b', label: 'b', default: 2, min: 1, max: 4, scale: 'linear', options: [1, 2, 4], format: 'bytes' });
+    const b = sliderModel({
+      symbol: 'b',
+      label: 'b',
+      default: 2,
+      min: 1,
+      max: 4,
+      scale: 'linear',
+      options: [1, 2, 4],
+      format: 'bytes',
+    });
     assert.deepEqual([b.min, b.max, b.toPosition(4), b.toValue(1)], [0, 2, 2, 2]);
   });
 
@@ -95,14 +125,23 @@ describe('numeric helpers', () => {
     const [scores] = evaluateCalculator(calculator.spec, { T: 32768 });
     assert.equal(scores?.value, 1 * 32 * 32768 ** 2 * 2);
     assert.equal(formatValue(scores?.value ?? 0, 'bytes'), '64\u202fGiB');
-    const broken = evaluateCalculator({ ...calculator.spec, outputs: [{ symbol: 'Z', label: 'z', formula: 'nope*2', format: 'raw', emphasis: false }] }, {});
+    const broken = evaluateCalculator(
+      { ...calculator.spec, outputs: [{ symbol: 'Z', label: 'z', formula: 'nope*2', format: 'raw', emphasis: false }] },
+      {},
+    );
     assert.equal(broken[0]?.value, null);
     assert.match(broken[0]?.error ?? '', /unbound identifier 'nope'/u);
   });
 
   it('matrix summaries and block allocation are exact', () => {
-    assert.deepEqual(matrixSummary({ rows: 8, cols: 8, pattern: 'banded', parameter: 3, rowLabel: 'i', colLabel: 'j', highlight: [] }), { total: 64, admitted: 21, mass: 21 });
-    assert.deepEqual(matrixSummary({ rows: 4, cols: 8, pattern: 'causal', rowLabel: 'i', colLabel: 'j', highlight: [] }).admitted, 4 * 5 + 6);
+    assert.deepEqual(
+      matrixSummary({ rows: 8, cols: 8, pattern: 'banded', parameter: 3, rowLabel: 'i', colLabel: 'j', highlight: [] }),
+      { total: 64, admitted: 21, mass: 21 },
+    );
+    assert.deepEqual(
+      matrixSummary({ rows: 4, cols: 8, pattern: 'causal', rowLabel: 'i', colLabel: 'j', highlight: [] }).admitted,
+      4 * 5 + 6,
+    );
     assert.deepEqual(allocateCells([1, 1, 1], 40), [14, 13, 13]);
     assert.deepEqual(allocateCells([4, 8], 12), [4, 8]);
   });

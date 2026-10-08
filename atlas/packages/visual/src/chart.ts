@@ -85,7 +85,11 @@ export function makeScale(
   kind: ScaleKind,
   extent: readonly [number, number],
   range: readonly [number, number],
-  options: { readonly domain?: readonly [number, number] | undefined; readonly ticks?: readonly number[] | undefined; readonly includeZero?: boolean } = {},
+  options: {
+    readonly domain?: readonly [number, number] | undefined;
+    readonly ticks?: readonly number[] | undefined;
+    readonly includeZero?: boolean;
+  } = {},
 ): Scale {
   let [lo, hi] = extent;
   if (options.includeZero === true && kind === 'linear') {
@@ -101,14 +105,23 @@ export function makeScale(
   } else {
     const positiveLo = lo > 0 ? lo : 1;
     const positiveHi = hi > 0 ? hi : positiveLo * 2;
-    const auto = logTicks(options.domain?.[0] ?? positiveLo, options.domain?.[1] ?? positiveHi, kind === 'log2' ? 2 : 10);
-    domain = options.domain !== undefined ? [options.domain[0], options.domain[1]] : [auto[0] ?? positiveLo, auto.at(-1) ?? positiveHi];
+    const auto = logTicks(
+      options.domain?.[0] ?? positiveLo,
+      options.domain?.[1] ?? positiveHi,
+      kind === 'log2' ? 2 : 10,
+    );
+    domain =
+      options.domain !== undefined
+        ? [options.domain[0], options.domain[1]]
+        : [auto[0] ?? positiveLo, auto.at(-1) ?? positiveHi];
     ticks = auto;
   }
   if (options.ticks !== undefined && options.ticks.length > 0) ticks = [...options.ticks];
   const [d0, d1] = domain;
   const eps = Math.abs(d1 - d0) * 1e-9;
-  ticks = ticks.filter((tick) => tick >= Math.min(d0, d1) - eps && tick <= Math.max(d0, d1) + eps && (kind === 'linear' || tick > 0));
+  ticks = ticks.filter(
+    (tick) => tick >= Math.min(d0, d1) - eps && tick <= Math.max(d0, d1) + eps && (kind === 'linear' || tick > 0),
+  );
   const t0 = transform(kind, d0);
   const t1 = transform(kind, d1);
   const span = t1 - t0 === 0 ? 1 : t1 - t0;
@@ -171,27 +184,39 @@ export function samplePositions(from: number, to: number, count: number, scale: 
 }
 
 /** Chart formula environment: variables plus state overrides; `x` is the sampled axis and is never overridden here. */
-export function chartVariables(spec: ChartSpec, overrides: Readonly<Record<string, number>> | null = null): Record<string, number> {
+export function chartVariables(
+  spec: ChartSpec,
+  overrides: Readonly<Record<string, number>> | null = null,
+): Record<string, number> {
   const env = withOverrides(spec.variables, overrides);
   delete env['x'];
   return env;
 }
 
 /** Evaluates every series of a chart. Errors are reported per series, never thrown. */
-export function resolveChart(spec: ChartSpec, overrides: Readonly<Record<string, number>> | null = null): ResolvedChart {
+export function resolveChart(
+  spec: ChartSpec,
+  overrides: Readonly<Record<string, number>> | null = null,
+): ResolvedChart {
   const variables = chartVariables(spec, overrides);
   const series = spec.series.map((entry): ResolvedSeries => {
     const base = { id: entry.id, label: entry.label, emphasis: entry.emphasis, dashed: entry.dashed };
     if (spec.type === 'bar') {
       const values = entry.values ?? [];
-      return { ...base, points: values.map((value, index): Point2 => [index, value]), error: entry.values === undefined ? 'bar series needs values' : null };
+      return {
+        ...base,
+        points: values.map((value, index): Point2 => [index, value]),
+        error: entry.values === undefined ? 'bar series needs values' : null,
+      };
     }
     if (entry.points !== undefined) {
       const points = [...entry.points].sort((a, b) => a[0] - b[0]);
       return { ...base, points, error: null };
     }
     if (entry.formula !== undefined) {
-      const range = entry.sample ?? (spec.x.domain === undefined ? undefined : { from: spec.x.domain[0], to: spec.x.domain[1], count: 32 });
+      const range =
+        entry.sample ??
+        (spec.x.domain === undefined ? undefined : { from: spec.x.domain[0], to: spec.x.domain[1], count: 32 });
       if (range === undefined) return { ...base, points: [], error: 'formula series needs sample (or an x domain)' };
       const points: Point2[] = [];
       for (const x of samplePositions(range.from, range.to, range.count, spec.x.scale)) {
@@ -247,7 +272,11 @@ export interface UnitScales {
  */
 export function unitScales(spec: ChartSpec, resolved: ResolvedChart): UnitScales {
   const xScale = makeScale(spec.x.scale, resolved.xExtent, [0, 1], { domain: spec.x.domain, ticks: spec.x.ticks });
-  const yScale = makeScale(spec.y.scale, resolved.yExtent, [0, 1], { domain: spec.y.domain, ticks: spec.y.ticks, includeZero: chartIncludesZero(spec) });
+  const yScale = makeScale(spec.y.scale, resolved.yExtent, [0, 1], {
+    domain: spec.y.domain,
+    ticks: spec.y.ticks,
+    includeZero: chartIncludesZero(spec),
+  });
   const categories = Math.max(1, spec.categories?.length ?? 0);
   return {
     x: spec.type === 'bar' ? (value) => (value + 0.5) / categories : (value) => xScale.map(value),
@@ -269,7 +298,12 @@ function toAxis(kind: ScaleKind, value: number): number {
  * straight); step series hold the previous value; bars read the nearest category.
  * Null outside the series' x range or when the formula fails.
  */
-export function seriesValueAt(spec: ChartSpec, series: ResolvedSeries, x: number, overrides: Readonly<Record<string, number>> | null = null): number | null {
+export function seriesValueAt(
+  spec: ChartSpec,
+  series: ResolvedSeries,
+  x: number,
+  overrides: Readonly<Record<string, number>> | null = null,
+): number | null {
   const entry = spec.series.find((candidate) => candidate.id === series.id);
   if (spec.type === 'bar') {
     const point = series.points[Math.round(x)];

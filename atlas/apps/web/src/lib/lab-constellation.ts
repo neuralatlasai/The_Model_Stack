@@ -71,7 +71,13 @@ export interface Constellation {
   readonly slots: readonly ConstellationSlot[];
   readonly bands: readonly ConstellationBand[];
   /** The compressed zone of planned-only parts (null when every part holds a written chapter). */
-  readonly planned: { readonly x0: number; readonly x1: number; readonly from: string; readonly to: string; readonly chapters: number } | null;
+  readonly planned: {
+    readonly x0: number;
+    readonly x1: number;
+    readonly from: string;
+    readonly to: string;
+    readonly chapters: number;
+  } | null;
   readonly marks: readonly ConstellationMark[];
   readonly links: readonly ConstellationLink[];
 }
@@ -152,7 +158,12 @@ export function labConstellation(
   const bands = axisParts.map((part) => {
     const first = slotOf.get(part.chapters[0] ?? -1) ?? 0;
     const last = slotOf.get(part.chapters.at(-1) ?? -1) ?? first;
-    return { part: part.n, numeral: part.numeral, x0: round(x0 + first * slotW + 2), x1: round(x0 + (last + 1) * slotW - 2) };
+    return {
+      part: part.n,
+      numeral: part.numeral,
+      x0: round(x0 + first * slotW + 2),
+      x1: round(x0 + (last + 1) * slotW - 2),
+    };
   });
   const links: ConstellationLink[] = [];
   for (let i = 0; i < drawn.length; i += 1) {
@@ -182,7 +193,13 @@ export function labConstellation(
             chapters: rest.reduce((sum, part) => sum + part.chapters.length, 0),
           },
     marks: placed
-      .map((item) => ({ key: item.key, x: round(item.x), y: round(cy + item.dy), r: round(item.r), at: round(item.at) }))
+      .map((item) => ({
+        key: item.key,
+        x: round(item.x),
+        y: round(cy + item.dy),
+        r: round(item.r),
+        at: round(item.at),
+      }))
       .sort((a, b) => a.x - b.x || a.y - b.y),
     links,
   };

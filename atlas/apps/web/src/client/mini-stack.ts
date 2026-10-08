@@ -13,7 +13,12 @@ export function initMiniStack(ctx: PageContext): void {
     const svg = figure.querySelector<SVGSVGElement>('svg');
     if (readout === null || svg === null) continue;
     const initial = readout.dataset['default'] ?? readout.textContent;
-    const nodes = new Map([...figure.querySelectorAll<SVGAElement>('[data-mini-node]')].map((node) => [node.dataset['miniNode'] ?? '', node]));
+    const nodes = new Map(
+      [...figure.querySelectorAll<SVGAElement>('[data-mini-node]')].map((node) => [
+        node.dataset['miniNode'] ?? '',
+        node,
+      ]),
+    );
     const clear = (): void => {
       svg.classList.remove('has-peek');
       for (const node of nodes.values()) node.classList.remove('is-peek', 'is-peek-up', 'is-peek-down');
@@ -37,8 +42,12 @@ export function initMiniStack(ctx: PageContext): void {
     figure.addEventListener('pointerover', show, { signal: ctl.signal });
     figure.addEventListener('focusin', show, { signal: ctl.signal });
     figure.addEventListener('pointerleave', restore, { signal: ctl.signal });
-    figure.addEventListener('focusout', (event) => {
-      if (!(event.relatedTarget instanceof Node) || !figure.contains(event.relatedTarget)) restore();
-    }, { signal: ctl.signal });
+    figure.addEventListener(
+      'focusout',
+      (event) => {
+        if (!(event.relatedTarget instanceof Node) || !figure.contains(event.relatedTarget)) restore();
+      },
+      { signal: ctl.signal },
+    );
   }
 }

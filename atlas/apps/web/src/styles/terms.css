@@ -179,7 +179,9 @@
 
 .tmx-cell:hover,
 .tmx-cell.is-focus {
-  box-shadow: 0 0 0 1.5px var(--paper), 0 0 0 2.5px var(--ink);
+  box-shadow:
+    0 0 0 1.5px var(--paper),
+    0 0 0 2.5px var(--ink);
 }
 
 .tmx-cell.is-filtered {

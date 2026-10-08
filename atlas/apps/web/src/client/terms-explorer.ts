@@ -48,7 +48,9 @@ export function initTermsExplorer(ctx: PageContext): void {
   const signal = ctl.signal;
 
   // ── model ──────────────────────────────────────────────────────────────────
-  const cellOf = new Map([...strip.querySelectorAll<HTMLElement>('[data-tmx-cell]')].map((cell) => [cell.dataset['tmxCell'] ?? '', cell]));
+  const cellOf = new Map(
+    [...strip.querySelectorAll<HTMLElement>('[data-tmx-cell]')].map((cell) => [cell.dataset['tmxCell'] ?? '', cell]),
+  );
   const words = (value: string | undefined): string[] => (value ?? '').split(' ').filter((item) => item !== '');
   const terms: Term[] = [...list.querySelectorAll<HTMLElement>('[data-tmx-entry]')].map((el) => {
     const slug = el.dataset['tmxEntry'] ?? '';
@@ -80,7 +82,9 @@ export function initTermsExplorer(ctx: PageContext): void {
     full: el.querySelector('[data-tmx-chbtn]')?.getAttribute('title') ?? '',
   }));
   const chapterOf = new Map(chapters.map((chapter) => [chapter.key, chapter]));
-  const buttons = chapters.map((chapter) => chapter.button).filter((button): button is HTMLButtonElement => button !== null);
+  const buttons = chapters
+    .map((chapter) => chapter.button)
+    .filter((button): button is HTMLButtonElement => button !== null);
   const letters = [...rail.querySelectorAll<HTMLAnchorElement>('[data-tmx-letter]')].map((el) => ({
     letter: el.dataset['tmxLetter'] ?? '',
     el,
@@ -88,8 +92,18 @@ export function initTermsExplorer(ctx: PageContext): void {
     total: Number(el.querySelector<HTMLElement>('[data-tmx-azn]')?.dataset['tmxAzn'] ?? 0),
   }));
   const letterLinks = letters.map((item) => item.el);
-  const groups = new Map([...list.querySelectorAll<HTMLElement>('[data-tmx-group]')].map((group) => [group.dataset['tmxGroup'] ?? '', group]));
-  const sectionTitle = new Map([...strip.querySelectorAll<HTMLElement>('[data-tmx-sec]')].map((sec) => [sec.dataset['tmxSec'] ?? '', sec.getAttribute('title') ?? '']));
+  const groups = new Map(
+    [...list.querySelectorAll<HTMLElement>('[data-tmx-group]')].map((group) => [
+      group.dataset['tmxGroup'] ?? '',
+      group,
+    ]),
+  );
+  const sectionTitle = new Map(
+    [...strip.querySelectorAll<HTMLElement>('[data-tmx-sec]')].map((sec) => [
+      sec.dataset['tmxSec'] ?? '',
+      sec.getAttribute('title') ?? '',
+    ]),
+  );
 
   const out = {
     kicker: root.querySelector<HTMLElement>('[data-tmx-kicker]'),
@@ -98,7 +112,12 @@ export function initTermsExplorer(ctx: PageContext): void {
     list: root.querySelector<HTMLElement>('[data-tmx-list]'),
   };
   // Server-rendered markup of our own component, restored verbatim on release.
-  const initial = { kicker: out.kicker?.innerHTML ?? '', title: out.title?.innerHTML ?? '', meta: out.meta?.innerHTML ?? '', list: out.list?.innerHTML ?? '' };
+  const initial = {
+    kicker: out.kicker?.innerHTML ?? '',
+    title: out.title?.innerHTML ?? '',
+    meta: out.meta?.innerHTML ?? '',
+    list: out.list?.innerHTML ?? '',
+  };
   const shown = root.querySelector<HTMLElement>('[data-tmx-shown]');
   const pins = root.querySelector<HTMLElement>('[data-tmx-pins]');
   const clearButton = root.querySelector<HTMLButtonElement>('[data-tmx-clear]');
@@ -131,7 +150,9 @@ export function initTermsExplorer(ctx: PageContext): void {
   const recount = (subset: ReadonlySet<Term> | null): void => {
     // The rail counts what is lit (subset) or, at rest, what the filters show.
     for (const item of letters) {
-      const n = terms.filter((term) => term.letter === item.letter && visible.has(term) && (subset === null || subset.has(term))).length;
+      const n = terms.filter(
+        (term) => term.letter === item.letter && visible.has(term) && (subset === null || subset.has(term)),
+      ).length;
       if (item.count !== null) item.count.textContent = String(n);
       item.el.classList.toggle('is-zero', n === 0);
       item.el.classList.toggle('is-lit', subset !== null && n > 0);
@@ -141,7 +162,8 @@ export function initTermsExplorer(ctx: PageContext): void {
     for (const el of lit) el.classList.remove(...LIGHT);
     lit = [];
     for (const chapter of chapters) {
-      if (chapter.count !== null) chapter.count.textContent = String(terms.filter((term) => term.ch === chapter.key).length);
+      if (chapter.count !== null)
+        chapter.count.textContent = String(terms.filter((term) => term.ch === chapter.key).length);
     }
     root.classList.remove('has-light');
     focus = null;
@@ -166,7 +188,14 @@ export function initTermsExplorer(ctx: PageContext): void {
       mark(other?.cell, 'is-in');
     }
     for (const mention of term.el.querySelectorAll('[data-tmx-mention]')) mark(mention, 'is-focus');
-    recount(new Set([term, ...[...term.out, ...term.in].map((slug) => bySlug.get(slug)).filter((other): other is Term => other !== undefined)]));
+    recount(
+      new Set([
+        term,
+        ...[...term.out, ...term.in]
+          .map((slug) => bySlug.get(slug))
+          .filter((other): other is Term => other !== undefined),
+      ]),
+    );
     const chapter = chapterOf.get(term.ch);
     const siblings = terms.filter((other) => other.sec === term.sec && other !== term);
     put(out.kicker, `ch ${chapter?.label ?? term.ch} · ${term.owner}`);
@@ -176,8 +205,16 @@ export function initTermsExplorer(ctx: PageContext): void {
     if (term.out.length > 0) lines.push(line(`→ ${String(term.out.length)}`, `mentions ${names(term.out)}`));
     if (term.in.length > 0) lines.push(line(`← ${String(term.in.length)}`, `mentioned by ${names(term.in)}`, 'is-in'));
     if (term.eqs.length > 0) lines.push(line('Eq', term.eqs.join(' · '), 'is-quiet'));
-    if (siblings.length > 0) lines.push(line(`§ ${String(siblings.length)}`, `also owned here: ${names(siblings.map((other) => other.slug))}`, 'is-quiet'));
-    if (term.out.length + term.in.length === 0) lines.unshift(line('—', 'no other glossary term is named in its definition, or names it', 'is-quiet'));
+    if (siblings.length > 0)
+      lines.push(
+        line(
+          `§ ${String(siblings.length)}`,
+          `also owned here: ${names(siblings.map((other) => other.slug))}`,
+          'is-quiet',
+        ),
+      );
+    if (term.out.length + term.in.length === 0)
+      lines.unshift(line('—', 'no other glossary term is named in its definition, or names it', 'is-quiet'));
     put(out.list, ...lines.slice(0, 5));
   };
 
@@ -227,10 +264,17 @@ export function initTermsExplorer(ctx: PageContext): void {
     for (const [ch, n] of byChapter) {
       const chapter = chapterOf.get(ch);
       mark(chapter?.el, 'is-lit');
-      if (chapter?.count !== null && chapter?.count !== undefined) chapter.count.textContent = `${String(n)}/${chapter.count.dataset['tmxChcount'] ?? ''}`;
+      if (chapter?.count !== null && chapter?.count !== undefined)
+        chapter.count.textContent = `${String(n)}/${chapter.count.dataset['tmxChcount'] ?? ''}`;
     }
     put(out.kicker, `letter ${letter} · ${String(members.length)} terms · ${String(byChapter.size)} chapters`);
-    put(out.title, members.slice(0, 3).map((term) => term.name).join(' · ') + (members.length > 3 ? ' …' : ''));
+    put(
+      out.title,
+      members
+        .slice(0, 3)
+        .map((term) => term.name)
+        .join(' · ') + (members.length > 3 ? ' …' : ''),
+    );
     put(out.meta, 'Where its terms are owned is lit in the strip. Enter or click jumps to the letter.');
     put(
       out.list,
@@ -263,7 +307,8 @@ export function initTermsExplorer(ctx: PageContext): void {
       term.cell?.classList.toggle('is-filtered', !on);
       if (on) visible.add(term);
     }
-    for (const [letter, group] of groups) group.hidden = !terms.some((term) => term.letter === letter && visible.has(term));
+    for (const [letter, group] of groups)
+      group.hidden = !terms.some((term) => term.letter === letter && visible.has(term));
     for (const chapter of chapters) {
       chapter.el.classList.toggle('is-pinned', chapter.key === pinnedCh);
       chapter.button?.setAttribute('aria-pressed', String(chapter.key === pinnedCh));
@@ -299,88 +344,131 @@ export function initTermsExplorer(ctx: PageContext): void {
   };
   clearButton?.addEventListener('click', clearAll, { signal });
   let debounce: (() => void) | null = null;
-  search?.addEventListener('input', () => {
-    debounce?.();
-    debounce = ctl.timeout(() => {
-      query = search.value.trim().toLowerCase().split(/\s+/u).filter((word) => word !== '');
-      apply();
-    }, 90);
-  }, { signal });
+  search?.addEventListener(
+    'input',
+    () => {
+      debounce?.();
+      debounce = ctl.timeout(() => {
+        query = search.value
+          .trim()
+          .toLowerCase()
+          .split(/\s+/u)
+          .filter((word) => word !== '');
+        apply();
+      }, 90);
+    },
+    { signal },
+  );
 
   // ── "more" on definitions that are clamped ─────────────────────────────────
   function measure(): void {
-    const clamped = terms.map((term) => [term, term.def !== null && !term.el.hidden && term.def.scrollHeight > term.def.clientHeight + 2] as const);
+    const clamped = terms.map(
+      (term) =>
+        [term, term.def !== null && !term.el.hidden && term.def.scrollHeight > term.def.clientHeight + 2] as const,
+    );
     for (const [term, isClamped] of clamped) {
       const button = term.el.querySelector<HTMLButtonElement>('[data-tmx-more]');
       if (button !== null) button.hidden = !isClamped && !term.el.classList.contains('is-open');
     }
   }
-  list.addEventListener('click', (event) => {
-    const target = event.target instanceof Element ? event.target : null;
-    const more = target?.closest<HTMLButtonElement>('[data-tmx-more]') ?? null;
-    if (more !== null) {
-      const entry = more.closest<HTMLElement>('[data-tmx-entry]');
-      const open = entry?.classList.toggle('is-open') ?? false;
-      more.setAttribute('aria-expanded', String(open));
-      more.textContent = open ? 'less' : 'more';
-      return;
-    }
-    const mention = target?.closest<HTMLElement>('[data-tmx-mention]') ?? null;
-    const goal = bySlug.get(mention?.dataset['tmxMention'] ?? '');
-    if (goal?.el.hidden === true) clearAll();
-  }, { signal });
+  list.addEventListener(
+    'click',
+    (event) => {
+      const target = event.target instanceof Element ? event.target : null;
+      const more = target?.closest<HTMLButtonElement>('[data-tmx-more]') ?? null;
+      if (more !== null) {
+        const entry = more.closest<HTMLElement>('[data-tmx-entry]');
+        const open = entry?.classList.toggle('is-open') ?? false;
+        more.setAttribute('aria-expanded', String(open));
+        more.textContent = open ? 'less' : 'more';
+        return;
+      }
+      const mention = target?.closest<HTMLElement>('[data-tmx-mention]') ?? null;
+      const goal = bySlug.get(mention?.dataset['tmxMention'] ?? '');
+      if (goal?.el.hidden === true) clearAll();
+    },
+    { signal },
+  );
   let resizeCancel: (() => void) | null = null;
-  addEventListener('resize', () => {
-    resizeCancel?.();
-    resizeCancel = ctl.timeout(measure, 160);
-  }, { signal });
+  addEventListener(
+    'resize',
+    () => {
+      resizeCancel?.();
+      resizeCancel = ctl.timeout(measure, 160);
+    },
+    { signal },
+  );
 
   // ── pointer ────────────────────────────────────────────────────────────────
   const closest = (target: EventTarget | null, selector: string): HTMLElement | null =>
     target instanceof Element ? target.closest<HTMLElement>(selector) : null;
 
-  strip.addEventListener('pointerover', (event) => {
-    const term = bySlug.get(closest(event.target, '[data-tmx-cell]')?.dataset['tmxCell'] ?? '');
-    if (term !== undefined) {
-      lightTerm(term);
-      return;
-    }
-    const chapter = closest(event.target, '[data-tmx-ch]');
-    if (chapter !== null) lightChapter(chapter.dataset['tmxCh'] ?? '');
-  }, { signal });
+  strip.addEventListener(
+    'pointerover',
+    (event) => {
+      const term = bySlug.get(closest(event.target, '[data-tmx-cell]')?.dataset['tmxCell'] ?? '');
+      if (term !== undefined) {
+        lightTerm(term);
+        return;
+      }
+      const chapter = closest(event.target, '[data-tmx-ch]');
+      if (chapter !== null) lightChapter(chapter.dataset['tmxCh'] ?? '');
+    },
+    { signal },
+  );
   strip.addEventListener('pointerleave', release, { signal });
-  strip.addEventListener('click', (event) => {
-    const button = closest(event.target, '[data-tmx-chbtn]');
-    if (button !== null) {
-      pinChapter(button.dataset['tmxChbtn'] ?? null);
-      return;
-    }
-    const term = bySlug.get(closest(event.target, '[data-tmx-cell]')?.dataset['tmxCell'] ?? '');
-    if (term?.el.hidden === true) clearAll();
-  }, { signal });
+  strip.addEventListener(
+    'click',
+    (event) => {
+      const button = closest(event.target, '[data-tmx-chbtn]');
+      if (button !== null) {
+        pinChapter(button.dataset['tmxChbtn'] ?? null);
+        return;
+      }
+      const term = bySlug.get(closest(event.target, '[data-tmx-cell]')?.dataset['tmxCell'] ?? '');
+      if (term?.el.hidden === true) clearAll();
+    },
+    { signal },
+  );
 
-  list.addEventListener('pointerover', (event) => {
-    const mention = bySlug.get(closest(event.target, '[data-tmx-mention]')?.dataset['tmxMention'] ?? '');
-    if (mention !== undefined) {
-      lightTerm(mention);
-      return;
-    }
-    const term = bySlug.get(closest(event.target, '[data-tmx-entry]')?.dataset['tmxEntry'] ?? '');
-    if (term !== undefined) lightTerm(term);
-  }, { signal });
+  list.addEventListener(
+    'pointerover',
+    (event) => {
+      const mention = bySlug.get(closest(event.target, '[data-tmx-mention]')?.dataset['tmxMention'] ?? '');
+      if (mention !== undefined) {
+        lightTerm(mention);
+        return;
+      }
+      const term = bySlug.get(closest(event.target, '[data-tmx-entry]')?.dataset['tmxEntry'] ?? '');
+      if (term !== undefined) lightTerm(term);
+    },
+    { signal },
+  );
   list.addEventListener('pointerleave', release, { signal });
-  list.addEventListener('focusin', (event) => {
-    const term = bySlug.get(closest(event.target, '[data-tmx-entry]')?.dataset['tmxEntry'] ?? '');
-    if (term !== undefined) lightTerm(term);
-  }, { signal });
-  list.addEventListener('focusout', (event) => {
-    if (!(event.relatedTarget instanceof Node && list.contains(event.relatedTarget))) release();
-  }, { signal });
+  list.addEventListener(
+    'focusin',
+    (event) => {
+      const term = bySlug.get(closest(event.target, '[data-tmx-entry]')?.dataset['tmxEntry'] ?? '');
+      if (term !== undefined) lightTerm(term);
+    },
+    { signal },
+  );
+  list.addEventListener(
+    'focusout',
+    (event) => {
+      if (!(event.relatedTarget instanceof Node && list.contains(event.relatedTarget))) release();
+    },
+    { signal },
+  );
 
-  rail.addEventListener('pointerover', (event) => {
-    const link = closest(event.target, '[data-tmx-letter]');
-    if (link !== null) lightLetter(link.dataset['tmxLetter'] ?? '');
-  }, { signal });
+  rail.addEventListener(
+    'pointerover',
+    (event) => {
+      const link = closest(event.target, '[data-tmx-letter]');
+      if (link !== null) lightLetter(link.dataset['tmxLetter'] ?? '');
+    },
+    { signal },
+  );
   rail.addEventListener('pointerleave', release, { signal });
 
   // ── keyboard: one tab stop per instrument ──────────────────────────────────
@@ -398,45 +486,69 @@ export function initTermsExplorer(ctx: PageContext): void {
     next.tabIndex = 0;
     next.focus();
   };
-  strip.addEventListener('keydown', (event) => {
-    const button = closest(event.target, '[data-tmx-chbtn]');
-    if (button === null) return;
-    if (event.key === 'Escape') {
-      if (pinnedCh !== null) pinChapter(null);
-      else release();
-      return;
-    }
-    const next = rove(buttons, event, button);
-    if (next === undefined) return;
-    event.preventDefault();
-    moveTo(buttons, next);
-  }, { signal });
-  strip.addEventListener('focusin', (event) => {
-    const button = closest(event.target, '[data-tmx-chbtn]');
-    if (button !== null) lightChapter(button.dataset['tmxChbtn'] ?? '');
-  }, { signal });
-  strip.addEventListener('focusout', (event) => {
-    if (!(event.relatedTarget instanceof Node && strip.contains(event.relatedTarget))) release();
-  }, { signal });
-  rail.addEventListener('keydown', (event) => {
-    const link = closest(event.target, '[data-tmx-letter]');
-    if (link === null) return;
-    if (event.key === 'Escape') {
-      release();
-      return;
-    }
-    const next = rove(letterLinks, event, link);
-    if (next === undefined) return;
-    event.preventDefault();
-    moveTo(letterLinks, next);
-  }, { signal });
-  rail.addEventListener('focusin', (event) => {
-    const link = closest(event.target, '[data-tmx-letter]');
-    if (link !== null) lightLetter(link.dataset['tmxLetter'] ?? '');
-  }, { signal });
-  rail.addEventListener('focusout', (event) => {
-    if (!(event.relatedTarget instanceof Node && rail.contains(event.relatedTarget))) release();
-  }, { signal });
+  strip.addEventListener(
+    'keydown',
+    (event) => {
+      const button = closest(event.target, '[data-tmx-chbtn]');
+      if (button === null) return;
+      if (event.key === 'Escape') {
+        if (pinnedCh !== null) pinChapter(null);
+        else release();
+        return;
+      }
+      const next = rove(buttons, event, button);
+      if (next === undefined) return;
+      event.preventDefault();
+      moveTo(buttons, next);
+    },
+    { signal },
+  );
+  strip.addEventListener(
+    'focusin',
+    (event) => {
+      const button = closest(event.target, '[data-tmx-chbtn]');
+      if (button !== null) lightChapter(button.dataset['tmxChbtn'] ?? '');
+    },
+    { signal },
+  );
+  strip.addEventListener(
+    'focusout',
+    (event) => {
+      if (!(event.relatedTarget instanceof Node && strip.contains(event.relatedTarget))) release();
+    },
+    { signal },
+  );
+  rail.addEventListener(
+    'keydown',
+    (event) => {
+      const link = closest(event.target, '[data-tmx-letter]');
+      if (link === null) return;
+      if (event.key === 'Escape') {
+        release();
+        return;
+      }
+      const next = rove(letterLinks, event, link);
+      if (next === undefined) return;
+      event.preventDefault();
+      moveTo(letterLinks, next);
+    },
+    { signal },
+  );
+  rail.addEventListener(
+    'focusin',
+    (event) => {
+      const link = closest(event.target, '[data-tmx-letter]');
+      if (link !== null) lightLetter(link.dataset['tmxLetter'] ?? '');
+    },
+    { signal },
+  );
+  rail.addEventListener(
+    'focusout',
+    (event) => {
+      if (!(event.relatedTarget instanceof Node && rail.contains(event.relatedTarget))) release();
+    },
+    { signal },
+  );
 
   // ── scroll: the letter being read, the entries in view ─────────────────────
   const inView = new Set<Term>();

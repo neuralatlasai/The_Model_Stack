@@ -20,7 +20,13 @@ export const REFERENCE_TYPES = [
 ] as const;
 export type ReferenceType = (typeof REFERENCE_TYPES)[number];
 
-export const REFERENCE_STATUSES = ['peer-reviewed', 'preprint', 'official documentation', 'archived', 'UNVERIFIED'] as const;
+export const REFERENCE_STATUSES = [
+  'peer-reviewed',
+  'preprint',
+  'official documentation',
+  'archived',
+  'UNVERIFIED',
+] as const;
 export type ReferenceStatus = (typeof REFERENCE_STATUSES)[number];
 
 export interface ReferenceUse {

@@ -78,7 +78,12 @@ function wrapNodeText(kind: NodeKind, label: string, sub: string | null, maxText
 }
 
 /** Measures a node box for the given primitive, label, and monospace sub-label. Deterministic. */
-export function measureNode(kind: NodeKind, label: string, sub: string | null, maxTextWidth: number = NODE_TYPE.maxTextWidth): MeasuredNode {
+export function measureNode(
+  kind: NodeKind,
+  label: string,
+  sub: string | null,
+  maxTextWidth: number = NODE_TYPE.maxTextWidth,
+): MeasuredNode {
   const text = wrapNodeText(kind, label, sub, maxTextWidth);
   const inset = GLYPH_INSET[kind];
   const textW = Math.max(
@@ -102,7 +107,12 @@ export interface PlacedLine {
  * Text lines of a node already placed in a box (x, y, width, height): centred
  * horizontally inside the glyph's text area and vertically in the box.
  */
-export function placeNodeText(kind: NodeKind, label: string, sub: string | null, box: { x: number; y: number; width: number; height: number }): PlacedLine[] {
+export function placeNodeText(
+  kind: NodeKind,
+  label: string,
+  sub: string | null,
+  box: { x: number; y: number; width: number; height: number },
+): PlacedLine[] {
   const inset = GLYPH_INSET[kind];
   const innerW = Math.max(24, box.width - 2 * NODE_TYPE.padX - inset.left - inset.right);
   const text = wrapNodeText(kind, label, sub, innerW + 1);

@@ -41,18 +41,29 @@ jobs:
       - name: Install
         run: npm ci
 
+      - name: Format
+        run: npm run format:check
+
+      - name: Lint
+        run: npm run lint
+
+      - name: Audit production dependencies
+        run: npm audit --omit=dev --audit-level=high
+
       - name: Typecheck
         run: npm run typecheck
 
       - name: Unit tests
         run: npm test
 
-      # Chapters are written in waves; a chapter mid-way (e.g. figures citing a
-      # references.md row not yet written) must not block publishing the rest.
-      # The strict check still runs and is shown as a failed-but-continued step.
-      - name: Compile manuscripts (strict, reported)
-        run: npm run compile:check
-        continue-on-error: true
+      - name: Compile manuscripts
+        run: npm run compile
+
+      - name: Install browser
+        run: npx playwright install --with-deps chromium
+
+      - name: Browser tests
+        run: npm run test:e2e
 
       - name: Configure Pages
         id: pages

@@ -49,7 +49,9 @@ export function initDashboard(ctx: PageContext, root: HTMLElement, reduced: bool
   const { doc, ctl } = ctx;
   const signal = ctl.signal;
   const parsed = DashSchema.safeParse(JSON.parse(root.querySelector('[data-dash-data]')?.textContent ?? 'null'));
-  const geometry = GeometrySchema.safeParse(JSON.parse(root.querySelector('[data-dx-geometry]')?.textContent ?? 'null'));
+  const geometry = GeometrySchema.safeParse(
+    JSON.parse(root.querySelector('[data-dx-geometry]')?.textContent ?? 'null'),
+  );
   if (!parsed.success || !geometry.success) return;
   const dash = parsed.data;
   const geo = geometry.data;
@@ -219,35 +221,49 @@ export function initDashboard(ctx: PageContext, root: HTMLElement, reduced: bool
 
     if (draws !== null) {
       draws.textContent =
-        state.part === 0 ? '' : state.drawsOn.length > 0 ? `draws on ${state.drawsOn.join(' · ')}` : 'the foundation — draws on nothing before it';
+        state.part === 0
+          ? ''
+          : state.drawsOn.length > 0
+            ? `draws on ${state.drawsOn.join(' · ')}`
+            : 'the foundation — draws on nothing before it';
     }
-    for (const square of status) square.classList.toggle('is-cur', state.part > 0 && Number(square.dataset['dxPart']) === state.part);
+    for (const square of status)
+      square.classList.toggle('is-cur', state.part > 0 && Number(square.dataset['dxPart']) === state.part);
   };
 
   // ── the signal feed: prerequisites as the brain fires them ───────────────
   let lastSignal = 0;
-  root.addEventListener('hx:signal', (event) => {
-    if (feed === null) return;
-    const { from, to } = (event as CustomEvent<{ from: number; to: number }>).detail;
-    const t = performance.now();
-    const key = `${String(from)}-${String(to)}`;
-    // one line per firing; a fibre that fires again soon is not repeated
-    if (t - lastSignal < 650 || [...feed.children].some((item) => (item as HTMLElement).dataset['route'] === key)) return;
-    lastSignal = t;
-    const li = doc.createElement('li');
-    li.dataset['route'] = key;
-    const route = doc.createElement('b');
-    route.textContent = `${pad(from)} → ${pad(to)}`;
-    const names = doc.createElement('span');
-    names.textContent = `${titleOf.get(from) ?? ''} → ${titleOf.get(to) ?? ''}`;
-    li.append(route, names);
-    feed.prepend(li);
-    while (feed.children.length > 3) feed.lastElementChild?.remove();
-  }, { signal });
+  root.addEventListener(
+    'hx:signal',
+    (event) => {
+      if (feed === null) return;
+      const { from, to } = (event as CustomEvent<{ from: number; to: number }>).detail;
+      const t = performance.now();
+      const key = `${String(from)}-${String(to)}`;
+      // one line per firing; a fibre that fires again soon is not repeated
+      if (t - lastSignal < 650 || [...feed.children].some((item) => (item as HTMLElement).dataset['route'] === key))
+        return;
+      lastSignal = t;
+      const li = doc.createElement('li');
+      li.dataset['route'] = key;
+      const route = doc.createElement('b');
+      route.textContent = `${pad(from)} → ${pad(to)}`;
+      const names = doc.createElement('span');
+      names.textContent = `${titleOf.get(from) ?? ''} → ${titleOf.get(to) ?? ''}`;
+      li.append(route, names);
+      feed.prepend(li);
+      while (feed.children.length > 3) feed.lastElementChild?.remove();
+    },
+    { signal },
+  );
 
-  root.addEventListener('hx:part', (event) => {
-    const part = (event as CustomEvent<{ part: number }>).detail.part;
-    show(part > 0 ? (dash.parts[part - 1] ?? dash.overview) : dash.overview);
-  }, { signal });
+  root.addEventListener(
+    'hx:part',
+    (event) => {
+      const part = (event as CustomEvent<{ part: number }>).detail.part;
+      show(part > 0 ? (dash.parts[part - 1] ?? dash.overview) : dash.overview);
+    },
+    { signal },
+  );
   show(dash.overview);
 }

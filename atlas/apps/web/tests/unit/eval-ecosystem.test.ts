@@ -1,6 +1,14 @@
 import assert from 'node:assert/strict';
 import { describe, test } from 'node:test';
-import { DOMAINS, KINDS, aliasMatcher, domainKindMatrix, ecosystem, hostLabel, matches } from '../../src/lib/eval-ecosystem.ts';
+import {
+  DOMAINS,
+  KINDS,
+  aliasMatcher,
+  domainKindMatrix,
+  ecosystem,
+  hostLabel,
+  matches,
+} from '../../src/lib/eval-ecosystem.ts';
 
 describe('evaluation ecosystem data', () => {
   const { entries, sources } = ecosystem();
@@ -20,12 +28,16 @@ describe('evaluation ecosystem data', () => {
 
   test('every link is https with no tracking parameters, and every cited source exists', () => {
     const numbers = new Set(sources.map((source) => source.n));
-    const urls = [...sources.map((source) => source.url), ...entries.flatMap((entry) => [entry.links.official, entry.links.repo, entry.links.paper])].filter((url) => url !== null);
+    const urls = [
+      ...sources.map((source) => source.url),
+      ...entries.flatMap((entry) => [entry.links.official, entry.links.repo, entry.links.paper]),
+    ].filter((url) => url !== null);
     for (const url of urls) {
       assert.match(url, /^https:\/\//u);
       assert.doesNotMatch(url, /utm_/u, url);
     }
-    for (const entry of entries) for (const ref of entry.refs) assert.ok(numbers.has(ref.n), `#${String(entry.rank)} cites [${String(ref.n)}]`);
+    for (const entry of entries)
+      for (const ref of entry.refs) assert.ok(numbers.has(ref.n), `#${String(entry.rank)} cites [${String(ref.n)}]`);
   });
 
   test('chapter anchors are real chapter numbers', () => {

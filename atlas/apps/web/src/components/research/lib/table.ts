@@ -13,8 +13,7 @@ import { inlineToText } from '@atlas/core';
  * `ms`, `tokens/s`). Section numbers such as `5.1` also qualify, which is the
  * intended tabular treatment for them.
  */
-const NUMERIC_CELL =
-  /^[~≈<>≤≥±+−-]?\s?\d[\d,.\u00A0\u202F ]*(?:[eE][+−-]?\d+)?\s?(?:[%×x]|[A-Za-zµ/·]{1,10})?$/u;
+const NUMERIC_CELL = /^[~≈<>≤≥±+−-]?\s?\d[\d,.\u00A0\u202F ]*(?:[eE][+−-]?\d+)?\s?(?:[%×x]|[A-Za-zµ/·]{1,10})?$/u;
 const NUMERIC_SHARE = 0.6;
 const MAX_NUMERIC_CHARS = 28;
 /** Tables with more rows than this scroll inside a bounded box so the sticky header stays reachable. */

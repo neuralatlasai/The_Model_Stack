@@ -72,7 +72,12 @@ export const ROUTE: Route = {
   breadcrumbs: [
     { id: 'ms.volume.1', number: 'I', title: 'Volume I', url: '/vol-01-learning-and-representation/' },
     { id: 'ms.part.1', number: 'I', title: 'Part I', url: '/part-01-scientific-foundations/' },
-    { id: 'ms.chapter.5', number: '05', title: 'Minimal Transformer', url: '/ch05-minimal-transformer-and-execution-trace/' },
+    {
+      id: 'ms.chapter.5',
+      number: '05',
+      title: 'Minimal Transformer',
+      url: '/ch05-minimal-transformer-and-execution-trace/',
+    },
   ],
   prev: null,
   next: null,
@@ -93,7 +98,9 @@ export function documentWith(lead: readonly Block[], regionBlocks: readonly Bloc
     route: ROUTE,
     header: HEADER,
     lead,
-    regions: [{ role: 'formulation', title: 'Formulation', anchor: 'formulation', depth: 'technical', blocks: regionBlocks }],
+    regions: [
+      { role: 'formulation', title: 'Formulation', anchor: 'formulation', depth: 'technical', blocks: regionBlocks },
+    ],
     figures: [],
     rail: [],
     outline: [],
@@ -128,11 +135,21 @@ export const CALCULATOR: CompiledFigure = {
     source: ['DERIVED:eq-5.8'],
     alt: 'Calculator for Eq. 5.8, M = B·H·T²·b.',
     concepts: [],
-  states: [],
+    states: [],
     spec: {
       tex: 'M = B\\,H\\,T^{2}\\,b',
       equation: '5.8',
-      inputs: [{ symbol: 'T', label: 'sequence length', default: 8192, min: 512, max: 131072, scale: 'log2', format: 'tokens' }],
+      inputs: [
+        {
+          symbol: 'T',
+          label: 'sequence length',
+          default: 8192,
+          min: 512,
+          max: 131072,
+          scale: 'log2',
+          format: 'tokens',
+        },
+      ],
       outputs: [{ symbol: 'M', label: 'scores per layer', formula: '32*T^2*2', format: 'bytes', emphasis: true }],
       presets: [],
     },

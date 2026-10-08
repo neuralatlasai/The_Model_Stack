@@ -61,8 +61,21 @@ const chart = figure('chart', {
   y: { label: 'bytes per layer', scale: 'log2', format: 'bytes' },
   variables: { B: 1, H: 32, D: 4096, b: 2 },
   series: [
-    { id: 'scores', label: 'scores', formula: 'B*H*x^2*b', sample: { from: 512, to: 131072, count: 9 }, emphasis: true },
-    { id: 'act', label: 'activation', points: [[512, 4194304], [131072, 1073741824]] },
+    {
+      id: 'scores',
+      label: 'scores',
+      formula: 'B*H*x^2*b',
+      sample: { from: 512, to: 131072, count: 9 },
+      emphasis: true,
+    },
+    {
+      id: 'act',
+      label: 'activation',
+      points: [
+        [512, 4194304],
+        [131072, 1073741824],
+      ],
+    },
   ],
 });
 

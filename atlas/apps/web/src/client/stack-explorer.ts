@@ -39,10 +39,20 @@ const ChapterSchema = z.object({
 });
 
 const ModelSchema = z.object({
-  parts: z.array(z.object({ n: z.number().int(), numeral: z.string(), title: z.string(), chapters: z.array(z.number().int()) })),
+  parts: z.array(
+    z.object({ n: z.number().int(), numeral: z.string(), title: z.string(), chapters: z.array(z.number().int()) }),
+  ),
   chapters: z.record(z.string(), ChapterSchema),
   edges: z.array(z.tuple([z.number().int(), z.number().int()])),
-  lineage: z.array(z.object({ id: z.number().int(), year: z.number(), work: z.string(), relation: z.string(), chapter: z.number().int() })),
+  lineage: z.array(
+    z.object({
+      id: z.number().int(),
+      year: z.number(),
+      work: z.string(),
+      relation: z.string(),
+      chapter: z.number().int(),
+    }),
+  ),
   routes: z.array(z.object({ label: z.string(), why: z.string(), chapters: z.array(z.number().int()) })),
 });
 type Model = z.output<typeof ModelSchema>;
@@ -103,8 +113,13 @@ export function initStackExplorer(ctx: PageContext): void {
   const svg = root.querySelector<SVGSVGElement>('[data-sx-svg]');
   if (svg === null) return;
   const nodes = new Map<number, SVGAElement>();
-  for (const node of svg.querySelectorAll<SVGAElement>('[data-sx-node]')) nodes.set(Number(node.dataset['sxNode']), node);
-  const edges = [...svg.querySelectorAll<SVGPathElement>('.sx-edge')].map((path) => ({ path, from: Number(path.dataset['from']), to: Number(path.dataset['to']) }));
+  for (const node of svg.querySelectorAll<SVGAElement>('[data-sx-node]'))
+    nodes.set(Number(node.dataset['sxNode']), node);
+  const edges = [...svg.querySelectorAll<SVGPathElement>('.sx-edge')].map((path) => ({
+    path,
+    from: Number(path.dataset['from']),
+    to: Number(path.dataset['to']),
+  }));
   const timeline = [...root.querySelectorAll<SVGAElement>('[data-sx-tl]')];
   const routeButtons = [...root.querySelectorAll<HTMLButtonElement>('[data-sx-route]')];
   const routePath = svg.querySelector<SVGPathElement>('[data-sx-route-path]');
@@ -128,7 +143,9 @@ export function initStackExplorer(ctx: PageContext): void {
   const partOf = (n: number) => model.parts.find((part) => part.chapters.includes(n));
   const center = (n: number): { x: number; y: number } | null => {
     const dot = nodes.get(n)?.querySelector<SVGCircleElement>('.sx-node__dot');
-    return dot === null || dot === undefined ? null : { x: Number(dot.getAttribute('cx')), y: Number(dot.getAttribute('cy')) };
+    return dot === null || dot === undefined
+      ? null
+      : { x: Number(dot.getAttribute('cx')), y: Number(dot.getAttribute('cy')) };
   };
 
   // ── readout (safe DOM construction; no innerHTML with data) ─────────────
@@ -161,7 +178,13 @@ export function initStackExplorer(ctx: PageContext): void {
     }
     return span;
   };
-  const setReadout = (kicker: string, title: string, summary: string, rows: HTMLElement[], links: HTMLElement[]): void => {
+  const setReadout = (
+    kicker: string,
+    title: string,
+    summary: string,
+    rows: HTMLElement[],
+    links: HTMLElement[],
+  ): void => {
     if (readout.kicker !== null) readout.kicker.textContent = kicker;
     if (readout.title !== null) readout.title.textContent = title;
     if (readout.summary !== null) readout.summary.textContent = summary;
@@ -202,8 +225,10 @@ export function initStackExplorer(ctx: PageContext): void {
     for (const k of [...target.prereqs, ...target.unlocks]) nodes.get(k)?.classList.add('is-direct');
     for (const edge of edges) {
       const direct = edge.to === n || edge.from === n;
-      if ((up.has(edge.from) || edge.from === n) && (up.has(edge.to) || edge.to === n)) edge.path.classList.add('is-up');
-      else if ((down.has(edge.from) || edge.from === n) && (down.has(edge.to) || edge.to === n)) edge.path.classList.add('is-down');
+      if ((up.has(edge.from) || edge.from === n) && (up.has(edge.to) || edge.to === n))
+        edge.path.classList.add('is-up');
+      else if ((down.has(edge.from) || edge.from === n) && (down.has(edge.to) || edge.to === n))
+        edge.path.classList.add('is-down');
       if (direct) edge.path.classList.add('is-direct');
     }
     for (const mark of timeline) mark.classList.toggle('is-lit', Number(mark.dataset['chapter']) === n);
@@ -214,7 +239,12 @@ export function initStackExplorer(ctx: PageContext): void {
       target.title,
       target.summary,
       [
-        row('status', target.written ? `${String(target.sectionsWritten)}/${String(target.sectionsTotal)} sections written` : 'planned'),
+        row(
+          'status',
+          target.written
+            ? `${String(target.sectionsWritten)}/${String(target.sectionsTotal)} sections written`
+            : 'planned',
+        ),
         row('figures · equations', target.written ? `${String(target.figures)} · ${String(target.equations)}` : '—'),
         row('builds on', `${String(target.prereqs.length)} direct · ${String(up.size)} in all`),
         row('unlocks', `${String(target.unlocks.length)} direct · ${String(down.size)} in all`),
@@ -230,7 +260,8 @@ export function initStackExplorer(ctx: PageContext): void {
       routePath.style.removeProperty('stroke-dashoffset');
     }
     routeBadges?.replaceChildren();
-    for (const button of routeButtons) button.setAttribute('aria-pressed', String(Number(button.dataset['sxRoute']) === pinnedRoute));
+    for (const button of routeButtons)
+      button.setAttribute('aria-pressed', String(Number(button.dataset['sxRoute']) === pinnedRoute));
   };
 
   const showRoute = (index: number): void => {
@@ -260,7 +291,10 @@ export function initStackExplorer(ctx: PageContext): void {
     if (routePath !== null && points.length > 1) {
       const [first, ...rest] = points;
       if (first !== undefined) {
-        routePath.setAttribute('d', `M${String(first.x)} ${String(first.y)} ${rest.map((p) => `L${String(p.x)} ${String(p.y)}`).join(' ')}`);
+        routePath.setAttribute(
+          'd',
+          `M${String(first.x)} ${String(first.y)} ${rest.map((p) => `L${String(p.x)} ${String(p.y)}`).join(' ')}`,
+        );
         if (!reducedMotion()) {
           const length = routePath.getTotalLength();
           routePath.style.strokeDasharray = String(length);
@@ -271,14 +305,18 @@ export function initStackExplorer(ctx: PageContext): void {
         }
       }
     }
-    for (const button of routeButtons) button.setAttribute('aria-pressed', String(Number(button.dataset['sxRoute']) === index));
+    for (const button of routeButtons)
+      button.setAttribute('aria-pressed', String(Number(button.dataset['sxRoute']) === index));
     const start = chapter(route.chapters[0] ?? 0);
     setReadout(
       `ROUTE · ${String(route.chapters.length)} CHAPTERS`,
       route.label,
       route.why,
       [
-        row('written on this route', `${String(route.chapters.filter((n) => chapter(n)?.written === true).length)} / ${String(route.chapters.length)}`),
+        row(
+          'written on this route',
+          `${String(route.chapters.filter((n) => chapter(n)?.written === true).length)} / ${String(route.chapters.length)}`,
+        ),
         row('starts at', start === undefined ? '—' : `${start.number} · ${start.short}`),
       ],
       [chapterLinks('in order', route.chapters)],
@@ -297,73 +335,101 @@ export function initStackExplorer(ctx: PageContext): void {
     const node = target instanceof Element ? target.closest<SVGAElement>('[data-sx-node]') : null;
     return node === null ? null : Number(node.dataset['sxNode']);
   };
-  svg.addEventListener('pointerover', (event) => {
-    const n = nodeFrom(event.target);
-    if (n !== null) focusChapter(n);
-  }, { signal: ctl.signal });
-  svg.addEventListener('focusin', (event) => {
-    const n = nodeFrom(event.target);
-    if (n !== null) focusChapter(n);
-  }, { signal: ctl.signal });
+  svg.addEventListener(
+    'pointerover',
+    (event) => {
+      const n = nodeFrom(event.target);
+      if (n !== null) focusChapter(n);
+    },
+    { signal: ctl.signal },
+  );
+  svg.addEventListener(
+    'focusin',
+    (event) => {
+      const n = nodeFrom(event.target);
+      if (n !== null) focusChapter(n);
+    },
+    { signal: ctl.signal },
+  );
   root.addEventListener('pointerleave', reset, { signal: ctl.signal });
 
   // Links inside the readout preview their chapter on hover.
-  root.querySelector('.sx-panel')?.addEventListener('pointerover', (event) => {
-    const jump = event.target instanceof Element ? event.target.closest<HTMLElement>('[data-sx-jump]') : null;
-    const n = Number(jump?.dataset['sxJump'] ?? Number.NaN);
-    if (!Number.isNaN(n)) {
-      for (const node of nodes.values()) node.classList.remove('is-peek');
-      nodes.get(n)?.classList.add('is-peek');
-    }
-  }, { signal: ctl.signal });
+  root.querySelector('.sx-panel')?.addEventListener(
+    'pointerover',
+    (event) => {
+      const jump = event.target instanceof Element ? event.target.closest<HTMLElement>('[data-sx-jump]') : null;
+      const n = Number(jump?.dataset['sxJump'] ?? Number.NaN);
+      if (!Number.isNaN(n)) {
+        for (const node of nodes.values()) node.classList.remove('is-peek');
+        nodes.get(n)?.classList.add('is-peek');
+      }
+    },
+    { signal: ctl.signal },
+  );
 
   for (const button of routeButtons) {
     const index = Number(button.dataset['sxRoute']);
-    button.addEventListener('pointerenter', () => {
-      showRoute(index);
-    }, { signal: ctl.signal });
-    button.addEventListener('focus', () => {
-      showRoute(index);
-    }, { signal: ctl.signal });
-    button.addEventListener('click', () => {
-      pinnedRoute = pinnedRoute === index ? null : index;
-      if (pinnedRoute === null) reset();
-      else showRoute(index);
-    }, { signal: ctl.signal });
+    button.addEventListener(
+      'pointerenter',
+      () => {
+        showRoute(index);
+      },
+      { signal: ctl.signal },
+    );
+    button.addEventListener(
+      'focus',
+      () => {
+        showRoute(index);
+      },
+      { signal: ctl.signal },
+    );
+    button.addEventListener(
+      'click',
+      () => {
+        pinnedRoute = pinnedRoute === index ? null : index;
+        if (pinnedRoute === null) reset();
+        else showRoute(index);
+      },
+      { signal: ctl.signal },
+    );
   }
 
   connectStrip({ doc, root, model, timeline, focusChapter, reset, signal: ctl.signal });
 
   // ── keyboard: roving focus across the lane grid ─────────────────────────
   const grid = model.parts.map((part) => part.chapters);
-  svg.addEventListener('keydown', (event) => {
-    const n = nodeFrom(event.target);
-    if (n === null) return;
-    if (event.key === 'Escape') {
-      reset();
-      return;
-    }
-    const r = grid.findIndex((lane) => lane.includes(n));
-    const c = grid[r]?.indexOf(n) ?? -1;
-    const moves: Readonly<Record<string, readonly [number, number]>> = {
-      ArrowRight: [r, c + 1],
-      ArrowLeft: [r, c - 1],
-      ArrowDown: [r + 1, c],
-      ArrowUp: [r - 1, c],
-      Home: [0, 0],
-      End: [grid.length - 1, 5],
-    };
-    const move = moves[event.key];
-    if (move === undefined) return;
-    event.preventDefault();
-    const lane = grid[Math.max(0, Math.min(grid.length - 1, move[0]))] ?? [];
-    const next = lane[Math.max(0, Math.min(lane.length - 1, move[1]))];
-    const target = next === undefined ? undefined : nodes.get(next);
-    if (target === undefined) return;
-    for (const node of nodes.values()) node.setAttribute('tabindex', '-1');
-    target.setAttribute('tabindex', '0');
-    target.focus();
-  }, { signal: ctl.signal });
+  svg.addEventListener(
+    'keydown',
+    (event) => {
+      const n = nodeFrom(event.target);
+      if (n === null) return;
+      if (event.key === 'Escape') {
+        reset();
+        return;
+      }
+      const r = grid.findIndex((lane) => lane.includes(n));
+      const c = grid[r]?.indexOf(n) ?? -1;
+      const moves: Readonly<Record<string, readonly [number, number]>> = {
+        ArrowRight: [r, c + 1],
+        ArrowLeft: [r, c - 1],
+        ArrowDown: [r + 1, c],
+        ArrowUp: [r - 1, c],
+        Home: [0, 0],
+        End: [grid.length - 1, 5],
+      };
+      const move = moves[event.key];
+      if (move === undefined) return;
+      event.preventDefault();
+      const lane = grid[Math.max(0, Math.min(grid.length - 1, move[0]))] ?? [];
+      const next = lane[Math.max(0, Math.min(lane.length - 1, move[1]))];
+      const target = next === undefined ? undefined : nodes.get(next);
+      if (target === undefined) return;
+      for (const node of nodes.values()) node.setAttribute('tabindex', '-1');
+      target.setAttribute('tabindex', '0');
+      target.focus();
+    },
+    { signal: ctl.signal },
+  );
 
   connectListing(doc, model, ctl.signal);
 }
@@ -432,7 +498,11 @@ function connectStrip(context: StripContext): void {
       .map((mark) => entryOf(mark)?.year ?? 0)
       .filter((year) => year > 0);
     const range = years.length === 0 ? '' : ` · ${String(Math.min(...years))}–${String(Math.max(...years))}`;
-    write(relationTag(key, RELATION_NAMES[key] ?? key), ` · ${plural(years.length, 'entry', 'entries')}${range}`, pinned === key ? ' · click the chip again to show all' : '');
+    write(
+      relationTag(key, RELATION_NAMES[key] ?? key),
+      ` · ${plural(years.length, 'entry', 'entries')}${range}`,
+      pinned === key ? ' · click the chip again to show all' : '',
+    );
   };
   const clearStrip = (): void => {
     svg.classList.remove('has-year', 'has-rel');
@@ -482,7 +552,9 @@ function connectStrip(context: StripContext): void {
     const members = timeline.filter((mark) => entryOf(mark)?.year === year);
     for (const mark of members) mark.classList.add('is-year');
     if (guide !== null) {
-      const xs = members.map((mark) => Number(mark.querySelector('circle')?.getAttribute('cx') ?? Number.NaN)).filter(Number.isFinite);
+      const xs = members
+        .map((mark) => Number(mark.querySelector('circle')?.getAttribute('cx') ?? Number.NaN))
+        .filter(Number.isFinite);
       if (xs.length > 0) {
         const x = String((Math.min(...xs) + Math.max(...xs)) / 2);
         guide.setAttribute('x1', x);
@@ -513,62 +585,97 @@ function connectStrip(context: StripContext): void {
   const yearFrom = (target: EventTarget | null): SVGAElement | null =>
     target instanceof Element ? target.closest<SVGAElement>('[data-sx-year]') : null;
 
-  svg.addEventListener('pointerover', (event) => {
-    const mark = markFrom(event.target);
-    if (mark !== null) {
-      showMark(mark);
-      return;
-    }
-    const column = yearFrom(event.target);
-    if (column !== null) showYear(column);
-  }, { signal });
-  strip.addEventListener('pointerleave', () => {
-    reset();
-    resetStrip();
-  }, { signal });
-  svg.addEventListener('focusin', (event) => {
-    const mark = markFrom(event.target);
-    if (mark !== null) showMark(mark);
-  }, { signal });
+  svg.addEventListener(
+    'pointerover',
+    (event) => {
+      const mark = markFrom(event.target);
+      if (mark !== null) {
+        showMark(mark);
+        return;
+      }
+      const column = yearFrom(event.target);
+      if (column !== null) showYear(column);
+    },
+    { signal },
+  );
+  strip.addEventListener(
+    'pointerleave',
+    () => {
+      reset();
+      resetStrip();
+    },
+    { signal },
+  );
+  svg.addEventListener(
+    'focusin',
+    (event) => {
+      const mark = markFrom(event.target);
+      if (mark !== null) showMark(mark);
+    },
+    { signal },
+  );
 
   for (const chip of chips) {
     const key = chip.dataset['sxTlChip'] ?? '';
-    chip.addEventListener('pointerenter', () => {
-      reset();
-      clearStrip();
-      showRelation(key);
-    }, { signal });
-    chip.addEventListener('focus', () => {
-      clearStrip();
-      showRelation(key);
-    }, { signal });
-    chip.addEventListener('click', () => {
-      pinned = pinned === key ? null : key;
-      clearStrip();
-      showRelation(key);
-    }, { signal });
+    chip.addEventListener(
+      'pointerenter',
+      () => {
+        reset();
+        clearStrip();
+        showRelation(key);
+      },
+      { signal },
+    );
+    chip.addEventListener(
+      'focus',
+      () => {
+        clearStrip();
+        showRelation(key);
+      },
+      { signal },
+    );
+    chip.addEventListener(
+      'click',
+      () => {
+        pinned = pinned === key ? null : key;
+        clearStrip();
+        showRelation(key);
+      },
+      { signal },
+    );
   }
 
   // Keyboard: one tab stop; arrows step through dots in time order (only the isolated relation when one is pinned).
   const STEP: Readonly<Record<string, number>> = { ArrowRight: 1, ArrowDown: 1, ArrowLeft: -1, ArrowUp: -1 };
-  svg.addEventListener('keydown', (event) => {
-    const mark = markFrom(event.target);
-    if (mark === null) return;
-    if (event.key === 'Escape') {
-      reset();
-      resetStrip();
-      return;
-    }
-    const visible = timeline.filter((other) => pinned === null || other.dataset['relation'] === pinned);
-    const at = Math.max(0, visible.indexOf(mark));
-    const step = STEP[event.key];
-    const next = event.key === 'Home' ? visible[0] : event.key === 'End' ? visible.at(-1) : step === undefined ? undefined : visible[Math.max(0, Math.min(visible.length - 1, at + step))];
-    if (next === undefined) return;
-    event.preventDefault();
-    for (const other of timeline) other.setAttribute('tabindex', '-1');
-    next.setAttribute('tabindex', '0');
-    next.focus();
-  }, { signal });
+  svg.addEventListener(
+    'keydown',
+    (event) => {
+      const mark = markFrom(event.target);
+      if (mark === null) return;
+      if (event.key === 'Escape') {
+        reset();
+        resetStrip();
+        return;
+      }
+      const visible = timeline.filter((other) => pinned === null || other.dataset['relation'] === pinned);
+      const at = Math.max(0, visible.indexOf(mark));
+      const step = STEP[event.key];
+      const next =
+        event.key === 'Home'
+          ? visible[0]
+          : event.key === 'End'
+            ? visible.at(-1)
+            : step === undefined
+              ? undefined
+              : visible[Math.max(0, Math.min(visible.length - 1, at + step))];
+      if (next === undefined) return;
+      event.preventDefault();
+      for (const other of timeline) other.setAttribute('tabindex', '-1');
+      next.setAttribute('tabindex', '0');
+      next.focus();
+    },
+    { signal },
+  );
 }
 
 /**
@@ -624,17 +731,29 @@ function connectListing(doc: Document, model: Model, signal: AbortSignal): void 
     return null;
   };
 
-  listing.addEventListener('pointerover', (event) => {
-    const n = chapterFrom(event.target);
-    if (n !== null) light(n);
-  }, { signal });
+  listing.addEventListener(
+    'pointerover',
+    (event) => {
+      const n = chapterFrom(event.target);
+      if (n !== null) light(n);
+    },
+    { signal },
+  );
   listing.addEventListener('pointerleave', clear, { signal });
-  listing.addEventListener('focusin', (event) => {
-    const n = chapterFrom(event.target);
-    if (n === null) clear();
-    else light(n);
-  }, { signal });
-  listing.addEventListener('focusout', (event) => {
-    if (!(event.relatedTarget instanceof Node) || !listing.contains(event.relatedTarget)) clear();
-  }, { signal });
+  listing.addEventListener(
+    'focusin',
+    (event) => {
+      const n = chapterFrom(event.target);
+      if (n === null) clear();
+      else light(n);
+    },
+    { signal },
+  );
+  listing.addEventListener(
+    'focusout',
+    (event) => {
+      if (!(event.relatedTarget instanceof Node) || !listing.contains(event.relatedTarget)) clear();
+    },
+    { signal },
+  );
 }

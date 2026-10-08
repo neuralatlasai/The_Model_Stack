@@ -18,7 +18,9 @@ describe('neighbourhood map (graph/[...slug])', () => {
   });
 
   test('groups cap at the limit and count the rest as "+n more"', () => {
-    const nodes = Array.from({ length: 11 }, (_, k) => graphNode({ id: `ms.chapter.${String(k + 1)}` as never, entityType: 'chapter', url: `/ch${String(k)}/` }));
+    const nodes = Array.from({ length: 11 }, (_, k) =>
+      graphNode({ id: `ms.chapter.${String(k + 1)}` as never, entityType: 'chapter', url: `/ch${String(k)}/` }),
+    );
     const group = mapGroup('dependents', nodes, 8);
     assert.equal(group.items.length, 7);
     assert.equal(group.more, 4);
@@ -45,7 +47,8 @@ describe('neighbourhood map (graph/[...slug])', () => {
     );
     assert.equal(map.twin[0]?.items.length, 12);
     assert.equal(map.dependents.more, 5);
-    for (const note of Object.values(MAP_ROLE_NOTES)) assert.ok(note.split(' ').length <= 6, `helper label too long: ${note}`);
+    for (const note of Object.values(MAP_ROLE_NOTES))
+      assert.ok(note.split(' ').length <= 6, `helper label too long: ${note}`);
   });
 
   test('a planned node without a summary reads its planned artifact', () => {
@@ -56,7 +59,16 @@ describe('neighbourhood map (graph/[...slug])', () => {
       hasManuscript: false,
       plan: { artifact: 'A calibrated quantizer', prerequisitesText: null, outcome: null, sections: [] },
     });
-    const map = neighbourhoodMap({ node: planned, ancestors: [], children: [], siblings: [], prerequisites: [], dependents: [], related: [], alternatives: [] });
+    const map = neighbourhoodMap({
+      node: planned,
+      ancestors: [],
+      children: [],
+      siblings: [],
+      prerequisites: [],
+      dependents: [],
+      related: [],
+      alternatives: [],
+    });
     assert.equal(map.center.summary, 'Planned artifact: A calibrated quantizer');
   });
 
@@ -65,7 +77,10 @@ describe('neighbourhood map (graph/[...slug])', () => {
       tidyIdentity('VOLUME I / PART I — PART I — SCIENTIFIC FOUNDATIONS / CHAPTER 01'),
       'VOLUME I / PART I — SCIENTIFIC FOUNDATIONS / CHAPTER 01',
     );
-    assert.equal(tidyIdentity('VOLUME I / PART I — SCIENTIFIC FOUNDATIONS'), 'VOLUME I / PART I — SCIENTIFIC FOUNDATIONS');
+    assert.equal(
+      tidyIdentity('VOLUME I / PART I — SCIENTIFIC FOUNDATIONS'),
+      'VOLUME I / PART I — SCIENTIFIC FOUNDATIONS',
+    );
   });
 });
 
@@ -116,7 +131,9 @@ describe('stack map labels (graph index)', () => {
 
 describe('compare field', () => {
   test('one flag per differential question, in order; plain-text why and change', () => {
-    const alt = fieldAlternative(sibling('GQA', { whyExists: [text('to cut KV bytes.')], changedPrimitive: [text('H K/V heads → G groups')] }));
+    const alt = fieldAlternative(
+      sibling('GQA', { whyExists: [text('to cut KV bytes.')], changedPrimitive: [text('H K/V heads → G groups')] }),
+    );
     assert.deepEqual(alt.stated, [true, false, false, false, false, true]);
     assert.equal(alt.why, 'to cut KV bytes.');
     assert.equal(alt.change, 'H K/V heads → G groups');
@@ -146,7 +163,12 @@ describe('compare field', () => {
 });
 
 describe('evidence ledger', () => {
-  const labelled = (id: string, chapter: number, entityType: 'section' | 'verification', labels: readonly string[]): ResearchDocument => {
+  const labelled = (
+    id: string,
+    chapter: number,
+    entityType: 'section' | 'verification',
+    labels: readonly string[],
+  ): ResearchDocument => {
     const base = sectionDoc();
     return {
       ...base,

@@ -43,7 +43,15 @@ export function LineageView({ spec, nodeHref, state = NO_STATE }: LineageViewPro
           const previous = spec.entries[index - 1];
           const sameYear = previous !== undefined && String(previous.year) === String(entry.year);
           return (
-            <li class={cls('vg-lineage__entry', `vg-lineage__entry--${relationSlug(entry.relation)}`, litClass(state, entry.work))} data-vg-key={entry.work} key={`${index}:${entry.work}`}>
+            <li
+              class={cls(
+                'vg-lineage__entry',
+                `vg-lineage__entry--${relationSlug(entry.relation)}`,
+                litClass(state, entry.work),
+              )}
+              data-vg-key={entry.work}
+              key={`${index}:${entry.work}`}
+            >
               <span class={cls('vg-lineage__year', sameYear && 'vg-lineage__year--repeat')}>{entry.year}</span>
               <span class={cls('vg-lineage__mark', `vg-mark--${relationSlug(entry.relation)}`)} aria-hidden="true" />
               <div class="vg-lineage__body">

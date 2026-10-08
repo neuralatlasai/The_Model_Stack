@@ -5,6 +5,8 @@
  */
 import type { Block as BlockNode } from '@atlas/core';
 import Block from './Block.astro';
+import MathProcedure from './MathProcedure.astro';
+import { groupMathProcedures } from './lib/math-procedures.ts';
 
 interface Props {
   blocks: readonly BlockNode[];
@@ -13,4 +15,6 @@ interface Props {
 const { blocks } = Astro.props;
 ---
 
-{blocks.map((block) => <Block block={block} />)}
+{(Astro.locals.mathProcedurePlates === true ? groupMathProcedures(blocks) : blocks).map((item) =>
+  item.kind === 'math-procedure' ? <MathProcedure procedure={item} /> : <Block block={item} />,
+)}

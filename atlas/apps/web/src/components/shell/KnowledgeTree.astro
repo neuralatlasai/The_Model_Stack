@@ -49,12 +49,19 @@ const persistName =
   transition:persist={persistName}
 >
   <div class="sh-tree-head">
-    <span class="sh-tree-title" id="knowledge-tree-title">Contents</span>
+    <span class="sh-tree-title" id="knowledge-tree-title">
+      Contents
+    </span>
     <button type="button" class="sh-panel-close" popovertarget="knowledge-tree" popovertargetaction="hide">
       Close
     </button>
   </div>
-  <ul role="tree" class="sh-tree-list" aria-labelledby="knowledge-tree-title" style={`--tree-num:${String(Math.max(0, ...graph.tree.map((node) => node.number?.length ?? 0)))}ch`}>
+  <ul
+    role="tree"
+    class="sh-tree-list"
+    aria-labelledby="knowledge-tree-title"
+    style={`--tree-num:${String(Math.max(0, ...graph.tree.map((node) => node.number?.length ?? 0)))}ch`}
+  >
     <TreeBranch nodes={graph.tree} level={1} state={state} focusId={focusId} entityOf={entityOf} />
   </ul>
 </nav>

@@ -1,6 +1,13 @@
 import assert from 'node:assert/strict';
 import { describe, test } from 'node:test';
-import { INITIAL_RAIL_STATE, railAnchor, railReducer, sameTarget, targetKey, type RailState } from '../../src/client/rail-machine.ts';
+import {
+  INITIAL_RAIL_STATE,
+  railAnchor,
+  railReducer,
+  sameTarget,
+  targetKey,
+  type RailState,
+} from '../../src/client/rail-machine.ts';
 
 const paper = { type: 'paper', key: 'P19' } as const;
 const equation = { type: 'equation', number: '5.4' } as const;
@@ -34,12 +41,22 @@ describe('railReducer', () => {
   test('inspecting another object replaces it; the same object is a no-op', () => {
     const pinned = railReducer(INITIAL_RAIL_STATE, { type: 'inspect', target: paper });
     assert.equal(railReducer(pinned, { type: 'inspect', target: { type: 'paper', key: 'P19' } }), pinned);
-    assert.deepEqual(railReducer(pinned, { type: 'inspect', target: equation }), { mode: 'inspecting', anchor: null, target: equation });
+    assert.deepEqual(railReducer(pinned, { type: 'inspect', target: equation }), {
+      mode: 'inspecting',
+      anchor: null,
+      target: equation,
+    });
   });
 
   test('close returns to the region, or to idle when no region was active', () => {
-    assert.deepEqual(railReducer({ mode: 'inspecting', anchor: 'formulation', target: equation }, { type: 'close' }), { mode: 'region', anchor: 'formulation' });
-    assert.deepEqual(railReducer({ mode: 'inspecting', anchor: null, target: equation }, { type: 'close' }), INITIAL_RAIL_STATE);
+    assert.deepEqual(railReducer({ mode: 'inspecting', anchor: 'formulation', target: equation }, { type: 'close' }), {
+      mode: 'region',
+      anchor: 'formulation',
+    });
+    assert.deepEqual(
+      railReducer({ mode: 'inspecting', anchor: null, target: equation }, { type: 'close' }),
+      INITIAL_RAIL_STATE,
+    );
     const region: RailState = { mode: 'region', anchor: 'scope' };
     assert.equal(railReducer(region, { type: 'close' }), region);
   });

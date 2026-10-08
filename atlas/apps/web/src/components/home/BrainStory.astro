@@ -27,7 +27,9 @@ const pad = (n: number): string => String(n).padStart(2, '0');
 const partOf = new Map(stack.parts.map((part) => [part.n, part]));
 const steps = STORY_PARTS.map((story) => {
   const part = partOf.get(story.n);
-  const chapters = (part?.chapters ?? []).map((n) => stack.chapters[String(n)]).filter((chapter) => chapter !== undefined);
+  const chapters = (part?.chapters ?? [])
+    .map((n) => stack.chapters[String(n)])
+    .filter((chapter) => chapter !== undefined);
   const first = chapters[0]?.n ?? 0;
   const last = chapters.at(-1)?.n ?? 0;
   return {
@@ -49,50 +51,85 @@ const steps = STORY_PARTS.map((story) => {
   </div>
 
   <div class="bs-text">
-    <header class="bs-intro bs-step" data-step data-part="0" data-k="The Model Stack" data-t="From data and silicon to intelligence">
+    <header
+      class="bs-intro bs-step"
+      data-step
+      data-part="0"
+      data-k="The Model Stack"
+      data-t="From data and silicon to intelligence"
+    >
       <h1 class="bs-title">The Model Stack</h1>
       <p class="bs-sub">From data and silicon to intelligence</p>
-      <p class="bs-author"><span>by</span> {STORY_AUTHOR}</p>
+      <p class="bs-author">
+        <span>by</span> {STORY_AUTHOR}
+      </p>
       <hr class="bs-rule" />
       <p class="bs-thesis">{STORY_THESIS}</p>
       <p class="bs-note">{STORY_BRAIN}</p>
       <p class="bs-actions">
-        <a class="bs-start" href={startUrl}>Start reading <svg class="bs-arrow" viewBox="0 0 12 12" width="12" height="12" aria-hidden="true"><path class="bs-arrow__stem" d="M1 6h8" /><path class="bs-arrow__head" d="M5.5 2.5 9 6l-3.5 3.5" /></svg></a>
-        <a class="bs-link" href="/library/">Browse the library <svg class="bs-arrow" viewBox="0 0 12 12" width="12" height="12" aria-hidden="true"><path class="bs-arrow__stem" d="M1 6h8" /><path class="bs-arrow__head" d="M5.5 2.5 9 6l-3.5 3.5" /></svg></a>
+        <a class="bs-start" href={startUrl}>
+          Start reading{' '}
+          <svg class="bs-arrow" viewBox="0 0 12 12" width="12" height="12" aria-hidden="true">
+            <path class="bs-arrow__stem" d="M1 6h8" />
+            <path class="bs-arrow__head" d="M5.5 2.5 9 6l-3.5 3.5" />
+          </svg>
+        </a>
+        <a class="bs-link" href="/library/">
+          Browse the library{' '}
+          <svg class="bs-arrow" viewBox="0 0 12 12" width="12" height="12" aria-hidden="true">
+            <path class="bs-arrow__stem" d="M1 6h8" />
+            <path class="bs-arrow__head" d="M5.5 2.5 9 6l-3.5 3.5" />
+          </svg>
+        </a>
       </p>
     </header>
 
-    {
-      steps.map((step) => (
-        <section class="bs-step" id={`part-${step.numeral.toLowerCase()}`} data-step data-part={step.n} data-k={`Part ${step.numeral} · Chapters ${step.range}`} data-t={step.title} aria-labelledby={`bs-h-${String(step.n)}`}>
-          <p class="bs-kicker">
-            <a href={step.url}>
-              Part {step.numeral} · {step.title}
-            </a>
-          </p>
-          <h2 class="bs-h2" id={`bs-h-${String(step.n)}`}>
-            {step.heading}
-          </h2>
-          <p class="bs-body">{runs(step.body).map((run) => (run.bold ? <b>{run.text}</b> : run.text))}</p>
-          <p class="bs-outcome">
-            <span>Outcome</span> {step.outcome}
-          </p>
-          <ol class="bs-chapters" role="list">
-            {step.chapters.map((chapter) => (
-              <li>
-                <a class:list={['bs-ch', { 'is-written': chapter.written }]} href={chapter.url} data-ch={chapter.n}>
-                  <span class="bs-ch__n">{chapter.number}</span>
-                  <span class="bs-ch__t">{chapter.title}</span>
-                </a>
-              </li>
-            ))}
-          </ol>
-        </section>
-      ))
-    }
+    {steps.map((step) => (
+      <section
+        class="bs-step"
+        id={`part-${step.numeral.toLowerCase()}`}
+        data-step
+        data-part={step.n}
+        data-k={`Part ${step.numeral} · Chapters ${step.range}`}
+        data-t={step.title}
+        aria-labelledby={`bs-h-${String(step.n)}`}
+      >
+        <p class="bs-kicker">
+          <a href={step.url}>
+            Part {step.numeral} · {step.title}
+          </a>
+        </p>
+        <h2 class="bs-h2" id={`bs-h-${String(step.n)}`}>
+          {step.heading}
+        </h2>
+        <p class="bs-body">{runs(step.body).map((run) => (run.bold ? <b>{run.text}</b> : run.text))}</p>
+        <p class="bs-outcome">
+          <span>Outcome</span> {step.outcome}
+        </p>
+        <ol class="bs-chapters" role="list">
+          {step.chapters.map((chapter) => (
+            <li>
+              <a class:list={['bs-ch', { 'is-written': chapter.written }]} href={chapter.url} data-ch={chapter.n}>
+                <span class="bs-ch__n">{chapter.number}</span>
+                <span class="bs-ch__t">{chapter.title}</span>
+              </a>
+            </li>
+          ))}
+        </ol>
+      </section>
+    ))}
 
-    <section class="bs-step bs-close" data-step data-part="0" data-k="The Model Stack" data-t="The whole stack, connected" aria-labelledby="bs-h-close">
-      <h2 class="bs-h2" id="bs-h-close">{STORY_CLOSE.heading}</h2>
+    <section
+      class="bs-step bs-close"
+      data-step
+      data-part="0"
+      data-k="The Model Stack"
+      data-t="The whole stack, connected"
+      aria-labelledby="bs-h-close"
+    >
+      <h2 class="bs-h2" id="bs-h-close">
+        {STORY_CLOSE.heading}
+      </h2>
       <p class="bs-body">{runs(STORY_CLOSE.body).map((run) => (run.bold ? <b>{run.text}</b> : run.text))}</p>
     </section>
   </div>

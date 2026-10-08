@@ -98,6 +98,9 @@ export function walkInline(nodes: readonly Inline[], visit: (node: Inline) => vo
 /** Visits every inline node of every block (nested blocks included), in reading order. */
 export function walkAllInline(blocks: readonly Block[], visit: (node: Inline, owner: Block) => void): void {
   walkBlocks(blocks, (block) => {
-    for (const sequence of ownInlines(block)) walkInline(sequence, (node) => { visit(node, block); });
+    for (const sequence of ownInlines(block))
+      walkInline(sequence, (node) => {
+        visit(node, block);
+      });
   });
 }

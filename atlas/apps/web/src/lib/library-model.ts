@@ -129,7 +129,12 @@ const tally = (items: readonly { readonly nodeId: string }[]): Map<string, numbe
  * `theses` maps a chapter node id to its full thesis (the compiled document's
  * header); without it the graph's summary, an excerpt capped for previews, is used.
  */
-export function buildLibraryModel(graph: AtlasGraph, registry: Registry, stack: StackModel, theses: ReadonlyMap<string, string> = new Map()): LibraryModel {
+export function buildLibraryModel(
+  graph: AtlasGraph,
+  registry: Registry,
+  stack: StackModel,
+  theses: ReadonlyMap<string, string> = new Map(),
+): LibraryModel {
   const figureCount = tally(registry.objects.filter((object) => object.kind === 'figure'));
 
   // Works cited per chapter: a reference counts once for every chapter that records a use or holds a citing page.
@@ -147,7 +152,9 @@ export function buildLibraryModel(graph: AtlasGraph, registry: Registry, stack: 
     .sort((a, b) => a.n - b.n)
     .map((chapter) => {
       const node = graph.nodes[chapter.id as NodeId];
-      const children = (node?.children ?? []).map((id) => graph.nodes[id]).filter((child): child is GraphNode => child !== undefined);
+      const children = (node?.children ?? [])
+        .map((id) => graph.nodes[id])
+        .filter((child): child is GraphNode => child !== undefined);
       const sections: LibrarySection[] = children
         .filter((child) => child.entityType === 'section')
         .map((section) => ({
@@ -186,7 +193,8 @@ export function buildLibraryModel(graph: AtlasGraph, registry: Registry, stack: 
       };
     });
   const byN = new Map(chapters.map((chapter) => [chapter.n, chapter]));
-  const inPart = (list: readonly number[]): LibraryChapter[] => list.map((n) => byN.get(n)).filter((c): c is LibraryChapter => c !== undefined);
+  const inPart = (list: readonly number[]): LibraryChapter[] =>
+    list.map((n) => byN.get(n)).filter((c): c is LibraryChapter => c !== undefined);
 
   const parts: LibraryPart[] = stack.parts
     .map((part) => {
@@ -226,7 +234,12 @@ export function buildLibraryModel(graph: AtlasGraph, registry: Registry, stack: 
 
   const shelf: LibraryShelfItem[] = graph.order
     .map((id) => graph.nodes[id])
-    .filter((node): node is GraphNode => node !== undefined && (node.entityType === 'frontmatter' || node.entityType === 'appendix') && node.id !== 'ms.root')
+    .filter(
+      (node): node is GraphNode =>
+        node !== undefined &&
+        (node.entityType === 'frontmatter' || node.entityType === 'appendix') &&
+        node.id !== 'ms.root',
+    )
     .map((node) => ({
       number: node.number,
       title: node.title,
@@ -288,7 +301,10 @@ export interface WeaveLayout {
  * between parts, and draws every prerequisite edge as an arch above the axis
  * whose height grows with its span. Pure: the component renders it, tests pin it.
  */
-export function weaveLayout(parts: readonly { readonly n: number; readonly chapters: readonly number[] }[], edges: readonly (readonly [number, number])[]): WeaveLayout {
+export function weaveLayout(
+  parts: readonly { readonly n: number; readonly chapters: readonly number[] }[],
+  edges: readonly (readonly [number, number])[],
+): WeaveLayout {
   const x = new Map<number, number>();
   const spans: { n: number; from: number; to: number }[] = [];
   let slot = 0;
@@ -313,7 +329,12 @@ export function weaveLayout(parts: readonly { readonly n: number; readonly chapt
       // Height grows sub-linearly with span, so long arches never flatten into a ceiling.
       const lift = ((4 + (base - 8) * (span / WEAVE.width) ** 0.7) * 4) / 3;
       const f = (v: number): string => String(Math.round(v * 10) / 10);
-      return { p, n, span, d: `M${f(a)} ${f(base)}C${f(a)} ${f(base - lift)} ${f(b)} ${f(base - lift)} ${f(b)} ${f(base)}` };
+      return {
+        p,
+        n,
+        span,
+        d: `M${f(a)} ${f(base)}C${f(a)} ${f(base - lift)} ${f(b)} ${f(base - lift)} ${f(b)} ${f(base)}`,
+      };
     })
     .sort((a, b) => b.span - a.span || a.n - b.n || a.p - b.p)
     .map(({ p, n, d }) => ({ p, n, d }));

@@ -67,9 +67,17 @@ export function initCitations(ctx: PageContext): void {
       .catch(() => undefined); // previews are an enhancement; the link still works
   };
 
-  const render = (trigger: HTMLElement, view: { readonly kind: string; readonly title: string; readonly body: HTMLElement }): void => {
+  const render = (
+    trigger: HTMLElement,
+    view: { readonly kind: string; readonly title: string; readonly body: HTMLElement },
+  ): void => {
     const host = ensurePreview();
-    replaceChildren(host, h('span', { class: 'cx-insp__kind' }, view.kind), h('p', { class: 'cx-insp__title' }, view.title), view.body);
+    replaceChildren(
+      host,
+      h('span', { class: 'cx-insp__kind' }, view.kind),
+      h('p', { class: 'cx-insp__title' }, view.title),
+      view.body,
+    );
     owner?.removeAttribute('aria-describedby');
     owner = trigger;
     trigger.setAttribute('aria-describedby', PREVIEW_ID);
@@ -154,7 +162,9 @@ export function initCitations(ctx: PageContext): void {
       hide();
       ctx.actions.inspect?.(target, trigger);
     },
-    { signal: ctl.signal },
+    // Intercept research objects before Astro's document-level router starts
+    // navigation; modified clicks and ordinary node links retain native behavior.
+    { signal: ctl.signal, capture: true },
   );
   // Capture phase: a visible preview consumes Esc before the rail sees it.
   doc.addEventListener(

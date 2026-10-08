@@ -1,7 +1,15 @@
 import assert from 'node:assert/strict';
 import { describe, it } from 'node:test';
 import type { CycleSpec, FigureSpec, GraphNode, NodeId, Scene, SceneNode } from '@atlas/core';
-import { layoutCycle, layoutDiagram, layoutFigure, layoutNeighbourhood, parseFigure, parseMermaid, placeNodeText } from '../src/index.ts';
+import {
+  layoutCycle,
+  layoutDiagram,
+  layoutFigure,
+  layoutNeighbourhood,
+  parseFigure,
+  parseMermaid,
+  placeNodeText,
+} from '../src/index.ts';
 import { envelope, grammarKindExamples, mermaidBlocks } from './fixtures.ts';
 
 function figureOf(kind: string, spec: unknown): FigureSpec {
@@ -13,14 +21,19 @@ function figureOf(kind: string, spec: unknown): FigureSpec {
 
 function overlaps(a: SceneNode, b: SceneNode): boolean {
   const eps = 0.5;
-  return a.x < b.x + b.width - eps && b.x < a.x + a.width - eps && a.y < b.y + b.height - eps && b.y < a.y + a.height - eps;
+  return (
+    a.x < b.x + b.width - eps && b.x < a.x + a.width - eps && a.y < b.y + b.height - eps && b.y < a.y + a.height - eps
+  );
 }
 
 function assertWellFormed(scene: Scene): void {
   for (let i = 0; i < scene.nodes.length; i += 1) {
     const a = scene.nodes[i];
     assert.ok(a !== undefined);
-    assert.ok(a.x >= 0 && a.y >= 0 && a.x + a.width <= scene.width + 0.5 && a.y + a.height <= scene.height + 0.5, `node ${a.id} outside the scene`);
+    assert.ok(
+      a.x >= 0 && a.y >= 0 && a.x + a.width <= scene.width + 0.5 && a.y + a.height <= scene.height + 0.5,
+      `node ${a.id} outside the scene`,
+    );
     for (let j = i + 1; j < scene.nodes.length; j += 1) {
       const b = scene.nodes[j];
       assert.ok(b !== undefined);
@@ -37,13 +50,22 @@ function assertWellFormed(scene: Scene): void {
     const end = edge.points[edge.points.length - 1];
     assert.ok(start !== undefined && end !== undefined);
     const near = (node: SceneNode, p: { x: number; y: number }): boolean =>
-      p.x >= node.x - 1.5 && p.x <= node.x + node.width + 1.5 && p.y >= node.y - 1.5 && p.y <= node.y + node.height + 1.5;
+      p.x >= node.x - 1.5 &&
+      p.x <= node.x + node.width + 1.5 &&
+      p.y >= node.y - 1.5 &&
+      p.y <= node.y + node.height + 1.5;
     assert.ok(near(from, start), `edge ${edge.id} does not start on ${edge.from}`);
     assert.ok(near(to, end), `edge ${edge.id} does not end on ${edge.to}`);
   }
   for (const group of scene.groups) {
     for (const node of scene.nodes.filter((entry) => entry.group === group.id)) {
-      assert.ok(node.x >= group.x && node.y >= group.y && node.x + node.width <= group.x + group.width + 0.5 && node.y + node.height <= group.y + group.height + 0.5, `${node.id} outside group ${group.id}`);
+      assert.ok(
+        node.x >= group.x &&
+          node.y >= group.y &&
+          node.x + node.width <= group.x + group.width + 0.5 &&
+          node.y + node.height <= group.y + group.height + 0.5,
+        `${node.id} outside group ${group.id}`,
+      );
     }
   }
   // Every node's text fits its box (the renderer re-wraps with the same metrics).
@@ -105,7 +127,11 @@ describe('layoutFigure — diagram (ELK layered)', () => {
         const from = byId.get(edge.from);
         const to = byId.get(edge.to);
         if (from === undefined || to === undefined) continue;
-        if (edge.kind === 'feedback') assert.ok(to.y + to.height / 2 < from.y + from.height / 2 || spec.edges.some((e) => e.kind === 'feedback' && e.from === edge.from && e.to === edge.to));
+        if (edge.kind === 'feedback')
+          assert.ok(
+            to.y + to.height / 2 < from.y + from.height / 2 ||
+              spec.edges.some((e) => e.kind === 'feedback' && e.from === edge.from && e.to === edge.to),
+          );
       }
     });
   }
@@ -207,9 +233,17 @@ describe('layoutNeighbourhood — constrained semantic graph (UI_UX §13)', () =
   const center = node('ms.section.5.2', 'Causal self-attention', '5.2');
   const input = {
     center,
-    prerequisites: [node('ms.section.2.1', 'Tensor algebra', '2.1'), node('ms.section.4.1', 'Autoregressive modeling', '4.1')],
-    dependents: Array.from({ length: 11 }, (_, i) => node(`ms.section.14.${i + 1}`, `Attention variant ${i + 1}`, `14.${i + 1}`)),
-    siblings: [node('ms.section.5.1', 'End-to-end forward pass', '5.1'), node('ms.section.5.3', 'Feed-forward block', '5.3')],
+    prerequisites: [
+      node('ms.section.2.1', 'Tensor algebra', '2.1'),
+      node('ms.section.4.1', 'Autoregressive modeling', '4.1'),
+    ],
+    dependents: Array.from({ length: 11 }, (_, i) =>
+      node(`ms.section.14.${i + 1}`, `Attention variant ${i + 1}`, `14.${i + 1}`),
+    ),
+    siblings: [
+      node('ms.section.5.1', 'End-to-end forward pass', '5.1'),
+      node('ms.section.5.3', 'Feed-forward block', '5.3'),
+    ],
     alternatives: [node('ms.section.14.2', 'Latent attention', '14.2')],
   };
 

@@ -1,7 +1,15 @@
 import assert from 'node:assert/strict';
 import { describe, test } from 'node:test';
 import { StoredTreeExpandedSchema } from '@atlas/core';
-import { expandedSet, keyToMove, labelMatches, MAX_EXPANDED, moveIndex, typeaheadIndex, updateExpanded } from '../../src/client/tree-model.ts';
+import {
+  expandedSet,
+  keyToMove,
+  labelMatches,
+  MAX_EXPANDED,
+  moveIndex,
+  typeaheadIndex,
+  updateExpanded,
+} from '../../src/client/tree-model.ts';
 
 describe('vertical moves (APG tree)', () => {
   test('keys map to moves; other keys do not', () => {
@@ -63,7 +71,8 @@ describe('persisted expansion', () => {
 
   test('stays within the stored schema limit', () => {
     let stored: string[] = [];
-    for (let i = 0; i < MAX_EXPANDED + 25; i += 1) stored = updateExpanded(stored, `ms.section.1.${String(i + 1)}`, true);
+    for (let i = 0; i < MAX_EXPANDED + 25; i += 1)
+      stored = updateExpanded(stored, `ms.section.1.${String(i + 1)}`, true);
     assert.equal(stored.length, MAX_EXPANDED);
     assert.equal(stored.at(-1), `ms.section.1.${String(MAX_EXPANDED + 25)}`);
     assert.equal(StoredTreeExpandedSchema.safeParse(stored).success, true);

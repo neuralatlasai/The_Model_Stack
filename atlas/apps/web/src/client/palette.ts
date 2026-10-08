@@ -23,11 +23,28 @@
 import { pageData } from './page-data.ts';
 import MiniSearch, { type Options, type SearchResult } from 'minisearch';
 import { z } from 'zod';
-import { ATTR, objectAnchor, SEARCH_INDEX_OPTIONS, SEARCH_KINDS, type Depth, type SearchHit, type SearchKind } from '@atlas/core';
+import {
+  ATTR,
+  objectAnchor,
+  SEARCH_INDEX_OPTIONS,
+  SEARCH_KINDS,
+  type Depth,
+  type SearchHit,
+  type SearchKind,
+} from '@atlas/core';
 import { linkWithDepth } from './depth-url.ts';
 import { $, h, replaceChildren } from './dom.ts';
 import type { PageContext } from './page.ts';
-import { COMMANDS, CONCEPT_KINDS, formatCitation, groupHits, parseQuery, rankCommands, typeLine, type CommandId } from './palette-model.ts';
+import {
+  COMMANDS,
+  CONCEPT_KINDS,
+  formatCitation,
+  groupHits,
+  parseQuery,
+  rankCommands,
+  typeLine,
+  type CommandId,
+} from './palette-model.ts';
 import { readBookmarks, readRecent } from './reading-state.ts';
 import { canonicalPageUrl, safeInternalHref, withBase } from './urls.ts';
 
@@ -37,7 +54,12 @@ const RESULT_LIMIT = 40;
 const RECENT_LIMIT = 8;
 const BOOKMARK_LIMIT = 8;
 const PLACEHOLDER = 'Search the atlas — type > for commands';
-const IDS = { dialog: 'atlas-palette', input: 'atlas-palette-input', list: 'atlas-palette-list', status: 'atlas-palette-status' } as const;
+const IDS = {
+  dialog: 'atlas-palette',
+  input: 'atlas-palette-input',
+  list: 'atlas-palette-list',
+  status: 'atlas-palette-status',
+} as const;
 
 interface StoredFields {
   readonly id: string;
@@ -75,7 +97,10 @@ let loading: Promise<MiniSearch<StoredFields>> | null = null;
 function loadIndex(base: string): Promise<MiniSearch<StoredFields>> {
   if (index !== null) return Promise.resolve(index);
   loading ??= (async () => {
-    const response = await fetch(`${base}${INDEX_FILE}`, { signal: AbortSignal.timeout(FETCH_TIMEOUT_MS), credentials: 'same-origin' });
+    const response = await fetch(`${base}${INDEX_FILE}`, {
+      signal: AbortSignal.timeout(FETCH_TIMEOUT_MS),
+      credentials: 'same-origin',
+    });
     if (!response.ok) throw new Error(`search index request failed with HTTP ${String(response.status)}`);
     const text = await response.text();
     // MiniSearch parses and rebuilds the index (yielding between chunks); malformed input rejects.
@@ -167,7 +192,11 @@ function buildView(doc: Document): PaletteView {
       h(
         'div',
         { class: 'cx-palette__bar' },
-        h('label', { class: 'cx-sr-only', for: IDS.input }, 'Search concepts, papers, equations, systems; type > for commands'),
+        h(
+          'label',
+          { class: 'cx-sr-only', for: IDS.input },
+          'Search concepts, papers, equations, systems; type > for commands',
+        ),
         input,
         h('kbd', { class: 'cx-palette__esc', 'aria-hidden': 'true' }, 'Esc'),
       ),
@@ -296,27 +325,37 @@ export function openPalette(ctx: PageContext, returnFocus: HTMLElement | null): 
     if (query.mode === 'command') {
       const ranked = rankCommands(commands, query.text);
       render(
-        [{ label: 'COMMANDS', items: ranked.map((command) => ({ title: command.title, typeLine: 'COMMAND', target: { command: command.runner } })) }],
+        [
+          {
+            label: 'COMMANDS',
+            items: ranked.map((command) => ({
+              title: command.title,
+              typeLine: 'COMMAND',
+              target: { command: command.runner },
+            })),
+          },
+        ],
         ranked.length === 0 ? 'No matching commands.' : `${String(ranked.length)} commands.`,
       );
       return;
     }
     if (query.text === '') {
-      render(emptyStateGroups(ctx), conceptsOnly ? 'Type to find a concept.' : 'Recent concepts and bookmarks. Type to search, or > for commands.');
+      render(
+        emptyStateGroups(ctx),
+        conceptsOnly ? 'Type to find a concept.' : 'Recent concepts and bookmarks. Type to search, or > for commands.',
+      );
       return;
     }
     const show = (engine: MiniSearch<StoredFields>): void => {
       if (current !== token || own.signal.aborted) return; // superseded or closed
       const groups = groupHits(search(engine, query.text, conceptsOnly), RESULT_LIMIT);
-      const items = groups.map(
-        (group): Group => ({
-          label: group.label,
-          items: group.hits.flatMap((hit): OptionSpec[] => {
-            const href = resolveHref(ctx.base, ctx.state.depth, hit.url);
-            return href === null ? [] : [{ title: hit.title, typeLine: typeLine(hit), target: { href } }];
-          }),
+      const items = groups.map((group): Group => ({
+        label: group.label,
+        items: group.hits.flatMap((hit): OptionSpec[] => {
+          const href = resolveHref(ctx.base, ctx.state.depth, hit.url);
+          return href === null ? [] : [{ title: hit.title, typeLine: typeLine(hit), target: { href } }];
         }),
-      );
+      }));
       const count = items.reduce((sum, group) => sum + group.items.length, 0);
       render(items, count === 0 ? `No results for “${query.text}”.` : `${String(count)} results.`);
     };
@@ -328,7 +367,8 @@ export function openPalette(ctx: PageContext, returnFocus: HTMLElement | null): 
     loadIndex(ctx.base)
       .then(show)
       .catch(() => {
-        if (current === token && !own.signal.aborted) render([], 'The search index could not be loaded. Close and reopen search to retry.');
+        if (current === token && !own.signal.aborted)
+          render([], 'The search index could not be loaded. Close and reopen search to retry.');
       });
   };
 
@@ -368,7 +408,8 @@ export function openPalette(ctx: PageContext, returnFocus: HTMLElement | null): 
       session = null;
       input.placeholder = PLACEHOLDER;
       // The platform restores focus to the opener; cover openers that left the DOM or lost focus.
-      if (returnFocus?.isConnected === true && (doc.activeElement === doc.body || doc.activeElement === null)) returnFocus.focus({ preventScroll: true });
+      if (returnFocus?.isConnected === true && (doc.activeElement === doc.body || doc.activeElement === null))
+        returnFocus.focus({ preventScroll: true });
     },
     listen,
   );
@@ -383,9 +424,23 @@ export function openPalette(ctx: PageContext, returnFocus: HTMLElement | null): 
 }
 
 function optionElement(id: string, spec: OptionSpec): HTMLElement {
-  const children = [h('span', { class: 'cx-palette__type' }, spec.typeLine), h('span', { class: 'cx-palette__title' }, spec.title)];
+  const children = [
+    h('span', { class: 'cx-palette__type' }, spec.typeLine),
+    h('span', { class: 'cx-palette__title' }, spec.title),
+  ];
   if ('href' in spec.target) {
-    return h('a', { id, role: 'option', class: 'cx-palette__option', href: spec.target.href, 'aria-selected': 'false', tabindex: -1 }, ...children);
+    return h(
+      'a',
+      {
+        id,
+        role: 'option',
+        class: 'cx-palette__option',
+        href: spec.target.href,
+        'aria-selected': 'false',
+        tabindex: -1,
+      },
+      ...children,
+    );
   }
   return h('div', { id, role: 'option', class: 'cx-palette__option', 'aria-selected': 'false' }, ...children);
 }
@@ -410,8 +465,13 @@ function emptyStateGroups(ctx: PageContext): Group[] {
     .slice(0, BOOKMARK_LIMIT)
     .flatMap((entry): OptionSpec[] => {
       const href = resolveHref(ctx.base, ctx.state.depth, entry.url);
-      const context = entry.context === '' ? '' : ` · ${entry.context.length > 90 ? `${entry.context.slice(0, 89)}…` : entry.context}`;
-      return href === null ? [] : [{ title: entry.title, typeLine: `BOOKMARK · ${entry.kind.toUpperCase()}${context}`, target: { href } }];
+      const context =
+        entry.context === ''
+          ? ''
+          : ` · ${entry.context.length > 90 ? `${entry.context.slice(0, 89)}…` : entry.context}`;
+      return href === null
+        ? []
+        : [{ title: entry.title, typeLine: `BOOKMARK · ${entry.kind.toUpperCase()}${context}`, target: { href } }];
     });
   return [
     { label: 'RECENT', items: recent },
@@ -435,7 +495,9 @@ function commandRunners(ctx: PageContext, goToConcept: Command): Readonly<Record
       link.click();
       link.remove();
     });
-  const mapHref = viewHref(doc, base, 'map') ?? (nodeId === null ? null : withBase(base, `/graph${location.pathname.slice(base.length - 1)}`));
+  const mapHref =
+    viewHref(doc, base, 'map') ??
+    (nodeId === null ? null : withBase(base, `/graph${location.pathname.slice(base.length - 1)}`));
   const compareHref = viewHref(doc, base, 'compare');
   const equation = firstEquationNumber(ctx, activeAnchor);
   const { setDepth, copyText, inspect, linkTo, showPosition, toggleDarkMode, toggleBookmark } = actions;
@@ -454,7 +516,10 @@ function commandRunners(ctx: PageContext, goToConcept: Command): Readonly<Record
       copyText === undefined || data === null
         ? null
         : later(() => {
-            void copyText(formatCitation(data.title, nodeId, canonicalPageUrl(location.href)), 'Citation copied to the clipboard.');
+            void copyText(
+              formatCitation(data.title, nodeId, canonicalPageUrl(location.href)),
+              'Citation copied to the clipboard.',
+            );
           }),
     'show-prerequisites': showPosition === undefined ? null : later(showPosition),
     'depth-overview': depth('overview'),

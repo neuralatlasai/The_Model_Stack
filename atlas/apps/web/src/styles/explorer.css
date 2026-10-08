@@ -480,11 +480,21 @@
 }
 
 /* Relation colours: one custom property per relation, used by dots, chips, and readout tags. */
-.sx-tl--anc { --sx-rel: var(--sx-anc); }
-.sx-tl--opt { --sx-rel: var(--sx-opt); }
-.sx-tl--alt { --sx-rel: var(--sx-alt); }
-.sx-tl--sup { --sx-rel: var(--sx-sup); }
-.sx-tl--fro { --sx-rel: var(--sx-fro); }
+.sx-tl--anc {
+  --sx-rel: var(--sx-anc);
+}
+.sx-tl--opt {
+  --sx-rel: var(--sx-opt);
+}
+.sx-tl--alt {
+  --sx-rel: var(--sx-alt);
+}
+.sx-tl--sup {
+  --sx-rel: var(--sx-sup);
+}
+.sx-tl--fro {
+  --sx-rel: var(--sx-fro);
+}
 
 .sx-tl {
   cursor: pointer;
@@ -578,11 +588,21 @@
   margin-top: 1.25rem;
 }
 
-.tlx--anc { --tlx-rel: var(--tlx-anc); }
-.tlx--opt { --tlx-rel: var(--tlx-opt); }
-.tlx--alt { --tlx-rel: var(--tlx-alt); }
-.tlx--sup { --tlx-rel: var(--tlx-sup); }
-.tlx--fro { --tlx-rel: var(--tlx-fro); }
+.tlx--anc {
+  --tlx-rel: var(--tlx-anc);
+}
+.tlx--opt {
+  --tlx-rel: var(--tlx-opt);
+}
+.tlx--alt {
+  --tlx-rel: var(--tlx-alt);
+}
+.tlx--sup {
+  --tlx-rel: var(--tlx-sup);
+}
+.tlx--fro {
+  --tlx-rel: var(--tlx-fro);
+}
 
 /* Filters: relations and chapter threads, shared by chronicle and minimap. */
 .tlx-filters {
@@ -1961,11 +1981,19 @@ a.gx-part__head:focus-visible .gx-part__title {
   content: '';
   inline-size: var(--cmp-cell-w);
   block-size: 9px;
-  background: repeating-linear-gradient(to bottom, var(--cmp-off) 0 var(--cmp-cell-h), transparent var(--cmp-cell-h) 5px);
+  background: repeating-linear-gradient(
+    to bottom,
+    var(--cmp-off) 0 var(--cmp-cell-h),
+    transparent var(--cmp-cell-h) 5px
+  );
 }
 
 .cmpx-key--on::before {
-  background: repeating-linear-gradient(to bottom, var(--cmp-on) 0 var(--cmp-cell-h), transparent var(--cmp-cell-h) 5px);
+  background: repeating-linear-gradient(
+    to bottom,
+    var(--cmp-on) 0 var(--cmp-cell-h),
+    transparent var(--cmp-cell-h) 5px
+  );
 }
 
 .cmpx__row {
@@ -2333,7 +2361,11 @@ a.gx-part__head:focus-visible .gx-part__title {
 }
 
 .cmpt__table td.is-missing {
-  background: repeating-linear-gradient(135deg, transparent 0 6px, color-mix(in oklab, var(--ink) 9%, transparent) 6px 7px);
+  background: repeating-linear-gradient(
+    135deg,
+    transparent 0 6px,
+    color-mix(in oklab, var(--ink) 9%, transparent) 6px 7px
+  );
 }
 
 .cmpt__table td:hover {

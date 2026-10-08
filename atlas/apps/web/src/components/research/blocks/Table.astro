@@ -38,34 +38,33 @@ const rows = block.rows.map((row) => block.columns.map((_, index) => row[index] 
 const ledger = block.role === 'stack-coverage' || block.role === 'references' ? block.role : null;
 ---
 
-{
-  ledger !== null ? (
-    <div class={`rb-ledger rb-ledger--${ledger}`} id={block.anchor ?? undefined} {...depthAttrs(block.depth)}>
-      <RecordList table={block} layout={ledger} />
-    </div>
-  ) : (
-
-<div
-  class:list={['rb-table', `rb-table--${block.role}`, { 'rb-wide': block.wide, 'rb-table--tall': isTallTable(block) }]}
-  id={block.anchor ?? undefined}
-  {...depthAttrs(block.depth)}
->
-  <div class="rb-table__scroll" tabindex="0" role="region" aria-label={tableLabel(block)}>
-    <table class="rb-table__table">
-      <thead>
-        <tr>
-          {
-            block.columns.map((column, index) => (
+{ledger !== null ? (
+  <div class={`rb-ledger rb-ledger--${ledger}`} id={block.anchor ?? undefined} {...depthAttrs(block.depth)}>
+    <RecordList table={block} layout={ledger} />
+  </div>
+) : (
+  <div
+    class:list={[
+      'rb-table',
+      `rb-table--${block.role}`,
+      { 'rb-wide': block.wide, 'rb-table--tall': isTallTable(block) },
+    ]}
+    id={block.anchor ?? undefined}
+    {...depthAttrs(block.depth)}
+  >
+    <div class="rb-table__scroll" tabindex="0" role="region" aria-label={tableLabel(block)}>
+      <table class="rb-table__table">
+        <thead>
+          <tr>
+            {block.columns.map((column, index) => (
               <th scope="col" class:list={cellClass(profiles[index])}>
                 <Inline nodes={column.header} />
               </th>
-            ))
-          }
-        </tr>
-      </thead>
-      <tbody>
-        {
-          rows.map((cells) => (
+            ))}
+          </tr>
+        </thead>
+        <tbody>
+          {rows.map((cells) => (
             <tr>
               {cells.map((cell, index) =>
                 index === 0 && rowHeader ? (
@@ -79,11 +78,9 @@ const ledger = block.role === 'stack-coverage' || block.role === 'references' ? 
                 ),
               )}
             </tr>
-          ))
-        }
-      </tbody>
-    </table>
+          ))}
+        </tbody>
+      </table>
+    </div>
   </div>
-</div>
-  )
-}
+)}

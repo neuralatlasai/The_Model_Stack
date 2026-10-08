@@ -88,7 +88,11 @@ function paperView(source: Source, key: string, mode: ViewMode): InspectorView {
 function termView(source: Source, slug: string, mode: ViewMode): InspectorView {
   const term = source.data?.terms[slug];
   if (term === undefined) {
-    return { kind: 'TERM', title: slug, body: body(h('p', { class: 'cx-insp__note' }, 'No glossary definition is embedded on this page.')) };
+    return {
+      kind: 'TERM',
+      title: slug,
+      body: body(h('p', { class: 'cx-insp__note' }, 'No glossary definition is embedded on this page.')),
+    };
   }
   return {
     kind: 'TERM',
@@ -104,7 +108,11 @@ function equationView(source: Source, number: string, mode: ViewMode): Inspector
   const equation = source.data?.equations[number];
   const title = `Eq. ${number}`;
   if (equation === undefined) {
-    return { kind: 'EQUATION', title, body: body(h('p', { class: 'cx-insp__note' }, 'This equation is not embedded on this page.')) };
+    return {
+      kind: 'EQUATION',
+      title,
+      body: body(h('p', { class: 'cx-insp__note' }, 'This equation is not embedded on this page.')),
+    };
   }
   const math = h('div', { class: 'cx-insp__math', 'data-equation': equation.number });
   math.append(trustedCompilerHtml(equation.html));
@@ -140,7 +148,9 @@ const ENTITY_LABEL: Readonly<Record<string, string>> = {
 /** Where a link leads: identity, written or planned, what it holds, and how it sits in the graph. */
 function cardView(card: PageData['nodes'][string], mode: ViewMode): InspectorView {
   const entity = ENTITY_LABEL[card.entity] ?? card.entity.toUpperCase();
-  const kind = [card.number === null ? entity : `${entity} ${card.number}`, card.written ? null : 'PLANNED'].filter((part) => part !== null).join(' · ');
+  const kind = [card.number === null ? entity : `${entity} ${card.number}`, card.written ? null : 'PLANNED']
+    .filter((part) => part !== null)
+    .join(' · ');
   const facts: string[] = [];
   if (card.entity === 'chapter') {
     facts.push(`builds on ${String(card.prerequisites)}`, `unlocks ${String(card.dependents)}`);
@@ -159,7 +169,11 @@ function cardView(card: PageData['nodes'][string], mode: ViewMode): InspectorVie
           { class: 'cx-insp__sections', 'aria-label': label },
           ...states.map((state, index) =>
             h('span', {
-              class: ['cx-insp__sec', state === 'w' ? 'is-written' : null, index + 1 === card.sectionPosition ? 'is-self' : null]
+              class: [
+                'cx-insp__sec',
+                state === 'w' ? 'is-written' : null,
+                index + 1 === card.sectionPosition ? 'is-self' : null,
+              ]
                 .filter((name) => name !== null)
                 .join(' '),
             }),
@@ -178,7 +192,9 @@ function cardView(card: PageData['nodes'][string], mode: ViewMode): InspectorVie
         : h('p', { class: 'cx-insp__definition' }, card.summary),
       facts.length === 0 ? null : h('p', { class: 'cx-insp__facts' }, facts.join(' · ')),
       sections,
-      mode === 'pinned' ? links(mode, [[card.written ? 'Open' : 'Open plan', safeInternalHref(card.url), false]]) : null,
+      mode === 'pinned'
+        ? links(mode, [[card.written ? 'Open' : 'Open plan', safeInternalHref(card.url), false]])
+        : null,
     ),
   };
 }
@@ -187,11 +203,22 @@ function nodeView(source: Source, id: NodeId, mode: ViewMode): InspectorView {
   const card = source.data?.nodes[id];
   if (card !== undefined) return cardView(card, mode);
   const neighbours = source.data?.neighbours;
-  const route = neighbours === undefined ? undefined : [...neighbours.prerequisites, ...neighbours.siblings, ...neighbours.dependents].find((r) => r.id === id);
+  const route =
+    neighbours === undefined
+      ? undefined
+      : [...neighbours.prerequisites, ...neighbours.siblings, ...neighbours.dependents].find((r) => r.id === id);
   if (route === undefined) {
-    return { kind: 'NODE', title: id, body: body(h('p', { class: 'cx-insp__note' }, 'This node is not in the current neighbourhood.')) };
+    return {
+      kind: 'NODE',
+      title: id,
+      body: body(h('p', { class: 'cx-insp__note' }, 'This node is not in the current neighbourhood.')),
+    };
   }
-  return { kind: 'NODE', title: routeLabel(route), body: body(links(mode, [['Open', safeInternalHref(route.url), false]])) };
+  return {
+    kind: 'NODE',
+    title: routeLabel(route),
+    body: body(links(mode, [['Open', safeInternalHref(route.url), false]])),
+  };
 }
 
 /** Where-am-I: prerequisites · siblings · downstream (UI_UX §1 relations 2–4). */
@@ -237,7 +264,11 @@ function body(...children: (HTMLElement | null)[]): HTMLElement {
 function rows(entries: readonly (readonly [string, string])[]): HTMLElement | null {
   const present = entries.filter(([, value]) => value.trim() !== '');
   if (present.length === 0) return null;
-  return h('dl', { class: 'cx-insp__rows' }, ...present.flatMap(([key, value]) => [h('dt', {}, key), h('dd', {}, value)]));
+  return h(
+    'dl',
+    { class: 'cx-insp__rows' },
+    ...present.flatMap(([key, value]) => [h('dt', {}, key), h('dd', {}, value)]),
+  );
 }
 
 /** [label, href (null → omitted), external]. */

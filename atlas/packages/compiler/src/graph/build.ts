@@ -52,7 +52,10 @@ function graphNode(node: NodeRecord, doc: ResearchDocument | undefined): GraphNo
   };
 }
 
-export function buildGraph(table: NodeTable, documents: ReadonlyMap<NodeId, ResearchDocument>): { graph: AtlasGraph; diagnostics: Diagnostic[] } {
+export function buildGraph(
+  table: NodeTable,
+  documents: ReadonlyMap<NodeId, ResearchDocument>,
+): { graph: AtlasGraph; diagnostics: Diagnostic[] } {
   const diagnostics: Diagnostic[] = [];
   const nodes: Record<string, GraphNode> = {};
   for (const id of table.order) {
@@ -90,7 +93,8 @@ export function buildGraph(table: NodeTable, documents: ReadonlyMap<NodeId, Rese
     for (const target of meta.prerequisites) addEdge(doc, target, 'prerequisite', 'prerequisites');
     for (const target of meta.downstream) addEdge(doc, target, 'downstream', 'downstream');
     for (const target of meta.related) addEdge(doc, target, 'related', 'related');
-    for (const target of meta.siblingsByMechanism) addEdge(doc, target, 'sibling_by_mechanism', 'siblings_by_mechanism');
+    for (const target of meta.siblingsByMechanism)
+      addEdge(doc, target, 'sibling_by_mechanism', 'siblings_by_mechanism');
     for (const relation of meta.relations) {
       if (isNodeId(relation.target)) {
         addEdge(doc, relation.target, relation.type, `relations[${relation.type}]`);

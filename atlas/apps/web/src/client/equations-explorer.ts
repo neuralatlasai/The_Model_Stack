@@ -64,8 +64,15 @@ export function initEquationsExplorer(ctx: PageContext): void {
   root.classList.add('is-enhanced');
 
   // ── model ──────────────────────────────────────────────────────────────────
-  const cellOf = new Map([...strip.querySelectorAll<HTMLElement>('[data-eqx-cell]')].map((cell) => [cell.dataset['eqxCell'] ?? '', cell]));
-  const bcellOf = new Map([...(bar?.querySelectorAll<HTMLElement>('[data-eqx-bcell]') ?? [])].map((cell) => [cell.dataset['eqxBcell'] ?? '', cell]));
+  const cellOf = new Map(
+    [...strip.querySelectorAll<HTMLElement>('[data-eqx-cell]')].map((cell) => [cell.dataset['eqxCell'] ?? '', cell]),
+  );
+  const bcellOf = new Map(
+    [...(bar?.querySelectorAll<HTMLElement>('[data-eqx-bcell]') ?? [])].map((cell) => [
+      cell.dataset['eqxBcell'] ?? '',
+      cell,
+    ]),
+  );
   const eqs: Eq[] = [...index.querySelectorAll<HTMLElement>('[data-eqx-row]')].map((row) => {
     const id = row.dataset['eqxRow'] ?? '';
     return {
@@ -103,7 +110,9 @@ export function initEquationsExplorer(ctx: PageContext): void {
     };
   });
   const chapterOf = new Map(chapters.map((chapter) => [chapter.key, chapter]));
-  const buttons = chapters.map((chapter) => chapter.button).filter((button): button is HTMLButtonElement => button !== null);
+  const buttons = chapters
+    .map((chapter) => chapter.button)
+    .filter((button): button is HTMLButtonElement => button !== null);
   const chips = [...symidx.querySelectorAll<HTMLButtonElement>('[data-eqx-sym]')];
   const chipOf = new Map(chips.map((chip) => [chip.dataset['eqxSym'] ?? '', chip]));
 
@@ -114,7 +123,12 @@ export function initEquationsExplorer(ctx: PageContext): void {
     list: root.querySelector<HTMLElement>('[data-eqx-list]'),
   };
   // Server-rendered markup of our own component, restored verbatim on release.
-  const initial = { kicker: out.kicker?.innerHTML ?? '', title: out.title?.innerHTML ?? '', meta: out.meta?.innerHTML ?? '', list: out.list?.innerHTML ?? '' };
+  const initial = {
+    kicker: out.kicker?.innerHTML ?? '',
+    title: out.title?.innerHTML ?? '',
+    meta: out.meta?.innerHTML ?? '',
+    list: out.list?.innerHTML ?? '',
+  };
   const status = root.querySelector<HTMLElement>('[data-eqx-status]');
   const shown = root.querySelector<HTMLElement>('[data-eqx-shown]');
   const pins = root.querySelector<HTMLElement>('[data-eqx-pins]');
@@ -139,7 +153,8 @@ export function initEquationsExplorer(ctx: PageContext): void {
     }
     return span;
   };
-  const glyphs = (keys: readonly string[]): (Node | string)[] => keys.flatMap((key, i) => (i === 0 ? [glyph(key)] : [' · ', glyph(key)]));
+  const glyphs = (keys: readonly string[]): (Node | string)[] =>
+    keys.flatMap((key, i) => (i === 0 ? [glyph(key)] : [' · ', glyph(key)]));
   const put = (el: HTMLElement | null, ...parts: (Node | string)[]): void => {
     el?.replaceChildren(...parts);
   };
@@ -199,8 +214,15 @@ export function initEquationsExplorer(ctx: PageContext): void {
     const meanings = list.map((eq) => ({ eq, meaning: meaningIn(eq, key) }));
     const declared = meanings.filter((item) => item.meaning !== '');
     const distinctMeanings = [...new Set(declared.map((item) => item.meaning))];
-    put(out.kicker, `symbol · ${String(list.length)} equation${list.length === 1 ? '' : 's'} · ${String(chs.length)} chapter${chs.length === 1 ? '' : 's'}`);
-    put(out.title, glyph(key), ` — ${distinctMeanings.length === 0 ? 'no chapter declares a meaning' : distinctMeanings.length === 1 ? (distinctMeanings[0] ?? '') : `${String(distinctMeanings.length)} declared meanings`}`);
+    put(
+      out.kicker,
+      `symbol · ${String(list.length)} equation${list.length === 1 ? '' : 's'} · ${String(chs.length)} chapter${chs.length === 1 ? '' : 's'}`,
+    );
+    put(
+      out.title,
+      glyph(key),
+      ` — ${distinctMeanings.length === 0 ? 'no chapter declares a meaning' : distinctMeanings.length === 1 ? (distinctMeanings[0] ?? '') : `${String(distinctMeanings.length)} declared meanings`}`,
+    );
     put(
       out.meta,
       `in ${chs.map((ch) => chapterOf.get(ch)?.label ?? ch).join(' · ')}. `,
@@ -212,7 +234,14 @@ export function initEquationsExplorer(ctx: PageContext): void {
       ...items.slice(0, 5).map((item) => line(`(${item.eq.id})`, item.meaning === '' ? item.eq.where : item.meaning)),
       ...(items.length > 5 ? [line('', `+ ${String(items.length - 5)} more equations use it`)] : []),
     );
-    put(status, glyph(key), ` · ${String(list.length)} equation${list.length === 1 ? '' : 's'} in ${String(chs.length)} chapter${chs.length === 1 ? '' : 's'}`, distinctMeanings.length > 0 ? ` · declared as: ${distinctMeanings.slice(0, 3).join('; ')}` : ' · no declared meaning');
+    put(
+      status,
+      glyph(key),
+      ` · ${String(list.length)} equation${list.length === 1 ? '' : 's'} in ${String(chs.length)} chapter${chs.length === 1 ? '' : 's'}`,
+      distinctMeanings.length > 0
+        ? ` · declared as: ${distinctMeanings.slice(0, 3).join('; ')}`
+        : ' · no declared meaning',
+    );
   };
 
   const lightEquation = (eq: Eq): void => {
@@ -248,7 +277,10 @@ export function initEquationsExplorer(ctx: PageContext): void {
     }
     const chs = chaptersOf([...shared.keys()]);
     const chapter = chapterOf.get(eq.ch);
-    put(out.kicker, `(${eq.id}) · ${chapter?.label === 'N' ? 'notation' : `chapter ${chapter?.label ?? eq.ch}`} · ${String(eq.syms.length)} symbols`);
+    put(
+      out.kicker,
+      `(${eq.id}) · ${chapter?.label === 'N' ? 'notation' : `chapter ${chapter?.label ?? eq.ch}`} · ${String(eq.syms.length)} symbols`,
+    );
     put(out.title, eq.where);
     put(
       out.meta,
@@ -258,7 +290,13 @@ export function initEquationsExplorer(ctx: PageContext): void {
     );
     const closest = [...shared.entries()].sort((a, b) => b[1].score - a[1].score || b[1].n - a[1].n).slice(0, 6);
     put(out.list, ...closest.map(([other, entry]) => line(`(${other.id})`, ...glyphs(entry.keys.slice(0, 5)))));
-    put(status, `(${eq.id}) ${eq.where} · `, shared.size === 0 ? 'shares no symbols' : `shares notation with ${String(shared.size)} equation${shared.size === 1 ? '' : 's'} in ${String(chs.length)} chapter${chs.length === 1 ? '' : 's'}`);
+    put(
+      status,
+      `(${eq.id}) ${eq.where} · `,
+      shared.size === 0
+        ? 'shares no symbols'
+        : `shares notation with ${String(shared.size)} equation${shared.size === 1 ? '' : 's'} in ${String(chs.length)} chapter${chs.length === 1 ? '' : 's'}`,
+    );
   };
 
   const lightChapter = (key: string): void => {
@@ -278,11 +316,29 @@ export function initEquationsExplorer(ctx: PageContext): void {
     for (const eq of chapter.eqs) for (const sym of eq.syms) counts.set(sym, (counts.get(sym) ?? 0) + 1);
     for (const sym of counts.keys()) mark(chipOf.get(sym), 'is-lit');
     const top = [...counts.entries()].filter(([sym]) => chipOf.has(sym)).sort((a, b) => b[1] - a[1]);
-    put(out.kicker, `${key === 'N' ? 'notation' : `chapter ${chapter.label}`} · ${String(chapter.eqs.length)} equations · ${String(counts.size)} symbols`);
+    put(
+      out.kicker,
+      `${key === 'N' ? 'notation' : `chapter ${chapter.label}`} · ${String(chapter.eqs.length)} equations · ${String(counts.size)} symbols`,
+    );
     put(out.title, chapter.title);
-    put(out.meta, pinnedCh === key ? 'The index is filtered to this chapter — click again to clear. Its most used shared symbols:' : 'Its vocabulary is lit in the symbol index; click to filter the index. Most used shared symbols:');
-    put(out.list, ...top.slice(0, 6).map(([sym, n]) => line(glyph(sym), `in ${String(n)} of its equations · ${String(bySym.get(sym)?.length ?? 0)} book-wide`)));
-    put(status, `${chapter.label} ${chapter.title} · ${String(chapter.eqs.length)} equations · ${String(counts.size)} symbols`);
+    put(
+      out.meta,
+      pinnedCh === key
+        ? 'The index is filtered to this chapter — click again to clear. Its most used shared symbols:'
+        : 'Its vocabulary is lit in the symbol index; click to filter the index. Most used shared symbols:',
+    );
+    put(
+      out.list,
+      ...top
+        .slice(0, 6)
+        .map(([sym, n]) =>
+          line(glyph(sym), `in ${String(n)} of its equations · ${String(bySym.get(sym)?.length ?? 0)} book-wide`),
+        ),
+    );
+    put(
+      status,
+      `${chapter.label} ${chapter.title} · ${String(chapter.eqs.length)} equations · ${String(counts.size)} symbols`,
+    );
   };
 
   const idle = (): void => {
@@ -323,9 +379,14 @@ export function initEquationsExplorer(ctx: PageContext): void {
         visible.add(eq);
       }
     }
-    for (const chapter of chapters) if (chapter.group !== null) chapter.group.hidden = !chapter.eqs.some((eq) => visible.has(eq));
+    for (const chapter of chapters)
+      if (chapter.group !== null) chapter.group.hidden = !chapter.eqs.some((eq) => visible.has(eq));
     const filtering = pinnedCh !== null || pinnedSym !== null || terms.length > 0;
-    for (const chip of chips) chip.classList.toggle('is-empty', filtering && !(bySym.get(chip.dataset['eqxSym'] ?? '') ?? []).some((eq) => visible.has(eq)));
+    for (const chip of chips)
+      chip.classList.toggle(
+        'is-empty',
+        filtering && !(bySym.get(chip.dataset['eqxSym'] ?? '') ?? []).some((eq) => visible.has(eq)),
+      );
     for (const chapter of chapters) {
       chapter.el.classList.toggle('is-pinned', chapter.key === pinnedCh);
       chapter.button?.setAttribute('aria-pressed', String(chapter.key === pinnedCh));
@@ -374,13 +435,21 @@ export function initEquationsExplorer(ctx: PageContext): void {
   clearButton?.addEventListener('click', clearAll, { signal });
 
   let debounce: (() => void) | null = null;
-  search?.addEventListener('input', () => {
-    debounce?.();
-    debounce = ctl.timeout(() => {
-      terms = search.value.trim().toLowerCase().split(/\s+/u).filter((term) => term !== '');
-      apply();
-    }, 90);
-  }, { signal });
+  search?.addEventListener(
+    'input',
+    () => {
+      debounce?.();
+      debounce = ctl.timeout(() => {
+        terms = search.value
+          .trim()
+          .toLowerCase()
+          .split(/\s+/u)
+          .filter((term) => term !== '');
+        apply();
+      }, 90);
+    },
+    { signal },
+  );
 
   // ── "+N" on rows whose symbol line is clamped ──────────────────────────────
   function measureMore(): void {
@@ -393,7 +462,8 @@ export function initEquationsExplorer(ctx: PageContext): void {
         continue;
       }
       let hidden = 0;
-      for (const sym of eq.line.querySelectorAll<HTMLElement>('.eqx-sym')) if (sym.offsetLeft + sym.offsetWidth > width - 24) hidden += 1;
+      for (const sym of eq.line.querySelectorAll<HTMLElement>('.eqx-sym'))
+        if (sym.offsetLeft + sym.offsetWidth > width - 24) hidden += 1;
       results.push([eq.meta, hidden]);
     }
     for (const [meta, hidden] of results) {
@@ -402,89 +472,137 @@ export function initEquationsExplorer(ctx: PageContext): void {
     }
   }
   let resizeCancel: (() => void) | null = null;
-  addEventListener('resize', () => {
-    resizeCancel?.();
-    resizeCancel = ctl.timeout(measureMore, 160);
-  }, { signal });
+  addEventListener(
+    'resize',
+    () => {
+      resizeCancel?.();
+      resizeCancel = ctl.timeout(measureMore, 160);
+    },
+    { signal },
+  );
 
   // ── pointer ────────────────────────────────────────────────────────────────
   const closest = (target: EventTarget | null, selector: string): HTMLElement | null =>
     target instanceof Element ? target.closest<HTMLElement>(selector) : null;
 
-  strip.addEventListener('pointerover', (event) => {
-    const cell = closest(event.target, '[data-eqx-cell]');
-    const eq = byId.get(cell?.dataset['eqxCell'] ?? '');
-    if (eq !== undefined) {
-      lightEquation(eq);
-      return;
-    }
-    const chapter = closest(event.target, '[data-eqx-ch]');
-    if (chapter !== null) lightChapter(chapter.dataset['eqxCh'] ?? '');
-  }, { signal });
+  strip.addEventListener(
+    'pointerover',
+    (event) => {
+      const cell = closest(event.target, '[data-eqx-cell]');
+      const eq = byId.get(cell?.dataset['eqxCell'] ?? '');
+      if (eq !== undefined) {
+        lightEquation(eq);
+        return;
+      }
+      const chapter = closest(event.target, '[data-eqx-ch]');
+      if (chapter !== null) lightChapter(chapter.dataset['eqxCh'] ?? '');
+    },
+    { signal },
+  );
   strip.addEventListener('pointerleave', release, { signal });
-  strip.addEventListener('click', (event) => {
-    const button = closest(event.target, '[data-eqx-chbtn]');
-    if (button !== null) {
-      pinChapter(button.dataset['eqxChbtn'] ?? null);
-      return;
-    }
-    const cell = closest(event.target, '[data-eqx-cell]');
-    const eq = byId.get(cell?.dataset['eqxCell'] ?? '');
-    if (eq?.row.hidden === true) clearAll();
-  }, { signal });
+  strip.addEventListener(
+    'click',
+    (event) => {
+      const button = closest(event.target, '[data-eqx-chbtn]');
+      if (button !== null) {
+        pinChapter(button.dataset['eqxChbtn'] ?? null);
+        return;
+      }
+      const cell = closest(event.target, '[data-eqx-cell]');
+      const eq = byId.get(cell?.dataset['eqxCell'] ?? '');
+      if (eq?.row.hidden === true) clearAll();
+    },
+    { signal },
+  );
 
-  symidx.addEventListener('pointerover', (event) => {
-    const chip = closest(event.target, '[data-eqx-sym]');
-    if (chip !== null) lightSymbol(chip.dataset['eqxSym'] ?? '');
-  }, { signal });
+  symidx.addEventListener(
+    'pointerover',
+    (event) => {
+      const chip = closest(event.target, '[data-eqx-sym]');
+      if (chip !== null) lightSymbol(chip.dataset['eqxSym'] ?? '');
+    },
+    { signal },
+  );
   symidx.addEventListener('pointerleave', release, { signal });
-  symidx.addEventListener('click', (event) => {
-    const chip = closest(event.target, '[data-eqx-sym]');
-    if (chip !== null) pinSymbol(chip.dataset['eqxSym'] ?? null);
-  }, { signal });
+  symidx.addEventListener(
+    'click',
+    (event) => {
+      const chip = closest(event.target, '[data-eqx-sym]');
+      if (chip !== null) pinSymbol(chip.dataset['eqxSym'] ?? null);
+    },
+    { signal },
+  );
 
-  index.addEventListener('pointerover', (event) => {
-    const sym = closest(event.target, '.eqx-sym.is-thread');
-    if (sym !== null) {
-      lightSymbol(sym.dataset['eqxRsym'] ?? '');
-      return;
-    }
-    const eq = byId.get(closest(event.target, '[data-eqx-row]')?.dataset['eqxRow'] ?? '');
-    if (eq !== undefined) lightEquation(eq);
-  }, { signal });
+  index.addEventListener(
+    'pointerover',
+    (event) => {
+      const sym = closest(event.target, '.eqx-sym.is-thread');
+      if (sym !== null) {
+        lightSymbol(sym.dataset['eqxRsym'] ?? '');
+        return;
+      }
+      const eq = byId.get(closest(event.target, '[data-eqx-row]')?.dataset['eqxRow'] ?? '');
+      if (eq !== undefined) lightEquation(eq);
+    },
+    { signal },
+  );
   index.addEventListener('pointerleave', release, { signal });
-  index.addEventListener('focusin', (event) => {
-    const eq = byId.get(closest(event.target, '[data-eqx-row]')?.dataset['eqxRow'] ?? '');
-    if (eq !== undefined) lightEquation(eq);
-  }, { signal });
-  index.addEventListener('focusout', (event) => {
-    if (!(event.relatedTarget instanceof Node && index.contains(event.relatedTarget))) release();
-  }, { signal });
-  index.addEventListener('click', (event) => {
-    const sym = closest(event.target, '.eqx-sym.is-thread');
-    if (sym !== null) pinSymbol(sym.dataset['eqxRsym'] ?? null);
-  }, { signal });
+  index.addEventListener(
+    'focusin',
+    (event) => {
+      const eq = byId.get(closest(event.target, '[data-eqx-row]')?.dataset['eqxRow'] ?? '');
+      if (eq !== undefined) lightEquation(eq);
+    },
+    { signal },
+  );
+  index.addEventListener(
+    'focusout',
+    (event) => {
+      if (!(event.relatedTarget instanceof Node && index.contains(event.relatedTarget))) release();
+    },
+    { signal },
+  );
+  index.addEventListener(
+    'click',
+    (event) => {
+      const sym = closest(event.target, '.eqx-sym.is-thread');
+      if (sym !== null) pinSymbol(sym.dataset['eqxRsym'] ?? null);
+    },
+    { signal },
+  );
 
   if (bar !== null) {
-    bar.addEventListener('pointerover', (event) => {
-      const eq = byId.get(closest(event.target, '[data-eqx-bcell]')?.dataset['eqxBcell'] ?? '');
-      if (eq !== undefined) lightEquation(eq);
-    }, { signal });
+    bar.addEventListener(
+      'pointerover',
+      (event) => {
+        const eq = byId.get(closest(event.target, '[data-eqx-bcell]')?.dataset['eqxBcell'] ?? '');
+        if (eq !== undefined) lightEquation(eq);
+      },
+      { signal },
+    );
     bar.addEventListener('pointerleave', release, { signal });
-    bar.addEventListener('click', (event) => {
-      const eq = byId.get(closest(event.target, '[data-eqx-bcell]')?.dataset['eqxBcell'] ?? '');
-      if (eq === undefined) return;
-      if (eq.row.hidden) clearAll();
-      eq.row.scrollIntoView({ block: 'start', behavior: reducedMotion() ? 'auto' : 'smooth' });
-      history.replaceState(history.state, '', `#${eq.row.id}`);
-    }, { signal });
+    bar.addEventListener(
+      'click',
+      (event) => {
+        const eq = byId.get(closest(event.target, '[data-eqx-bcell]')?.dataset['eqxBcell'] ?? '');
+        if (eq === undefined) return;
+        if (eq.row.hidden) clearAll();
+        eq.row.scrollIntoView({ block: 'start', behavior: reducedMotion() ? 'auto' : 'smooth' });
+        history.replaceState(history.state, '', `#${eq.row.id}`);
+      },
+      { signal },
+    );
   }
 
-  more?.addEventListener('click', () => {
-    const open = !symidx.classList.contains('is-open');
-    symidx.classList.toggle('is-open', open);
-    more.setAttribute('aria-expanded', String(open));
-  }, { signal });
+  more?.addEventListener(
+    'click',
+    () => {
+      const open = !symidx.classList.contains('is-open');
+      symidx.classList.toggle('is-open', open);
+      more.setAttribute('aria-expanded', String(open));
+    },
+    { signal },
+  );
   if (more !== null) more.hidden = symidx.scrollHeight <= symidx.clientHeight + 2;
 
   // ── keyboard: one tab stop per instrument ──────────────────────────────────
@@ -502,51 +620,75 @@ export function initEquationsExplorer(ctx: PageContext): void {
     next.tabIndex = 0;
     next.focus();
   };
-  strip.addEventListener('keydown', (event) => {
-    const button = closest(event.target, '[data-eqx-chbtn]');
-    if (button === null) return;
-    if (event.key === 'Escape') {
-      if (pinnedCh !== null) pinChapter(null);
-      else release();
-      return;
-    }
-    const next = rove(buttons, event, button);
-    if (next === undefined) return;
-    event.preventDefault();
-    moveTo(buttons, next);
-  }, { signal });
-  strip.addEventListener('focusin', (event) => {
-    const button = closest(event.target, '[data-eqx-chbtn]');
-    if (button !== null) lightChapter(button.dataset['eqxChbtn'] ?? '');
-  }, { signal });
-  strip.addEventListener('focusout', (event) => {
-    if (!(event.relatedTarget instanceof Node && strip.contains(event.relatedTarget))) release();
-  }, { signal });
+  strip.addEventListener(
+    'keydown',
+    (event) => {
+      const button = closest(event.target, '[data-eqx-chbtn]');
+      if (button === null) return;
+      if (event.key === 'Escape') {
+        if (pinnedCh !== null) pinChapter(null);
+        else release();
+        return;
+      }
+      const next = rove(buttons, event, button);
+      if (next === undefined) return;
+      event.preventDefault();
+      moveTo(buttons, next);
+    },
+    { signal },
+  );
+  strip.addEventListener(
+    'focusin',
+    (event) => {
+      const button = closest(event.target, '[data-eqx-chbtn]');
+      if (button !== null) lightChapter(button.dataset['eqxChbtn'] ?? '');
+    },
+    { signal },
+  );
+  strip.addEventListener(
+    'focusout',
+    (event) => {
+      if (!(event.relatedTarget instanceof Node && strip.contains(event.relatedTarget))) release();
+    },
+    { signal },
+  );
 
-  symidx.addEventListener('keydown', (event) => {
-    const chip = closest(event.target, '[data-eqx-sym]');
-    if (chip === null) return;
-    if (event.key === 'Escape') {
-      if (pinnedSym !== null) pinSymbol(null);
-      else release();
-      return;
-    }
-    const next = rove(chips, event, chip);
-    if (next === undefined) return;
-    event.preventDefault();
-    if (next.offsetTop >= symidx.clientHeight && !symidx.classList.contains('is-open')) {
-      symidx.classList.add('is-open');
-      more?.setAttribute('aria-expanded', 'true');
-    }
-    moveTo(chips, next);
-  }, { signal });
-  symidx.addEventListener('focusin', (event) => {
-    const chip = closest(event.target, '[data-eqx-sym]');
-    if (chip !== null) lightSymbol(chip.dataset['eqxSym'] ?? '');
-  }, { signal });
-  symidx.addEventListener('focusout', (event) => {
-    if (!(event.relatedTarget instanceof Node && symidx.contains(event.relatedTarget))) release();
-  }, { signal });
+  symidx.addEventListener(
+    'keydown',
+    (event) => {
+      const chip = closest(event.target, '[data-eqx-sym]');
+      if (chip === null) return;
+      if (event.key === 'Escape') {
+        if (pinnedSym !== null) pinSymbol(null);
+        else release();
+        return;
+      }
+      const next = rove(chips, event, chip);
+      if (next === undefined) return;
+      event.preventDefault();
+      if (next.offsetTop >= symidx.clientHeight && !symidx.classList.contains('is-open')) {
+        symidx.classList.add('is-open');
+        more?.setAttribute('aria-expanded', 'true');
+      }
+      moveTo(chips, next);
+    },
+    { signal },
+  );
+  symidx.addEventListener(
+    'focusin',
+    (event) => {
+      const chip = closest(event.target, '[data-eqx-sym]');
+      if (chip !== null) lightSymbol(chip.dataset['eqxSym'] ?? '');
+    },
+    { signal },
+  );
+  symidx.addEventListener(
+    'focusout',
+    (event) => {
+      if (!(event.relatedTarget instanceof Node && symidx.contains(event.relatedTarget))) release();
+    },
+    { signal },
+  );
 
   // ── scroll: equations in view, the chapter being read ──────────────────────
   const inView = new Set<Eq>();

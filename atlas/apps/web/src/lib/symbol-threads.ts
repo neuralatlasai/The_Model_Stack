@@ -98,16 +98,145 @@ const CALLIGRAPHIC: Readonly<Record<string, string>> = {
 };
 
 /** Commands whose single argument is a (possibly multi-letter) symbol name. */
-const NAMING = new Set(['text', 'mathrm', 'textrm', 'mathit', 'textit', 'mathsf', 'textsf', 'mathtt', 'texttt', 'mathbf', 'textbf', 'boldsymbol', 'bm', 'mathnormal']);
-const ACCENTS = new Set(['hat', 'bar', 'tilde', 'widehat', 'widetilde', 'overline', 'vec', 'dot', 'ddot', 'check', 'breve', 'mathring']);
+const NAMING = new Set([
+  'text',
+  'mathrm',
+  'textrm',
+  'mathit',
+  'textit',
+  'mathsf',
+  'textsf',
+  'mathtt',
+  'texttt',
+  'mathbf',
+  'textbf',
+  'boldsymbol',
+  'bm',
+  'mathnormal',
+]);
+const ACCENTS = new Set([
+  'hat',
+  'bar',
+  'tilde',
+  'widehat',
+  'widetilde',
+  'overline',
+  'vec',
+  'dot',
+  'ddot',
+  'check',
+  'breve',
+  'mathring',
+]);
 /** Commands whose argument is skipped entirely (operators, sets, environments, layout). */
-const SKIP_ARGUMENT = new Set(['operatorname', 'mathbb', 'mathfrak', 'begin', 'end', 'label', 'tag', 'color', 'textcolor', 'hspace', 'vspace', 'phantom', 'hphantom', 'vphantom']);
+const SKIP_ARGUMENT = new Set([
+  'operatorname',
+  'mathbb',
+  'mathfrak',
+  'begin',
+  'end',
+  'label',
+  'tag',
+  'color',
+  'textcolor',
+  'hspace',
+  'vspace',
+  'phantom',
+  'hphantom',
+  'vphantom',
+]);
 /** Script commands that are words, not symbols (`x_{\min}` → sub `min`). */
-const SCRIPT_WORDS: Readonly<Record<string, string>> = { min: 'min', max: 'max', star: '', top: '', prime: '', ast: '' };
+const SCRIPT_WORDS: Readonly<Record<string, string>> = {
+  min: 'min',
+  max: 'max',
+  star: '',
+  top: '',
+  prime: '',
+  ast: '',
+};
 /** Lower-case prose inside `\text{…}` that is never a symbol. */
-const PROSE = new Set(['if', 'iff', 'for', 'and', 'or', 'with', 'where', 'st', 'to', 'all', 'otherwise', 'else', 'when', 'per', 'of', 'the', 'a', 'an', 'is', 'in', 'on', 'by', 'at', 'as', 'be', 'no', 'not', 'then', 'each', 'any', 'some', 'from', 'over', 'under', 'unless', 'subject', 'const', 'true', 'false', 'are', 'equal', 'else']);
+const PROSE = new Set([
+  'if',
+  'iff',
+  'for',
+  'and',
+  'or',
+  'with',
+  'where',
+  'st',
+  'to',
+  'all',
+  'otherwise',
+  'else',
+  'when',
+  'per',
+  'of',
+  'the',
+  'a',
+  'an',
+  'is',
+  'in',
+  'on',
+  'by',
+  'at',
+  'as',
+  'be',
+  'no',
+  'not',
+  'then',
+  'each',
+  'any',
+  'some',
+  'from',
+  'over',
+  'under',
+  'unless',
+  'subject',
+  'const',
+  'true',
+  'false',
+  'are',
+  'equal',
+  'else',
+]);
 /** Named operators written with `\mathrm`/`\text` rather than `\operatorname`. */
-const OPERATORS = new Set(['Var', 'Cov', 'Corr', 'softmax', 'LSE', 'rms', 'diag', 'rank', 'tr', 'Tr', 'sign', 'sgn', 'clip', 'round', 'fl', 'Pr', 'sim', 'cos', 'sin', 'exp', 'log', 'ln', 'max', 'min', 'argmax', 'argmin', 'arg', 'mod', 'bmod', 'det', 'mean', 'median', 'sg', 'stopgrad', 'cond']);
+const OPERATORS = new Set([
+  'Var',
+  'Cov',
+  'Corr',
+  'softmax',
+  'LSE',
+  'rms',
+  'diag',
+  'rank',
+  'tr',
+  'Tr',
+  'sign',
+  'sgn',
+  'clip',
+  'round',
+  'fl',
+  'Pr',
+  'sim',
+  'cos',
+  'sin',
+  'exp',
+  'log',
+  'ln',
+  'max',
+  'min',
+  'argmax',
+  'argmin',
+  'arg',
+  'mod',
+  'bmod',
+  'det',
+  'mean',
+  'median',
+  'sg',
+  'stopgrad',
+  'cond',
+]);
 /** Letters that are only ever indices here. */
 const PURE_INDEX = new Set(['i', 'j']);
 /** Letters (and ℓ) that act as indices when they appear inside a script. */
@@ -184,7 +313,10 @@ function atom(base: string, sub: string): SymbolAtom {
 
 function prepare(tex: string): string {
   return tex
-    .replace(/\\(?:left|right|bigl|bigr|Bigl|Bigr|biggl|biggr|big|Big|bigg|Bigg|displaystyle|textstyle|limits|nolimits|quad|qquad|mid|lvert|rvert|lVert|rVert|langle|rangle)(?![A-Za-z])/gu, ' ')
+    .replace(
+      /\\(?:left|right|bigl|bigr|Bigl|Bigr|biggl|biggr|big|Big|bigg|Bigg|displaystyle|textstyle|limits|nolimits|quad|qquad|mid|lvert|rvert|lVert|rVert|langle|rangle)(?![A-Za-z])/gu,
+      ' ',
+    )
     .replace(/\\[,;!: ]/gu, ' ')
     .replace(/&|\\\\/gu, ' ');
 }
@@ -272,7 +404,9 @@ function scan(s: string, out: SymbolAtom[], inScript: boolean): void {
     const single = codePoints(base) === 1;
     // A bound variable in a script (`\sum_{a=1}`, `\sum_{o \in \mathcal{O}}`) is an index, not a symbol.
     const bound = inScript && /^\s*(?:=|\\in(?![A-Za-z]))/u.test(s.slice(j));
-    const isIndex = single && (PURE_INDEX.has(base) || (inScript && sub === '' && (SCRIPT_INDEX.has(base) || (bound && /[a-z]/u.test(base)))));
+    const isIndex =
+      single &&
+      (PURE_INDEX.has(base) || (inScript && sub === '' && (SCRIPT_INDEX.has(base) || (bound && /[a-z]/u.test(base)))));
     if (!isIndex) out.push(atom(base, sub));
     for (const script of scripts) scan(script, out, true);
   }
@@ -321,7 +455,11 @@ export function declaredKey(raw: string): string | null {
   return atom(base, sub ?? '').key;
 }
 
-const GREEK_NAME = new Map(Object.entries(GREEK).filter(([name]) => !name.startsWith('var')).map(([name, glyph]) => [glyph, name]));
+const GREEK_NAME = new Map(
+  Object.entries(GREEK)
+    .filter(([name]) => !name.startsWith('var'))
+    .map(([name, glyph]) => [glyph, name]),
+);
 
 /** Words a reader may type for a key: the key itself plus spelled-out Greek (`σ_a` → `σ_a sigma_a sigma`). */
 export function symbolSearchText(key: string): string {
@@ -376,16 +514,25 @@ export function equationSymbols(equation: EquationInput): EquationSymbol[] {
 
 /** Threads for every symbol used by at least `min` equations, most used first. */
 export function symbolThreads(
-  equations: readonly { readonly number: string; readonly chapter: string; readonly symbols: readonly EquationSymbol[] }[],
+  equations: readonly {
+    readonly number: string;
+    readonly chapter: string;
+    readonly symbols: readonly EquationSymbol[];
+  }[],
   min = 2,
 ): SymbolThread[] {
   const byKey = new Map<string, { equations: string[]; chapters: Set<string>; meanings: Map<string, number> }>();
   for (const equation of equations) {
     for (const symbol of equation.symbols) {
-      const entry = byKey.get(symbol.key) ?? { equations: [], chapters: new Set<string>(), meanings: new Map<string, number>() };
+      const entry = byKey.get(symbol.key) ?? {
+        equations: [],
+        chapters: new Set<string>(),
+        meanings: new Map<string, number>(),
+      };
       entry.equations.push(equation.number);
       entry.chapters.add(equation.chapter);
-      if (symbol.meaning !== null && symbol.meaning !== '') entry.meanings.set(symbol.meaning, (entry.meanings.get(symbol.meaning) ?? 0) + 1);
+      if (symbol.meaning !== null && symbol.meaning !== '')
+        entry.meanings.set(symbol.meaning, (entry.meanings.get(symbol.meaning) ?? 0) + 1);
       byKey.set(symbol.key, entry);
     }
   }
@@ -395,7 +542,12 @@ export function symbolThreads(
       key,
       equations: entry.equations,
       chapters: [...entry.chapters],
-      meanings: [...entry.meanings.entries()].map(([meaning, count]) => ({ meaning, count })).sort((a, b) => b.count - a.count),
+      meanings: [...entry.meanings.entries()]
+        .map(([meaning, count]) => ({ meaning, count }))
+        .sort((a, b) => b.count - a.count),
     }))
-    .sort((a, b) => b.equations.length - a.equations.length || b.chapters.length - a.chapters.length || a.key.localeCompare(b.key));
+    .sort(
+      (a, b) =>
+        b.equations.length - a.equations.length || b.chapters.length - a.chapters.length || a.key.localeCompare(b.key),
+    );
 }

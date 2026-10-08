@@ -51,7 +51,10 @@ describe('urls', () => {
   });
 
   test('canonicalPageUrl drops query and fragment', () => {
-    assert.equal(canonicalPageUrl('https://atlas.test/ch05/05-2/?depth=overview#eq-5-4'), 'https://atlas.test/ch05/05-2/');
+    assert.equal(
+      canonicalPageUrl('https://atlas.test/ch05/05-2/?depth=overview#eq-5-4'),
+      'https://atlas.test/ch05/05-2/',
+    );
   });
 });
 

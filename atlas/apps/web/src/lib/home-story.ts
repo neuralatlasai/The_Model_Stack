@@ -19,7 +19,8 @@ export const STORY_AUTHOR = 'Kandimalla Hemanth';
 export const STORY_THESIS =
   'A learning objective induces a representation and an algorithm. Those choices fix how a model executes — its memory, its communication, its deployment behaviour — and the evidence from deployment decides the next learning intervention. Architecture, data, optimisation, hardware and evaluation have to be studied together.';
 
-export const STORY_BRAIN = 'Beside the text, the book as a brain — each region a part, each neuron a chapter, each fibre a prerequisite. It follows the argument as you read.';
+export const STORY_BRAIN =
+  'Beside the text, the book as a brain — each region a part, each neuron a chapter, each fibre a prerequisite. It follows the argument as you read.';
 
 export const STORY_PARTS: readonly StoryPart[] = [
   {
@@ -97,5 +98,8 @@ export const STORY_CLOSE = {
 
 /** Splits `**bold**` markup into runs for rendering. */
 export function runs(text: string): { readonly text: string; readonly bold: boolean }[] {
-  return text.split('**').map((part, index) => ({ text: part, bold: index % 2 === 1 })).filter((run) => run.text !== '');
+  return text
+    .split('**')
+    .map((part, index) => ({ text: part, bold: index % 2 === 1 }))
+    .filter((run) => run.text !== '');
 }

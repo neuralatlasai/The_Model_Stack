@@ -47,7 +47,13 @@ function coverageColumns(table: TableBlock): CoverageColumns | null {
   const section = find('stack section');
   const entry = find('entry');
   if (section === null || entry === null) return null;
-  return { section, entry, what: find('what this chapter takes from it', 'what'), sections: find('sections'), label: find('evidence label', 'evidence') };
+  return {
+    section,
+    entry,
+    what: find('what this chapter takes from it', 'what'),
+    sections: find('sections'),
+    label: find('evidence label', 'evidence'),
+  };
 }
 
 export interface EntryRef {
@@ -90,7 +96,11 @@ function matchEntry<E extends { readonly rank: number; readonly name: string }>(
   };
 }
 
-export function buildEntities(stack: ReferenceStack, compiled: readonly CompiledSource[], table: NodeTable): EntityBuild {
+export function buildEntities(
+  stack: ReferenceStack,
+  compiled: readonly CompiledSource[],
+  table: NodeTable,
+): EntityBuild {
   const diagnostics: Diagnostic[] = [];
   const systemUses = new Map<string, StackUse[]>();
   const labUses = new Map<string, StackUse[]>();
@@ -133,10 +143,14 @@ export function buildEntities(stack: ReferenceStack, compiled: readonly Compiled
             kind === 'lab' ? matchEntry(ref, stack.labs) : matchEntry(ref, stack.systems);
           if (match.problem !== null) {
             diagnostics.push(
-              diagnostic('reference-stack-parse', `Reference-stack coverage (${kind === 'lab' ? '§1' : '§4'}): ${match.problem}`, {
-                file: source.path,
-                nodeId: source.meta.id,
-              }),
+              diagnostic(
+                'reference-stack-parse',
+                `Reference-stack coverage (${kind === 'lab' ? '§1' : '§4'}): ${match.problem}`,
+                {
+                  file: source.path,
+                  nodeId: source.meta.id,
+                },
+              ),
             );
           }
           if (match.entry === null) continue;

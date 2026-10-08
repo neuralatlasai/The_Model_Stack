@@ -29,29 +29,27 @@ const fragmentFor = (nodeId: StackUse['nodeId']): string | undefined => {
 ---
 
 <dl class="sh-uses">
-  {
-    uses.map((use) => {
-      const node = graph.nodes[use.nodeId];
-      return (
-        <div class="sh-use" id={fragmentFor(use.nodeId)}>
-          <dt>
-            {node !== undefined ? (
-              <a href={node.url}>
-                {node.number !== null && <span class="sh-num">{node.number}</span>} {node.title}
-              </a>
-            ) : (
-              <span class="sh-mono">{use.nodeId}</span>
-            )}
-          </dt>
-          <dd>
-            <Inline nodes={use.what} />
-          </dd>
-          <dd class="sh-meta-line">
-            {use.sections !== '' && <span>Sections {use.sections}</span>}
-            {use.label !== '' && <span class="sh-use-label">{use.label}</span>}
-          </dd>
-        </div>
-      );
-    })
-  }
+  {uses.map((use) => {
+    const node = graph.nodes[use.nodeId];
+    return (
+      <div class="sh-use" id={fragmentFor(use.nodeId)}>
+        <dt>
+          {node !== undefined ? (
+            <a href={node.url}>
+              {node.number !== null && <span class="sh-num">{node.number}</span>} {node.title}
+            </a>
+          ) : (
+            <span class="sh-mono">{use.nodeId}</span>
+          )}
+        </dt>
+        <dd>
+          <Inline nodes={use.what} />
+        </dd>
+        <dd class="sh-meta-line">
+          {use.sections !== '' && <span>Sections {use.sections}</span>}
+          {use.label !== '' && <span class="sh-use-label">{use.label}</span>}
+        </dd>
+      </div>
+    );
+  })}
 </dl>

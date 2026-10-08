@@ -150,12 +150,15 @@ const envelope = {
   caption: z.string().min(10).max(700),
   placement: z.enum(FIGURE_PLACEMENTS).default('inline'),
   /** Region anchor (H2 slug) a rail figure binds to; defaults to the enclosing region. */
-  anchor: z.string().regex(/^[a-z0-9-]+$/u).optional(),
+  anchor: z
+    .string()
+    .regex(/^[a-z0-9-]+$/u)
+    .optional(),
   evidence: figureEvidence,
   /** Source ids: `P19`, `R5.13`, `DERIVED:eq-5.8`, `OD:vllm-docs`. At least one. */
-  source: z.union([z.string().min(1), z.array(z.string().min(1)).min(1)]).transform((value) =>
-    Array.isArray(value) ? value : [value],
-  ),
+  source: z
+    .union([z.string().min(1), z.array(z.string().min(1)).min(1)])
+    .transform((value) => (Array.isArray(value) ? value : [value])),
   /** Text equivalent (UI_UX §60): what the figure shows, in words a screen reader can use. */
   alt: z.string().min(20).max(1200),
   concepts: z.array(nodeIdRef).default([]),
@@ -240,7 +243,11 @@ export type SystemsTraceColumn = (typeof SYSTEMS_TRACE_COLUMNS)[number];
 
 export const SystemsTraceSpecSchema = z
   .object({
-    columns: z.array(z.enum(SYSTEMS_TRACE_COLUMNS)).min(1).max(5).default([...SYSTEMS_TRACE_COLUMNS]),
+    columns: z
+      .array(z.enum(SYSTEMS_TRACE_COLUMNS))
+      .min(1)
+      .max(5)
+      .default([...SYSTEMS_TRACE_COLUMNS]),
     stages: z
       .array(
         z
@@ -288,7 +295,11 @@ export const MemoryStackSpecSchema = z
       .max(8),
     /** A capacity line, e.g. device HBM; drawn as a hairline across the bars. */
     budget: z
-      .object({ label: z.string().min(1).max(60), value: z.number().positive().optional(), formula: formula.optional() })
+      .object({
+        label: z.string().min(1).max(60),
+        value: z.number().positive().optional(),
+        formula: formula.optional(),
+      })
       .strict()
       .refine((b) => (b.value === undefined) !== (b.formula === undefined), {
         message: 'give exactly one of value or formula',
@@ -302,7 +313,10 @@ export const CalculatorSpecSchema = z
     /** Display equation (TeX). Rendered with KaTeX; symbols in `inputs` become inspectable. */
     tex: z.string().min(1).max(400),
     /** Equation number this calculator executes, e.g. `5.8`. */
-    equation: z.string().regex(/^\d+\.\d+$/u).optional(),
+    equation: z
+      .string()
+      .regex(/^\d+\.\d+$/u)
+      .optional(),
     inputs: z
       .array(
         z
@@ -374,7 +388,15 @@ export const StatPanelSpecSchema = z
             total: z.number().int().min(2).max(240),
             filled: z.number().int().min(0),
             legend: z
-              .array(z.object({ marker: z.enum(['filled', 'hollow']), label: z.string().min(1).max(40), value: z.string().max(24).optional() }).strict())
+              .array(
+                z
+                  .object({
+                    marker: z.enum(['filled', 'hollow']),
+                    label: z.string().min(1).max(40),
+                    value: z.string().max(24).optional(),
+                  })
+                  .strict(),
+              )
               .max(3)
               .default([]),
           })
@@ -383,7 +405,15 @@ export const StatPanelSpecSchema = z
           .object({
             type: z.literal('blocks'),
             items: z
-              .array(z.object({ label: z.string().min(1).max(24), weight: z.number().positive(), emphasis: z.boolean().default(false) }).strict())
+              .array(
+                z
+                  .object({
+                    label: z.string().min(1).max(24),
+                    weight: z.number().positive(),
+                    emphasis: z.boolean().default(false),
+                  })
+                  .strict(),
+              )
               .min(1)
               .max(16),
           })
@@ -401,7 +431,10 @@ export const LineageSpecSchema = z
           .object({
             year: z.union([z.number().int().min(1900).max(2100), z.string().regex(/^\d{4}\+?$/u)]),
             work: z.string().min(1).max(80),
-            cite: z.string().regex(/^(P\d{2}|R\d+\.\d+)$/u).optional(),
+            cite: z
+              .string()
+              .regex(/^(P\d{2}|R\d+\.\d+)$/u)
+              .optional(),
             node: nodeIdRef.optional(),
             relation: z.enum(LINEAGE_RELATIONS),
             note: z.string().max(140).optional(),
@@ -416,13 +449,27 @@ export const LineageSpecSchema = z
 export const CycleSpecSchema = z
   .object({
     stages: z
-      .array(z.object({ id: localId, label: z.string().min(1).max(40), kind: z.enum(NODE_KINDS).default('process'), sub: z.string().max(40).optional() }).strict())
+      .array(
+        z
+          .object({
+            id: localId,
+            label: z.string().min(1).max(40),
+            kind: z.enum(NODE_KINDS).default('process'),
+            sub: z.string().max(40).optional(),
+          })
+          .strict(),
+      )
       .min(3)
       .max(12),
     edges: z
       .array(
         z
-          .object({ from: localId, to: localId, kind: z.enum(['flow', 'feedback']).default('flow'), label: z.string().max(40).optional() })
+          .object({
+            from: localId,
+            to: localId,
+            kind: z.enum(['flow', 'feedback']).default('flow'),
+            label: z.string().max(40).optional(),
+          })
           .strict(),
       )
       .min(2)
@@ -446,7 +493,10 @@ export const MatrixSpecSchema = z
     colLabel: z.string().min(1).max(40),
     rowTicks: z.array(z.string().max(12)).optional(),
     colTicks: z.array(z.string().max(12)).optional(),
-    highlight: z.array(z.object({ row: z.number().int().min(0), col: z.number().int().min(0) }).strict()).max(64).default([]),
+    highlight: z
+      .array(z.object({ row: z.number().int().min(0), col: z.number().int().min(0) }).strict())
+      .max(64)
+      .default([]),
     legend: z.string().max(120).optional(),
   })
   .strict();
@@ -475,7 +525,10 @@ export const ChartSpecSchema = z
           .object({
             id: localId,
             label: z.string().min(1).max(60),
-            points: z.array(z.tuple([z.number(), z.number()])).max(500).optional(),
+            points: z
+              .array(z.tuple([z.number(), z.number()]))
+              .max(500)
+              .optional(),
             values: z.array(z.number()).max(24).optional(),
             /** y = f(x, variables); sampled over `sample`. */
             formula: formula.optional(),

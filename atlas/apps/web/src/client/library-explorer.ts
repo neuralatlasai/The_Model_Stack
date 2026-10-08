@@ -79,7 +79,10 @@ const MAX_CHIPS = 6;
 const LENSES = new Set(['chapters', 'sections', 'words', 'figures', 'equations', 'works']);
 
 const reducedMotion = (): boolean => matchMedia('(prefers-reduced-motion: reduce)').matches;
-const grouped = (n: number): string => Math.round(n).toString().replace(/\B(?=(\d{3})+(?!\d))/gu, ',');
+const grouped = (n: number): string =>
+  Math.round(n)
+    .toString()
+    .replace(/\B(?=(\d{3})+(?!\d))/gu, ',');
 
 /** Breadth-first distances from `start` along `next` (start excluded). */
 function distances(start: number, next: (n: number) => readonly number[]): Map<number, number> {
@@ -128,13 +131,17 @@ export function initLibraryExplorer(ctx: PageContext): void {
   if (body === null || grid === null || ledger === null || readout === null) return;
 
   const tiles = new Map<number, HTMLElement>();
-  for (const tile of grid.querySelectorAll<HTMLElement>('.lib-tile[data-lib-n]')) tiles.set(Number(tile.dataset['libN']), tile);
+  for (const tile of grid.querySelectorAll<HTMLElement>('.lib-tile[data-lib-n]'))
+    tiles.set(Number(tile.dataset['libN']), tile);
   const tileLinks = new Map<number, HTMLAnchorElement>();
-  for (const link of grid.querySelectorAll<HTMLAnchorElement>('[data-lib-tile]')) tileLinks.set(Number(link.dataset['libTile']), link);
+  for (const link of grid.querySelectorAll<HTMLAnchorElement>('[data-lib-tile]'))
+    tileLinks.set(Number(link.dataset['libTile']), link);
   const rows = new Map<number, HTMLElement>();
-  for (const row of ledger.querySelectorAll<HTMLElement>('.lib-ch[data-lib-n]')) rows.set(Number(row.dataset['libN']), row);
+  for (const row of ledger.querySelectorAll<HTMLElement>('.lib-ch[data-lib-n]'))
+    rows.set(Number(row.dataset['libN']), row);
   const cols = new Map<number, HTMLElement>();
-  for (const col of weave?.querySelectorAll<HTMLElement>('.lib-wc[data-lib-n]') ?? []) cols.set(Number(col.dataset['libN']), col);
+  for (const col of weave?.querySelectorAll<HTMLElement>('.lib-wc[data-lib-n]') ?? [])
+    cols.set(Number(col.dataset['libN']), col);
   const arcs = [...(weave?.querySelectorAll<SVGPathElement>('path[data-p]') ?? [])].map((path) => ({
     path,
     p: Number(path.dataset['p']),
@@ -146,9 +153,11 @@ export function initLibraryExplorer(ctx: PageContext): void {
     if (Number.isFinite(n)) weaveParts.set(n, band);
   }
   const mapRows = new Map<number, HTMLElement>();
-  for (const row of grid.querySelectorAll<HTMLElement>('.lib-row[data-lib-part]')) mapRows.set(Number(row.dataset['libPart']), row);
+  for (const row of grid.querySelectorAll<HTMLElement>('.lib-row[data-lib-part]'))
+    mapRows.set(Number(row.dataset['libPart']), row);
   const ledgerParts = new Map<number, HTMLElement>();
-  for (const part of ledger.querySelectorAll<HTMLElement>('.lib-part[data-lib-part]')) ledgerParts.set(Number(part.dataset['libPart']), part);
+  for (const part of ledger.querySelectorAll<HTMLElement>('.lib-part[data-lib-part]'))
+    ledgerParts.set(Number(part.dataset['libPart']), part);
   const chipsOfLens = [...root.querySelectorAll<HTMLButtonElement>('button[data-lib-lens]')];
 
   // ── readout slots (restored from clones of the server-rendered nodes) ─────
@@ -164,7 +173,12 @@ export function initLibraryExplorer(ctx: PageContext): void {
     links: slot('links-out'),
   };
   const initial = new Map<HTMLElement, Node[]>();
-  for (const el of Object.values(out)) if (el !== null) initial.set(el, [...el.childNodes].map((node) => node.cloneNode(true)));
+  for (const el of Object.values(out))
+    if (el !== null)
+      initial.set(
+        el,
+        [...el.childNodes].map((node) => node.cloneNode(true)),
+      );
 
   const text = (el: HTMLElement | null, value: string): void => {
     if (el === null) return;
@@ -172,7 +186,11 @@ export function initLibraryExplorer(ctx: PageContext): void {
     // Long titles step down a size so every title fits its two reserved lines.
     if (el === out.title) el.dataset['len'] = value.length > 64 ? 'l' : value.length > 50 ? 'm' : 's';
   };
-  const make = <K extends keyof HTMLElementTagNameMap>(tag: K, className: string, content = ''): HTMLElementTagNameMap[K] => {
+  const make = <K extends keyof HTMLElementTagNameMap>(
+    tag: K,
+    className: string,
+    content = '',
+  ): HTMLElementTagNameMap[K] => {
     const el = doc.createElement(tag);
     if (className !== '') el.className = className;
     if (content !== '') el.textContent = content;
@@ -186,7 +204,10 @@ export function initLibraryExplorer(ctx: PageContext): void {
   };
   /** The kicker: a boxed badge, then plain text. */
   const kicker = (badge: string, rest: string): void => {
-    out.kicker?.replaceChildren(make('span', 'lib-badge', badge), ...(rest === '' ? [] : [doc.createTextNode(` ${rest}`)]));
+    out.kicker?.replaceChildren(
+      make('span', 'lib-badge', badge),
+      ...(rest === '' ? [] : [doc.createTextNode(` ${rest}`)]),
+    );
   };
   const setRows = (pairs: readonly (readonly [string, string])[]): void => {
     out.rows?.replaceChildren(
@@ -218,7 +239,8 @@ export function initLibraryExplorer(ctx: PageContext): void {
       link.tabIndex = -1;
       group.append(link);
     }
-    if (shown.length < list.length) group.append(make('span', 'lib-links__more', `+${String(list.length - shown.length)}`));
+    if (shown.length < list.length)
+      group.append(make('span', 'lib-links__more', `+${String(list.length - shown.length)}`));
     return group;
   };
   const restore = (): void => {
@@ -235,7 +257,11 @@ export function initLibraryExplorer(ctx: PageContext): void {
       link.title = `${section.number} ${section.title}`;
       link.tabIndex = -1;
       link.dataset['libItem'] = String(index);
-      link.append(make('span', `lib-ro__cell${section.written ? ' is-written' : ''}`), make('span', 'lib-ro__num', section.number), itemText(section.title));
+      link.append(
+        make('span', `lib-ro__cell${section.written ? ' is-written' : ''}`),
+        make('span', 'lib-ro__num', section.number),
+        itemText(section.title),
+      );
       item.append(link);
       return item;
     });
@@ -253,7 +279,9 @@ export function initLibraryExplorer(ctx: PageContext): void {
     text(out.state, `${status} · ${chapter.words > 0 ? `${grouped(chapter.words)} words` : 'no words yet'}`);
     const planned = chapter.plan === '' ? '' : ` It is planned to produce ${chapter.plan}.`;
     out.thesis?.replaceChildren(
-      ...(chapter.evidence === null || chapter.summary === '' ? [] : [make('span', 'lib-ev', chapter.evidence), doc.createTextNode(' ')]),
+      ...(chapter.evidence === null || chapter.summary === ''
+        ? []
+        : [make('span', 'lib-ev', chapter.evidence), doc.createTextNode(' ')]),
       chapter.summary !== ''
         ? chapter.summary
         : drafted > 0
@@ -276,14 +304,21 @@ export function initLibraryExplorer(ctx: PageContext): void {
     const members = part.chapters.map((n) => chapterOf.get(n)).filter((c): c is Chapter => c !== undefined);
     kicker(`Part ${part.numeral}`, `${String(part.chapters.length)} chapters`);
     text(out.title, part.title);
-    text(out.state, `${String(part.written)} of ${String(part.chapters.length)} written · ${grouped(part.words)} words`);
+    text(
+      out.state,
+      `${String(part.written)} of ${String(part.chapters.length)} written · ${grouped(part.words)} words`,
+    );
     const inside = new Set(part.chapters);
-    const outside = (list: (c: Chapter) => readonly number[]): number[] => [...new Set(members.flatMap(list).filter((n) => !inside.has(n)))];
+    const outside = (list: (c: Chapter) => readonly number[]): number[] => [
+      ...new Set(members.flatMap(list).filter((n) => !inside.has(n))),
+    ];
     // Which other parts the part draws on and feeds, as numeral runs (III–VI, IX and XI).
     const partsOf = (chapters: readonly number[]): string => {
-      const ns = [...new Set(chapters.map((n) => chapterOf.get(n)?.part ?? 0))].filter((n) => n > 0).sort((a, b) => a - b);
+      const ns = [...new Set(chapters.map((n) => chapterOf.get(n)?.part ?? 0))]
+        .filter((n) => n > 0)
+        .sort((a, b) => a - b);
       const runs: string[] = [];
-      for (let i = 0; i < ns.length; ) {
+      for (let i = 0; i < ns.length;) {
         let j = i;
         while (j + 1 < ns.length && (ns[j + 1] ?? 0) === (ns[j] ?? 0) + 1) j += 1;
         const from = partOf.get(ns[i] ?? 0)?.numeral ?? '';
@@ -292,7 +327,9 @@ export function initLibraryExplorer(ctx: PageContext): void {
         i = j + 1;
       }
       const word = ns.length === 1 ? 'Part' : 'Parts';
-      return runs.length <= 1 ? `${word} ${runs[0] ?? ''}` : `${word} ${runs.slice(0, -1).join(', ')} and ${runs.at(-1) ?? ''}`;
+      return runs.length <= 1
+        ? `${word} ${runs[0] ?? ''}`
+        : `${word} ${runs.slice(0, -1).join(', ')} and ${runs.at(-1) ?? ''}`;
     };
     const upstream = outside((c) => c.prereqs);
     const downstream = outside((c) => c.unlocks);
@@ -304,10 +341,19 @@ export function initLibraryExplorer(ctx: PageContext): void {
           : downstream.length > 0
             ? `It builds on no other part and unlocks ${partsOf(downstream)}.`
             : '';
-    text(out.thesis, `${part.outcome === '' ? 'No outcome is recorded for this part.' : `Outcome: ${part.outcome}.`} ${reach}`.trim());
+    text(
+      out.thesis,
+      `${part.outcome === '' ? 'No outcome is recorded for this part.' : `Outcome: ${part.outcome}.`} ${reach}`.trim(),
+    );
     setRows([
-      ['figures · equations', `${String(members.reduce((s, c) => s + c.figures, 0))} · ${String(members.reduce((s, c) => s + c.equations, 0))}`],
-      ['chapters with a thesis', `${String(members.filter((c) => c.summary !== '').length)} / ${String(members.length)}`],
+      [
+        'figures · equations',
+        `${String(members.reduce((s, c) => s + c.figures, 0))} · ${String(members.reduce((s, c) => s + c.equations, 0))}`,
+      ],
+      [
+        'chapters with a thesis',
+        `${String(members.filter((c) => c.summary !== '').length)} / ${String(members.length)}`,
+      ],
       ['builds on (outside)', `${String(upstream.length)} chapters`],
       ['unlocks (outside)', `${String(downstream.length)} chapters`],
     ]);
@@ -317,7 +363,10 @@ export function initLibraryExplorer(ctx: PageContext): void {
         const drafted = chapter.sections.filter((section) => section.written).length;
         const item = make('li', `lib-ro__item${chapter.written ? '' : ' is-planned'}`);
         const cell = make('span', 'lib-ro__cell is-part');
-        cell.style.setProperty('--fill', `${String(Math.round((drafted / Math.max(1, chapter.sections.length)) * 100))}%`);
+        cell.style.setProperty(
+          '--fill',
+          `${String(Math.round((drafted / Math.max(1, chapter.sections.length)) * 100))}%`,
+        );
         item.append(cell, make('span', 'lib-ro__num', chapter.number), itemText(chapter.short));
         item.title = `${String(drafted)} of ${String(chapter.sections.length)} sections drafted`;
         return item;
@@ -354,7 +403,8 @@ export function initLibraryExplorer(ctx: PageContext): void {
     for (const row of mapRows.values()) row.classList.remove('is-part');
     for (const part of ledgerParts.values()) part.classList.remove('is-part');
     weave?.classList.remove('has-focus', 'has-part');
-    for (const col of cols.values()) col.classList.remove('is-focus', 'is-up', 'is-down', 'is-direct', 'is-part', 'is-peek');
+    for (const col of cols.values())
+      col.classList.remove('is-focus', 'is-up', 'is-down', 'is-direct', 'is-part', 'is-peek');
     for (const band of weaveParts.values()) band.classList.remove('is-part');
     for (const arc of lit) arc.classList.remove('is-up', 'is-down', 'is-direct', 'is-part');
     lit = [];
@@ -368,10 +418,19 @@ export function initLibraryExplorer(ctx: PageContext): void {
 
   const center = (el: Element, box: DOMRect): { x: number; y: number; hw: number; hh: number } => {
     const r = el.getBoundingClientRect();
-    return { x: r.left - box.left + r.width / 2, y: r.top - box.top + r.height / 2, hw: r.width / 2 + 3, hh: r.height / 2 + 3 };
+    return {
+      x: r.left - box.left + r.width / 2,
+      y: r.top - box.top + r.height / 2,
+      hw: r.width / 2 + 3,
+      hh: r.height / 2 + 3,
+    };
   };
   /** The point where the ray from a rectangle's centre towards (tx, ty) leaves the rectangle. */
-  const edge = (from: { x: number; y: number; hw: number; hh: number }, tx: number, ty: number): { x: number; y: number } => {
+  const edge = (
+    from: { x: number; y: number; hw: number; hh: number },
+    tx: number,
+    ty: number,
+  ): { x: number; y: number } => {
     const dx = tx - from.x;
     const dy = ty - from.y;
     const t = Math.min(dx === 0 ? Infinity : from.hw / Math.abs(dx), dy === 0 ? Infinity : from.hh / Math.abs(dy));
@@ -399,7 +458,10 @@ export function initLibraryExplorer(ctx: PageContext): void {
       const nx = len === 0 ? 0 : -(b.y - a.y) / len;
       const ny = len === 0 ? 0 : (b.x - a.x) / len;
       const path = doc.createElementNS(SVG_NS, 'path');
-      path.setAttribute('d', `M${a.x.toFixed(1)} ${a.y.toFixed(1)} Q${(mx + nx * bend).toFixed(1)} ${(my + ny * bend).toFixed(1)} ${b.x.toFixed(1)} ${b.y.toFixed(1)}`);
+      path.setAttribute(
+        'd',
+        `M${a.x.toFixed(1)} ${a.y.toFixed(1)} Q${(mx + nx * bend).toFixed(1)} ${(my + ny * bend).toFixed(1)} ${b.x.toFixed(1)} ${b.y.toFixed(1)}`,
+      );
       path.setAttribute('class', `is-${role}`);
       const dot = doc.createElementNS(SVG_NS, 'circle');
       dot.setAttribute('cx', a.x.toFixed(1));
@@ -471,7 +533,11 @@ export function initLibraryExplorer(ctx: PageContext): void {
       const downstream = new Set([n, ...down.keys()]);
       for (const arc of arcs) {
         const role =
-          arc.n === n || (upstream.has(arc.p) && upstream.has(arc.n)) ? 'is-up' : arc.p === n || (downstream.has(arc.p) && downstream.has(arc.n)) ? 'is-down' : null;
+          arc.n === n || (upstream.has(arc.p) && upstream.has(arc.n))
+            ? 'is-up'
+            : arc.p === n || (downstream.has(arc.p) && downstream.has(arc.n))
+              ? 'is-down'
+              : null;
         if (role === null) continue;
         arc.path.classList.add(role);
         if (arc.n === n || arc.p === n) arc.path.classList.add('is-direct');
@@ -490,11 +556,14 @@ export function initLibraryExplorer(ctx: PageContext): void {
     const chapter = chapterOf.get(n);
     const section = chapter?.sections[index];
     if (chapter === undefined || section === undefined) return;
-    for (const scope of [tiles.get(n), rows.get(n)]) scope?.querySelector(`.lib-cell[data-lib-s="${String(index)}"]`)?.classList.add('is-on');
+    for (const scope of [tiles.get(n), rows.get(n)])
+      scope?.querySelector(`.lib-cell[data-lib-s="${String(index)}"]`)?.classList.add('is-on');
     out.list?.querySelector(`[data-lib-item="${String(index)}"]`)?.classList.add('is-on');
     setListHead(
       `§ ${section.number}`,
-      section.written ? `drafted · ${grouped(section.words)} words · ${String(section.figures)} fig` : 'planned — not yet drafted',
+      section.written
+        ? `drafted · ${grouped(section.words)} words · ${String(section.figures)} fig`
+        : 'planned — not yet drafted',
     );
   };
 
@@ -538,55 +607,97 @@ export function initLibraryExplorer(ctx: PageContext): void {
         if (currentSection !== null) {
           const chapter = chapterOf.get(n);
           clearSection();
-          if (chapter !== undefined) setListHead('Sections', `${String(chapter.sections.filter((x) => x.written).length)} of ${String(chapter.sections.length)} drafted`);
+          if (chapter !== undefined)
+            setListHead(
+              'Sections',
+              `${String(chapter.sections.filter((x) => x.written).length)} of ${String(chapter.sections.length)} drafted`,
+            );
         }
       }
       return;
     }
-    const p = numberFrom(target, '[data-lib-partlink]', 'libPartlink') ?? (target instanceof Element && target.closest('.lib-part__head') !== null ? numberFrom(target, '.lib-part', 'libPart') : null);
+    const p =
+      numberFrom(target, '[data-lib-partlink]', 'libPartlink') ??
+      (target instanceof Element && target.closest('.lib-part__head') !== null
+        ? numberFrom(target, '.lib-part', 'libPart')
+        : null);
     if (p !== null) focusPart(p);
   };
 
-  grid.addEventListener('pointerover', (event) => {
-    route(event.target);
-  }, { signal });
-  ledger.addEventListener('pointerover', (event) => {
-    route(event.target);
-  }, { signal });
-  weave?.addEventListener('pointerover', (event) => {
-    route(event.target);
-  }, { signal });
+  grid.addEventListener(
+    'pointerover',
+    (event) => {
+      route(event.target);
+    },
+    { signal },
+  );
+  ledger.addEventListener(
+    'pointerover',
+    (event) => {
+      route(event.target);
+    },
+    { signal },
+  );
+  weave?.addEventListener(
+    'pointerover',
+    (event) => {
+      route(event.target);
+    },
+    { signal },
+  );
   body.addEventListener('pointerleave', reset, { signal });
   for (const scope of [grid, ledger]) {
-    scope.addEventListener('focusin', (event) => {
-      route(event.target);
-    }, { signal });
-    scope.addEventListener('focusout', (event) => {
-      if (!(event.relatedTarget instanceof Node) || !body.contains(event.relatedTarget)) reset();
-    }, { signal });
+    scope.addEventListener(
+      'focusin',
+      (event) => {
+        route(event.target);
+      },
+      { signal },
+    );
+    scope.addEventListener(
+      'focusout',
+      (event) => {
+        if (!(event.relatedTarget instanceof Node) || !body.contains(event.relatedTarget)) reset();
+      },
+      { signal },
+    );
   }
 
   // Readout chips preview their chapter in the map.
-  readout.addEventListener('pointerover', (event) => {
-    const n = numberFrom(event.target, '[data-lib-jump]', 'libJump');
-    for (const el of [...tiles.values(), ...cols.values()]) el.classList.remove('is-peek');
-    if (n !== null) {
-      tiles.get(n)?.classList.add('is-peek');
-      cols.get(n)?.classList.add('is-peek');
-    }
-  }, { signal });
-  readout.addEventListener('pointerleave', () => {
-    for (const el of [...tiles.values(), ...cols.values()]) el.classList.remove('is-peek');
-  }, { signal });
+  readout.addEventListener(
+    'pointerover',
+    (event) => {
+      const n = numberFrom(event.target, '[data-lib-jump]', 'libJump');
+      for (const el of [...tiles.values(), ...cols.values()]) el.classList.remove('is-peek');
+      if (n !== null) {
+        tiles.get(n)?.classList.add('is-peek');
+        cols.get(n)?.classList.add('is-peek');
+      }
+    },
+    { signal },
+  );
+  readout.addEventListener(
+    'pointerleave',
+    () => {
+      for (const el of [...tiles.values(), ...cols.values()]) el.classList.remove('is-peek');
+    },
+    { signal },
+  );
 
   // ── lenses: the map re-reads in one measure; the readout ranks it ─────────
-  const MEASURES: Readonly<Record<string, { readonly name: string; readonly unit: string; readonly of: (c: Chapter) => number }>> = {
+  const MEASURES: Readonly<
+    Record<string, { readonly name: string; readonly unit: string; readonly of: (c: Chapter) => number }>
+  > = {
     words: { name: 'Words', unit: 'words', of: (c) => c.words },
     figures: { name: 'Figures', unit: 'figures', of: (c) => c.figures },
     equations: { name: 'Equations', unit: 'equations', of: (c) => c.equations },
     works: { name: 'Works cited', unit: 'works', of: (c) => c.works },
     sections: { name: 'Sections drafted', unit: 'sections', of: (c) => c.sections.filter((x) => x.written).length },
-    chapters: { name: 'Chapters written', unit: 'sections', of: (c) => (c.written ? 0 : c.sections.filter((x) => x.written).length) },
+    chapters: {
+      name: 'Chapters written',
+      unit: 'sections',
+      of: (c) => (c.written ? 0 : c.sections.filter((x) => x.written).length),
+    },
   };
   const rankItem = (chapter: Chapter, value: number, max: number, label: string): HTMLElement => {
     const item = make('li', 'lib-ro__item');
@@ -594,7 +705,12 @@ export function initLibraryExplorer(ctx: PageContext): void {
     const part = partOf.get(chapter.part);
     if (part !== undefined) cell.dataset['domain'] = part.domain;
     cell.style.setProperty('--fill', `${String(Math.round((value / Math.max(1, max)) * 100))}%`);
-    item.append(cell, make('span', 'lib-ro__num', chapter.number), itemText(chapter.short), make('span', 'lib-ro__val', label));
+    item.append(
+      cell,
+      make('span', 'lib-ro__num', chapter.number),
+      itemText(chapter.short),
+      make('span', 'lib-ro__val', label),
+    );
     return item;
   };
   const describeLens = (lens: string): void => {
@@ -611,12 +727,23 @@ export function initLibraryExplorer(ctx: PageContext): void {
       kicker('Lens', 'chapters written');
       text(out.title, `${String(written)} of ${String(model.chapters.length)} chapters written`);
       text(out.state, `${String(present.length)} more with sections drafted`);
-      text(out.thesis, 'Written chapters stay solid; planned ones fade. Below: the chapters closest to being written — planned chapter pages whose sections are already drafted.');
+      text(
+        out.thesis,
+        'Written chapters stay solid; planned ones fade. Below: the chapters closest to being written — planned chapter pages whose sections are already drafted.',
+      );
     } else {
       const drafted = model.chapters.reduce((sum, c) => sum + c.sections.filter((x) => x.written).length, 0);
       kicker('Lens', measure.name.toLowerCase());
-      text(out.title, lens === 'sections' ? `${String(drafted)} of ${String(model.chapters.reduce((s2, c) => s2 + c.sections.length, 0))} sections drafted` : `${measure.name}, chapter by chapter`);
-      text(out.state, `${grouped(total)} ${measure.unit} in ${String(present.length)} of ${String(model.chapters.length)} chapters`);
+      text(
+        out.title,
+        lens === 'sections'
+          ? `${String(drafted)} of ${String(model.chapters.reduce((s2, c) => s2 + c.sections.length, 0))} sections drafted`
+          : `${measure.name}, chapter by chapter`,
+      );
+      text(
+        out.state,
+        `${grouped(total)} ${measure.unit} in ${String(present.length)} of ${String(model.chapters.length)} chapters`,
+      );
       text(
         out.thesis,
         lens === 'sections'
@@ -630,8 +757,22 @@ export function initLibraryExplorer(ctx: PageContext): void {
       ['mean where present', present.length === 0 ? '—' : grouped(total / present.length)],
       ['total', grouped(total)],
     ]);
-    setListHead(lens === 'chapters' ? 'Closest to written' : `Most ${measure.unit}`, lens === 'chapters' ? 'sections drafted' : 'top 6');
-    out.list?.replaceChildren(...present.slice(0, 6).map((x) => rankItem(x.c, x.v, lens === 'chapters' || lens === 'sections' ? x.c.sections.length : max, lens === 'chapters' || lens === 'sections' ? `${String(x.v)}/${String(x.c.sections.length)}` : grouped(x.v))));
+    setListHead(
+      lens === 'chapters' ? 'Closest to written' : `Most ${measure.unit}`,
+      lens === 'chapters' ? 'sections drafted' : 'top 6',
+    );
+    out.list?.replaceChildren(
+      ...present
+        .slice(0, 6)
+        .map((x) =>
+          rankItem(
+            x.c,
+            x.v,
+            lens === 'chapters' || lens === 'sections' ? x.c.sections.length : max,
+            lens === 'chapters' || lens === 'sections' ? `${String(x.v)}/${String(x.c.sections.length)}` : grouped(x.v),
+          ),
+        ),
+    );
     out.links?.replaceChildren();
   };
   // The weave's scale note names what its halftone measures and the largest value.
@@ -641,12 +782,18 @@ export function initLibraryExplorer(ctx: PageContext): void {
     const key = lens === 'figures' || lens === 'equations' || lens === 'works' ? lens : 'words';
     const measure = MEASURES[key];
     if (measure === undefined) return;
-    const top = model.chapters.reduce<Chapter | undefined>((best, c) => (best === undefined || measure.of(c) > measure.of(best) ? c : best), undefined);
+    const top = model.chapters.reduce<Chapter | undefined>(
+      (best, c) => (best === undefined || measure.of(c) > measure.of(best) ? c : best),
+      undefined,
+    );
     if (top === undefined || measure.of(top) <= 0) {
       scale.replaceChildren();
       return;
     }
-    scale.replaceChildren(make('b', '', key === 'works' ? 'works cited' : measure.unit), ` per chapter · max ${grouped(measure.of(top))} (ch ${top.number})`);
+    scale.replaceChildren(
+      make('b', '', key === 'works' ? 'works cited' : measure.unit),
+      ` per chapter · max ${grouped(measure.of(top))} (ch ${top.number})`,
+    );
   };
   let pinnedLens: string | null = null;
   const setLens = (lens: string | null): void => {
@@ -661,23 +808,43 @@ export function initLibraryExplorer(ctx: PageContext): void {
   };
   for (const chip of chipsOfLens) {
     const lens = chip.dataset['libLens'] ?? 'none';
-    chip.addEventListener('pointerenter', () => {
-      setLens(lens);
-    }, { signal });
-    chip.addEventListener('focus', () => {
-      setLens(lens);
-    }, { signal });
-    chip.addEventListener('pointerleave', () => {
-      setLens(pinnedLens);
-    }, { signal });
-    chip.addEventListener('blur', () => {
-      setLens(pinnedLens);
-    }, { signal });
-    chip.addEventListener('click', () => {
-      pinnedLens = lens === 'none' ? null : lens;
-      for (const other of chipsOfLens) other.setAttribute('aria-pressed', String(other === chip));
-      setLens(pinnedLens);
-    }, { signal });
+    chip.addEventListener(
+      'pointerenter',
+      () => {
+        setLens(lens);
+      },
+      { signal },
+    );
+    chip.addEventListener(
+      'focus',
+      () => {
+        setLens(lens);
+      },
+      { signal },
+    );
+    chip.addEventListener(
+      'pointerleave',
+      () => {
+        setLens(pinnedLens);
+      },
+      { signal },
+    );
+    chip.addEventListener(
+      'blur',
+      () => {
+        setLens(pinnedLens);
+      },
+      { signal },
+    );
+    chip.addEventListener(
+      'click',
+      () => {
+        pinnedLens = lens === 'none' ? null : lens;
+        for (const other of chipsOfLens) other.setAttribute('aria-pressed', String(other === chip));
+        setLens(pinnedLens);
+      },
+      { signal },
+    );
   }
 
   // ── keyboard: one tab stop across the 11 × 6 map ──────────────────────────
@@ -690,47 +857,51 @@ export function initLibraryExplorer(ctx: PageContext): void {
     target.tabIndex = 0;
     target.focus();
   };
-  grid.addEventListener('keydown', (event) => {
-    const n = numberFrom(event.target, '[data-lib-tile]', 'libTile');
-    if (n === null) return;
-    if (event.key === 'Escape') {
-      reset();
-      return;
-    }
-    const r = lanes.findIndex((lane) => lane.includes(n));
-    const lane = lanes[r] ?? [];
-    const c = lane.indexOf(n);
-    const at = flat.indexOf(n);
-    let to: number | undefined;
-    switch (event.key) {
-      case 'ArrowRight':
-        to = flat[Math.min(flat.length - 1, at + 1)];
-        break;
-      case 'ArrowLeft':
-        to = flat[Math.max(0, at - 1)];
-        break;
-      case 'ArrowDown': {
-        const next = lanes[Math.min(lanes.length - 1, r + 1)] ?? [];
-        to = next[Math.min(next.length - 1, c)];
-        break;
-      }
-      case 'ArrowUp': {
-        const previous = lanes[Math.max(0, r - 1)] ?? [];
-        to = previous[Math.min(previous.length - 1, c)];
-        break;
-      }
-      case 'Home':
-        to = event.ctrlKey ? flat[0] : lane[0];
-        break;
-      case 'End':
-        to = event.ctrlKey ? flat.at(-1) : lane.at(-1);
-        break;
-      default:
+  grid.addEventListener(
+    'keydown',
+    (event) => {
+      const n = numberFrom(event.target, '[data-lib-tile]', 'libTile');
+      if (n === null) return;
+      if (event.key === 'Escape') {
+        reset();
         return;
-    }
-    event.preventDefault();
-    move(to);
-  }, { signal });
+      }
+      const r = lanes.findIndex((lane) => lane.includes(n));
+      const lane = lanes[r] ?? [];
+      const c = lane.indexOf(n);
+      const at = flat.indexOf(n);
+      let to: number | undefined;
+      switch (event.key) {
+        case 'ArrowRight':
+          to = flat[Math.min(flat.length - 1, at + 1)];
+          break;
+        case 'ArrowLeft':
+          to = flat[Math.max(0, at - 1)];
+          break;
+        case 'ArrowDown': {
+          const next = lanes[Math.min(lanes.length - 1, r + 1)] ?? [];
+          to = next[Math.min(next.length - 1, c)];
+          break;
+        }
+        case 'ArrowUp': {
+          const previous = lanes[Math.max(0, r - 1)] ?? [];
+          to = previous[Math.min(previous.length - 1, c)];
+          break;
+        }
+        case 'Home':
+          to = event.ctrlKey ? flat[0] : lane[0];
+          break;
+        case 'End':
+          to = event.ctrlKey ? flat.at(-1) : lane.at(-1);
+          break;
+        default:
+          return;
+      }
+      event.preventDefault();
+      move(to);
+    },
+    { signal },
+  );
 
   // Each ledger section strip becomes one tab stop; arrows move within it.
   for (const strip of ledger.querySelectorAll<HTMLElement>('.lib-strip')) {
@@ -738,22 +909,35 @@ export function initLibraryExplorer(ctx: PageContext): void {
     cells.forEach((cell, index) => {
       cell.tabIndex = index === 0 ? 0 : -1;
     });
-    strip.addEventListener('keydown', (event) => {
-      const at = cells.indexOf(event.target as HTMLAnchorElement);
-      if (at === -1) return;
-      const to = event.key === 'ArrowRight' ? at + 1 : event.key === 'ArrowLeft' ? at - 1 : event.key === 'Home' ? 0 : event.key === 'End' ? cells.length - 1 : null;
-      if (event.key === 'Escape') {
-        reset();
-        return;
-      }
-      if (to === null) return;
-      event.preventDefault();
-      const next = cells[Math.max(0, Math.min(cells.length - 1, to))];
-      if (next === undefined) return;
-      for (const cell of cells) cell.tabIndex = -1;
-      next.tabIndex = 0;
-      next.focus();
-    }, { signal });
+    strip.addEventListener(
+      'keydown',
+      (event) => {
+        const at = cells.indexOf(event.target as HTMLAnchorElement);
+        if (at === -1) return;
+        const to =
+          event.key === 'ArrowRight'
+            ? at + 1
+            : event.key === 'ArrowLeft'
+              ? at - 1
+              : event.key === 'Home'
+                ? 0
+                : event.key === 'End'
+                  ? cells.length - 1
+                  : null;
+        if (event.key === 'Escape') {
+          reset();
+          return;
+        }
+        if (to === null) return;
+        event.preventDefault();
+        const next = cells[Math.max(0, Math.min(cells.length - 1, to))];
+        if (next === undefined) return;
+        for (const cell of cells) cell.tabIndex = -1;
+        next.tabIndex = 0;
+        next.focus();
+      },
+      { signal },
+    );
   }
 
   // Links are drawn in pixels: redraw on resize while a chapter is focused.

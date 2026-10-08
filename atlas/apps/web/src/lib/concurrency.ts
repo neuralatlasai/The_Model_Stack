@@ -34,7 +34,9 @@ export async function mapBounded<T, R>(
   await Promise.all(workers);
   const { failure } = state;
   if (failure !== null) {
-    throw failure.error instanceof Error ? failure.error : new Error('mapBounded: task failed', { cause: failure.error });
+    throw failure.error instanceof Error
+      ? failure.error
+      : new Error('mapBounded: task failed', { cause: failure.error });
   }
   return results;
 }

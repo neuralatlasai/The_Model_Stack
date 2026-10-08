@@ -7,7 +7,10 @@ import { diagnostic, termAnchor, type Diagnostic, type GlossaryTerm } from '@atl
 import { walkDocument } from '../project/walk.ts';
 import type { CompiledSource, NodeTable } from '../project/types.ts';
 
-export function collectTerms(compiled: readonly CompiledSource[], table: NodeTable): { terms: GlossaryTerm[]; diagnostics: Diagnostic[] } {
+export function collectTerms(
+  compiled: readonly CompiledSource[],
+  table: NodeTable,
+): { terms: GlossaryTerm[]; diagnostics: Diagnostic[] } {
   const terms = new Map<string, GlossaryTerm>();
   const diagnostics: Diagnostic[] = [];
   for (const { source, body } of compiled) {

@@ -40,7 +40,7 @@ export function isMetaLine(text: string): boolean {
 /** Splits `05 — Title`, `5.2 Title`, `Appendix A — Title`, `Part III — Title` into number and title. */
 export function splitTitle(text: string, meta: NodeMeta): { number: string | null; title: string } {
   const flat = squash(text);
-  const section = /^((?:\d+|[A-Z])\.\d+)\s+(.+)$/u.exec(flat);
+  const section = /^((?:\d+|[A-Z])\.\d+)\s+(?:[\u2014\u2013:-]\s*)?(.+)$/u.exec(flat);
   if (section !== null) return { number: section[1] ?? null, title: section[2] ?? flat };
   const chapter = /^(\d{1,3})\s*[—–-]\s*(.+)$/u.exec(flat);
   if (chapter !== null) return { number: chapter[1] ?? null, title: chapter[2] ?? flat };
@@ -49,7 +49,8 @@ export function splitTitle(text: string, meta: NodeMeta): { number: string | nul
   const volumePart = /^(?:Volume|Part)\s+([IVXLC]+|\d+)\s*[—–:-]\s*(.+)$/iu.exec(flat);
   if (volumePart !== null) return { number: volumePart[1] ?? null, title: volumePart[2] ?? flat };
   if (meta.entityType === 'section' && meta.section !== null) return { number: meta.section, title: flat };
-  if (meta.entityType === 'chapter' && meta.chapter !== null) return { number: String(meta.chapter).padStart(2, '0'), title: flat };
+  if (meta.entityType === 'chapter' && meta.chapter !== null)
+    return { number: String(meta.chapter).padStart(2, '0'), title: flat };
   return { number: null, title: flat };
 }
 
@@ -80,7 +81,13 @@ export function buildHeader(front: readonly RootContent[], st: CompileState): He
         identityLine = squash(text);
         continue;
       }
-      if (h1Index !== -1 && index > h1Index && metaLine === null && isMetaLine(text) && onlyHeaderBetween(front, h1Index, index)) {
+      if (
+        h1Index !== -1 &&
+        index > h1Index &&
+        metaLine === null &&
+        isMetaLine(text) &&
+        onlyHeaderBetween(front, h1Index, index)
+      ) {
         metaLine = inlineOf(node.children, st);
         continue;
       }

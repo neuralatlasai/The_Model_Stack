@@ -5,7 +5,8 @@ import { buildNodeTable, type NodeTableResult } from '../../src/project/nodes.ts
 import { buildRoutes, breadcrumbsOf } from '../../src/project/routes.ts';
 import { must, realManifest, source } from './fixtures.ts';
 
-const CH05 = 'vol-01-learning-and-representation/part-01-scientific-foundations/ch05-minimal-transformer-and-execution-trace';
+const CH05 =
+  'vol-01-learning-and-representation/part-01-scientific-foundations/ch05-minimal-transformer-and-execution-trace';
 
 describe('node table and routes (real manifest, synthetic documents)', () => {
   let table: NodeTableResult;
@@ -14,9 +15,16 @@ describe('node table and routes (real manifest, synthetic documents)', () => {
     const manifest = await realManifest();
     table = buildNodeTable(manifest, [
       source('ms.root', 'README.md', { slug: 'index' }),
-      source('ms.chapter.5', `${CH05}/README.md`, { slug: 'ch05-minimal-transformer-and-execution-trace', title: 'A minimal Transformer', shortTitle: 'Minimal Transformer' }),
+      source('ms.chapter.5', `${CH05}/README.md`, {
+        slug: 'ch05-minimal-transformer-and-execution-trace',
+        title: 'A minimal Transformer',
+        shortTitle: 'Minimal Transformer',
+      }),
       source('ms.section.5.1', `${CH05}/05-1-end-to-end-forward-pass.md`, { slug: '05-1-end-to-end-forward-pass' }),
-      source('ms.section.5.2', `${CH05}/05-2-attention-calculation.md`, { slug: '05-2-attention-calculation', title: 'Attention calculation' }),
+      source('ms.section.5.2', `${CH05}/05-2-attention-calculation.md`, {
+        slug: '05-2-attention-calculation',
+        title: 'Attention calculation',
+      }),
       source('ms.verification.5', `${CH05}/verification.md`, { slug: 'verification' }),
       source('ms.frontmatter.notation', 'front-matter/notation.md', { slug: 'notation' }),
       source('ms.appendices', 'appendices/README.md', { slug: 'appendices' }),
@@ -31,8 +39,14 @@ describe('node table and routes (real manifest, synthetic documents)', () => {
     assert.equal(table.nodes.get('ms.volume.1')?.url, '/vol-01-learning-and-representation/');
     assert.equal(table.nodes.get('ms.part.5')?.url, '/part-05-hardware-kernels-and-distributed-execution/');
     assert.equal(table.nodes.get('ms.chapter.5')?.url, '/ch05-minimal-transformer-and-execution-trace/');
-    assert.equal(table.nodes.get('ms.section.5.2')?.url, '/ch05-minimal-transformer-and-execution-trace/05-2-attention-calculation/');
-    assert.equal(table.nodes.get('ms.verification.5')?.url, '/ch05-minimal-transformer-and-execution-trace/verification/');
+    assert.equal(
+      table.nodes.get('ms.section.5.2')?.url,
+      '/ch05-minimal-transformer-and-execution-trace/05-2-attention-calculation/',
+    );
+    assert.equal(
+      table.nodes.get('ms.verification.5')?.url,
+      '/ch05-minimal-transformer-and-execution-trace/verification/',
+    );
     assert.equal(table.nodes.get('ms.references.5')?.url, '/ch05-minimal-transformer-and-execution-trace/references/');
     assert.equal(table.nodes.get('ms.appendix.d')?.url, '/appendices/appendix-d-primary-paper-spine/');
   });
@@ -46,7 +60,8 @@ describe('node table and routes (real manifest, synthetic documents)', () => {
   });
 
   it('keeps every manifest node, planned ones without a document', () => {
-    for (let chapter = 1; chapter <= 66; chapter += 1) assert.ok(table.nodes.has(`ms.chapter.${String(chapter)}` as NodeId), `ms.chapter.${String(chapter)}`);
+    for (let chapter = 1; chapter <= 66; chapter += 1)
+      assert.ok(table.nodes.has(`ms.chapter.${String(chapter)}` as NodeId), `ms.chapter.${String(chapter)}`);
     assert.equal(table.nodes.get('ms.chapter.42')?.doc, null);
     assert.equal(table.nodes.get('ms.chapter.42')?.plan?.sections.length, 6);
     assert.ok(table.nodes.get('ms.chapter.5')?.doc !== null);
@@ -54,7 +69,10 @@ describe('node table and routes (real manifest, synthetic documents)', () => {
 
   it('prefers document titles and keeps plan data', () => {
     assert.equal(table.nodes.get('ms.chapter.5')?.title, 'A minimal Transformer');
-    assert.equal(table.nodes.get('ms.chapter.5')?.plan?.artifact, 'a small reference Transformer with inspectable intermediate tensors');
+    assert.equal(
+      table.nodes.get('ms.chapter.5')?.plan?.artifact,
+      'a small reference Transformer with inspectable intermediate tensors',
+    );
     assert.equal(table.nodes.get('ms.part.1')?.plan?.outcome, 'A correct reference model and defensible experiment');
   });
 

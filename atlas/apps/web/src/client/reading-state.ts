@@ -88,7 +88,8 @@ export function initReadingState(ctx: PageContext): void {
 
   // ── bookmarks ────────────────────────────────────────────────────────────
   const controls = (): HTMLElement[] => $$(actionSelector(ACTIONS.bookmark), doc);
-  const anchorFor = (control: Element): string | null => control.getAttribute(HOOK.bookmarkAnchor) ?? ctx.state.activeAnchor;
+  const anchorFor = (control: Element): string | null =>
+    control.getAttribute(HOOK.bookmarkAnchor) ?? ctx.state.activeAnchor;
 
   const paint = (): void => {
     const list = readBookmarks(store);
@@ -100,9 +101,12 @@ export function initReadingState(ctx: PageContext): void {
 
   const toggle = (control: Element | null): void => {
     const anchor = control === null ? ctx.state.activeAnchor : anchorFor(control);
-    const kindParse = BookmarkKindSchema.safeParse(control?.getAttribute(HOOK.bookmarkKind) ?? (anchor === null ? 'node' : 'region'));
+    const kindParse = BookmarkKindSchema.safeParse(
+      control?.getAttribute(HOOK.bookmarkKind) ?? (anchor === null ? 'node' : 'region'),
+    );
     const kind: Bookmark['kind'] = kindParse.success ? kindParse.data : 'region';
-    const regionTitle = anchor === null ? null : (data?.regions.find((region) => region.anchor === anchor)?.title ?? null);
+    const regionTitle =
+      anchor === null ? null : (data?.regions.find((region) => region.anchor === anchor)?.title ?? null);
     const target = anchor === null ? null : doc.getElementById(anchor);
     const bookmark: Bookmark = {
       kind,

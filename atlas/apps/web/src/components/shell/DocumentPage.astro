@@ -20,6 +20,7 @@ import PartMap from '../research/PartMap.astro';
 import VolumeMap from '../research/VolumeMap.astro';
 import { buildLibraryModel } from '../../lib/library-model.ts';
 import '../../styles/partmap.css';
+import '../../styles/training-reader.css';
 import { getStackModel } from '../../lib/stack.ts';
 import ChapterGlance from '../research/ChapterGlance.astro';
 import CitationTimeline from '../research/CitationTimeline.astro';
@@ -42,6 +43,7 @@ interface Props {
 }
 
 const { doc } = Astro.props;
+Astro.locals.mathProcedurePlates = doc.meta.chapter !== null && doc.meta.chapter >= 19 && doc.meta.chapter <= 24;
 const [graph, registry, manifest, withCompare] = await Promise.all([
   getGraph(),
   getRegistry(),
@@ -130,7 +132,7 @@ const jsonLd = documentJsonLd({ doc, graph, registry, site: Astro.site, edition:
   articleTitle={doc.header.title}
   jsonLd={jsonLd}
 >
-  <article class="sh-article" data-node-id={doc.meta.id}>
+  <article class="sh-article" data-node-id={doc.meta.id} data-chapter={doc.meta.chapter ?? undefined}>
     {topic && (
       <div class="aw-workspace">
         <div class="aw-explanation">

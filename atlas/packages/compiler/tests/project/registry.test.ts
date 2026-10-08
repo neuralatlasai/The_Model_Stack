@@ -12,18 +12,61 @@ import { collectTerms } from '../../src/registry/terms.ts';
 import { compiledSource, must, realManifest, region, source, text } from './fixtures.ts';
 import { REFERENCE_STACK } from './paths.ts';
 
-const CH05 = 'vol-01-learning-and-representation/part-01-scientific-foundations/ch05-minimal-transformer-and-execution-trace';
+const CH05 =
+  'vol-01-learning-and-representation/part-01-scientific-foundations/ch05-minimal-transformer-and-execution-trace';
 
 describe('lineage grammar', () => {
   it('parses the formats used across chapters', () => {
     const cases: [string, string, string, string | null, string | null][] = [
-      ['2017 · Attention Is All You Need (P01) · conceptual ancestor — the encoder–decoder reference.', '2017', 'Attention Is All You Need', 'P01', 'the encoder–decoder reference.'],
-      ['2015 · Hidden Technical Debt in Machine Learning Systems [R1.5] · conceptual ancestor (hidden feedback loops).', '2015', 'Hidden Technical Debt in Machine Learning Systems', 'R1.5', '(hidden feedback loops).'],
-      ['1985 · IEEE Std 754 (binary floating-point arithmetic; revised 2008, 2019) [R3.1] · *conceptual ancestor*', '1985', 'IEEE Std 754 (binary floating-point arithmetic; revised 2008, 2019)', 'R3.1', null],
-      ['2019 · T5 (P02) · *current frontier* for span-corruption bookkeeping — sentinel targets', '2019', 'T5', 'P02', 'for span-corruption bookkeeping — sentinel targets'],
-      ['2019 · CCNet (R7.17) and C4 (P02) · *conceptual ancestor* — WET extraction', '2019', 'CCNet and C4', 'R7.17', 'WET extraction'],
-      ['1948 · Shannon, *A Mathematical Theory of Communication* [R2.1] · conceptual ancestor (entropy, coding length)', '1948', 'Shannon, A Mathematical Theory of Communication', 'R2.1', '(entropy, coding length)'],
-      ['2025+ · hardware-specialised attention kernels · current frontier', '2025+', 'hardware-specialised attention kernels', null, null],
+      [
+        '2017 · Attention Is All You Need (P01) · conceptual ancestor — the encoder–decoder reference.',
+        '2017',
+        'Attention Is All You Need',
+        'P01',
+        'the encoder–decoder reference.',
+      ],
+      [
+        '2015 · Hidden Technical Debt in Machine Learning Systems [R1.5] · conceptual ancestor (hidden feedback loops).',
+        '2015',
+        'Hidden Technical Debt in Machine Learning Systems',
+        'R1.5',
+        '(hidden feedback loops).',
+      ],
+      [
+        '1985 · IEEE Std 754 (binary floating-point arithmetic; revised 2008, 2019) [R3.1] · *conceptual ancestor*',
+        '1985',
+        'IEEE Std 754 (binary floating-point arithmetic; revised 2008, 2019)',
+        'R3.1',
+        null,
+      ],
+      [
+        '2019 · T5 (P02) · *current frontier* for span-corruption bookkeeping — sentinel targets',
+        '2019',
+        'T5',
+        'P02',
+        'for span-corruption bookkeeping — sentinel targets',
+      ],
+      [
+        '2019 · CCNet (R7.17) and C4 (P02) · *conceptual ancestor* — WET extraction',
+        '2019',
+        'CCNet and C4',
+        'R7.17',
+        'WET extraction',
+      ],
+      [
+        '1948 · Shannon, *A Mathematical Theory of Communication* [R2.1] · conceptual ancestor (entropy, coding length)',
+        '1948',
+        'Shannon, A Mathematical Theory of Communication',
+        'R2.1',
+        '(entropy, coding length)',
+      ],
+      [
+        '2025+ · hardware-specialised attention kernels · current frontier',
+        '2025+',
+        'hardware-specialised attention kernels',
+        null,
+        null,
+      ],
     ];
     for (const [line, year, work, cite, note] of cases) {
       const parsed = parseLineageText(line.replaceAll('*', ''));
@@ -42,7 +85,10 @@ describe('lineage grammar', () => {
   });
 
   it('collects entries from a chapter lineage region and keeps inline structure in notes', () => {
-    const item = (content: Inline[]): { blocks: Block[]; checked: null } => ({ blocks: [{ kind: 'paragraph', anchor: null, depth: 'overview', content }], checked: null });
+    const item = (content: Inline[]): { blocks: Block[]; checked: null } => ({
+      blocks: [{ kind: 'paragraph', anchor: null, depth: 'overview', content }],
+      checked: null,
+    });
     const list: Block = {
       kind: 'list',
       anchor: null,
@@ -59,7 +105,9 @@ describe('lineage grammar', () => {
         item(text('2017 · Transformer (P01) · rearranged')),
       ],
     };
-    const compiled = [compiledSource(source('ms.chapter.5', `${CH05}/README.md`), { regions: [region('lineage', 'Lineage', [list])] })];
+    const compiled = [
+      compiledSource(source('ms.chapter.5', `${CH05}/README.md`), { regions: [region('lineage', 'Lineage', [list])] }),
+    ];
     const { lineage, diagnostics } = collectLineage(compiled);
     assert.equal(lineage.length, 1);
     const entry = must(lineage[0]);
@@ -113,19 +161,45 @@ describe('reference-stack coverage → entities', () => {
       depth: 'research',
       role: 'stack-coverage',
       wide: true,
-      columns: ['Stack section', 'Entry (rank)', 'Stack layer', 'What this chapter takes from it', 'Surface used', 'Sections', 'Evidence label'].map((header) => ({
+      columns: [
+        'Stack section',
+        'Entry (rank)',
+        'Stack layer',
+        'What this chapter takes from it',
+        'Surface used',
+        'Sections',
+        'Evidence label',
+      ].map((header) => ({
         header: cell(header),
         align: null,
       })),
       rows: [
         ['§1 lab', '#18 Google Research', '—', 'P01 equations', 'Papers', '5.1–5.5', 'PAPER-REPORTED'].map(cell),
-        ['§4 system', '**PyTorch** (#17)', 'Model / autograd framework', 'SDPA signature', 'docs/code', '5.1–5.6', 'OFFICIAL-DOCUMENTATION'].map(cell),
-        ['§4 system', '#42 SGLang; #41 TensorRT-LLM', 'Inference engine', 'forward pointers', 'docs/code', '5.5', 'OFFICIAL-DOCUMENTATION'].map(cell),
+        [
+          '§4 system',
+          '**PyTorch** (#17)',
+          'Model / autograd framework',
+          'SDPA signature',
+          'docs/code',
+          '5.1–5.6',
+          'OFFICIAL-DOCUMENTATION',
+        ].map(cell),
+        [
+          '§4 system',
+          '#42 SGLang; #41 TensorRT-LLM',
+          'Inference engine',
+          'forward pointers',
+          'docs/code',
+          '5.5',
+          'OFFICIAL-DOCUMENTATION',
+        ].map(cell),
         ['§2 conference', '#1 NeurIPS', '—', 'venue', 'Papers', '5.1', 'PAPER-REPORTED'].map(cell),
       ],
     };
     const chapter = source('ms.chapter.5', `${CH05}/README.md`, { implementations: ['impl.pytorch', 'impl.flashmla'] });
-    const section = source('ms.section.5.2', `${CH05}/05-2-attention-calculation.md`, { implementations: ['impl.pytorch', 'impl.vllm'] });
+    const section = source('ms.section.5.2', `${CH05}/05-2-attention-calculation.md`, {
+      implementations: ['impl.pytorch', 'impl.vllm'],
+    });
     const compiled = [
       compiledSource(chapter, { regions: [region('stack-coverage', 'Reference-stack coverage', [coverage])] }),
       compiledSource(section),
@@ -156,11 +230,20 @@ describe('terms and indexes', () => {
       source('ms.section.5.1', `${CH05}/05-1-end-to-end-forward-pass.md`, { slug: '05-1-end-to-end-forward-pass' }),
       source('ms.section.5.2', `${CH05}/05-2-attention-calculation.md`, { slug: '05-2-attention-calculation' }),
     ]);
-    const definition = (term: string, slug: string): Block => ({ kind: 'definition', anchor: `term-${slug}`, depth: 'overview', term, termSlug: slug, content: text(`${term} means…`) });
+    const definition = (term: string, slug: string): Block => ({
+      kind: 'definition',
+      anchor: `term-${slug}`,
+      depth: 'overview',
+      term,
+      termSlug: slug,
+      content: text(`${term} means…`),
+    });
     const [first, second] = table.docs;
     assert.ok(first !== undefined && second !== undefined);
     const compiled = [
-      compiledSource(first, { regions: [region('formulation', 'Formulation', [definition('residual stream', 'residual-stream')])] }),
+      compiledSource(first, {
+        regions: [region('formulation', 'Formulation', [definition('residual stream', 'residual-stream')])],
+      }),
       compiledSource(second, {
         regions: [
           region('formulation', 'Formulation', [
@@ -176,7 +259,16 @@ describe('terms and indexes', () => {
               note: null,
               variables: [{ symbol: 'S', meaning: 'scores' }],
             },
-            { kind: 'failure-mode', anchor: 'fm-overflow', depth: 'research', name: 'Softmax overflow', symptom: null, cause: null, detection: null, mitigation: null },
+            {
+              kind: 'failure-mode',
+              anchor: 'fm-overflow',
+              depth: 'research',
+              name: 'Softmax overflow',
+              symptom: null,
+              cause: null,
+              detection: null,
+              mitigation: null,
+            },
           ]),
         ],
       }),
@@ -189,7 +281,10 @@ describe('terms and indexes', () => {
         ['residual-stream', 'ms.section.5.1'],
       ],
     );
-    assert.equal(must(terms[1]).url, '/ch05-minimal-transformer-and-execution-trace/05-1-end-to-end-forward-pass/#term-residual-stream');
+    assert.equal(
+      must(terms[1]).url,
+      '/ch05-minimal-transformer-and-execution-trace/05-1-end-to-end-forward-pass/#term-residual-stream',
+    );
     assert.equal(diagnostics.length, 1);
     const duplicate = must(diagnostics[0]);
     assert.equal(duplicate.code, 'term-duplicate-owner');

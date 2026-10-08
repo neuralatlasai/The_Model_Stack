@@ -23,7 +23,11 @@ export function stubIndex(input: MarkdownInput): NumberedObjectIndex {
 }
 
 function roleOf(title: string): RegionRole {
-  const key = title.split(/\s+[—–-]\s+/u)[0]?.trim().toLowerCase() ?? '';
+  const key =
+    title
+      .split(/\s+[—–-]\s+/u)[0]
+      ?.trim()
+      .toLowerCase() ?? '';
   return REGION_HEADINGS[key] ?? 'other';
 }
 
@@ -35,7 +39,11 @@ export function stubCompile(input: MarkdownInput, ctx: CompileContext): Compiled
   for (const section of sections) {
     const [titleLine = '', ...rest] = section.split('\n');
     const title = titleLine.trim();
-    let anchor = title.toLowerCase().replace(/[^a-z0-9]+/gu, '-').replace(/^-|-$/gu, '') || 'region';
+    let anchor =
+      title
+        .toLowerCase()
+        .replace(/[^a-z0-9]+/gu, '-')
+        .replace(/^-|-$/gu, '') || 'region';
     while (used.has(anchor)) anchor = `${anchor}-x`;
     used.add(anchor);
     const text = rest.find((line) => line.trim() !== '' && !line.startsWith('|') && !line.startsWith('```')) ?? '';
@@ -44,9 +52,17 @@ export function stubCompile(input: MarkdownInput, ctx: CompileContext): Compiled
     const blocks: Block[] = [{ kind: 'paragraph', anchor: null, depth: REGION_ROLE_DEPTH[role], content }];
     regions.push({ role, title, anchor, depth: REGION_ROLE_DEPTH[role], blocks });
   }
-  const citations = [...new Set(all(/\b(P\d{2}|R\d+\.\d+)\b/gu, input.body))].filter((key) => ctx.hasCitation(key as `P${number}`));
+  const citations = [...new Set(all(/\b(P\d{2}|R\d+\.\d+)\b/gu, input.body))].filter((key) =>
+    ctx.hasCitation(key as `P${number}`),
+  );
   return {
-    header: { identityLine: null, number: input.meta.section, title: input.meta.title, thesis: [{ kind: 'text', value: `${input.meta.title} thesis` }], metaLine: null },
+    header: {
+      identityLine: null,
+      number: input.meta.section,
+      title: input.meta.title,
+      thesis: [{ kind: 'text', value: `${input.meta.title} thesis` }],
+      metaLine: null,
+    },
     lead: [],
     regions,
     figures: [],
@@ -55,7 +71,17 @@ export function stubCompile(input: MarkdownInput, ctx: CompileContext): Compiled
     citations: citations as CompiledBody['citations'],
     definedTerms: [],
     linksTo: [],
-    stats: { words: input.body.split(/\s+/u).length, readingMinutes: 1, equations: 0, figures: 0, algorithms: 0, experiments: 0, failureModes: 0, definitions: 0, citations: citations.length },
+    stats: {
+      words: input.body.split(/\s+/u).length,
+      readingMinutes: 1,
+      equations: 0,
+      figures: 0,
+      algorithms: 0,
+      experiments: 0,
+      failureModes: 0,
+      definitions: 0,
+      citations: citations.length,
+    },
     diagnostics: [],
   };
 }

@@ -16,7 +16,11 @@ describe('compileAtlas on the real docs', () => {
   let out: string;
 
   before(async () => {
-    atlas = await compileAtlas({ docsDir: DOCS_DIR, referenceStackPath: REFERENCE_STACK, compiledAt: FIXED_COMPILED_AT });
+    atlas = await compileAtlas({
+      docsDir: DOCS_DIR,
+      referenceStackPath: REFERENCE_STACK,
+      compiledAt: FIXED_COMPILED_AT,
+    });
     out = await mkdtemp(path.join(os.tmpdir(), 'atlas-compile-'));
   });
 
@@ -59,9 +63,12 @@ describe('compileAtlas on the real docs', () => {
     assert.equal(atlas.manifest.compiledAt, FIXED_COMPILED_AT);
     const counts = atlas.manifest.counts;
     const byCode = new Map<string, number>();
-    for (const item of atlas.diagnostics) byCode.set(`${item.severity} ${item.code}`, (byCode.get(`${item.severity} ${item.code}`) ?? 0) + 1);
+    for (const item of atlas.diagnostics)
+      byCode.set(`${item.severity} ${item.code}`, (byCode.get(`${item.severity} ${item.code}`) ?? 0) + 1);
     // Surfaced in the test log so the observed numbers are reviewable.
-    process.stdout.write(`# counts ${JSON.stringify(counts)}\n# diagnostics ${JSON.stringify(atlas.manifest.diagnostics)}\n`);
+    process.stdout.write(
+      `# counts ${JSON.stringify(counts)}\n# diagnostics ${JSON.stringify(atlas.manifest.diagnostics)}\n`,
+    );
     for (const [key, value] of [...byCode].sort()) process.stdout.write(`#   ${key}: ${String(value)}\n`);
   });
 

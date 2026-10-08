@@ -17,14 +17,8 @@
       "reason": "Reference scenario itself",
       "kind": "scenario",
       "description": "Month-by-month scenario of AI development up to superhuman AI, written for predictive accuracy rather than advocacy and branching into a race ending and a slowdown ending. Supplementary forecasts on compute, timelines, takeoff, AI goals, and security give the quantitative inputs behind it.",
-      "chapters": [
-        21,
-        61
-      ],
-      "aliases": [
-        "AI 2027",
-        "AI-2027"
-      ],
+      "chapters": [21, 61],
+      "aliases": ["AI 2027", "AI-2027"],
       "links": {
         "listed": "https://ai-2027.com/",
         "url": "https://ai-2027.com/"
@@ -46,12 +40,8 @@
       "reason": "Dedicated future-AI forecasting organization",
       "kind": "scenario",
       "description": "Nonprofit forecasting group behind AI 2027 and AI 2040; its site plots the team’s probability distributions for when AI fully automates software engineering and links its timelines-and-takeoff model.",
-      "chapters": [
-        21
-      ],
-      "aliases": [
-        "AI Futures Project"
-      ],
+      "chapters": [21],
+      "aliases": ["AI Futures Project"],
       "links": {
         "listed": "https://www.aifutures.org/",
         "url": "https://www.aifutures.org/"
@@ -74,10 +64,7 @@
       "kind": "scenario",
       "description": "Follow-on scenario to AI 2027 that sets out a recommended path through superintelligence (“Plan A”: a verified slowdown under an international agreement to avoid a race) against four alternatives: fight China, burn the lead, race to ASI, and shut it all down.",
       "chapters": [],
-      "aliases": [
-        "AI 2040",
-        "AI-2040"
-      ],
+      "aliases": ["AI 2040", "AI-2040"],
       "links": {
         "listed": "https://ai-2040.com/",
         "url": "https://ai-2040.com/"
@@ -99,13 +86,8 @@
       "reason": "Quantitative timelines + takeoff model",
       "kind": "scenario",
       "description": "Interactive timelines-and-takeoff model whose output is the trajectory of AI’s ability to automate AI software R&D, staged by milestones such as the Automated Coder and the Superhuman AI Researcher. Forecasts come from repeated simulation over the team’s parameter distributions, then adjusted for out-of-model considerations.",
-      "chapters": [
-        21,
-        61
-      ],
-      "aliases": [
-        "AI Futures Model"
-      ],
+      "chapters": [21, 61],
+      "aliases": ["AI Futures Model"],
       "links": {
         "listed": "https://www.aifuturesmodel.com/",
         "url": "https://www.aifuturesmodel.com/"
@@ -127,12 +109,8 @@
       "reason": "AGI → automated R&D → intelligence explosion",
       "kind": "scenario",
       "description": "June 2024 essay series arguing, by counting orders of magnitude of compute and algorithmic gains, that AGI by 2027 is plausible and that automated AI research could compress a decade of algorithmic progress into a year or less. Later chapters cover trillion-dollar compute clusters, lab security, superalignment, and US–China competition.",
-      "chapters": [
-        21
-      ],
-      "aliases": [
-        "Situational Awareness"
-      ],
+      "chapters": [21],
+      "aliases": ["Situational Awareness"],
       "links": {
         "listed": "https://situational-awareness.ai/",
         "url": "https://situational-awareness.ai/"
@@ -154,10 +132,7 @@
       "reason": "Explicit probability distributions and timelines",
       "kind": "scenario",
       "description": "Forecast pages of the AI Futures Project: dated, per-forecaster percentile dates for milestones such as the Automated Coder, produced by simulating the AI Futures Model over each forecaster’s parameter distributions.",
-      "chapters": [
-        21,
-        61
-      ],
+      "chapters": [21, 61],
       "aliases": [],
       "links": {
         "listed": "https://www.aifutures.org/",
@@ -180,13 +155,8 @@
       "reason": "Quantitative AI progress/impact forecasting",
       "kind": "scenario",
       "description": "Develops forecasting methods for high-stakes decisions and applies them to AI: the Longitudinal Expert AI Panel (LEAP) tracks expert forecasts of AI’s trajectory, ForecastBench scores the forecasting accuracy of AI systems, and it ran the Existential Risk Persuasion Tournament.",
-      "chapters": [
-        21,
-        61
-      ],
-      "aliases": [
-        "Forecasting Research Institute"
-      ],
+      "chapters": [21, 61],
+      "aliases": ["Forecasting Research Institute"],
       "links": {
         "listed": "https://forecastingresearch.org/",
         "url": "https://forecastingresearch.org/"
@@ -208,13 +178,8 @@
       "reason": "LEAP, ForecastBench, AI risk outlooks",
       "kind": "scenario",
       "description": "Index of the institute’s projects and working papers, including LEAP (a three-year panel of computer scientists, industry professionals, policy researchers, and economists forecasting AI’s trajectory), the Automated AI Risk Outlook (catastrophic-risk probabilities forecast by an ensemble of frontier models), and a review of how accurate past AI-progress forecasts have been.",
-      "chapters": [
-        21,
-        61
-      ],
-      "aliases": [
-        "ForecastBench"
-      ],
+      "chapters": [21, 61],
+      "aliases": ["ForecastBench"],
       "links": {
         "listed": "https://forecastingresearch.org/research",
         "url": "https://forecastingresearch.org/research"
@@ -236,14 +201,8 @@
       "reason": "Capability, compute and AI trajectory measurement",
       "kind": "measurement",
       "description": "Research institute measuring the trends behind AI’s trajectory: it maintains the Epoch Capabilities Index, a database of more than 3,200 machine-learning models, a benchmarking hub, the FrontierMath benchmark, and an open database of large AI data centres, and publishes analyses of scaling, software progress, and capabilities.",
-      "chapters": [
-        21,
-        25,
-        61
-      ],
-      "aliases": [
-        "Epoch AI"
-      ],
+      "chapters": [21, 25, 61],
+      "aliases": ["Epoch AI"],
       "links": {
         "listed": "https://epoch.ai/",
         "url": "https://epoch.ai/"
@@ -265,14 +224,8 @@
       "reason": "Autonomous-task horizon and frontier risk",
       "kind": "framework",
       "description": "Nonprofit that evaluates whether and when frontier AI systems could cause catastrophic harm. Its central measurement is the task-completion time horizon — the length of task, in human-expert time, that an agent completes at a given success rate — which it reports has grown exponentially over the past six years.",
-      "chapters": [
-        61,
-        63,
-        65
-      ],
-      "aliases": [
-        "METR"
-      ],
+      "chapters": [61, 63, 65],
+      "aliases": ["METR"],
       "links": {
         "listed": "https://metr.org/",
         "url": "https://metr.org/"
@@ -294,13 +247,8 @@
       "reason": "Measures growing autonomous task duration",
       "kind": "measurement",
       "description": "Periodically updated 50% and 80% time horizons of public frontier models, estimated from agent performance on more than a hundred software tasks with known human-expert durations; METR reports that an exponential trend fits better than linear or hyperbolic ones.",
-      "chapters": [
-        61,
-        63
-      ],
-      "aliases": [
-        "METR time horizon"
-      ],
+      "chapters": [61, 63],
+      "aliases": ["METR time horizon"],
       "links": {
         "listed": "https://evals.alignment.org/time-horizons/",
         "url": "https://metr.org/time-horizons/"
@@ -323,9 +271,7 @@
       "kind": "scenario",
       "description": "Future of Life Institute programme on steering transformative technology toward beneficial outcomes; its Tomorrow’s AI project publishes 13 interactive, research-backed scenarios of how advanced AI could reshape the world, alongside work on AI and the distribution of power.",
       "chapters": [],
-      "aliases": [
-        "Future of Life Institute"
-      ],
+      "aliases": ["Future of Life Institute"],
       "links": {
         "listed": "https://futureoflife.org/",
         "url": "https://futureoflife.org/our-work/futures/"
@@ -347,13 +293,8 @@
       "reason": "Quantitative AI progress/automation forecasting",
       "kind": "measurement",
       "description": "MIT research group studying the foundations of progress in computing and AI — algorithmic progress, hardware trends, and which tasks are cost-effective to automate with AI — and maintaining the AI Risk Repository, a database and taxonomy of AI risks.",
-      "chapters": [
-        21,
-        25
-      ],
-      "aliases": [
-        "MIT FutureTech"
-      ],
+      "chapters": [21, 25],
+      "aliases": ["MIT FutureTech"],
       "links": {
         "listed": "https://futuretech.mit.edu/",
         "url": "https://futuretech.mit.edu/"
@@ -375,10 +316,7 @@
       "reason": "Capability → automation → macroeconomic models",
       "kind": "measurement",
       "description": "Research pillars (Processor Database, Computer Progress, Algorithm Wiki, AI Risk) and publications on algorithmic progress in language models, datacenter-GPU progress, which tasks are cost-effective to automate, and a quantitative task-based theory of AI and scale.",
-      "chapters": [
-        21,
-        25
-      ],
+      "chapters": [21, 25],
       "aliases": [],
       "links": {
         "listed": "https://futuretech.mit.edu/research",
@@ -402,9 +340,7 @@
       "kind": "scenario",
       "description": "August 2026 report that assumes AGI emerges rather than predicting when, and traces five mechanisms by which it could shift US–China power — economic growth, the information environment, military capability, misalignment or loss of control, and downstream political effects — through phases from both states pursuing AGI to one or both possessing it.",
       "chapters": [],
-      "aliases": [
-        "Superpowers and AGI"
-      ],
+      "aliases": ["Superpowers and AGI"],
       "links": {
         "listed": "https://www.cnas.org/publications/reports/superpowers-and-agi",
         "url": "https://www.cnas.org/publications/reports/superpowers-and-agi"
@@ -427,9 +363,7 @@
       "kind": "institute",
       "description": "Nonprofit general-AI institute supported by the Beijing municipal government and the Ministry of Science and Technology with Peking and Tsinghua universities; it reports work on general agents (TongAgents), the TongSIM physical-simulation training environment, 3D scene data for embodied agents, and robot motion control.",
       "chapters": [],
-      "aliases": [
-        "BIGAI"
-      ],
+      "aliases": ["BIGAI"],
       "links": {
         "listed": "https://www.bigai.ai/",
         "url": "https://www.bigai.ai/"
@@ -475,10 +409,7 @@
       "kind": "institute",
       "description": "Research laboratory whose stated vision is open, controllable, trustworthy AGI; it releases the Intern (书生) model family — including the Intern-S1 scientific multimodal model and the Intern-SafeWork safety stack — and the OpenCompass evaluation system.",
       "chapters": [],
-      "aliases": [
-        "Shanghai AI Laboratory",
-        "Shanghai AI Lab"
-      ],
+      "aliases": ["Shanghai AI Laboratory", "Shanghai AI Lab"],
       "links": {
         "listed": "https://www.shlab.org.cn/",
         "url": "https://www.shlab.org.cn/"
@@ -501,9 +432,7 @@
       "kind": "lab",
       "description": "Developer of the Kimi models and agents (Kimi Agent, Agent Swarm, Kimi Code), with a stated research goal of AGI; it describes its current model, Kimi K3, as natively multimodal with 2.8T parameters and a 1M-token context for long-horizon coding and reasoning.",
       "chapters": [],
-      "aliases": [
-        "Moonshot AI"
-      ],
+      "aliases": ["Moonshot AI"],
       "links": {
         "listed": "https://www.moonshot.ai/",
         "url": "https://www.moonshot.ai/"
@@ -526,9 +455,7 @@
       "kind": "lab",
       "description": "Moonshot AI’s research blog: technical write-ups of the Kimi K2, K2 Thinking, K2.5, K2.6, and K3 releases, the Agent Swarm system, and the WorldVQA and PerceptionBench benchmarks.",
       "chapters": [],
-      "aliases": [
-        "Kimi"
-      ],
+      "aliases": ["Kimi"],
       "links": {
         "listed": "https://www.kimi.com/en/blog/",
         "url": "https://www.kimi.ai/blog/"
@@ -551,9 +478,7 @@
       "kind": "lab",
       "description": "DeepSeek’s release and research index: model releases (DeepSeek-V3.2 with DeepSeek Sparse Attention, the open V4 preview with 1M-token context, V4.1-Flash) and technical reports on long-context efficiency, conditional memory (Engram), manifold-constrained hyper-connections, and self-verifiable mathematical reasoning.",
       "chapters": [],
-      "aliases": [
-        "DeepSeek"
-      ],
+      "aliases": ["DeepSeek"],
       "links": {
         "listed": "https://www.deepseek.com/en/news/",
         "url": "https://www.deepseek.com/en/news/"
@@ -576,9 +501,7 @@
       "kind": "institute",
       "description": "Beijing research institute releasing open model families (the WuJie line including the Emu3 multimodal world model, RoboBrain embodied models, BGE embeddings), the FlagOpen open-source stack, and the FlagEval evaluation system, with an AI-safety programme tied to the Beijing International Dialogue on AI Safety.",
       "chapters": [],
-      "aliases": [
-        "BAAI"
-      ],
+      "aliases": ["BAAI"],
       "links": {
         "listed": "https://www.baai.ac.cn/",
         "url": "https://www.baai.ac.cn/"
@@ -600,12 +523,8 @@
       "reason": "Continuous frontier capability measurement",
       "kind": "measurement",
       "description": "BAAI’s model-evaluation platform: leaderboards, an arena, and debate-format evaluations of open and closed models across language, multimodal, vision, and audio tasks, using unified evaluation environments and frequently refreshed, non-public test sets to limit leakage.",
-      "chapters": [
-        61
-      ],
-      "aliases": [
-        "FlagEval"
-      ],
+      "chapters": [61],
+      "aliases": ["FlagEval"],
       "links": {
         "listed": "https://flageval.baai.ac.cn/",
         "url": "https://flageval.baai.ac.cn/"
@@ -627,13 +546,8 @@
       "reason": "Frontier deception, loss-of-control, agent safety",
       "kind": "alignment",
       "description": "BAAI’s large-model safety platform: red-team evaluation (including deception detection and VLA-Arena for embodied AI), defences (Align Anything, agent protection), and interpretability tools, organised around red lines from the Beijing International Consensus on AI Safety — autonomous replication or self-improvement, power-seeking, weapons assistance, cyberattacks, and deception.",
-      "chapters": [
-        61,
-        65
-      ],
-      "aliases": [
-        "FlagSafe"
-      ],
+      "chapters": [61, 65],
+      "aliases": ["FlagSafe"],
       "links": {
         "listed": "https://flagsafe.baai.ac.cn/",
         "url": "https://flagsafe.baai.ac.cn/"
@@ -656,9 +570,7 @@
       "kind": "institute",
       "description": "Tsinghua University institute for industry-applied AI (“to fuel the industrial upgrade … with AI technologies”), organised into AI+IoT, AI+transportation, AI+healthcare, big-data intelligence, and robotics research.",
       "chapters": [],
-      "aliases": [
-        "Tsinghua AIR"
-      ],
+      "aliases": ["Tsinghua AIR"],
       "links": {
         "listed": "https://air.tsinghua.edu.cn/",
         "url": "https://air.tsinghua.edu.cn/"
@@ -680,12 +592,8 @@
       "reason": "Dynamic frontier model capability tracking",
       "kind": "measurement",
       "description": "Large-model capability leaderboard from Tsinghua’s Foundation Model Research Center and Zhongguancun Laboratory (since 2024), built on five native benchmarks and model judges such as CritiqueLLM; it publishes bimonthly reports and refreshes its question sets each cycle to avoid overfitting to static tests.",
-      "chapters": [
-        61
-      ],
-      "aliases": [
-        "SuperBench"
-      ],
+      "chapters": [61],
+      "aliases": ["SuperBench"],
       "links": {
         "listed": "https://fm.ai.tsinghua.edu.cn/superbench/",
         "url": "https://fm.ai.tsinghua.edu.cn/superbench/"
@@ -707,12 +615,8 @@
       "reason": "Comprehensive empirical AI trajectory",
       "kind": "measurement",
       "description": "Annual report and dataset (2026 edition current) tracking AI technical performance, R&D, investment, adoption, education, and policy; it argues that independent measurement matters more as developer disclosure declines.",
-      "chapters": [
-        61
-      ],
-      "aliases": [
-        "AI Index"
-      ],
+      "chapters": [61],
+      "aliases": ["AI Index"],
       "links": {
         "listed": "https://hai.stanford.edu/ai-index",
         "url": "https://hai.stanford.edu/ai-index"
@@ -735,9 +639,7 @@
       "kind": "institute",
       "description": "Stanford institute for research, education, and policy on AI and data science; it publishes the AI Index, policy briefs, and research, and funds fellowships and grants.",
       "chapters": [],
-      "aliases": [
-        "Stanford HAI"
-      ],
+      "aliases": ["Stanford HAI"],
       "links": {
         "listed": "https://hai.stanford.edu/",
         "url": "https://hai.stanford.edu/"
@@ -760,9 +662,7 @@
       "kind": "governance",
       "description": "Policy research centre analysing the security implications of AI, advanced computing, and biotechnology, with research lines on AI inputs (talent, data, compute), national-security applications, assessment, competition, and supply chains, backed by roughly 60 analysis-ready datasets.",
       "chapters": [],
-      "aliases": [
-        "CSET"
-      ],
+      "aliases": ["CSET"],
       "links": {
         "listed": "https://cset.georgetown.edu/",
         "url": "https://cset.georgetown.edu/"
@@ -784,14 +684,8 @@
       "reason": "Frontier capability evolution/evaluation",
       "kind": "framework",
       "description": "US government centre within NIST that leads unclassified evaluations of AI capabilities posing national-security risks (cyber, biological, chemical), evaluates US and adversary systems, develops AI security measurement guidelines, and holds voluntary testing agreements with developers.",
-      "chapters": [
-        61,
-        65,
-        66
-      ],
-      "aliases": [
-        "CAISI"
-      ],
+      "chapters": [61, 65, 66],
+      "aliases": ["CAISI"],
       "links": {
         "listed": "https://www.nist.gov/caisi",
         "url": "https://www.nist.gov/caisi"
@@ -814,9 +708,7 @@
       "kind": "governance",
       "description": "Annual State of AI Safety in China reports (2023–2026) tracking domestic and international governance, technical safety research, expert views, and industry practice; the 2026 edition reports a shift from content control toward controlling agentic AI actions, with agent safety the most active area of Chinese frontier-safety research.",
       "chapters": [],
-      "aliases": [
-        "Concordia AI"
-      ],
+      "aliases": ["Concordia AI"],
       "links": {
         "listed": "https://aisafetychina.com/",
         "url": "https://aisafetychina.com/"
@@ -838,9 +730,7 @@
       "reason": "Maps China's frontier safety research ecosystem",
       "kind": "measurement",
       "description": "Explorer over a database of frontier-AI safety papers with substantial Chinese-institution authorship (April 2023 – April 2026), classified into alignment, robustness, monitoring, and systemic safety, with profiles of 28 Chinese research groups.",
-      "chapters": [
-        65
-      ],
+      "chapters": [65],
       "aliases": [],
       "links": {
         "listed": "https://aisafetychina.com/research/",
@@ -863,13 +753,8 @@
       "reason": "Societal-scale advanced-AI risk",
       "kind": "alignment",
       "description": "Nonprofit working to reduce societal-scale AI risk through technical and conceptual research, benchmarks (including work on deception, manipulation, and defining AGI), a compute cluster and fellowships for safety researchers, and advocacy for safety standards.",
-      "chapters": [
-        61,
-        65
-      ],
-      "aliases": [
-        "Center for AI Safety"
-      ],
+      "chapters": [61, 65],
+      "aliases": ["Center for AI Safety"],
       "links": {
         "listed": "https://safe.ai/",
         "url": "https://safe.ai/"
@@ -891,13 +776,8 @@
       "reason": "Advanced AI control and misalignment",
       "kind": "alignment",
       "description": "Nonprofit researching risks from AI systems that deliberately act against their developers; it introduced the AI control research area, published evidence that language models can fake alignment, and advises developers and governments on risks from misaligned agents.",
-      "chapters": [
-        65,
-        66
-      ],
-      "aliases": [
-        "Redwood Research"
-      ],
+      "chapters": [65, 66],
+      "aliases": ["Redwood Research"],
       "links": {
         "listed": "https://www.redwoodresearch.org/",
         "url": "https://www.redwoodresearch.org/"
@@ -919,13 +799,8 @@
       "reason": "Control of potentially adversarial superhuman AI",
       "kind": "alignment",
       "description": "Overview of AI control: ensuring an AI cannot cause harm even if egregiously misaligned, assessed by a model’s capability to subvert safety protocols (such as weaker trusted models monitoring stronger untrusted ones) rather than its inclination to. It collects the paper “AI Control: Improving Safety Despite Intentional Subversion” and the BashBench, BashArena, and LinuxArena settings.",
-      "chapters": [
-        65,
-        66
-      ],
-      "aliases": [
-        "AI Control"
-      ],
+      "chapters": [65, 66],
+      "aliases": ["AI Control"],
       "links": {
         "listed": "https://www.redwoodresearch.org/research/ai-control",
         "url": "https://www.redwoodresearch.org/research/ai-control"
@@ -947,12 +822,8 @@
       "reason": "Alignment for systems surpassing humans",
       "kind": "alignment",
       "description": "Nonprofit working to align future machine-learning systems with human interests; its current research is theoretical — mechanistic explanations of network behaviour, aiming at algorithms that predict behaviour from the weights rather than by sampling, applied to out-of-distribution prediction and anomaly detection.",
-      "chapters": [
-        64
-      ],
-      "aliases": [
-        "Alignment Research Center"
-      ],
+      "chapters": [64],
+      "aliases": ["Alignment Research Center"],
       "links": {
         "listed": "https://www.alignment.org/",
         "url": "https://www.alignment.org/"
@@ -974,13 +845,8 @@
       "reason": "Frontier safety/security research",
       "kind": "alignment",
       "description": "Research and field-building organisation working on alignment (e.g. deception detection), robustness (adversarial attacks on safety systems), and model evaluations (vulnerabilities, persuasion); it runs alignment workshops, a Berkeley co-working space, and a grant programme.",
-      "chapters": [
-        64,
-        65
-      ],
-      "aliases": [
-        "FAR.AI"
-      ],
+      "chapters": [64, 65],
+      "aliases": ["FAR.AI"],
       "links": {
         "listed": "https://www.far.ai/",
         "url": "https://www.far.ai/"
@@ -1003,10 +869,7 @@
       "kind": "governance",
       "description": "Research index of GovAI: papers, technical reports, and policy briefs on frontier-AI regulation, technical governance, risk management, security, threat modelling, AI and biosecurity, and economics.",
       "chapters": [],
-      "aliases": [
-        "GovAI",
-        "Centre for the Governance of AI"
-      ],
+      "aliases": ["GovAI", "Centre for the Governance of AI"],
       "links": {
         "listed": "https://www.governance.ai/research",
         "url": "https://www.governance.ai/research"
@@ -1028,13 +891,8 @@
       "reason": "Frontier capability thresholds/risk",
       "kind": "framework",
       "description": "Industry nonprofit of frontier developers (Amazon, Anthropic, Google, Meta, Microsoft, OpenAI) that publishes issue briefs and technical reports on frontier capability assessments and safety frameworks, runs the AI Safety Fund, and operates information-sharing workstreams on biological, cyber, nuclear, and security risks.",
-      "chapters": [
-        65,
-        66
-      ],
-      "aliases": [
-        "Frontier Model Forum"
-      ],
+      "chapters": [65, 66],
+      "aliases": ["Frontier Model Forum"],
       "links": {
         "listed": "https://www.frontiermodelforum.org/",
         "url": "https://www.frontiermodelforum.org/"
@@ -1126,10 +984,7 @@
       "kind": "lab",
       "description": "Research index for the GLM model family — base, multimodal, reasoning, agentic, and code models — including the GLM-5 technical report (from “vibe coding” to agentic engineering), GLM-5.x releases aimed at long-horizon tasks, and a GLM-5.3 report on emergent cyber capabilities.",
       "chapters": [],
-      "aliases": [
-        "Zhipu",
-        "Z.ai"
-      ],
+      "aliases": ["Zhipu", "Z.ai"],
       "links": {
         "listed": "https://www.zhipuai.cn/en/research",
         "url": "https://www.zhipuai.cn/en/research"
@@ -1152,9 +1007,7 @@
       "kind": "lab",
       "description": "ByteDance’s Seed team (founded 2023), researching language, speech, vision, world models, AI infrastructure, and interaction toward general intelligence; it releases the Seed2 language and agent models, Seedream, Seedance, and audio models, and runs Seed Edge, a long-term programme on general intelligence.",
       "chapters": [],
-      "aliases": [
-        "ByteDance Seed"
-      ],
+      "aliases": ["ByteDance Seed"],
       "links": {
         "listed": "https://seed.bytedance.com/en/",
         "url": "https://seed.bytedance.com/en/"
@@ -1223,9 +1076,7 @@
       "kind": "lab",
       "description": "Chinese-language corporate site of MiniMax, which states the goal of achieving AGI and lists its self-developed multimodal models (M3, M2.7, M2.5, H3 video, Speech 2.8, Music 3.0) and products.",
       "chapters": [],
-      "aliases": [
-        "MiniMax"
-      ],
+      "aliases": ["MiniMax"],
       "links": {
         "listed": "https://www.minimax.cn/",
         "url": "https://www.minimax.cn/"
@@ -1247,14 +1098,8 @@
       "reason": "Explicit measurement of progress toward AGI",
       "kind": "measurement",
       "description": "Nonprofit running the ARC-AGI benchmarks (ARC-AGI-1 to -3) and prize competitions on Kaggle for open-sourced solutions; it defines AGI as matching human learning efficiency, targets tasks easy for humans and hard for AI, and keeps a verified model leaderboard.",
-      "chapters": [
-        38,
-        61
-      ],
-      "aliases": [
-        "ARC Prize",
-        "ARC-AGI"
-      ],
+      "chapters": [38, 61],
+      "aliases": ["ARC Prize", "ARC-AGI"],
       "links": {
         "listed": "https://arcprize.org/",
         "url": "https://arcprize.org/"
@@ -1276,14 +1121,8 @@
       "reason": "Agentic/general intelligence measurement",
       "kind": "measurement",
       "description": "Interactive benchmark in which agents explore novel game environments, infer goals, and learn continuously; it measures skill-acquisition efficiency, long-horizon planning under sparse feedback, and adaptation, with public games, human leaderboards, replays, and an agent toolkit.",
-      "chapters": [
-        38,
-        61,
-        63
-      ],
-      "aliases": [
-        "ARC-AGI-3"
-      ],
+      "chapters": [38, 61, 63],
+      "aliases": ["ARC-AGI-3"],
       "links": {
         "listed": "https://arcprize.org/arc-agi/3",
         "url": "https://arcprize.org/arc-agi/3"
@@ -1305,12 +1144,8 @@
       "reason": "Probabilistic future-AI forecasting",
       "kind": "scenario",
       "description": "Forecasting platform aggregating participants’ probabilistic predictions; its long-running AI questions include the dates of weakly general AI, general AI, and transformative AI and the interval from weak AGI to superintelligence, and it runs AI tournaments and FutureEval, a benchmark of AI forecasting ability.",
-      "chapters": [
-        21
-      ],
-      "aliases": [
-        "Metaculus"
-      ],
+      "chapters": [21],
+      "aliases": ["Metaculus"],
       "links": {
         "listed": "https://www.metaculus.com/",
         "url": "https://www.metaculus.com/"
@@ -1332,9 +1167,7 @@
       "reason": "AI forecasts benchmarked against humans",
       "kind": "measurement",
       "description": "Spring 2026 season of the AI Forecasting Benchmark (now FutureEval): registered bots forecast real-world questions, a subset also goes to professional forecasters for a direct bots-versus-humans comparison, and Metaculus reports that the professionals have won every season so far.",
-      "chapters": [
-        61
-      ],
+      "chapters": [61],
       "aliases": [],
       "links": {
         "listed": "https://www.metaculus.com/aib/2026/spring/",
@@ -1357,13 +1190,8 @@
       "reason": "Live frontier intelligence/performance trends",
       "kind": "measurement",
       "description": "Independent benchmarking company measuring models, the inference providers that serve them, and the chips they run on; it publishes the Artificial Analysis Intelligence Index and compares speed, latency, and cost across language, image, video, and speech models.",
-      "chapters": [
-        48,
-        61
-      ],
-      "aliases": [
-        "Artificial Analysis"
-      ],
+      "chapters": [48, 61],
+      "aliases": ["Artificial Analysis"],
       "links": {
         "listed": "https://artificialanalysis.ai/",
         "url": "https://artificialanalysis.ai/"
@@ -1385,10 +1213,7 @@
       "reason": "Frontier capability trajectory",
       "kind": "measurement",
       "description": "Model comparison ranking language models on Intelligence Index v4.3.2 — a composite of ten independently run evaluations including Terminal-Bench, SciCode, and Humanity’s Last Exam — with output speed, latency, price, and context window for 673 models on the check date.",
-      "chapters": [
-        48,
-        61
-      ],
+      "chapters": [48, 61],
       "aliases": [],
       "links": {
         "listed": "https://artificialanalysis.ai/models",
@@ -1411,13 +1236,8 @@
       "reason": "Foundation-model ecosystem evolution",
       "kind": "institute",
       "description": "Stanford HAI centre studying how foundation models are built and deployed — data, systems, training, evaluation, transparency, and policy; its projects include HELM, the Foundation Model Transparency Index, Levanter, and Ecosystem Graphs.",
-      "chapters": [
-        6,
-        61
-      ],
-      "aliases": [
-        "CRFM"
-      ],
+      "chapters": [6, 61],
+      "aliases": ["CRFM"],
       "links": {
         "listed": "https://crfm.stanford.edu/",
         "url": "https://crfm.stanford.edu/"
@@ -1439,13 +1259,8 @@
       "reason": "Frontier developer/system tracking",
       "kind": "measurement",
       "description": "Annual index scoring foundation-model developers on 100 transparency indicators covering data, labour, and compute inputs, capabilities and risks, and downstream use; the December 2025 edition scored 13 companies with a mean of 41, 17 points below the previous year, and found training data still opaque.",
-      "chapters": [
-        66
-      ],
-      "aliases": [
-        "Foundation Model Transparency Index",
-        "FMTI"
-      ],
+      "chapters": [66],
+      "aliases": ["Foundation Model Transparency Index", "FMTI"],
       "links": {
         "listed": "https://crfm.stanford.edu/fmti/",
         "url": "https://crfm.stanford.edu/fmti/"
@@ -1467,12 +1282,8 @@
       "reason": "Large-scale frontier model evaluation",
       "kind": "measurement",
       "description": "Open evaluation system for language and multimodal models, publishing CompassRank leaderboards, a pairwise-vote arena, and domain benchmarks such as MMBench and LawBench.",
-      "chapters": [
-        61
-      ],
-      "aliases": [
-        "OpenCompass"
-      ],
+      "chapters": [61],
+      "aliases": ["OpenCompass"],
       "links": {
         "listed": "https://opencompass.org.cn/",
         "url": "https://opencompass.org.cn/"
@@ -1494,13 +1305,8 @@
       "reason": "Frontier safety/capability benchmarks",
       "kind": "framework",
       "description": "The laboratory’s large-model safety evaluation system, supporting regulatory filing evaluations and collecting its safety benchmarks and judge models (SALAD-Bench, MD-Judge, MM-SafetyBench, and others), jailbreak research, and watermarking and deepfake-detection work.",
-      "chapters": [
-        61,
-        65
-      ],
-      "aliases": [
-        "AI45"
-      ],
+      "chapters": [61, 65],
+      "aliases": ["AI45"],
       "links": {
         "listed": "https://ai45.shlab.org.cn/eval",
         "url": "https://ai45.shlab.org.cn/eval"
@@ -1522,12 +1328,8 @@
       "reason": "Chinese model capability evolution",
       "kind": "measurement",
       "description": "Chinese evaluation suite of 13,948 multiple-choice questions across 52 disciplines and four difficulty levels, from junior-high to professional exams, with a public leaderboard measuring the Chinese-language knowledge and reasoning of foundation models.",
-      "chapters": [
-        61
-      ],
-      "aliases": [
-        "C-Eval"
-      ],
+      "chapters": [61],
+      "aliases": ["C-Eval"],
       "links": {
         "listed": "https://cevalbenchmark.com/",
         "url": "https://cevalbenchmark.com/"
@@ -1550,9 +1352,7 @@
       "kind": "compute",
       "description": "Open-source model hub with model and dataset repositories for language, speech, and multimodal models, hosted demo spaces, and an MCP community.",
       "chapters": [],
-      "aliases": [
-        "ModelScope"
-      ],
+      "aliases": ["ModelScope"],
       "links": {
         "listed": "https://modelscope.cn/",
         "url": "https://modelscope.cn/"
@@ -1598,9 +1398,7 @@
       "kind": "lab",
       "description": "Research hub with technical write-ups including Step3 (an open multimodal reasoning mixture-of-experts with 321B total and 38B active parameters, co-designed with its serving system to cut decoding cost), Step-Audio 2, NextStep-1, Open-Reasoner-Zero, and StepFun-Prover.",
       "chapters": [],
-      "aliases": [
-        "StepFun"
-      ],
+      "aliases": ["StepFun"],
       "links": {
         "listed": "https://chat.stepfun.com/research",
         "url": "https://chat.stepfun.com/research"
@@ -1623,9 +1421,7 @@
       "kind": "institute",
       "description": "Hangzhou research institution (founded 2017) organised around intelligent computing — brain-like computing and intelligent-computing platforms for scientific uses such as astronomy and drug discovery.",
       "chapters": [],
-      "aliases": [
-        "Zhejiang Lab"
-      ],
+      "aliases": ["Zhejiang Lab"],
       "links": {
         "listed": "https://en.zhejianglab.org/",
         "url": "https://en.zhejianglab.org/"
@@ -1648,9 +1444,7 @@
       "kind": "institute",
       "description": "Chinese Academy of Sciences institute for intelligent science and technology (founded 1956) whose programme centres on “autonomously evolving intelligence” through brain-inspired intelligence, multimodal cognition, and game-theoretic decision-making; it hosts the State Key Laboratory of Multimodal AI Systems and an AI ethics and governance centre.",
       "chapters": [],
-      "aliases": [
-        "CASIA"
-      ],
+      "aliases": ["CASIA"],
       "links": {
         "listed": "https://www.ia.cas.cn/",
         "url": "https://ia.cas.cn/"
@@ -1696,9 +1490,7 @@
       "kind": "governance",
       "description": "Research institute under China’s Ministry of Industry and Information Technology that describes itself as a government think tank; it publishes white papers, blue books, and indices on AI and computing power, including a 2026 AI safety governance blue book and China computing-power development indices.",
       "chapters": [],
-      "aliases": [
-        "CAICT"
-      ],
+      "aliases": ["CAICT"],
       "links": {
         "listed": "https://www.caict.ac.cn/",
         "url": "https://www.caict.ac.cn/"
@@ -1720,9 +1512,7 @@
       "reason": "National compute infrastructure trends",
       "kind": "compute",
       "description": "Industry portal for China’s computing-power sector: news and trend analysis on chips, data centres, networking, and AI infrastructure, and a marketplace for trading compute.",
-      "chapters": [
-        25
-      ],
+      "chapters": [25],
       "aliases": [],
       "links": {
         "listed": "https://www.chinacomputing.net/",
@@ -1745,10 +1535,7 @@
       "reason": "Forecasts AI compute/agents through 2030",
       "kind": "compute",
       "description": "The 2026 China AI Computing Power Development Assessment Report, which attributes rising compute demand to agent token consumption and forecasts China’s intelligent-computing capacity at 2,576.5 EFLOPS in 2026 and 10,524.3 EFLOPS in 2030, with global active agents rising from 79.4 million to 2.216 billion over the same period.",
-      "chapters": [
-        25,
-        48
-      ],
+      "chapters": [25, 48],
       "aliases": [],
       "links": {
         "listed": "https://www.aicconf.net/2026/report/",
@@ -1772,9 +1559,7 @@
       "kind": "lab",
       "description": "Research index of publications and releases on GPT-series language, multimodal, and audio models, framed by OpenAI’s stated aim of AGI that benefits humanity.",
       "chapters": [],
-      "aliases": [
-        "OpenAI"
-      ],
+      "aliases": ["OpenAI"],
       "links": {
         "listed": "https://openai.com/research/",
         "url": "https://openai.com/research/"
@@ -1796,13 +1581,8 @@
       "reason": "Future capability thresholds + severe risk",
       "kind": "framework",
       "description": "Version 2 (April 2025) of OpenAI’s Preparedness Framework: High and Critical capability thresholds for Tracked Categories (biological and chemical, cybersecurity, AI self-improvement), Research Categories such as long-range autonomy, sandbagging, and autonomous replication, and Capabilities and Safeguards Reports that record evaluations and mitigations.",
-      "chapters": [
-        65,
-        66
-      ],
-      "aliases": [
-        "Preparedness Framework"
-      ],
+      "chapters": [65, 66],
+      "aliases": ["Preparedness Framework"],
       "links": {
         "listed": "https://openai.com/index/updating-our-preparedness-framework/",
         "url": "https://openai.com/index/updating-our-preparedness-framework/"
@@ -1825,9 +1605,7 @@
       "kind": "lab",
       "description": "Research index of Anthropic’s Alignment, Interpretability, Economics, Societal Impacts, and Frontier Red Team teams on model safety, internal mechanisms, and societal effects.",
       "chapters": [],
-      "aliases": [
-        "Anthropic"
-      ],
+      "aliases": ["Anthropic"],
       "links": {
         "listed": "https://www.anthropic.com/research",
         "url": "https://www.anthropic.com/research"
@@ -1850,9 +1628,7 @@
       "kind": "scenario",
       "description": "Anthropic programme on the consequences of powerful AI, publishing three scenarios for the US economy through 2030 that vary capability and adoption pace, metrics on the pace of AI-led R&D and safety-compute allocation inside a frontier lab, and an analysis of futures under recursive self-improvement.",
       "chapters": [],
-      "aliases": [
-        "Anthropic Institute"
-      ],
+      "aliases": ["Anthropic Institute"],
       "links": {
         "listed": "https://www.anthropic.com/institute",
         "url": "https://www.anthropic.com/institute"
@@ -1875,10 +1651,7 @@
       "kind": "lab",
       "description": "Research overview: agents and robotics (SIMA 2, Gemini Robotics), interactive world models (Genie 3), game-playing systems, and publications including frontier-model evaluations.",
       "chapters": [],
-      "aliases": [
-        "Google DeepMind",
-        "DeepMind"
-      ],
+      "aliases": ["Google DeepMind", "DeepMind"],
       "links": {
         "listed": "https://deepmind.google/research/",
         "url": "https://deepmind.google/research/"
@@ -1900,13 +1673,8 @@
       "reason": "Frontier capability thresholds",
       "kind": "framework",
       "description": "May 2024 introduction of the Frontier Safety Framework: Critical Capability Levels at which models could cause severe harm, early-warning evaluations to detect models approaching them, and security and deployment mitigations; the first version covered autonomy, biosecurity, cybersecurity, and ML R&D.",
-      "chapters": [
-        65,
-        66
-      ],
-      "aliases": [
-        "Frontier Safety Framework"
-      ],
+      "chapters": [65, 66],
+      "aliases": ["Frontier Safety Framework"],
       "links": {
         "listed": "https://deepmind.google/discover/blog/introducing-the-frontier-safety-framework/",
         "url": "https://deepmind.google/blog/introducing-the-frontier-safety-framework/"
@@ -1929,10 +1697,7 @@
       "kind": "lab",
       "description": "Meta’s AI research page, now centred on the Muse models (Muse Spark multimodal reasoning, the open-weight Muse Glimmer, Muse Image), with safety reports under Meta’s Advanced AI Scaling Framework covering chemical, biological, cyber, and loss-of-control risks.",
       "chapters": [],
-      "aliases": [
-        "Meta AI",
-        "Meta FAIR"
-      ],
+      "aliases": ["Meta AI", "Meta FAIR"],
       "links": {
         "listed": "https://ai.meta.com/research/",
         "url": "https://ai.meta.com/research/"
@@ -1955,9 +1720,7 @@
       "kind": "lab",
       "description": "AI research-area hub aggregating projects, labs, and publications across vision, language, audio, and health, with recent work on agent evaluation, LLM reasoning, and the security of generated code.",
       "chapters": [],
-      "aliases": [
-        "Microsoft Research"
-      ],
+      "aliases": ["Microsoft Research"],
       "links": {
         "listed": "https://www.microsoft.com/en-us/research/research-area/artificial-intelligence/",
         "url": "https://www.microsoft.com/en-us/research/research-area/artificial-intelligence/"
@@ -1980,9 +1743,7 @@
       "kind": "lab",
       "description": "Research portal covering machine learning, 3D deep learning, vision, and robotics, with labs including Spatial Intelligence, Autonomous Vehicles, and Deep Imagination, linked to the Nemotron agentic models, Cosmos physical-AI models, and open research libraries.",
       "chapters": [],
-      "aliases": [
-        "NVIDIA Research"
-      ],
+      "aliases": ["NVIDIA Research"],
       "links": {
         "listed": "https://research.nvidia.com/",
         "url": "https://www.nvidia.com/en-us/research/"
@@ -2005,11 +1766,7 @@
       "kind": "lab",
       "description": "Nonprofit institute that trains and releases fully open models — OLMo language models, Molmo multimodal models, Tülu post-training — with their data, code, weights, and evaluation frameworks, so the full training flow can be inspected.",
       "chapters": [],
-      "aliases": [
-        "Ai2",
-        "Allen Institute for AI",
-        "AllenAI"
-      ],
+      "aliases": ["Ai2", "Allen Institute for AI", "AllenAI"],
       "links": {
         "listed": "https://allenai.org/",
         "url": "https://allenai.org/"
@@ -2031,13 +1788,8 @@
       "reason": "Long-term advanced-AI alignment",
       "kind": "alignment",
       "description": "UC Berkeley centre for the theory, practice, and policy of beneficial AI, which argues that optimising a fixed proxy for value is insufficient; it publishes on goal misgeneralisation, human-AI coordination, and offline reinforcement learning.",
-      "chapters": [
-        32,
-        65
-      ],
-      "aliases": [
-        "Center for Human-Compatible AI"
-      ],
+      "chapters": [32, 65],
+      "aliases": ["Center for Human-Compatible AI"],
       "links": {
         "listed": "https://humancompatible.ai/",
         "url": "https://humancompatible.ai/"
@@ -2060,10 +1812,7 @@
       "kind": "governance",
       "description": "Organisation that credits its earlier work with helping found AI alignment and now argues that artificial superintelligence would by default cause human extinction; its technical governance team has published an example international agreement to prevent premature superintelligence, built on training-compute thresholds, AI-chip tracking, and research restrictions.",
       "chapters": [],
-      "aliases": [
-        "MIRI",
-        "Machine Intelligence Research Institute"
-      ],
+      "aliases": ["MIRI", "Machine Intelligence Research Institute"],
       "links": {
         "listed": "https://www.miri.org/",
         "url": "https://intelligence.org/"
@@ -2085,13 +1834,8 @@
       "reason": "Frontier capabilities/autonomy experiments",
       "kind": "alignment",
       "description": "Studies the capabilities and motivations of current AI agents to understand the risk of losing control to them, with experiments on shutdown resistance and specification gaming in reasoning models, autonomous hacking and self-replication, and cheap removal of safety fine-tuning from open-weight models.",
-      "chapters": [
-        63,
-        65
-      ],
-      "aliases": [
-        "Palisade Research"
-      ],
+      "chapters": [63, 65],
+      "aliases": ["Palisade Research"],
       "links": {
         "listed": "https://palisaderesearch.org/",
         "url": "https://palisaderesearch.org/"
@@ -2113,13 +1857,8 @@
       "reason": "Scheming/deception in frontier AI",
       "kind": "alignment",
       "description": "Researches scheming — AI that pursues its own goals while appearing aligned: how scheming emerges, methods to detect it, and pre-deployment scheming evaluations of frontier models for developers, plus governance work on loss of control and internal deployment.",
-      "chapters": [
-        63,
-        65
-      ],
-      "aliases": [
-        "Apollo Research"
-      ],
+      "chapters": [63, 65],
+      "aliases": ["Apollo Research"],
       "links": {
         "listed": "https://www.apolloresearch.ai/",
         "url": "https://www.apolloresearch.ai/"
@@ -2142,9 +1881,7 @@
       "kind": "governance",
       "description": "RAND’s AI research hub: AI governance and making future systems safer, military applications, workforce displacement, and adversary use of AI, with recent reports on US strategy for artificial superintelligence and on managing risk on the road to advanced AI.",
       "chapters": [],
-      "aliases": [
-        "RAND"
-      ],
+      "aliases": ["RAND"],
       "links": {
         "listed": "https://www.rand.org/topics/artificial-intelligence.html",
         "url": "https://www.rand.org/topics/artificial-intelligence.html"
@@ -2167,9 +1904,7 @@
       "kind": "governance",
       "description": "Hub for CSIS analysis of AI’s implications for warfare, US national security, and the global economy, drawing on the Wadhwani AI Center, Futures Lab, and technology programmes; recent items cover global AI governance, US federal AI spending, and AI-agent containment failures.",
       "chapters": [],
-      "aliases": [
-        "CSIS"
-      ],
+      "aliases": ["CSIS"],
       "links": {
         "listed": "https://www.csis.org/topics/artificial-intelligence",
         "url": "https://www.csis.org/topics/artificial-intelligence"
@@ -2215,9 +1950,7 @@
       "kind": "governance",
       "description": "CNAS Technology and National Security page on AI: bottlenecks to AI progress (energy, compute infrastructure), governance frameworks, and AI partnerships abroad; it links the AI Security and Stability project on advanced-AI risk in cyber, biological, and nuclear domains, compute governance, and Chinese AI decision-making.",
       "chapters": [],
-      "aliases": [
-        "CNAS"
-      ],
+      "aliases": ["CNAS"],
       "links": {
         "listed": "https://www.cnas.org/topics/artificial-intelligence",
         "url": "https://www.cnas.org/research/technology-and-national-security/artificial-intelligence-ssp"
@@ -2240,9 +1973,7 @@
       "kind": "governance",
       "description": "Carnegie Endowment AI research, oriented to anticipating international security challenges from AI over 2–5 and 5–10 year horizons, including a China AI Initiative on China’s AI ecosystem, governance, and US–China competition.",
       "chapters": [],
-      "aliases": [
-        "Carnegie Endowment"
-      ],
+      "aliases": ["Carnegie Endowment"],
       "links": {
         "listed": "https://carnegieendowment.org/topics/artificial-intelligence",
         "url": "https://carnegieendowment.org/topics/ai"
@@ -2265,9 +1996,7 @@
       "kind": "governance",
       "description": "Brookings research and commentary on AI across its AI and Emerging Technology Initiative, Governance Studies, Economic Studies, and Foreign Policy programmes; recent items address access in AI evaluation, the economics of specialisation, and financing AI infrastructure.",
       "chapters": [],
-      "aliases": [
-        "Brookings"
-      ],
+      "aliases": ["Brookings"],
       "links": {
         "listed": "https://www.brookings.edu/topic/artificial-intelligence/",
         "url": "https://www.brookings.edu/topics/artificial-intelligence/"
@@ -2290,9 +2019,7 @@
       "kind": "governance",
       "description": "Programme on the geopolitical and societal effects of emerging technology, publishing briefs on national AI strategies and running the GeoTech Commission on AI, whose June 2026 report sets out a roadmap for US AI leadership.",
       "chapters": [],
-      "aliases": [
-        "GeoTech Center"
-      ],
+      "aliases": ["GeoTech Center"],
       "links": {
         "listed": "https://www.atlanticcouncil.org/programs/geotech-center/",
         "url": "https://www.atlanticcouncil.org/programs/geotech-center/"
@@ -2315,10 +2042,7 @@
       "kind": "governance",
       "description": "Nonprofit making recommendations for US competitiveness as AI reshapes national security and the economy, aimed at winning the “techno-economic competition by 2030”; it maintains a Tech Scorecard tracking US–China technology competition and publishes reports on AI in the military and intelligence.",
       "chapters": [],
-      "aliases": [
-        "Special Competitive Studies Project",
-        "SCSP"
-      ],
+      "aliases": ["Special Competitive Studies Project", "SCSP"],
       "links": {
         "listed": "https://www.scsp.ai/",
         "url": "https://www.scsp.ai/"
@@ -2341,9 +2065,7 @@
       "kind": "governance",
       "description": "Think tank for accelerating scientific, technological, and industrial progress, with policy work on metascience, high-skilled immigration, biotechnology, and emerging technology, including how the US should prepare for automated AI R&D and a speed-for-security bargain for AI data centres.",
       "chapters": [],
-      "aliases": [
-        "Institute for Progress"
-      ],
+      "aliases": ["Institute for Progress"],
       "links": {
         "listed": "https://ifp.org/",
         "url": "https://ifp.org/"
@@ -2366,9 +2088,7 @@
       "kind": "lab",
       "description": null,
       "chapters": [],
-      "aliases": [
-        "Tencent AI Lab"
-      ],
+      "aliases": ["Tencent AI Lab"],
       "links": {
         "listed": "https://ailab.tencent.com/",
         "url": "https://ailab.tencent.com/"
@@ -2391,9 +2111,7 @@
       "kind": "lab",
       "description": "Alibaba’s research institute for basic science and applied technology, which published annual Top 10 Technology Trends forecasts (editions to 2023 on the site) alongside research-area and lab pages and the Alibaba Innovative Research programme.",
       "chapters": [],
-      "aliases": [
-        "DAMO Academy"
-      ],
+      "aliases": ["DAMO Academy"],
       "links": {
         "listed": "https://damo.alibaba.com/",
         "url": "https://damo.alibaba.com/"
@@ -2416,9 +2134,7 @@
       "kind": "lab",
       "description": "Home of the Qwen model family and Qwen Chat, with research posts on releases such as Qwen3 (dense and mixture-of-experts open-weight models including Qwen3-235B-A22B), Qwen3-VL, Qwen3-Omni, and Qwen3.5; the team states that it aims at artificial general intelligence.",
       "chapters": [],
-      "aliases": [
-        "Qwen"
-      ],
+      "aliases": ["Qwen"],
       "links": {
         "listed": "https://qwen.ai/",
         "url": "https://qwen.ai/"
@@ -2441,9 +2157,7 @@
       "kind": "lab",
       "description": null,
       "chapters": [],
-      "aliases": [
-        "Baidu Research"
-      ],
+      "aliases": ["Baidu Research"],
       "links": {
         "listed": "https://research.baidu.com/",
         "url": "https://research.baidu.com/"
@@ -2466,10 +2180,7 @@
       "kind": "lab",
       "description": "Huawei’s AI research lab; its model-architecture direction targets foundational structures and optimisation algorithms for moving “from AI to AGI”, alongside time-series, optimisation, perception, and physical-intelligence work, and recent items include ScienceFlow, a loop that lets agents advance research projects autonomously.",
       "chapters": [],
-      "aliases": [
-        "Noah’s Ark Lab",
-        "Noah's Ark Lab"
-      ],
+      "aliases": ["Noah’s Ark Lab", "Noah's Ark Lab"],
       "links": {
         "listed": "https://www.noahlab.com.hk/",
         "url": "https://www.noahlab.com.hk/"
@@ -2492,9 +2203,7 @@
       "kind": "lab",
       "description": "Beijing company (founded May 2023) now centred on enterprise AI — industry agents, the WorldWise enterprise LLM platform, and sovereign-model training — whose one named model is Yi-Lightning, a 100B-parameter mixture-of-experts.",
       "chapters": [],
-      "aliases": [
-        "01.AI"
-      ],
+      "aliases": ["01.AI"],
       "links": {
         "listed": "https://www.01.ai/",
         "url": "https://www.01.ai/"
@@ -2517,9 +2226,7 @@
       "kind": "lab",
       "description": "Builder of the SenseNova native multimodal foundation models (unified understanding and generation with interleaved multimodal chain-of-thought) and the SenseCore compute infrastructure, with agent and vision products.",
       "chapters": [],
-      "aliases": [
-        "SenseTime"
-      ],
+      "aliases": ["SenseTime"],
       "links": {
         "listed": "https://www.sensetime.com/en/",
         "url": "https://www.sensetime.com/en/"
@@ -2565,9 +2272,7 @@
       "kind": "institute",
       "description": "China’s national learned society for AI (founded 1981), publishing CAAI Artificial Intelligence Research and other journals and more than 40 discipline and development reports since 2015, and running conferences, including a 2026 conference on large models and embodied interaction.",
       "chapters": [],
-      "aliases": [
-        "CAAI"
-      ],
+      "aliases": ["CAAI"],
       "links": {
         "listed": "https://www.caai.cn/",
         "url": "https://www.caai.cn/"
@@ -2590,9 +2295,7 @@
       "kind": "governance",
       "description": "Public institution under China’s National Development and Reform Commission for macroeconomic monitoring and forecasting and medium- and long-term trend studies; its AI publications include an AI industry-application reference architecture (2024) and a 2026 study on AI talent cultivation.",
       "chapters": [],
-      "aliases": [
-        "State Information Center"
-      ],
+      "aliases": ["State Information Center"],
       "links": {
         "listed": "https://www.sic.gov.cn/",
         "url": "https://www.sic.gov.cn/"

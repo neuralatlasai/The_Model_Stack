@@ -24,19 +24,23 @@ const equationHref = (number: string, anchor: string): string => equationUrl.get
 ---
 
 <div class="rb-claim" id={block.anchor ?? undefined} data-evidence={block.label} {...depthAttrs(block.depth)}>
-  <p class="rb-claim__text"><span class="rb-lead">Claim</span> <Inline nodes={block.content} /></p>
+  <p class="rb-claim__text">
+    <span class="rb-lead">Claim</span> <Inline nodes={block.content} />
+  </p>
   <p class="rb-claim__prov">
     <span class="rb-vh">Provenance:</span>
     <EvidenceMark label={block.label} />
-    {
-      items.map((item) => (
-        <span class="rb-claim__src">
-          {item.type === 'cite' && <CiteLink citeKey={item.key} />}
-          {item.type === 'equation' && <a class="rb-xref" href={equationHref(item.number, item.anchor)} {...xrefAttrs(`equation:${item.number}`)}>Eq. {item.number}</a>}
-          {item.type === 'doc' && <span class="rb-claim__doc">OD:{item.id}</span>}
-          {item.type === 'text' && item.text}
-        </span>
-      ))
-    }
+    {items.map((item) => (
+      <span class="rb-claim__src">
+        {item.type === 'cite' && <CiteLink citeKey={item.key} />}
+        {item.type === 'equation' && (
+          <a class="rb-xref" href={equationHref(item.number, item.anchor)} {...xrefAttrs(`equation:${item.number}`)}>
+            Eq. {item.number}
+          </a>
+        )}
+        {item.type === 'doc' && <span class="rb-claim__doc">OD:{item.id}</span>}
+        {item.type === 'text' && item.text}
+      </span>
+    ))}
   </p>
 </div>

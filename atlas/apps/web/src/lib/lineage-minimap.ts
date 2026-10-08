@@ -85,7 +85,9 @@ export function lineageMinimap(entries: readonly MinimapEntry[], width = 400, he
 
   const placed: MinimapMark[] = [];
   for (const lane of lanes) {
-    const own = entries.filter((entry) => relationKey(entry.relation) === lane.key).sort((a, b) => a.year - b.year || a.id - b.id);
+    const own = entries
+      .filter((entry) => relationKey(entry.relation) === lane.key)
+      .sort((a, b) => a.year - b.year || a.id - b.id);
     const taken: { x: number; y: number }[] = [];
     const slots = Math.max(1, Math.floor((laneW - 8) / PITCH));
     const order = Array.from({ length: slots }, (_, k) => (k % 2 === 0 ? k / 2 : -(k + 1) / 2)); // 0, -1, +1, -2, +2 …
@@ -118,11 +120,16 @@ export function lineageMinimap(entries: readonly MinimapEntry[], width = 400, he
     const y0 = recent || previous === undefined ? yOf(year) : (yOf(previous) + yOf(year)) / 2;
     const own = placed.filter((mark) => mark.year === year);
     const lowest = own.length === 0 ? yOf(year) : Math.max(...own.map((mark) => mark.y)) + 4;
-    const y1 = Math.max(lowest, recent ? yOf(year + 1) : next === undefined ? yOf(year) + 6 : (yOf(year) + yOf(next)) / 2);
+    const y1 = Math.max(
+      lowest,
+      recent ? yOf(year + 1) : next === undefined ? yOf(year) + 6 : (yOf(year) + yOf(next)) / 2,
+    );
     return { year, y0: round(y0), y1: round(y1), count: own.length };
   });
 
-  const candidates = [...new Set([yMin, ...populated.filter((year) => year % 10 === 0 || year >= split), yMax])].sort((a, b) => a - b);
+  const candidates = [...new Set([yMin, ...populated.filter((year) => year % 10 === 0 || year >= split), yMax])].sort(
+    (a, b) => a - b,
+  );
   const ticks: { year: number; y: number }[] = [];
   for (const year of candidates) {
     const y = yOf(year) + 7.5;

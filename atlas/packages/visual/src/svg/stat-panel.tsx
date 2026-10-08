@@ -26,12 +26,27 @@ function DotMatrix({ total, filled }: { readonly total: number; readonly filled:
   for (let i = 0; i < total; i += 1) {
     const cx = (i % cols) * DOT_PITCH + DOT_PITCH / 2;
     const cy = Math.floor(i / cols) * DOT_PITCH + DOT_PITCH / 2;
-    dots.push(<circle class={i >= hollow ? 'vg-dot vg-dot--on' : 'vg-dot vg-dot--off'} cx={r1(cx)} cy={r1(cy)} r={i >= hollow ? DOT_R + 0.35 : DOT_R} key={i} />);
+    dots.push(
+      <circle
+        class={i >= hollow ? 'vg-dot vg-dot--on' : 'vg-dot vg-dot--off'}
+        cx={r1(cx)}
+        cy={r1(cy)}
+        r={i >= hollow ? DOT_R + 0.35 : DOT_R}
+        key={i}
+      />,
+    );
   }
   const width = cols * DOT_PITCH;
   const height = rows * DOT_PITCH;
   return (
-    <svg class="vg-dots" viewBox={`0 0 ${width} ${height}`} width={width} height={height} aria-hidden="true" focusable="false">
+    <svg
+      class="vg-dots"
+      viewBox={`0 0 ${width} ${height}`}
+      width={width}
+      height={height}
+      aria-hidden="true"
+      focusable="false"
+    >
       {dots}
     </svg>
   );
@@ -50,7 +65,9 @@ function squarify(weights: readonly number[], width: number, height: number): Ce
   const total = weights.reduce((sum, weight) => sum + Math.max(0, weight), 0);
   if (total <= 0) return [];
   const scale = (width * height) / total;
-  const items = weights.map((weight, index) => ({ index, area: Math.max(0, weight) * scale })).sort((a, b) => b.area - a.area || a.index - b.index);
+  const items = weights
+    .map((weight, index) => ({ index, area: Math.max(0, weight) * scale }))
+    .sort((a, b) => b.area - a.area || a.index - b.index);
   const cells: Cell[] = [];
   let x = 0;
   let y = 0;
@@ -111,7 +128,13 @@ const BLOCK_H = 92;
 const BLOCK_GAP = 2;
 const BLOCK_FONT = 10;
 
-function BlockGlyph({ items, state }: { readonly items: readonly { readonly label: string; readonly weight: number; readonly emphasis: boolean }[]; readonly state: StateView }): JSX.Element {
+function BlockGlyph({
+  items,
+  state,
+}: {
+  readonly items: readonly { readonly label: string; readonly weight: number; readonly emphasis: boolean }[];
+  readonly state: StateView;
+}): JSX.Element {
   const cells = squarify(
     items.map((item) => item.weight),
     BLOCK_W,
@@ -119,7 +142,14 @@ function BlockGlyph({ items, state }: { readonly items: readonly { readonly labe
   );
   const total = items.reduce((sum, item) => sum + item.weight, 0);
   return (
-    <svg class="vg-boxes" viewBox={`-1 -1 ${BLOCK_W + 2} ${BLOCK_H + 2}`} width={BLOCK_W + 2} height={BLOCK_H + 2} aria-hidden="true" focusable="false">
+    <svg
+      class="vg-boxes"
+      viewBox={`-1 -1 ${BLOCK_W + 2} ${BLOCK_H + 2}`}
+      width={BLOCK_W + 2}
+      height={BLOCK_H + 2}
+      aria-hidden="true"
+      focusable="false"
+    >
       {cells.map((cell) => {
         const item = items[cell.index];
         if (item === undefined) return null;
@@ -133,8 +163,20 @@ function BlockGlyph({ items, state }: { readonly items: readonly { readonly labe
         const label = textWidth(item.label, BLOCK_FONT, 'mono') + 10 <= w && h >= 16;
         const showShare = h >= 16 && textWidth(share, BLOCK_FONT, 'mono') + 10 <= w && (label ? h >= 32 : true);
         return (
-          <g class={cls('vg-box', item.emphasis && 'vg-box--emph', litClass(state, item.label))} data-vg-key={item.label} key={cell.index}>
-            <rect class="vg-box__rect" x={r1(x)} y={r1(y)} width={r1(Math.max(1, w))} height={r1(Math.max(1, h))} rx="2.5" ry="2.5" />
+          <g
+            class={cls('vg-box', item.emphasis && 'vg-box--emph', litClass(state, item.label))}
+            data-vg-key={item.label}
+            key={cell.index}
+          >
+            <rect
+              class="vg-box__rect"
+              x={r1(x)}
+              y={r1(y)}
+              width={r1(Math.max(1, w))}
+              height={r1(Math.max(1, h))}
+              rx="2.5"
+              ry="2.5"
+            />
             {label && (
               <text class="vg-box__label" x={r1(x + 5)} y={r1(y + 12)}>
                 {item.label}
@@ -152,11 +194,23 @@ function BlockGlyph({ items, state }: { readonly items: readonly { readonly labe
   );
 }
 
-export function StatPanelView({ spec, state = NO_STATE }: { readonly spec: StatPanelSpec; readonly state?: StateView }): JSX.Element {
+export function StatPanelView({
+  spec,
+  state = NO_STATE,
+}: {
+  readonly spec: StatPanelSpec;
+  readonly state?: StateView;
+}): JSX.Element {
   const env = withOverrides(spec.variables, state.overrides);
   const glyph = spec.glyph;
   const blockTotal = glyph?.type === 'blocks' ? glyph.items.reduce((sum, item) => sum + item.weight, 0) : 0;
-  const blockShares = glyph?.type === 'blocks' ? allocateCells(glyph.items.map((item) => item.weight), 100) : [];
+  const blockShares =
+    glyph?.type === 'blocks'
+      ? allocateCells(
+          glyph.items.map((item) => item.weight),
+          100,
+        )
+      : [];
   return (
     <div class="vg-stat">
       <p class="vg-stat__header">{spec.header}</p>
@@ -169,7 +223,11 @@ export function StatPanelView({ spec, state = NO_STATE }: { readonly spec: StatP
             text = result.value === null ? '—' : formatValue(result.value, row.format);
           }
           return (
-            <div class={cls('vg-stat__row', litClass(state, row.key))} data-vg-key={row.key} key={`${index}:${row.key}`}>
+            <div
+              class={cls('vg-stat__row', litClass(state, row.key))}
+              data-vg-key={row.key}
+              key={`${index}:${row.key}`}
+            >
               <dt class="vg-stat__key">
                 {row.key}
                 {row.note !== undefined && <span class="vg-stat__note">{row.note}</span>}
@@ -193,8 +251,19 @@ export function StatPanelView({ spec, state = NO_STATE }: { readonly spec: StatP
           {glyph.legend.length > 0 && (
             <ul class="vg-legendlines">
               {glyph.legend.map((entry) => (
-                <li class={cls('vg-legendline', entry.marker === 'filled' && 'vg-legendline--on', litClass(state, entry.label))} data-vg-key={entry.label} key={entry.label}>
-                  <span class={cls('vg-marker', entry.marker === 'filled' ? 'vg-marker--on' : 'vg-marker--off')} aria-hidden="true" />
+                <li
+                  class={cls(
+                    'vg-legendline',
+                    entry.marker === 'filled' && 'vg-legendline--on',
+                    litClass(state, entry.label),
+                  )}
+                  data-vg-key={entry.label}
+                  key={entry.label}
+                >
+                  <span
+                    class={cls('vg-marker', entry.marker === 'filled' ? 'vg-marker--on' : 'vg-marker--off')}
+                    aria-hidden="true"
+                  />
                   <span class="vg-legendline__label">{entry.label}</span>
                   <span class="vg-leader" aria-hidden="true" />
                   <span class="vg-legendline__value">{entry.value ?? ''}</span>
@@ -209,8 +278,15 @@ export function StatPanelView({ spec, state = NO_STATE }: { readonly spec: StatP
           <BlockGlyph items={glyph.items} state={state} />
           <ul class="vg-legendlines">
             {glyph.items.map((item, index) => (
-              <li class={cls('vg-legendline', item.emphasis && 'vg-legendline--on', litClass(state, item.label))} data-vg-key={item.label} key={`${index}:${item.label}`}>
-                <span class={cls('vg-marker', 'vg-marker--box', item.emphasis ? 'vg-marker--on' : 'vg-marker--off')} aria-hidden="true" />
+              <li
+                class={cls('vg-legendline', item.emphasis && 'vg-legendline--on', litClass(state, item.label))}
+                data-vg-key={item.label}
+                key={`${index}:${item.label}`}
+              >
+                <span
+                  class={cls('vg-marker', 'vg-marker--box', item.emphasis ? 'vg-marker--on' : 'vg-marker--off')}
+                  aria-hidden="true"
+                />
                 <span class="vg-legendline__label">{item.label}</span>
                 <span class="vg-leader" aria-hidden="true" />
                 <span class="vg-legendline__value">{blockTotal > 0 ? `${blockShares[index] ?? 0} %` : '—'}</span>

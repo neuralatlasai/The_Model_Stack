@@ -67,7 +67,12 @@ export function initScrollSync(ctx: PageContext): void {
     const atBottom = isAtBottom(window.scrollY, viewportHeight, doc.documentElement.scrollHeight);
     const articleRect = article.getBoundingClientRect();
     const pick = pickActiveRegion(tops, line, atBottom, viewportHeight);
-    const progress = readingProgress({ line, articleTop: articleRect.top, articleHeight: articleRect.height, atBottom });
+    const progress = readingProgress({
+      line,
+      articleTop: articleRect.top,
+      articleHeight: articleRect.height,
+      atBottom,
+    });
 
     // … then writes.
     const region = pick.index >= 0 ? regions[pick.index] : undefined;
@@ -139,7 +144,9 @@ export function initScrollSync(ctx: PageContext): void {
     // A band from the top of the viewport down to the reading line: a region entering or
     // leaving it is exactly a threshold crossing.
     const bottomInset = `-${String(Math.round((1 - READING_THRESHOLD) * 1000) / 10)}%`;
-    const observer = ctl.observe(new IntersectionObserver(schedule, { rootMargin: `0px 0px ${bottomInset} 0px`, threshold: [0] }));
+    const observer = ctl.observe(
+      new IntersectionObserver(schedule, { rootMargin: `0px 0px ${bottomInset} 0px`, threshold: [0] }),
+    );
     for (const region of $$(`[${ATTR.region}]`, scope)) observer.observe(region);
   }
 

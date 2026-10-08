@@ -100,7 +100,14 @@ const refEntry = z
   })
   .strict();
 
-const routeRef = z.object({ id: z.string().max(60), title: z.string().max(200), number: z.string().max(12).nullable(), url: z.string().max(400) }).strict();
+const routeRef = z
+  .object({
+    id: z.string().max(60),
+    title: z.string().max(200),
+    number: z.string().max(12).nullable(),
+    url: z.string().max(400),
+  })
+  .strict();
 
 /**
  * Preview card for an atlas node the page links to (a chapter, section,
@@ -141,11 +148,20 @@ export const PageDataSchema = z
     nodeId: z.string().max(60),
     url: z.string().max(400),
     title: z.string().max(300),
-    regions: z.array(z.object({ anchor: z.string().max(120), role: z.string().max(40), title: z.string().max(200) }).strict()).max(60),
+    regions: z
+      .array(z.object({ anchor: z.string().max(120), role: z.string().max(40), title: z.string().max(200) }).strict())
+      .max(60),
     references: z.record(z.string().max(12), refEntry),
     terms: z.record(
       z.string().max(120),
-      z.object({ term: z.string().max(200), definition: z.string().max(1200), url: z.string().max(400), ownerTitle: z.string().max(200) }).strict(),
+      z
+        .object({
+          term: z.string().max(200),
+          definition: z.string().max(1200),
+          url: z.string().max(400),
+          ownerTitle: z.string().max(200),
+        })
+        .strict(),
     ),
     equations: z.record(
       z.string().max(12),
@@ -161,7 +177,11 @@ export const PageDataSchema = z
         .strict(),
     ),
     neighbours: z
-      .object({ prerequisites: z.array(routeRef).max(40), dependents: z.array(routeRef).max(60), siblings: z.array(routeRef).max(40) })
+      .object({
+        prerequisites: z.array(routeRef).max(40),
+        dependents: z.array(routeRef).max(60),
+        siblings: z.array(routeRef).max(40),
+      })
       .strict(),
     /** Preview cards for the atlas nodes this page links to, keyed by node id. */
     nodes: z.record(z.string().max(60), nodeCard).default({}),
@@ -207,7 +227,9 @@ export const StoredBookmarksSchema = z
   )
   .max(500);
 
-export const StoredRecentSchema = z.array(z.object({ nodeId: z.string().max(60), url: z.string().max(400), title: z.string().max(200) }).strict()).max(30);
+export const StoredRecentSchema = z
+  .array(z.object({ nodeId: z.string().max(60), url: z.string().max(400), title: z.string().max(200) }).strict())
+  .max(30);
 
 export const StoredTreeExpandedSchema = z.array(z.string().max(60)).max(400);
 

@@ -16,9 +16,18 @@
 
 // ── 3D simplex noise (Gustavson), seeded permutation ─────────────────────────
 const GRAD3 = [
-  [1, 1, 0], [-1, 1, 0], [1, -1, 0], [-1, -1, 0],
-  [1, 0, 1], [-1, 0, 1], [1, 0, -1], [-1, 0, -1],
-  [0, 1, 1], [0, -1, 1], [0, 1, -1], [0, -1, -1],
+  [1, 1, 0],
+  [-1, 1, 0],
+  [1, -1, 0],
+  [-1, -1, 0],
+  [1, 0, 1],
+  [-1, 0, 1],
+  [1, 0, -1],
+  [-1, 0, -1],
+  [0, 1, 1],
+  [0, -1, 1],
+  [0, 1, -1],
+  [0, -1, -1],
 ] as const;
 
 export function simplex3(seed = 1): (x: number, y: number, z: number) => number {
@@ -32,7 +41,8 @@ export function simplex3(seed = 1): (x: number, y: number, z: number) => number 
   for (let i = 0; i < 512; i += 1) perm[i] = p[i & 255] ?? 0;
   const F3 = 1 / 3;
   const G3 = 1 / 6;
-  const dot = (g: readonly number[], x: number, y: number, z: number): number => (g[0] ?? 0) * x + (g[1] ?? 0) * y + (g[2] ?? 0) * z;
+  const dot = (g: readonly number[], x: number, y: number, z: number): number =>
+    (g[0] ?? 0) * x + (g[1] ?? 0) * y + (g[2] ?? 0) * z;
   return (xin, yin, zin) => {
     const s = (xin + yin + zin) * F3;
     const i = Math.floor(xin + s);
@@ -70,7 +80,13 @@ export function simplex3(seed = 1): (x: number, y: number, z: number) => number 
     const g1 = perm[ii + i1 + (perm[jj + j1 + (perm[kk + k1] ?? 0)] ?? 0)] ?? 0;
     const g2 = perm[ii + i2 + (perm[jj + j2 + (perm[kk + k2] ?? 0)] ?? 0)] ?? 0;
     const g3 = perm[ii + 1 + (perm[jj + 1 + (perm[kk + 1] ?? 0)] ?? 0)] ?? 0;
-    return 32 * (corner(0.6, g0, x0, y0, z0) + corner(0.6, g1, x1, y1, z1) + corner(0.6, g2, x2, y2, z2) + corner(0.6, g3, x3, y3, z3));
+    return (
+      32 *
+      (corner(0.6, g0, x0, y0, z0) +
+        corner(0.6, g1, x1, y1, z1) +
+        corner(0.6, g2, x2, y2, z2) +
+        corner(0.6, g3, x3, y3, z3))
+    );
   };
 }
 
@@ -123,18 +139,37 @@ function toPolyline(x: number, y: number, pts: readonly (readonly [number, numbe
   for (let i = 0; i < pts.length - 1; i += 1) {
     const [ax, ay] = pts[i] ?? [0, 0];
     const [bx, by] = pts[i + 1] ?? [0, 0];
-    const t = Math.max(0, Math.min(1, ((x - ax) * (bx - ax) + (y - ay) * (by - ay)) / ((bx - ax) ** 2 + (by - ay) ** 2)));
+    const t = Math.max(
+      0,
+      Math.min(1, ((x - ax) * (bx - ax) + (y - ay) * (by - ay)) / ((bx - ax) ** 2 + (by - ay) ** 2)),
+    );
     best = Math.min(best, Math.hypot(x - (ax + t * (bx - ax)), y - (ay + t * (by - ay))));
   }
   return best;
 }
 
 /** Lateral (Sylvian) fissure separating the temporal lobe, and the central sulcus. */
-const SYLVIAN = [[-0.62, -0.2], [-0.3, -0.12], [0.02, -0.02], [0.3, 0.1]] as const;
-const CENTRAL = [[0.02, 0.72], [-0.06, 0.45], [-0.14, 0.18], [-0.2, 0.0]] as const;
+const SYLVIAN = [
+  [-0.62, -0.2],
+  [-0.3, -0.12],
+  [0.02, -0.02],
+  [0.3, 0.1],
+] as const;
+const CENTRAL = [
+  [0.02, 0.72],
+  [-0.06, 0.45],
+  [-0.14, 0.18],
+  [-0.2, 0.0],
+] as const;
 
 /** A point on one hemisphere's cortex for unit direction (ux, uy, uz); side = +1 left, −1 right. */
-export function hemispherePoint(noise: Noise, ux: number, uy: number, uz: number, side: 1 | -1): readonly [number, number, number] {
+export function hemispherePoint(
+  noise: Noise,
+  ux: number,
+  uy: number,
+  uz: number,
+  side: 1 | -1,
+): readonly [number, number, number] {
   const f = profile(Math.atan2(-uy, ux));
   let x = ux * HEMI.rx * f;
   let y = uy * HEMI.ry * f;
@@ -146,7 +181,9 @@ export function hemispherePoint(noise: Noise, ux: number, uy: number, uz: number
   const lateral = 1 - Math.max(0, -zl / HEMI.rz) * 0.7;
   const g = gyri(noise, x, y, side * (HEMI.centre + zl)) * (medial ? 0.4 : 1);
   const onSide = Math.max(0, zl / HEMI.rz);
-  const fissure = 0.075 * Math.exp(-((toPolyline(x, y, SYLVIAN) / 0.035) ** 2)) * onSide + 0.04 * Math.exp(-((toPolyline(x, y, CENTRAL) / 0.028) ** 2));
+  const fissure =
+    0.075 * Math.exp(-((toPolyline(x, y, SYLVIAN) / 0.035) ** 2)) * onSide +
+    0.04 * Math.exp(-((toPolyline(x, y, CENTRAL) / 0.028) ** 2));
   const d = (0.07 * g - 0.045) * lateral - fissure;
   const len = Math.hypot(x, y, zl) || 1;
   x += (x / len) * d;
@@ -171,23 +208,56 @@ export function insideBrain(x: number, y: number, z: number, margin = 0.82): boo
   const zl = z * side - HEMI.centre;
   const f = profile(Math.atan2(-y, x));
   const yy = y < 0 ? y / 0.84 : y;
-  return (x / (HEMI.rx * f)) ** 2 + (yy / (HEMI.ry * f)) ** 2 + (zl / HEMI.rz) ** 2 <= margin * margin && z * side > 0.03;
+  return (
+    (x / (HEMI.rx * f)) ** 2 + (yy / (HEMI.ry * f)) ** 2 + (zl / HEMI.rz) ** 2 <= margin * margin && z * side > 0.03
+  );
 }
 
 // ── layout ───────────────────────────────────────────────────────────────────
 
 export interface Brain3DInput {
   readonly parts: readonly { readonly n: number; readonly title: string; readonly domain: string }[];
-  readonly chapters: readonly { readonly n: number; readonly title: string; readonly url: string; readonly part: number; readonly domain: string; readonly written: boolean }[];
+  readonly chapters: readonly {
+    readonly n: number;
+    readonly title: string;
+    readonly url: string;
+    readonly part: number;
+    readonly domain: string;
+    readonly written: boolean;
+  }[];
   readonly terms: readonly { readonly term: string; readonly chapter: number }[];
   readonly prereqs: readonly (readonly [number, number])[];
 }
 
 export interface Brain3D {
-  readonly regions: readonly { readonly n: number; readonly label: string; readonly domain: string; readonly p: readonly [number, number, number] }[];
-  readonly neurons: readonly { readonly n: number; readonly title: string; readonly url: string; readonly part: number; readonly region: string; readonly domain: string; readonly written: boolean; readonly concepts: number; readonly p: readonly [number, number, number] }[];
-  readonly concepts: readonly { readonly chapter: number; readonly term: string; readonly domain: string; readonly p: readonly [number, number, number] }[];
-  readonly fibres: readonly { readonly from: number; readonly to: number; readonly c: readonly [number, number, number] }[];
+  readonly regions: readonly {
+    readonly n: number;
+    readonly label: string;
+    readonly domain: string;
+    readonly p: readonly [number, number, number];
+  }[];
+  readonly neurons: readonly {
+    readonly n: number;
+    readonly title: string;
+    readonly url: string;
+    readonly part: number;
+    readonly region: string;
+    readonly domain: string;
+    readonly written: boolean;
+    readonly concepts: number;
+    readonly p: readonly [number, number, number];
+  }[];
+  readonly concepts: readonly {
+    readonly chapter: number;
+    readonly term: string;
+    readonly domain: string;
+    readonly p: readonly [number, number, number];
+  }[];
+  readonly fibres: readonly {
+    readonly from: number;
+    readonly to: number;
+    readonly c: readonly [number, number, number];
+  }[];
 }
 
 export const REGION_LABEL: Readonly<Record<number, string>> = {
@@ -232,7 +302,11 @@ function sphere(count: number, radius: number, twist: number): (readonly [number
 }
 
 /** Pull a point toward an anchor until it lies inside the cerebrum. */
-function inside(p: readonly [number, number, number], anchor: readonly [number, number, number], margin: number): [number, number, number] {
+function inside(
+  p: readonly [number, number, number],
+  anchor: readonly [number, number, number],
+  margin: number,
+): [number, number, number] {
   let [x, y, z] = p;
   for (let k = 0; k < 10 && !insideBrain(x, y, z, margin); k += 1) {
     x = (x + anchor[0]) / 2;
@@ -245,7 +319,12 @@ function inside(p: readonly [number, number, number], anchor: readonly [number, 
 export function brainLayout(input: Brain3DInput): Brain3D {
   const regions = input.parts.map((part) => {
     const [x, y, side] = REGION[part.n] ?? [0, 0, 1];
-    return { n: part.n, label: REGION_LABEL[part.n] ?? part.title, domain: part.domain, p: [x, y, side * (HEMI.centre + 0.02)] as const };
+    return {
+      n: part.n,
+      label: REGION_LABEL[part.n] ?? part.title,
+      domain: part.domain,
+      p: [x, y, side * (HEMI.centre + 0.02)] as const,
+    };
   });
   const regionAt = new Map(regions.map((region) => [region.n, region.p]));
   const conceptCount = new Map<number, number>();
@@ -260,7 +339,17 @@ export function brainLayout(input: Brain3DInput): Brain3D {
     list.forEach((chapter, i) => {
       const [dx, dy, dz] = ring[i] ?? [0, 0, 0];
       const p = inside([centre[0] + dx, centre[1] + dy * 0.8, centre[2] + dz * 0.7], centre, 0.8);
-      neurons.push({ n: chapter.n, title: chapter.title, url: chapter.url, part, region: REGION_LABEL[part] ?? '', domain: chapter.domain, written: chapter.written, concepts: conceptCount.get(chapter.n) ?? 0, p });
+      neurons.push({
+        n: chapter.n,
+        title: chapter.title,
+        url: chapter.url,
+        part,
+        region: REGION_LABEL[part] ?? '',
+        domain: chapter.domain,
+        written: chapter.written,
+        concepts: conceptCount.get(chapter.n) ?? 0,
+        p,
+      });
     });
   }
   const at = new Map(neurons.map((neuron) => [neuron.n, neuron]));
@@ -274,7 +363,12 @@ export function brainLayout(input: Brain3DInput): Brain3D {
     seen.set(term.chapter, i + 1);
     const total = conceptCount.get(term.chapter) ?? 1;
     const [dx, dy, dz] = sphere(total, 0.05 + 0.012 * Math.sqrt(total), term.chapter)[i] ?? [0, 0, 0];
-    concepts.push({ chapter: term.chapter, term: term.term, domain: home.domain, p: inside([home.p[0] + dx, home.p[1] + dy, home.p[2] + dz], home.p, 0.86) });
+    concepts.push({
+      chapter: term.chapter,
+      term: term.term,
+      domain: home.domain,
+      p: inside([home.p[0] + dx, home.p[1] + dy, home.p[2] + dz], home.p, 0.86),
+    });
   }
 
   const fibres = input.prereqs

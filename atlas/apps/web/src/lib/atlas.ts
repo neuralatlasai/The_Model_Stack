@@ -51,12 +51,7 @@ import { mapBounded } from './concurrency.ts';
 import { pageDataFor } from './page-data.ts';
 
 export type AtlasBundleErrorCode =
-  | 'config-invalid'
-  | 'bundle-missing'
-  | 'bundle-unreadable'
-  | 'bundle-invalid'
-  | 'schema-version'
-  | 'document-missing';
+  'config-invalid' | 'bundle-missing' | 'bundle-unreadable' | 'bundle-invalid' | 'schema-version' | 'document-missing';
 
 /** Stable, branchable failure for every bundle-loading problem (engineering standards §6). */
 export class AtlasBundleError extends Error {
@@ -129,9 +124,13 @@ async function readJson(dir: string, relative: string): Promise<unknown> {
 function parseWith<S extends z.ZodType>(schema: S, value: unknown, file: string): z.output<S> {
   const result = schema.safeParse(value);
   if (!result.success) {
-    throw new AtlasBundleError('bundle-invalid', `${file} does not match the atlas schema:\n${describeIssues(result.error)}`, {
-      cause: result.error,
-    });
+    throw new AtlasBundleError(
+      'bundle-invalid',
+      `${file} does not match the atlas schema:\n${describeIssues(result.error)}`,
+      {
+        cause: result.error,
+      },
+    );
   }
   return result.data;
 }
@@ -149,7 +148,10 @@ async function readBundle(dir: string): Promise<LoadedBundle> {
     );
   }
   const manifest = parseWith(BundleManifestSchema, rawManifest, BUNDLE_FILES.manifest);
-  const [rawGraph, rawRegistry] = await Promise.all([readJson(dir, BUNDLE_FILES.graph), readJson(dir, BUNDLE_FILES.registry)]);
+  const [rawGraph, rawRegistry] = await Promise.all([
+    readJson(dir, BUNDLE_FILES.graph),
+    readJson(dir, BUNDLE_FILES.registry),
+  ]);
   const graph: AtlasGraph = parseWith(atlasGraphSchema, rawGraph, BUNDLE_FILES.graph);
   const registry: Registry = parseWith(registrySchema, rawRegistry, BUNDLE_FILES.registry);
   return { dir, manifest, graph, registry };
@@ -229,7 +231,10 @@ async function readDocument(dir: string, id: NodeId): Promise<ResearchDocument> 
   const relative = docFilePath(id);
   const envelope = parseWith(documentEnvelopeSchema, await readJson(dir, relative), relative);
   if (envelope.meta.id !== id) {
-    throw new AtlasBundleError('bundle-invalid', `${relative} holds ${envelope.meta.id}, expected ${id}. ${RUN_COMPILE}`);
+    throw new AtlasBundleError(
+      'bundle-invalid',
+      `${relative} holds ${envelope.meta.id}, expected ${id}. ${RUN_COMPILE}`,
+    );
   }
   if (envelope.schemaVersion !== DOCUMENT_SCHEMA_VERSION) {
     throw new AtlasBundleError('schema-version', `${relative} has document schema ${String(envelope.schemaVersion)}.`);

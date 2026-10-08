@@ -8,8 +8,10 @@ import { convertPhrasing } from '../inline.ts';
 import { plainText, trimInline } from '../inline-utils.ts';
 import { depthOf, type CompileState, type FlowEnv } from '../state.ts';
 
-const PERFORMANCE_HEADERS = /hardware|precision|concurrency|runtime version|measurement boundary|sequence length|input\/output|latency|throughput|ttft|tpot/u;
-const BENCHMARK_HEADERS = /capability measured|task construction|metric|contamination|protocol|known limitations|comparability/u;
+const PERFORMANCE_HEADERS =
+  /hardware|precision|concurrency|runtime version|measurement boundary|sequence length|input\/output|latency|throughput|ttft|tpot/u;
+const BENCHMARK_HEADERS =
+  /capability measured|task construction|metric|contamination|protocol|known limitations|comparability/u;
 const LONG_CELL = 160;
 
 function countMatching(headers: readonly string[], pattern: RegExp): number {
@@ -24,15 +26,25 @@ export function tableRole(headers: readonly string[], region: RegionRole): Table
   if (h.includes('key') && h.includes('type') && h.includes('work')) return 'references';
   if (region === 'position' || (first === 'relation' && (h[1] ?? '').startsWith('link'))) return 'position';
   if (region === 'sections' || h.some((header) => header.includes('what changes here'))) return 'sections';
-  if (countMatching(h, PERFORMANCE_HEADERS) >= 2 && h.some((header) => /hardware|precision|concurrency/u.test(header))) return 'performance';
+  if (countMatching(h, PERFORMANCE_HEADERS) >= 2 && h.some((header) => /hardware|precision|concurrency/u.test(header)))
+    return 'performance';
   if (countMatching(h, BENCHMARK_HEADERS) >= 3) return 'benchmark';
-  if (h.some((header) => /dataset|corpus/u.test(header)) && h.some((header) => /licen[cs]e|snapshot|provenance|role/u.test(header))) {
+  if (
+    h.some((header) => /dataset|corpus/u.test(header)) &&
+    h.some((header) => /licen[cs]e|snapshot|provenance|role/u.test(header))
+  ) {
     return 'dataset';
   }
-  if (h.some((header) => /^model\b/u.test(header)) && h.some((header) => /param|context|release|licen[cs]e|weights|architecture/u.test(header))) {
+  if (
+    h.some((header) => /^model\b/u.test(header)) &&
+    h.some((header) => /param|context|release|licen[cs]e|weights|architecture/u.test(header))
+  ) {
     return 'model';
   }
-  if (['dimension', 'axis', 'property', 'aspect', 'criterion'].includes(first) || h.some((header) => header.includes('comparison'))) {
+  if (
+    ['dimension', 'axis', 'property', 'aspect', 'criterion'].includes(first) ||
+    h.some((header) => header.includes('comparison'))
+  ) {
     return 'comparison';
   }
   return 'generic';

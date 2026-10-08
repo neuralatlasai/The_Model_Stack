@@ -46,14 +46,28 @@ export interface DashState {
 export interface Dashboard {
   readonly overview: DashState;
   readonly parts: readonly DashState[];
-  readonly line: readonly { readonly part: number; readonly numeral: string; readonly label: string; readonly restsOn: number }[];
-  readonly status: readonly { readonly n: number; readonly part: number; readonly state: ChapterState; readonly title: string; readonly url: string }[];
+  readonly line: readonly {
+    readonly part: number;
+    readonly numeral: string;
+    readonly label: string;
+    readonly restsOn: number;
+  }[];
+  readonly status: readonly {
+    readonly n: number;
+    readonly part: number;
+    readonly state: ChapterState;
+    readonly title: string;
+    readonly url: string;
+  }[];
 }
 
 const pad = (n: number): string => String(n).padStart(2, '0');
 
 /** Transitive closure over prerequisite edges ([prerequisite, chapter]). */
-export function closure(edges: readonly (readonly [number, number])[], direction: 'up' | 'down'): Map<number, Set<number>> {
+export function closure(
+  edges: readonly (readonly [number, number])[],
+  direction: 'up' | 'down',
+): Map<number, Set<number>> {
   const next = new Map<number, number[]>();
   for (const [from, to] of edges) {
     const [a, b] = direction === 'up' ? [to, from] : [from, to];
@@ -115,10 +129,13 @@ export function buildDashboard(stack: StackModel, registry: Registry, docs: read
   const conceptsOf = (list: readonly number[]): string[] =>
     registry.terms.filter((term) => term.chapter !== null && list.includes(term.chapter)).map((term) => term.term);
   const sumEvidence = (list: readonly number[]): [number, number, number] =>
-    list.reduce<[number, number, number]>((acc, n) => {
-      const row = evidence.get(n) ?? [0, 0, 0];
-      return [acc[0] + row[0], acc[1] + row[1], acc[2] + row[2]];
-    }, [0, 0, 0]);
+    list.reduce<[number, number, number]>(
+      (acc, n) => {
+        const row = evidence.get(n) ?? [0, 0, 0];
+        return [acc[0] + row[0], acc[1] + row[1], acc[2] + row[2]];
+      },
+      [0, 0, 0],
+    );
   const partOf = (n: number): number => stack.chapters[String(n)]?.part ?? 0;
   const regionsOf = (set: ReadonlySet<number>, own: number): string[] => {
     const counts = new Map<number, number>();
@@ -128,7 +145,8 @@ export function buildDashboard(stack: StackModel, registry: Registry, docs: read
     }
     return [...counts.entries()].sort((a, b) => b[1] - a[1]).map(([p]) => REGION_LABEL[p] ?? '');
   };
-  const writtenCount = (list: readonly number[]): string => `${String(list.filter((n) => stateOf(n) === 'written').length)}/${String(list.length)}`;
+  const writtenCount = (list: readonly number[]): string =>
+    `${String(list.filter((n) => stateOf(n) === 'written').length)}/${String(list.length)}`;
 
   const parts: DashState[] = stack.parts.map((part) => {
     const own = new Set(part.chapters);
@@ -156,7 +174,8 @@ export function buildDashboard(stack: StackModel, registry: Registry, docs: read
           icon: part.n,
           label: chapter === undefined ? pad(n) : /^chapter \d+/iu.test(chapter.short) ? chapter.title : chapter.short,
           url: chapter?.url ?? '/library/',
-          fill: chapter === undefined || chapter.sectionsTotal === 0 ? 0 : chapter.sectionsWritten / chapter.sectionsTotal,
+          fill:
+            chapter === undefined || chapter.sectionsTotal === 0 ? 0 : chapter.sectionsWritten / chapter.sectionsTotal,
         };
       }),
       evidence: sumEvidence(part.chapters),
@@ -178,9 +197,18 @@ export function buildDashboard(stack: StackModel, registry: Registry, docs: read
     tiles: stack.parts.map((part) => {
       const done = part.chapters.reduce((sum, n) => {
         const chapter = stack.chapters[String(n)];
-        return sum + (chapter === undefined || chapter.sectionsTotal === 0 ? 0 : chapter.sectionsWritten / chapter.sectionsTotal);
+        return (
+          sum +
+          (chapter === undefined || chapter.sectionsTotal === 0 ? 0 : chapter.sectionsWritten / chapter.sectionsTotal)
+        );
       }, 0);
-      return { n: part.n, icon: part.n, label: REGION_LABEL[part.n] ?? part.title, url: part.url, fill: part.chapters.length === 0 ? 0 : done / part.chapters.length };
+      return {
+        n: part.n,
+        icon: part.n,
+        label: REGION_LABEL[part.n] ?? part.title,
+        url: part.url,
+        fill: part.chapters.length === 0 ? 0 : done / part.chapters.length,
+      };
     }),
     evidence: sumEvidence(all),
     concepts: conceptsOf(all),
@@ -190,7 +218,18 @@ export function buildDashboard(stack: StackModel, registry: Registry, docs: read
   return {
     overview,
     parts,
-    line: parts.map((state, i) => ({ part: state.part, numeral: stack.parts[i]?.numeral ?? '', label: REGION_LABEL[state.part] ?? '', restsOn: state.restsOn })),
-    status: chapters.map((chapter) => ({ n: chapter.n, part: chapter.part, state: stateOf(chapter.n), title: chapter.title, url: chapter.url })),
+    line: parts.map((state, i) => ({
+      part: state.part,
+      numeral: stack.parts[i]?.numeral ?? '',
+      label: REGION_LABEL[state.part] ?? '',
+      restsOn: state.restsOn,
+    })),
+    status: chapters.map((chapter) => ({
+      n: chapter.n,
+      part: chapter.part,
+      state: stateOf(chapter.n),
+      title: chapter.title,
+      url: chapter.url,
+    })),
   };
 }

@@ -37,17 +37,39 @@
   text-decoration: none;
 }
 
-.lib [data-domain='foundations'] { --d: var(--domain-foundations); }
-.lib [data-domain='data'] { --d: var(--domain-data); }
-.lib [data-domain='architecture'] { --d: var(--domain-architecture); }
-.lib [data-domain='training'] { --d: var(--domain-training); }
-.lib [data-domain='hardware'] { --d: var(--domain-hardware); }
-.lib [data-domain='post-training'] { --d: var(--domain-post-training); }
-.lib [data-domain='inference'] { --d: var(--domain-inference); }
-.lib [data-domain='serving'] { --d: var(--domain-serving); }
-.lib [data-domain='agents'] { --d: var(--domain-agents); }
-.lib [data-domain='embodied'] { --d: var(--domain-embodied); }
-.lib [data-domain='evaluation'] { --d: var(--domain-evaluation); }
+.lib [data-domain='foundations'] {
+  --d: var(--domain-foundations);
+}
+.lib [data-domain='data'] {
+  --d: var(--domain-data);
+}
+.lib [data-domain='architecture'] {
+  --d: var(--domain-architecture);
+}
+.lib [data-domain='training'] {
+  --d: var(--domain-training);
+}
+.lib [data-domain='hardware'] {
+  --d: var(--domain-hardware);
+}
+.lib [data-domain='post-training'] {
+  --d: var(--domain-post-training);
+}
+.lib [data-domain='inference'] {
+  --d: var(--domain-inference);
+}
+.lib [data-domain='serving'] {
+  --d: var(--domain-serving);
+}
+.lib [data-domain='agents'] {
+  --d: var(--domain-agents);
+}
+.lib [data-domain='embodied'] {
+  --d: var(--domain-embodied);
+}
+.lib [data-domain='evaluation'] {
+  --d: var(--domain-evaluation);
+}
 
 /* ── body: weave + map + catalogue | sticky readout ──────────────────────── */
 
@@ -262,9 +284,15 @@
   transition: block-size var(--t-panel) ease;
 }
 
-.lib[data-lens='figures'] .lib-wc { --lv: var(--f); }
-.lib[data-lens='equations'] .lib-wc { --lv: var(--e); }
-.lib[data-lens='works'] .lib-wc { --lv: var(--r); }
+.lib[data-lens='figures'] .lib-wc {
+  --lv: var(--f);
+}
+.lib[data-lens='equations'] .lib-wc {
+  --lv: var(--e);
+}
+.lib[data-lens='works'] .lib-wc {
+  --lv: var(--r);
+}
 
 .lib-weave__stage:is(.has-focus, .has-part) .lib-wc:not(.is-focus, .is-up, .is-down, .is-part, .is-peek) {
   opacity: 0.22;
@@ -833,10 +861,18 @@
 }
 
 /* Lenses: a measure re-reads every tile (bar + value) and the weave's halftone. */
-.lib[data-lens='words'] .lib-tile { --lv: var(--w); }
-.lib[data-lens='figures'] .lib-tile { --lv: var(--f); }
-.lib[data-lens='equations'] .lib-tile { --lv: var(--e); }
-.lib[data-lens='works'] .lib-tile { --lv: var(--r); }
+.lib[data-lens='words'] .lib-tile {
+  --lv: var(--w);
+}
+.lib[data-lens='figures'] .lib-tile {
+  --lv: var(--f);
+}
+.lib[data-lens='equations'] .lib-tile {
+  --lv: var(--e);
+}
+.lib[data-lens='works'] .lib-tile {
+  --lv: var(--r);
+}
 
 .lib:is([data-lens='words'], [data-lens='figures'], [data-lens='equations'], [data-lens='works']) .lib-tile__cells {
   visibility: hidden;
@@ -1232,12 +1268,20 @@ a.lib-ro__item:focus-visible {
 }
 
 .lib-key--draft {
-  background-image: repeating-linear-gradient(-45deg, color-mix(in oklab, var(--domain-data) 45%, transparent) 0 1px, transparent 1px 4px);
+  background-image: repeating-linear-gradient(
+    -45deg,
+    color-mix(in oklab, var(--domain-data) 45%, transparent) 0 1px,
+    transparent 1px 4px
+  );
 }
 
 .lib-key--planned {
   border-color: color-mix(in oklab, var(--domain-data) 30%, var(--rule));
-  background-image: repeating-linear-gradient(-45deg, color-mix(in oklab, var(--domain-data) 25%, transparent) 0 1px, transparent 1px 4px);
+  background-image: repeating-linear-gradient(
+    -45deg,
+    color-mix(in oklab, var(--domain-data) 25%, transparent) 0 1px,
+    transparent 1px 4px
+  );
 }
 
 .lib-key--cell {

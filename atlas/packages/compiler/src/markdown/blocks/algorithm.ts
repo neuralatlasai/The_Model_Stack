@@ -81,7 +81,11 @@ export function parseAlgorithm(code: string, st: CompileState, env: FlowEnv, lin
     const numbered = NUMBERED.exec(row);
     if (numbered !== null) {
       phase = 'body';
-      const column = (numbered[1] ?? '').length + (numbered[2] ?? '').length + (numbered[3] ?? '').length + (numbered[4] ?? '').length;
+      const column =
+        (numbered[1] ?? '').length +
+        (numbered[2] ?? '').length +
+        (numbered[3] ?? '').length +
+        (numbered[4] ?? '').length;
       raw.push({ n: Number.parseInt(numbered[2] ?? '0', 10), column, text: numbered[5] ?? '' });
       continue;
     }
@@ -115,7 +119,8 @@ export function parseAlgorithm(code: string, st: CompileState, env: FlowEnv, lin
   if (title === null || number === null) {
     st.report('algorithm-malformed', 'algorithm title must read "Algorithm <ch>.<n> — <name>"', line);
   }
-  if (numberedColumns.length === 0) st.report('algorithm-malformed', `Algorithm ${number ?? '?'} has no numbered lines`, line);
+  if (numberedColumns.length === 0)
+    st.report('algorithm-malformed', `Algorithm ${number ?? '?'} has no numbered lines`, line);
   if (headers.input.length === 0 || headers.output.length === 0) {
     st.report('algorithm-malformed', `Algorithm ${number ?? '?'} lacks an INPUT or OUTPUT contract`, line);
   }

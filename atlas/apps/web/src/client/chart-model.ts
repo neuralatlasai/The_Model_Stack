@@ -25,7 +25,13 @@ export type PickMode = 'x' | 'xy';
  * Index of the point nearest to (px, py) among visible series (`visible` null = all).
  * Returns -1 when there is no candidate.
  */
-export function nearestPoint(points: readonly PlotPoint[], px: number, py: number, mode: PickMode, visible: ReadonlySet<string> | null): number {
+export function nearestPoint(
+  points: readonly PlotPoint[],
+  px: number,
+  py: number,
+  mode: PickMode,
+  visible: ReadonlySet<string> | null,
+): number {
   let best = -1;
   let bestPrimary = Number.POSITIVE_INFINITY;
   let bestSecondary = Number.POSITIVE_INFINITY;

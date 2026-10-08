@@ -54,6 +54,10 @@ export function buildObjectIndex(compiled: readonly CompiledSource[], table: Nod
     }
     for (const { block, region } of walkDocument(body)) {
       const fallback = region?.anchor ?? '';
+      if ((block.kind === 'heading' || block.kind === 'paragraph') && block.anchor?.startsWith('alg-') === true) {
+        const number = block.anchor.slice(4).replace('-', '.');
+        push('algorithm', `Alg. ${number}`, truncate(inlineToText(block.content), 160), block.anchor);
+      }
       switch (block.kind) {
         case 'algorithm':
           push(

@@ -53,9 +53,12 @@ const FEATURES: readonly Feature[] = [
   ['sheets', initSheets],
   ['rail', initRail],
   ['rail-track', initRailTrack],
-  ['live-instruments', (ctx) => {
-    initLiveInstruments(ctx, evaluateFigureState);
-  }],
+  [
+    'live-instruments',
+    (ctx) => {
+      initLiveInstruments(ctx, evaluateFigureState);
+    },
+  ],
   ['tree', initTree],
   ['minimap', initMinimap],
   ['reading-state', initReadingState],
@@ -65,7 +68,15 @@ const FEATURES: readonly Feature[] = [
   ['figure-explore', initFigureExplore],
   ['mini-stack', initMiniStack],
   ['timeline-explorer', initTimelineExplorer],
-  ['entity-explorer', (ctx) => { if (ctx.doc.querySelector('[data-entity-explorer]') !== null) void import('./entity-explorer.ts').then((m) => { if (!ctx.ctl.disposed) m.initEntityExplorer(ctx); }); }],
+  [
+    'entity-explorer',
+    (ctx) => {
+      if (ctx.doc.querySelector('[data-entity-explorer]') !== null)
+        void import('./entity-explorer.ts').then((m) => {
+          if (!ctx.ctl.disposed) m.initEntityExplorer(ctx);
+        });
+    },
+  ],
   ['chapter-links', initChapterLinks],
   [
     'papers-explorer',
@@ -209,7 +220,10 @@ function mount(): void {
         report('charts', error);
       });
   }
-  if (document.querySelector(EQUATION_SELECTOR) !== null || Object.keys(pageData(document)?.equations ?? {}).length > 0) {
+  if (
+    document.querySelector(EQUATION_SELECTOR) !== null ||
+    Object.keys(pageData(document)?.equations ?? {}).length > 0
+  ) {
     import('./equations.ts')
       .then((module) => {
         if (!ctl.disposed) module.initEquations(ctx);

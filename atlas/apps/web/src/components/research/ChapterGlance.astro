@@ -32,7 +32,10 @@ const MAX_DOTS = 12;
 
 const rows: GraphNode[] = doc.meta.children
   .map((id) => graph.nodes[id])
-  .filter((node): node is GraphNode => node !== undefined && (node.entityType === 'section' || node.entityType === 'verification'));
+  .filter(
+    (node): node is GraphNode =>
+      node !== undefined && (node.entityType === 'section' || node.entityType === 'verification'),
+  );
 
 interface Cell {
   readonly count: number;
@@ -53,69 +56,82 @@ const table = rows.map((node) => ({
   cells: COLUMNS.map((column) => ({ column, ...cellFor(node, column.key) })),
   written: node.hasManuscript,
 }));
-const totals = COLUMNS.map((column) => table.reduce((sum, row) => sum + (row.cells.find((cell) => cell.column.key === column.key)?.count ?? 0), 0));
+const totals = COLUMNS.map((column) =>
+  table.reduce((sum, row) => sum + (row.cells.find((cell) => cell.column.key === column.key)?.count ?? 0), 0),
+);
 const hasAny = totals.some((total) => total > 0);
 ---
 
-{
-  table.length > 0 && hasAny && (
-    <figure class="rb-glance" aria-labelledby="glance-title">
-      <figcaption class="rb-glance__head" id="glance-title">
-        <span class="rb-glance__kicker">Chapter {doc.header.number} at a glance</span>
-        <span class="rb-glance__note">one dot per research object</span>
-      </figcaption>
-      <table class="rb-glance__table">
-        <thead>
-          <tr>
-            <th scope="col" class="rb-glance__sec">Section</th>
-            {COLUMNS.map((column) => (
-              <th scope="col" title={column.label}>
-                {column.short}
-              </th>
-            ))}
-          </tr>
-        </thead>
-        <tbody>
-          {table.map((row) => (
-            <tr class:list={{ 'is-planned': !row.written }}>
-              <th scope="row" class="rb-glance__sec">
-                <a href={siteHref(row.node.url)}>
-                  {row.node.number !== null ? (
-                    <span class="rb-glance__num">{row.node.number}</span>
-                  ) : (
-                    <span class="rb-glance__num rb-glance__num--text" aria-hidden="true">
-                      {row.node.entityType === 'verification' ? 'ver' : ''}
-                    </span>
-                  )}
-                  <span class="rb-glance__title">{row.node.shortTitle}</span>
-                </a>
-              </th>
-              {row.cells.map((cell) => (
-                <td class="rb-glance__cell" title={`${String(cell.count)} ${cell.column.label.toLowerCase()} in ${row.node.shortTitle}`}>
-                  {cell.count > 0 && cell.href !== null ? (
-                    <a class="rb-glance__dots" href={cell.href} aria-label={`${String(cell.count)} ${cell.column.label.toLowerCase()} in ${row.node.shortTitle}`}>
-                      {Array.from({ length: Math.min(cell.count, MAX_DOTS) }, () => (
-                        <span class="rb-glance__dot" aria-hidden="true" />
-                      ))}
-                      {cell.count > MAX_DOTS && <span class="rb-glance__more">+{cell.count - MAX_DOTS}</span>}
-                    </a>
-                  ) : (
-                    <span class="rb-glance__none" aria-label="none">·</span>
-                  )}
-                </td>
-              ))}
-            </tr>
+{table.length > 0 && hasAny && (
+  <figure class="rb-glance" aria-labelledby="glance-title">
+    <figcaption class="rb-glance__head" id="glance-title">
+      <span class="rb-glance__kicker">Chapter {doc.header.number} at a glance</span>
+      <span class="rb-glance__note">one dot per research object</span>
+    </figcaption>
+    <table class="rb-glance__table">
+      <thead>
+        <tr>
+          <th scope="col" class="rb-glance__sec">
+            Section
+          </th>
+          {COLUMNS.map((column) => (
+            <th scope="col" title={column.label}>
+              {column.short}
+            </th>
           ))}
-        </tbody>
-        <tfoot>
-          <tr>
-            <th scope="row" class="rb-glance__sec">Chapter</th>
-            {totals.map((total) => (
-              <td class="rb-glance__total">{total}</td>
+        </tr>
+      </thead>
+      <tbody>
+        {table.map((row) => (
+          <tr class:list={{ 'is-planned': !row.written }}>
+            <th scope="row" class="rb-glance__sec">
+              <a href={siteHref(row.node.url)}>
+                {row.node.number !== null ? (
+                  <span class="rb-glance__num">{row.node.number}</span>
+                ) : (
+                  <span class="rb-glance__num rb-glance__num--text" aria-hidden="true">
+                    {row.node.entityType === 'verification' ? 'ver' : ''}
+                  </span>
+                )}
+                <span class="rb-glance__title">{row.node.shortTitle}</span>
+              </a>
+            </th>
+            {row.cells.map((cell) => (
+              <td
+                class="rb-glance__cell"
+                title={`${String(cell.count)} ${cell.column.label.toLowerCase()} in ${row.node.shortTitle}`}
+              >
+                {cell.count > 0 && cell.href !== null ? (
+                  <a
+                    class="rb-glance__dots"
+                    href={cell.href}
+                    aria-label={`${String(cell.count)} ${cell.column.label.toLowerCase()} in ${row.node.shortTitle}`}
+                  >
+                    {Array.from({ length: Math.min(cell.count, MAX_DOTS) }, () => (
+                      <span class="rb-glance__dot" aria-hidden="true" />
+                    ))}
+                    {cell.count > MAX_DOTS && <span class="rb-glance__more">+{cell.count - MAX_DOTS}</span>}
+                  </a>
+                ) : (
+                  <span class="rb-glance__none" aria-label="none">
+                    ·
+                  </span>
+                )}
+              </td>
             ))}
           </tr>
-        </tfoot>
-      </table>
-    </figure>
-  )
-}
+        ))}
+      </tbody>
+      <tfoot>
+        <tr>
+          <th scope="row" class="rb-glance__sec">
+            Chapter
+          </th>
+          {totals.map((total) => (
+            <td class="rb-glance__total">{total}</td>
+          ))}
+        </tr>
+      </tfoot>
+    </table>
+  </figure>
+)}

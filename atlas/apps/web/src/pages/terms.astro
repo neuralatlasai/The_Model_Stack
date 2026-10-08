@@ -35,14 +35,16 @@ const glossaryNode = graph.nodes['ms.frontmatter.glossary'];
     lede="Each term is defined once, in the section that owns it; this index points there and shows which terms lean on which."
     meta={`${grouped(terms.length)} terms · owned by ${grouped(owners)} sections in ${grouped(chapters)} chapters · ${grouped(mentions)} mentions between definitions`}
   >
-    {
-      glossaryNode !== undefined && (
-        <p class="sh-meta-line">
-          The compiled glossary chapter: <a href={glossaryNode.url}>{glossaryNode.title}</a>
-        </p>
-      )
-    }
+    {glossaryNode !== undefined && (
+      <p class="sh-meta-line">
+        The compiled glossary chapter: <a href={glossaryNode.url}>{glossaryNode.title}</a>
+      </p>
+    )}
   </PageHeader>
 
-  {terms.length === 0 ? <p class="sh-empty">No glossary terms are recorded in this bundle.</p> : <TermsExplorer terms={terms} graph={graph} />}
+  {terms.length === 0 ? (
+    <p class="sh-empty">No glossary terms are recorded in this bundle.</p>
+  ) : (
+    <TermsExplorer terms={terms} graph={graph} />
+  )}
 </ReaderLayout>

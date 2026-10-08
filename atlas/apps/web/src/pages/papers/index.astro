@@ -31,11 +31,9 @@ const unverified = registry.references.filter((record) => record.status === 'UNV
     meta={`${grouped(registry.references.length)} works · ${grouped(spineCount)} spine papers · ${grouped(unverified)} unverified`}
   />
 
-  {
-    registry.references.length === 0 ? (
-      <p class="sh-empty">The citation registry is empty in this bundle.</p>
-    ) : (
-      <PapersExplorer registry={registry} graph={graph} />
-    )
-  }
+  {registry.references.length === 0 ? (
+    <p class="sh-empty">The citation registry is empty in this bundle.</p>
+  ) : (
+    <PapersExplorer registry={registry} graph={graph} />
+  )}
 </ReaderLayout>

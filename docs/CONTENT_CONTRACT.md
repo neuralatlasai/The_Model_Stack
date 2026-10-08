@@ -1,7 +1,7 @@
 # Content Contract for *The Model Stack* manuscripts
 
 **Status:** normative for every file under `docs/`. Edition 1.0, 20 September 2026.
-**Editorial revision:** 7 October 2026 — complete topic treatment, primary-source evidence, and the user's selected editorial references.
+**Editorial revision:** 8 October 2026 — complete topic treatment, primary-source evidence, mathematical procedures, and scientific visual presentation.
 **Authority:** this contract implements `book_plan.md` (chapter ownership, matrices, shared mathematical contract, Appendix H) and the content-object model in `Instruction/UI_UX.md`. Explicit user instructions control the current scope, audience, evidence standard, completeness, and editorial style. Preserve the plan's hierarchy and identifiers and the application's content grammar; do not modify read-only inputs to reconcile a writing preference.
 
 Requirements use **MUST**, **MUST NOT**, **SHOULD**, and **MAY** as normative terms.
@@ -213,7 +213,7 @@ The UI needs first-class renderers for definitions, claims, equations, algorithm
 | Proposition / Theorem | `> **Proposition 14.1.** <statement>` followed by `*Proof sketch.*` or `*Derivation.*` |
 | Equation | Display math in `$$ … $$` with a trailing tag line `*(Eq. 14.3)*` and a one-line variable table beneath: `where L = layers, S = sequence length, …` |
 | Derivation | `<details><summary>Derivation of Eq. 14.3</summary> … </details>` (inline expansion; never a separate page) |
-| Algorithm | Fenced `text` block whose first line is `Algorithm 14.2 — <name>`, then `INPUT`, `OUTPUT`, `STATE`, `INVARIANT`, numbered lines; complexity and implementation link beneath the block |
+| Algorithm | For new or revised manuscripts: `### Algorithm 14.2 — <name>` or `**Algorithm 14.2 — <name>.**`, followed by numbered display equations or aligned mathematical state transitions. Define inputs, outputs, state, invariants, termination, failure branches, and complexity locally. Existing prose-fenced algorithms are legacy input; §12.2 governs current authoring |
 | Code | Fenced block with language tag; must be reference-level (PyTorch/JAX/Triton) and must state the pinned version it targets or be marked `UNVERIFIED` |
 | Tensor trace | Fenced `text` block titled `Tensor trace` with lines `[B, T, D] → op → [B, T, 3, H, Dh]` |
 | Systems trace | Fenced `text` block titled `Systems trace` with `stage → latency / memory / compute / communication / failure` rows |
@@ -362,6 +362,16 @@ The reference set was reviewed on 7 October 2026; the AI Futures Model root is c
 - **Original writing.** Synthesize inspected primary sources in original technical language. Preserve source equations and conditions with attribution, identify adaptations, and quote sparingly. Matching the references' editorial discipline does not permit copying their prose or claiming their predictions as facts.
 
 ---
+
+### 12.2 Mathematical procedures and visual presentation
+
+**Editorial direction, 8 October 2026.** From Chapter 19 onward, and when earlier content is revised, write for principal staff engineers and principal research engineers. Use compact technical exposition with explicit conditions, mechanisms, derivations, evidence boundaries, and resource accounting. Omit promotional quality claims and unnecessary introductory text.
+
+- **Research procedures MUST use mathematical pseudocode:** numbered equations or aligned mathematical state transitions with defined inputs, outputs, state, update order, termination, invariants, and failure branches. Do not use programming-language listings or prose instructions inside code fences as algorithm substitutes. Implementation headings explain operators, representations, dtypes, memory, communication, and exact source locations without requiring source-code excerpts. Figure metadata remains renderer input, not a displayed programming listing.
+- **Retrieve evidence in the requested order:** relevant originating lab disclosures and technical reports, archival conference/journal papers and supplements, then market/deployment observations for their disclosed operational context. Apply the primary-source eligibility rules in §14 throughout. Prestige, recency, commercial adoption, and rankings do not substitute for evidence or make a mechanism superior. Label a state-of-the-art comparison only with its dated benchmark, versions, comparable workload, and limitations.
+- **Figures MUST be authored with the content.** Each substantive section includes a technical figure or instrument where it materially explains a derivation, state transition, representation, comparison, or resource dependency. An omission requires a topic-specific reason. Use the visual grammar, numbered captions, source/evidence fields, and accessible text equivalents. Illustrative calculations must be identified as analytical configurations; never plot invented benchmark results.
+- **Presentation MUST preserve scientific readability.** Keep mathematical algorithms, equation numbers, figure labels, captions, citations, and source disclosures readable at desktop and mobile widths. An interactive calculator exposes its outputs and supports the example's meaningful input values. Use the established editorial design system, restrained rules and accents, and coherent light/dark modes. Visual novelty must improve comparison, inspection, or navigation; decorative density is not technical depth.
+- **Evaluate content and rendering separately.** Manuscript/source/figure checks establish editorial correctness; browser interaction, responsive-layout and accessibility checks establish the tested presentation behavior. Neither certifies training results or world-best quality. Retain explicit draft status until the applicable scientific review gates pass.
 
 ## 13. `verification.md`
 

@@ -18,5 +18,11 @@ const anchor = block.anchor ?? termAnchor(block.termSlug);
 ---
 
 <div class="rb-def" id={anchor} {...depthAttrs(block.depth)}>
-  <p class="rb-def__text"><span class="rb-def__head"><dfn class="rb-def__term">{block.term}</dfn><span class="rb-def__marker">defined here</span></span><Inline nodes={block.content} /></p>
+  <p class="rb-def__text">
+    <span class="rb-def__head">
+      <dfn class="rb-def__term">{block.term}</dfn>
+      <span class="rb-def__marker">defined here</span>
+    </span>
+    <Inline nodes={block.content} />
+  </p>
 </div>

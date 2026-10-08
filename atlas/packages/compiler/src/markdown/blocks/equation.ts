@@ -95,12 +95,25 @@ export function convertEquation(
   const tag = next?.type === 'paragraph' ? equationTag(next) : null;
   if (tag === null) {
     return {
-      value: { kind: 'equation', anchor: null, depth: depthOf('equation', env), number: null, tex, html, note: null, variables: [] },
+      value: {
+        kind: 'equation',
+        anchor: null,
+        depth: depthOf('equation', env),
+        number: null,
+        tex,
+        html,
+        note: null,
+        variables: [],
+      },
       extra: 0,
     };
   }
   if (st.equationNumbers.has(tag.number)) {
-    st.report('equation-duplicate-number', `Eq. ${tag.number} is tagged more than once in this document`, st.lineOf(next));
+    st.report(
+      'equation-duplicate-number',
+      `Eq. ${tag.number} is tagged more than once in this document`,
+      st.lineOf(next),
+    );
   }
   st.equationNumbers.add(tag.number);
   const note = trimInline(convertPhrasing(tag.rest, st));

@@ -17,7 +17,12 @@ export interface NeighbourhoodGraphProps {
   readonly idPrefix?: string;
 }
 
-export function NeighbourhoodGraph({ scene, title = 'Local neighbourhood', desc, idPrefix }: NeighbourhoodGraphProps): JSX.Element {
+export function NeighbourhoodGraph({
+  scene,
+  title = 'Local neighbourhood',
+  desc,
+  idPrefix,
+}: NeighbourhoodGraphProps): JSX.Element {
   const prefix = idPrefix ?? `vg-nb-${hashId(scene.nodes.map((node) => node.id).join(','))}`;
   const center = scene.nodes.find((node) => node.emphasis);
   const summary =
@@ -48,7 +53,13 @@ export function NeighbourhoodGraph({ scene, title = 'Local neighbourhood', desc,
           <text class="vg-nb-heading__label" x={r1(group.x)} y={r1(group.y + 13)}>
             {group.label}
           </text>
-          <line class="vg-hair" x1={r1(group.x)} y1={r1(group.y + 18)} x2={r1(group.x + group.width)} y2={r1(group.y + 18)} />
+          <line
+            class="vg-hair"
+            x1={r1(group.x)}
+            y1={r1(group.y + 18)}
+            x2={r1(group.x + group.width)}
+            y2={r1(group.y + 18)}
+          />
         </g>
       ))}
       <g class="vg-edges">

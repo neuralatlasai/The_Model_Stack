@@ -1,7 +1,15 @@
 import assert from 'node:assert/strict';
 import { describe, test } from 'node:test';
 import type { SearchHit } from '@atlas/core';
-import { COMMANDS, formatCitation, groupHits, locator, parseQuery, rankCommands, typeLine } from '../../src/client/palette-model.ts';
+import {
+  COMMANDS,
+  formatCitation,
+  groupHits,
+  locator,
+  parseQuery,
+  rankCommands,
+  typeLine,
+} from '../../src/client/palette-model.ts';
 
 describe('parseQuery', () => {
   test('">" switches to command mode (leading whitespace tolerated)', () => {
@@ -44,10 +52,20 @@ describe('rankCommands', () => {
 });
 
 describe('groupHits', () => {
-  const hit = (id: string, kind: SearchHit['kind'], score: number): SearchHit => ({ id, kind, title: id, context: 'Foundations / Transformer', url: `/${id}/`, score });
+  const hit = (id: string, kind: SearchHit['kind'], score: number): SearchHit => ({
+    id,
+    kind,
+    title: id,
+    context: 'Foundations / Transformer',
+    url: `/${id}/`,
+    score,
+  });
 
   test('groups by kind, groups ordered by their best hit, hits by score', () => {
-    const groups = groupHits([hit('p1', 'paper', 5), hit('s1', 'section', 9), hit('s2', 'section', 2), hit('e1', 'equation', 7)], 10);
+    const groups = groupHits(
+      [hit('p1', 'paper', 5), hit('s1', 'section', 9), hit('s2', 'section', 2), hit('e1', 'equation', 7)],
+      10,
+    );
     assert.deepEqual(
       groups.map((group) => group.kind),
       ['section', 'equation', 'paper'],
@@ -85,7 +103,10 @@ describe('formatCitation', () => {
 
   test('chapter pages cite the chapter; other pages omit the locator', () => {
     assert.equal(locator('ms.chapter.11'), 'Chapter 11');
-    assert.equal(formatCitation('Notation', 'ms.frontmatter.notation', 'https://atlas.test/front-matter/notation/'), 'Notation — The Model Stack, https://atlas.test/front-matter/notation/');
+    assert.equal(
+      formatCitation('Notation', 'ms.frontmatter.notation', 'https://atlas.test/front-matter/notation/'),
+      'Notation — The Model Stack, https://atlas.test/front-matter/notation/',
+    );
     assert.equal(locator(null), null);
   });
 });

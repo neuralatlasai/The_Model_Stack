@@ -12,13 +12,7 @@
  * Raw inline HTML never survives: placeholders such as `<bos>` become text,
  * and anything that looks like a real tag is also text plus a diagnostic.
  */
-import {
-  EVIDENCE_LABEL_PATTERN,
-  isCitationKey,
-  isEvidenceLabel,
-  type Inline,
-  type XRefKind,
-} from '@atlas/core';
+import { EVIDENCE_LABEL_PATTERN, isCitationKey, isEvidenceLabel, type Inline, type XRefKind } from '@atlas/core';
 import type { PhrasingContent } from 'mdast';
 import { toString } from 'mdast-util-to-string';
 import type { CompileState } from './state.ts';
@@ -35,13 +29,94 @@ export interface InlineOptions {
  * deliberately absent: `<s>`/`</s>` are sentence-boundary tokens in this book.
  */
 const HTML_ELEMENTS: ReadonlySet<string> = new Set([
-  'a', 'abbr', 'b', 'bdi', 'bdo', 'blockquote', 'br', 'button', 'canvas', 'caption', 'center', 'cite', 'code',
-  'col', 'colgroup', 'dd', 'del', 'details', 'dfn', 'div', 'dl', 'dt', 'em', 'embed', 'fieldset', 'figcaption',
-  'figure', 'font', 'footer', 'form', 'h1', 'h2', 'h3', 'h4', 'h5', 'h6', 'header', 'hr', 'i', 'iframe', 'img',
-  'input', 'ins', 'kbd', 'label', 'legend', 'li', 'link', 'main', 'mark', 'math', 'meta', 'nav', 'noscript',
-  'object', 'ol', 'option', 'p', 'picture', 'pre', 'q', 'script', 'section', 'select', 'small', 'source', 'span',
-  'strong', 'style', 'sub', 'summary', 'sup', 'svg', 'table', 'tbody', 'td', 'template', 'textarea', 'tfoot',
-  'th', 'thead', 'time', 'tr', 'u', 'ul', 'var', 'video', 'wbr',
+  'a',
+  'abbr',
+  'b',
+  'bdi',
+  'bdo',
+  'blockquote',
+  'br',
+  'button',
+  'canvas',
+  'caption',
+  'center',
+  'cite',
+  'code',
+  'col',
+  'colgroup',
+  'dd',
+  'del',
+  'details',
+  'dfn',
+  'div',
+  'dl',
+  'dt',
+  'em',
+  'embed',
+  'fieldset',
+  'figcaption',
+  'figure',
+  'font',
+  'footer',
+  'form',
+  'h1',
+  'h2',
+  'h3',
+  'h4',
+  'h5',
+  'h6',
+  'header',
+  'hr',
+  'i',
+  'iframe',
+  'img',
+  'input',
+  'ins',
+  'kbd',
+  'label',
+  'legend',
+  'li',
+  'link',
+  'main',
+  'mark',
+  'math',
+  'meta',
+  'nav',
+  'noscript',
+  'object',
+  'ol',
+  'option',
+  'p',
+  'picture',
+  'pre',
+  'q',
+  'script',
+  'section',
+  'select',
+  'small',
+  'source',
+  'span',
+  'strong',
+  'style',
+  'sub',
+  'summary',
+  'sup',
+  'svg',
+  'table',
+  'tbody',
+  'td',
+  'template',
+  'textarea',
+  'tfoot',
+  'th',
+  'thead',
+  'time',
+  'tr',
+  'u',
+  'ul',
+  'var',
+  'video',
+  'wbr',
 ]);
 
 export type HtmlKind = 'comment' | 'tag' | 'placeholder';
@@ -70,7 +145,8 @@ export function htmlAsInline(value: string, st: CompileState, line: number | nul
     st.report('raw-html-dropped', `HTML comment/declaration removed: ${abbreviate(value)}`, line);
     return [];
   }
-  if (kind === 'tag') st.report('raw-html-dropped', `raw HTML is not rendered; kept as literal text: ${abbreviate(value)}`, line);
+  if (kind === 'tag')
+    st.report('raw-html-dropped', `raw HTML is not rendered; kept as literal text: ${abbreviate(value)}`, line);
   return [{ kind: 'text', value }];
 }
 
@@ -85,7 +161,8 @@ const CITE_PATTERN = /(?<![A-Za-z0-9_.])(P\d{2}|R\d+\.\d+)(?![A-Za-z0-9_]|\.\d)/
 const OBJECT_NUMBER = String.raw`(?:\d+|[A-Z])\.\d+[a-z]?`;
 const NUMBER_END = String.raw`(?![\d]|\.\d)`;
 /** `5.4` or `(5.4)`; a closing parenthesis is consumed only when it closes an opening one. */
-const EQ_NUMBER = (name: string): string => String.raw`(?:\((?<${name}p>${OBJECT_NUMBER})\)|(?<${name}>${OBJECT_NUMBER})${NUMBER_END})`;
+const EQ_NUMBER = (name: string): string =>
+  String.raw`(?:\((?<${name}p>${OBJECT_NUMBER})\)|(?<${name}>${OBJECT_NUMBER})${NUMBER_END})`;
 const XREF_PATTERN = new RegExp(
   [
     String.raw`(?<eq>\b(?:Eqs?\.|Equations?)\s*${EQ_NUMBER('eqn')}(?:\s*(?:[–—-]|to)\s*(?:\(${OBJECT_NUMBER}\)|${OBJECT_NUMBER}${NUMBER_END}))?)`,
@@ -148,9 +225,18 @@ function xrefTokens(value: string, st: CompileState, line: number | null): Token
       if (text === undefined || number === undefined) continue;
       const target = st.ctx.resolveXRef(kind, number);
       if (target === null) {
-        st.reportOnce(`xref:${kind}:${number}`, 'xref-unresolved', `${text} does not resolve to a numbered ${kind}`, line);
+        st.reportOnce(
+          `xref:${kind}:${number}`,
+          'xref-unresolved',
+          `${text} does not resolve to a numbered ${kind}`,
+          line,
+        );
       }
-      out.push({ start: match.index, end: match.index + text.length, node: { kind: 'xref', ref: kind, number, text, target } });
+      out.push({
+        start: match.index,
+        end: match.index + text.length,
+        node: { kind: 'xref', ref: kind, number, text, target },
+      });
       break;
     }
   }
@@ -158,7 +244,12 @@ function xrefTokens(value: string, st: CompileState, line: number | null): Token
 }
 
 /** Splits one text value into text / label / cite / xref nodes. */
-export function recogniseText(value: string, st: CompileState, line: number | null, options: InlineOptions = {}): Inline[] {
+export function recogniseText(
+  value: string,
+  st: CompileState,
+  line: number | null,
+  options: InlineOptions = {},
+): Inline[] {
   const tokens = [...labelTokens(value)];
   if (options.inLink !== true) tokens.push(...citeTokens(value, st, line), ...xrefTokens(value, st, line));
   if (tokens.length === 0) return value === '' ? [] : [{ kind: 'text', value }];
@@ -182,7 +273,11 @@ export function definitionKey(label: string): string {
   return label.trim().replace(/\s+/gu, ' ').toLowerCase();
 }
 
-export function convertPhrasing(nodes: readonly PhrasingContent[], st: CompileState, options: InlineOptions = {}): Inline[] {
+export function convertPhrasing(
+  nodes: readonly PhrasingContent[],
+  st: CompileState,
+  options: InlineOptions = {},
+): Inline[] {
   const out: Inline[] = [];
   for (const node of nodes) out.push(...convertOne(node, st, options));
   return out;

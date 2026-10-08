@@ -184,9 +184,15 @@
   opacity: 0.45;
 }
 
-:is(.eqx-cell, .eqx-bar__cells i).is-s1 { background: var(--eqx-share-1); }
-:is(.eqx-cell, .eqx-bar__cells i).is-s2 { background: var(--eqx-share-2); }
-:is(.eqx-cell, .eqx-bar__cells i).is-s3 { background: var(--eqx-share-3); }
+:is(.eqx-cell, .eqx-bar__cells i).is-s1 {
+  background: var(--eqx-share-1);
+}
+:is(.eqx-cell, .eqx-bar__cells i).is-s2 {
+  background: var(--eqx-share-2);
+}
+:is(.eqx-cell, .eqx-bar__cells i).is-s3 {
+  background: var(--eqx-share-3);
+}
 
 :is(.eqx-cell, .eqx-bar__cells i).is-lit {
   background: var(--eqx-lit);
@@ -198,7 +204,9 @@
 
 .eqx-cell.is-focus,
 .eqx-cell:hover {
-  box-shadow: 0 0 0 1.5px var(--paper), 0 0 0 2.5px var(--ink);
+  box-shadow:
+    0 0 0 1.5px var(--paper),
+    0 0 0 2.5px var(--ink);
 }
 
 :is(.eqx-cell, .eqx-bar__cells i).is-filtered {
@@ -633,8 +641,10 @@
   background:
     linear-gradient(to right, var(--eqx-row-bg, var(--paper)) 40%, transparent) left / 1.5rem 100% no-repeat local,
     linear-gradient(to left, var(--eqx-row-bg, var(--paper)) 40%, transparent) right / 1.5rem 100% no-repeat local,
-    radial-gradient(farthest-side at 0 50%, color-mix(in oklab, var(--ink) 24%, transparent), transparent) left / 0.75rem 100% no-repeat scroll,
-    radial-gradient(farthest-side at 100% 50%, color-mix(in oklab, var(--ink) 24%, transparent), transparent) right / 0.75rem 100% no-repeat scroll;
+    radial-gradient(farthest-side at 0 50%, color-mix(in oklab, var(--ink) 24%, transparent), transparent) left /
+      0.75rem 100% no-repeat scroll,
+    radial-gradient(farthest-side at 100% 50%, color-mix(in oklab, var(--ink) 24%, transparent), transparent) right /
+      0.75rem 100% no-repeat scroll;
 }
 
 .eqx-row__math .katex-display > .katex {

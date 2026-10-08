@@ -1,0 +1,25 @@
+---
+import type { MathProcedure } from './lib/math-procedures.ts';
+import Inline from './Inline.astro';
+import Blocks from './Blocks.astro';
+import Equation from './blocks/Equation.astro';
+interface Props {
+  procedure: MathProcedure;
+}
+const { procedure } = Astro.props;
+---
+
+<section class="rb-math-procedure" id={procedure.anchor} aria-labelledby={`${procedure.anchor}-title`}>
+  <header class="rb-math-procedure__header">
+    <h3 id={`${procedure.anchor}-title`} class="rb-math-procedure__title">
+      <Inline nodes={procedure.title} />
+    </h3>
+    {procedure.introduction.length > 0 && (
+      <p class="rb-p rb-math-procedure__context">
+        <Inline nodes={procedure.introduction} />
+      </p>
+    )}
+    <Blocks blocks={procedure.context} />
+  </header>
+  <Equation block={procedure.equation} />
+</section>

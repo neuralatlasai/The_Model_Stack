@@ -15,19 +15,17 @@ interface Props {
 const { hasTree, hasRail } = Astro.props;
 ---
 
-{
-  (hasTree || hasRail) && (
-    <div class="sh-dock">
-      {hasTree && (
-        <button type="button" class="sh-dock-button" popovertarget="knowledge-tree" data-action="toggle-tree">
-          Contents
-        </button>
-      )}
-      {hasRail && (
-        <button type="button" class="sh-dock-button" popovertarget="context-rail" data-action="toggle-rail">
-          Context
-        </button>
-      )}
-    </div>
-  )
-}
+{(hasTree || hasRail) && (
+  <div class="sh-dock">
+    {hasTree && (
+      <button type="button" class="sh-dock-button" popovertarget="knowledge-tree" data-action="toggle-tree">
+        Contents
+      </button>
+    )}
+    {hasRail && (
+      <button type="button" class="sh-dock-button" popovertarget="context-rail" data-action="toggle-rail">
+        Context
+      </button>
+    )}
+  </div>
+)}

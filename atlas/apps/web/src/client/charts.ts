@@ -44,7 +44,8 @@ const ACTIVE = 'is-active';
 export function initCharts(ctx: PageContext): void {
   for (const figure of $$(`[${ATTR.figureKind}="chart"]`, ctx.doc)) {
     const svg = figure.querySelector<SVGSVGElement>('svg');
-    if (svg !== null && svg.querySelector(`[${HOOK.chartX}][${HOOK.chartY}]`) !== null) enhanceChart(ctx.ctl, figure, svg);
+    if (svg !== null && svg.querySelector(`[${HOOK.chartX}][${HOOK.chartY}]`) !== null)
+      enhanceChart(ctx.ctl, figure, svg);
   }
 }
 
@@ -73,12 +74,16 @@ function enhanceChart(ctl: Controller, figure: HTMLElement, svg: SVGSVGElement):
     xLabel: labelsForAxes.x,
     yLabel: labelsForAxes.y,
   };
-  const scatter = attrFrom(svg, figure, 'data-chart-type') === 'scatter' || figure.querySelector('.vg-chart--scatter') !== null;
+  const scatter =
+    attrFrom(svg, figure, 'data-chart-type') === 'scatter' || figure.querySelector('.vg-chart--scatter') !== null;
   const mode: PickMode = scatter ? 'xy' : 'x';
   // Legend entries live outside the plot: `data-series-toggle` anywhere, or `data-series` buttons outside the <svg>.
-  const toggles = $$<Element>(`[${HOOK.chartToggle}], button[${HOOK.chartSeries}]`, figure).filter((element) => !svg.contains(element));
+  const toggles = $$<Element>(`[${HOOK.chartToggle}], button[${HOOK.chartSeries}]`, figure).filter(
+    (element) => !svg.contains(element),
+  );
   const seriesEls = $$<Element>(`[${HOOK.chartSeries}]`, svg);
-  const toggleId = (toggle: Element): string => toggle.getAttribute(HOOK.chartToggle) ?? toggle.getAttribute(HOOK.chartSeries) ?? '';
+  const toggleId = (toggle: Element): string =>
+    toggle.getAttribute(HOOK.chartToggle) ?? toggle.getAttribute(HOOK.chartSeries) ?? '';
 
   const labels = new Map<string, string>();
   for (const toggle of toggles) {
@@ -107,9 +112,19 @@ function enhanceChart(ctl: Controller, figure: HTMLElement, svg: SVGSVGElement):
       const local = element.getScreenCTM();
       if (x === null || y === null || rootInverse === null || local === null) continue;
       const box = element.getBBox();
-      const center = new DOMPoint(box.x + box.width / 2, box.y + box.height / 2).matrixTransform(rootInverse.multiply(local));
+      const center = new DOMPoint(box.x + box.width / 2, box.y + box.height / 2).matrixTransform(
+        rootInverse.multiply(local),
+      );
       const series = element.closest(`[${HOOK.chartSeries}]`)?.getAttribute(HOOK.chartSeries) ?? 'series';
-      measured.push({ series, x, y, px: center.x, py: center.y, xText: element.getAttribute('data-xv'), yText: element.getAttribute('data-yv') });
+      measured.push({
+        series,
+        x,
+        y,
+        px: center.x,
+        py: center.y,
+        xText: element.getAttribute('data-xv'),
+        yText: element.getAttribute('data-yv'),
+      });
       elements.push(element);
     }
     order = [...new Set(measured.map((point) => point.series))];
@@ -126,7 +141,11 @@ function enhanceChart(ctl: Controller, figure: HTMLElement, svg: SVGSVGElement):
   svg.append(marker);
   const readout = h('p', { class: 'cx-chart-readout', role: 'status', 'aria-live': 'polite' });
   const hintId = `${figure.id === '' ? 'chart' : figure.id}-keys`;
-  const hint = h('span', { class: 'cx-sr-only', id: hintId }, 'Arrow keys read data points; up and down switch series.');
+  const hint = h(
+    'span',
+    { class: 'cx-sr-only', id: hintId },
+    'Arrow keys read data points; up and down switch series.',
+  );
   svg.after(hint, readout);
   ctl.defer(() => {
     marker.remove();
@@ -185,7 +204,9 @@ function enhanceChart(ctl: Controller, figure: HTMLElement, svg: SVGSVGElement):
 
   // ── keyboard ─────────────────────────────────────────────────────────────
   if (!svg.hasAttribute('tabindex')) svg.setAttribute('tabindex', '0');
-  const describedBy = [svg.getAttribute('aria-describedby'), hintId].filter((part): part is string => part !== null && part !== '');
+  const describedBy = [svg.getAttribute('aria-describedby'), hintId].filter(
+    (part): part is string => part !== null && part !== '',
+  );
   svg.setAttribute('aria-describedby', describedBy.join(' '));
 
   svg.addEventListener(

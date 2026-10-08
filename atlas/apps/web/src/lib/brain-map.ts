@@ -140,7 +140,13 @@ const REGION: Readonly<Record<number, readonly [number, number]>> = {
   11: [418, 222],
 };
 
-export function brainMap(parts: readonly BrainPart[], chapters: readonly BrainChapter[], terms: readonly BrainTerm[], prereqs: readonly (readonly [number, number])[], seed = 7): BrainModel {
+export function brainMap(
+  parts: readonly BrainPart[],
+  chapters: readonly BrainChapter[],
+  terms: readonly BrainTerm[],
+  prereqs: readonly (readonly [number, number])[],
+  seed = 7,
+): BrainModel {
   const rand = prng(seed);
 
   const outline: [number, number][] = [];
@@ -165,9 +171,26 @@ export function brainMap(parts: readonly BrainPart[], chapters: readonly BrainCh
     sulci.push(smooth(pts));
   }
   const fissures = [
-    smooth([[118, 232], [170, 226], [228, 214], [284, 206], [336, 196], [372, 176]]), // lateral (Sylvian)
-    smooth([[318, 36], [306, 74], [288, 108], [276, 140], [262, 170]]), // central
-    smooth([[470, 64], [478, 100], [492, 126]]), // parieto-occipital
+    smooth([
+      [118, 232],
+      [170, 226],
+      [228, 214],
+      [284, 206],
+      [336, 196],
+      [372, 176],
+    ]), // lateral (Sylvian)
+    smooth([
+      [318, 36],
+      [306, 74],
+      [288, 108],
+      [276, 140],
+      [262, 170],
+    ]), // central
+    smooth([
+      [470, 64],
+      [478, 100],
+      [492, 126],
+    ]), // parieto-occipital
   ];
 
   // Cerebellum below the occipital lobe, brainstem below the centre.
@@ -178,11 +201,16 @@ export function brainMap(parts: readonly BrainPart[], chapters: readonly BrainCh
     cb.push([432 + 84 * Math.cos(t) * r, 300 + 48 * Math.sin(t) * r]);
   }
   const cerebellum = closed(cb);
-  const folia = [0.84, 0.66, 0.48, 0.3].map((k) => smooth(Array.from({ length: 13 }, (_, i) => {
-    const t = Math.PI * (0.05 + (i / 12) * 0.9);
-    return [432 + 84 * k * Math.cos(t + Math.PI), 312 + 42 * k * Math.sin(t) * 0.9 - 4] as [number, number];
-  })));
-  const stem = 'M322 280C332 306 342 326 348 346C352 360 354 374 356 390L388 390C388 372 392 358 398 344C406 324 414 304 420 284Z';
+  const folia = [0.84, 0.66, 0.48, 0.3].map((k) =>
+    smooth(
+      Array.from({ length: 13 }, (_, i) => {
+        const t = Math.PI * (0.05 + (i / 12) * 0.9);
+        return [432 + 84 * k * Math.cos(t + Math.PI), 312 + 42 * k * Math.sin(t) * 0.9 - 4] as [number, number];
+      }),
+    ),
+  );
+  const stem =
+    'M322 280C332 306 342 326 348 346C352 360 354 374 356 390L388 390C388 372 392 358 398 344C406 324 414 304 420 284Z';
 
   // Neurons: each part's chapters on a small ring around its region.
   const byPart = new Map<number, BrainChapter[]>();
@@ -244,5 +272,19 @@ export function brainMap(parts: readonly BrainPart[], chapters: readonly BrainCh
     return { ...part, x, y };
   });
 
-  return { width: W, height: H, cerebrum, cerebellum, folia, stem, sulci, fissures, regions, neurons, concepts, fibres, dendrites };
+  return {
+    width: W,
+    height: H,
+    cerebrum,
+    cerebellum,
+    folia,
+    stem,
+    sulci,
+    fissures,
+    regions,
+    neurons,
+    concepts,
+    fibres,
+    dendrites,
+  };
 }

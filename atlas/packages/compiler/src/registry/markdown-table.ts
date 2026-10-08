@@ -95,7 +95,10 @@ export function headerKey(header: string): string {
  * accepted header keys (see `headerKey`). Returns field → column index; missing
  * fields are absent.
  */
-export function mapColumns<F extends string>(headers: readonly string[], aliases: Readonly<Record<F, readonly string[]>>): Partial<Record<F, number>> {
+export function mapColumns<F extends string>(
+  headers: readonly string[],
+  aliases: Readonly<Record<F, readonly string[]>>,
+): Partial<Record<F, number>> {
   const keys = headers.map(headerKey);
   const out: Partial<Record<F, number>> = {};
   for (const field of Object.keys(aliases) as F[]) {

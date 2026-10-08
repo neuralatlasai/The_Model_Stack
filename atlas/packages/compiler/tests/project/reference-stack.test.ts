@@ -53,8 +53,10 @@ describe('parseReferenceStack (real Instruction/AI_REFERENCE_STACK.md, read-only
   });
 
   it('places every system in exactly one §4.1 stack layer', () => {
-    for (const system of stack.systems) assert.ok(system.layer !== null && STACK_LAYERS.includes(system.layer), system.name);
-    const layerOf = (name: string): string | null => stack.systems.find((system) => system.name === name)?.layer ?? null;
+    for (const system of stack.systems)
+      assert.ok(system.layer !== null && STACK_LAYERS.includes(system.layer), system.name);
+    const layerOf = (name: string): string | null =>
+      stack.systems.find((system) => system.name === name)?.layer ?? null;
     assert.equal(layerOf('vLLM'), 'Inference engine');
     assert.equal(layerOf('FlashAttention'), 'Kernels / numerics / collectives');
     assert.equal(layerOf('PyTorch'), 'Model / autograd framework');

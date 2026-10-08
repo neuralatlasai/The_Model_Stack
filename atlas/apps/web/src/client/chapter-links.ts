@@ -13,26 +13,44 @@ export function initChapterLinks(ctx: PageContext): void {
   const index = [...doc.querySelectorAll<HTMLElement>('.rb-secidx__item')];
   const glance = [...doc.querySelectorAll<HTMLTableRowElement>('.rb-glance__table tbody tr')];
   if (index.length === 0 || glance.length === 0) return;
-  const keyOfIndex = (item: HTMLElement): string => pathOf(item.querySelector('a.rb-secidx__title')?.getAttribute('href') ?? null);
-  const keyOfRow = (row: HTMLElement): string => pathOf(row.querySelector('.rb-glance__sec a')?.getAttribute('href') ?? null);
+  const keyOfIndex = (item: HTMLElement): string =>
+    pathOf(item.querySelector('a.rb-secidx__title')?.getAttribute('href') ?? null);
+  const keyOfRow = (row: HTMLElement): string =>
+    pathOf(row.querySelector('.rb-glance__sec a')?.getAttribute('href') ?? null);
   const light = (key: string): void => {
     for (const item of index) item.classList.toggle('is-lit', key !== '' && keyOfIndex(item) === key);
     for (const row of glance) row.classList.toggle('is-lit', key !== '' && keyOfRow(row) === key);
   };
   for (const item of index) {
-    item.addEventListener('pointerenter', () => {
-      light(keyOfIndex(item));
-    }, { signal: ctl.signal });
-    item.addEventListener('pointerleave', () => {
-      light('');
-    }, { signal: ctl.signal });
+    item.addEventListener(
+      'pointerenter',
+      () => {
+        light(keyOfIndex(item));
+      },
+      { signal: ctl.signal },
+    );
+    item.addEventListener(
+      'pointerleave',
+      () => {
+        light('');
+      },
+      { signal: ctl.signal },
+    );
   }
   for (const row of glance) {
-    row.addEventListener('pointerenter', () => {
-      light(keyOfRow(row));
-    }, { signal: ctl.signal });
-    row.addEventListener('pointerleave', () => {
-      light('');
-    }, { signal: ctl.signal });
+    row.addEventListener(
+      'pointerenter',
+      () => {
+        light(keyOfRow(row));
+      },
+      { signal: ctl.signal },
+    );
+    row.addEventListener(
+      'pointerleave',
+      () => {
+        light('');
+      },
+      { signal: ctl.signal },
+    );
   }
 }

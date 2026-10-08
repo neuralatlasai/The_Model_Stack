@@ -23,21 +23,31 @@ const alias = githubAlias(`${title} — ${block.name}`, block.anchor);
   {alias !== null && <span class="rb-alias" id={alias} aria-hidden="true" />}
   <h3 class="rb-h rb-h3 rb-experiment__title">
     <span class="rb-experiment__num">{title}</span>
-    <span class="rb-experiment__sep" aria-hidden="true">—</span>
+    <span class="rb-experiment__sep" aria-hidden="true">
+      —
+    </span>
     <span class="rb-experiment__name">{block.name}</span>
-    {block.anchor !== null && <a class="rb-anchor" href={`#${block.anchor}`}><span aria-hidden="true">#</span><span class="rb-vh">Link to {title}</span></a>}
+    {block.anchor !== null && (
+      <a class="rb-anchor" href={`#${block.anchor}`}>
+        <span aria-hidden="true">#</span>
+        <span class="rb-vh">Link to {title}</span>
+      </a>
+    )}
   </h3>
-  <p class="rb-experiment__status"><span class="rb-experiment__glyph" aria-hidden="true">○</span>Proposal — not executed in Edition 1.0</p>
+  <p class="rb-experiment__status">
+    <span class="rb-experiment__glyph" aria-hidden="true">
+      ○
+    </span>
+    Proposal — not executed in Edition 1.0
+  </p>
   <dl class="rb-grid rb-experiment__grid">
-    {
-      block.fields.map((field) => (
-        <div class="rb-grid__row">
-          <dt class="rb-grid__key">{field.name}</dt>
-          <dd class="rb-grid__value">
-            <Blocks blocks={field.blocks} />
-          </dd>
-        </div>
-      ))
-    }
+    {block.fields.map((field) => (
+      <div class="rb-grid__row">
+        <dt class="rb-grid__key">{field.name}</dt>
+        <dd class="rb-grid__value">
+          <Blocks blocks={field.blocks} />
+        </dd>
+      </div>
+    ))}
   </dl>
 </section>

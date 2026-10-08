@@ -20,7 +20,9 @@ interface TileData {
 function isTileData(value: unknown): value is TileData {
   if (typeof value !== 'object' || value === null) return false;
   const record = value as Record<string, unknown>;
-  return typeof record['title'] === 'string' && typeof record['summary'] === 'string' && typeof record['words'] === 'number';
+  return (
+    typeof record['title'] === 'string' && typeof record['summary'] === 'string' && typeof record['words'] === 'number'
+  );
 }
 
 export function initPartMap(ctx: PageContext): void {
@@ -35,7 +37,11 @@ export function initPartMap(ctx: PageContext): void {
     title: root.querySelector<HTMLElement>('[data-pm-title]'),
     body: root.querySelector<HTMLElement>('[data-pm-body]'),
   };
-  const initial = { kicker: out.kicker?.textContent ?? '', title: out.title?.textContent ?? '', body: out.body?.textContent ?? '' };
+  const initial = {
+    kicker: out.kicker?.textContent ?? '',
+    title: out.title?.textContent ?? '',
+    body: out.body?.textContent ?? '',
+  };
   let data: Readonly<Record<string, unknown>> = {};
   try {
     const parsed: unknown = JSON.parse(root.querySelector('[data-pm-data]')?.textContent ?? '{}');
@@ -52,7 +58,8 @@ export function initPartMap(ctx: PageContext): void {
 
   const clear = (): void => {
     root.classList.remove('has-focus');
-    for (const el of root.querySelectorAll('.is-lit, .is-focus, .is-up, .is-down')) el.classList.remove('is-lit', 'is-focus', 'is-up', 'is-down');
+    for (const el of root.querySelectorAll('.is-lit, .is-focus, .is-up, .is-down'))
+      el.classList.remove('is-lit', 'is-focus', 'is-up', 'is-down');
   };
   const reset = (): void => {
     clear();
@@ -78,10 +85,19 @@ export function initPartMap(ctx: PageContext): void {
     }
     const info = data[n];
     if (isTileData(info)) {
-      const measures = [`${info.sections} sections`, info.words > 0 ? `${info.words.toLocaleString('en')} words` : null, `${String(info.figures)} figures`, `${String(info.equations)} equations`]
+      const measures = [
+        `${info.sections} sections`,
+        info.words > 0 ? `${info.words.toLocaleString('en')} words` : null,
+        `${String(info.figures)} figures`,
+        `${String(info.equations)} equations`,
+      ]
         .filter((part) => part !== null)
         .join(' · ');
-      set(`ch ${pad(n)} · ${info.state} · builds on ${String(ins.size)} · unlocks ${String(outs.size)}`, info.title, info.summary === '' ? measures : `${measures}. ${info.summary}`);
+      set(
+        `ch ${pad(n)} · ${info.state} · builds on ${String(ins.size)} · unlocks ${String(outs.size)}`,
+        info.title,
+        info.summary === '' ? measures : `${measures}. ${info.summary}`,
+      );
     }
   };
   const showChip = (chip: HTMLAnchorElement): void => {
@@ -91,7 +107,9 @@ export function initPartMap(ctx: PageContext): void {
     const via = new Set((chip.dataset['pmVia'] ?? '').split(' ').filter((v) => v !== ''));
     for (const tile of tiles) if (via.has(tile.dataset['pmTile'] ?? '')) tile.classList.add('is-lit');
     const inbound = chip.closest('.pm-side--in') !== null;
-    const names = tiles.filter((tile) => via.has(tile.dataset['pmTile'] ?? '')).map((tile) => tile.querySelector('.pm-tile__n')?.textContent ?? '');
+    const names = tiles
+      .filter((tile) => via.has(tile.dataset['pmTile'] ?? ''))
+      .map((tile) => tile.querySelector('.pm-tile__n')?.textContent ?? '');
     set(
       `ch ${pad(chip.dataset['pmExt'] ?? '')} · ${inbound ? 'an earlier chapter this part builds on' : 'a later chapter this part unlocks'}`,
       chip.title,
@@ -99,41 +117,60 @@ export function initPartMap(ctx: PageContext): void {
     );
   };
 
-  root.addEventListener('pointerover', (event) => {
-    const target = event.target instanceof Element ? event.target : null;
-    const tile = target?.closest<HTMLElement>('[data-pm-tile]');
-    if (tile !== null && tile !== undefined) {
-      showTile(tile);
-      return;
-    }
-    const chip = target?.closest<HTMLAnchorElement>('[data-pm-ext]');
-    if (chip !== null && chip !== undefined) showChip(chip);
-  }, { signal });
+  root.addEventListener(
+    'pointerover',
+    (event) => {
+      const target = event.target instanceof Element ? event.target : null;
+      const tile = target?.closest<HTMLElement>('[data-pm-tile]');
+      if (tile !== null && tile !== undefined) {
+        showTile(tile);
+        return;
+      }
+      const chip = target?.closest<HTMLAnchorElement>('[data-pm-ext]');
+      if (chip !== null && chip !== undefined) showChip(chip);
+    },
+    { signal },
+  );
   root.addEventListener('pointerleave', reset, { signal });
-  root.addEventListener('focusin', (event) => {
-    const target = event.target instanceof Element ? event.target : null;
-    const tile = target?.closest<HTMLElement>('[data-pm-tile]');
-    if (tile !== null && tile !== undefined) showTile(tile);
-    const chip = target?.closest<HTMLAnchorElement>('[data-pm-ext]');
-    if (chip !== null && chip !== undefined) showChip(chip);
-  }, { signal });
+  root.addEventListener(
+    'focusin',
+    (event) => {
+      const target = event.target instanceof Element ? event.target : null;
+      const tile = target?.closest<HTMLElement>('[data-pm-tile]');
+      if (tile !== null && tile !== undefined) showTile(tile);
+      const chip = target?.closest<HTMLAnchorElement>('[data-pm-ext]');
+      if (chip !== null && chip !== undefined) showChip(chip);
+    },
+    { signal },
+  );
 
   // Keyboard: the tiles are one tab stop; arrows move between them.
-  const links = tiles.map((tile) => tile.querySelector<HTMLAnchorElement>('.pm-tile__link')).filter((link) => link !== null);
-  root.querySelector('[data-pm-tiles]')?.addEventListener('keydown', (event) => {
-    if (!(event instanceof KeyboardEvent)) return;
-    if (event.key === 'Escape') {
-      reset();
-      return;
-    }
-    const step = event.key === 'ArrowRight' || event.key === 'ArrowDown' ? 1 : event.key === 'ArrowLeft' || event.key === 'ArrowUp' ? -1 : 0;
-    if (step === 0) return;
-    const at = links.findIndex((link) => link === doc.activeElement);
-    const next = links[Math.max(0, Math.min(links.length - 1, at + step))];
-    if (next === undefined) return;
-    event.preventDefault();
-    for (const link of links) link.setAttribute('tabindex', '-1');
-    next.setAttribute('tabindex', '0');
-    next.focus();
-  }, { signal });
+  const links = tiles
+    .map((tile) => tile.querySelector<HTMLAnchorElement>('.pm-tile__link'))
+    .filter((link) => link !== null);
+  root.querySelector('[data-pm-tiles]')?.addEventListener(
+    'keydown',
+    (event) => {
+      if (!(event instanceof KeyboardEvent)) return;
+      if (event.key === 'Escape') {
+        reset();
+        return;
+      }
+      const step =
+        event.key === 'ArrowRight' || event.key === 'ArrowDown'
+          ? 1
+          : event.key === 'ArrowLeft' || event.key === 'ArrowUp'
+            ? -1
+            : 0;
+      if (step === 0) return;
+      const at = links.findIndex((link) => link === doc.activeElement);
+      const next = links[Math.max(0, Math.min(links.length - 1, at + step))];
+      if (next === undefined) return;
+      event.preventDefault();
+      for (const link of links) link.setAttribute('tabindex', '-1');
+      next.setAttribute('tabindex', '0');
+      next.focus();
+    },
+    { signal },
+  );
 }

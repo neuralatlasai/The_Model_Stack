@@ -1,6 +1,6 @@
 # Research Atlas — The Model Stack
 
-The web edition of *The Model Stack — From Data and Silicon to Intelligence*. It compiles the manuscripts in `../docs/` into typed research objects and renders them as an interactive research atlas (`../Instruction/UI_UX.md`): a knowledge tree, a reading column with first-class research objects (equations, algorithms, claims, failure modes, experiments, siblings), and a context rail of live instruments that change with the region being read.
+The web edition of _The Model Stack — From Data and Silicon to Intelligence_. It compiles the manuscripts in `../docs/` into typed research objects and renders them as an interactive research atlas (`../Instruction/UI_UX.md`): a knowledge tree, a reading column with first-class research objects (equations, algorithms, claims, failure modes, experiments, siblings), and a context rail of live instruments that change with the region being read.
 
 ## Supported runtime
 
@@ -10,24 +10,24 @@ The web edition of *The Model Stack — From Data and Silicon to Intelligence*. 
 
 ## Commands (run in `atlas/`)
 
-| Command | What it does |
-|---|---|
-| `npm ci` | Install exactly what the lockfile pins |
-| `npm run dev` | Compile `../docs` into `.atlas/`, then serve the site at http://localhost:4321 with hot reload |
-| `npm run compile` / `compile:check` | Compile only; `:check` exits 1 on any error diagnostic |
-| `npm run figures:check` | Validate every authored ` ```figure ` block without the full compiler |
-| `npm run build` / `preview` | Static production build into `apps/web/dist`, then serve it |
-| `npm run typecheck` | `tsc` for core, visual, compiler; `astro check` for the site |
-| `npm run lint` / `format:check` | ESLint 10 flat config (typescript-eslint strict type-checked); Prettier |
-| `npm test` | `node:test` suites of the pure-TS packages |
-| `npm run test:e2e` | Playwright + axe accessibility checks against a built site |
+| Command                             | What it does                                                                                   |
+| ----------------------------------- | ---------------------------------------------------------------------------------------------- |
+| `npm ci`                            | Install exactly what the lockfile pins                                                         |
+| `npm run dev`                       | Compile `../docs` into `.atlas/`, then serve the site at http://localhost:4321 with hot reload |
+| `npm run compile` / `compile:check` | Compile only; `:check` exits 1 on any error diagnostic                                         |
+| `npm run figures:check`             | Validate every authored ` ```figure ` block without the full compiler                          |
+| `npm run build` / `preview`         | Static production build into `apps/web/dist`, then serve it                                    |
+| `npm run typecheck`                 | `tsc` for core, visual, compiler; `astro check` for the site                                   |
+| `npm run lint` / `format:check`     | ESLint 10 flat config (typescript-eslint strict type-checked); Prettier                        |
+| `npm test`                          | `node:test` suites of the pure-TS packages                                                     |
+| `npm run test:e2e`                  | Playwright + axe accessibility checks against a built site                                     |
 
 A change is done when `format:check`, `lint`, `typecheck`, `test`, `compile:check`, and `build` pass from a clean `npm ci`.
 
 ## Configuration
 
-| Variable | Default | Meaning |
-|---|---|---|
+| Variable           | Default        | Meaning                                                                  |
+| ------------------ | -------------- | ------------------------------------------------------------------------ |
 | `ATLAS_BUNDLE_DIR` | `atlas/.atlas` | Where the site reads the compiled bundle (validated once at build start) |
 
 No secrets are used; nothing is read from the environment at runtime in the browser.

@@ -4,13 +4,27 @@ import { citationField, radiusFor } from '../../src/lib/citation-field.ts';
 import { lineageMinimap } from '../../src/lib/lineage-minimap.ts';
 import { lineageStrip, relationKey } from '../../src/lib/lineage-strip.ts';
 
-const RELATIONS = ['conceptual ancestor', 'engineering optimization', 'alternative branch', 'superseded approach', 'current frontier'];
+const RELATIONS = [
+  'conceptual ancestor',
+  'engineering optimization',
+  'alternative branch',
+  'superseded approach',
+  'current frontier',
+];
 
 /** A deterministic, lineage-shaped sample: sparse early years, dense recent ones. */
 function entries(): { id: number; year: number; work: string; relation: string; chapter: number }[] {
-  const years = [1948, 1979, 1985, 1991, 2010, 2013, 2013, 2015, 2017, 2019, 2019, 2019, 2019, 2019, 2019, 2019, 2022, 2024];
+  const years = [
+    1948, 1979, 1985, 1991, 2010, 2013, 2013, 2015, 2017, 2019, 2019, 2019, 2019, 2019, 2019, 2019, 2022, 2024,
+  ];
   for (let i = 0; i < 20; i += 1) years.push(2024);
-  return years.map((year, id) => ({ id, year, work: `w${String(id)}`, relation: RELATIONS[id % RELATIONS.length] ?? 'conceptual ancestor', chapter: (id % 9) + 1 }));
+  return years.map((year, id) => ({
+    id,
+    year,
+    work: `w${String(id)}`,
+    relation: RELATIONS[id % RELATIONS.length] ?? 'conceptual ancestor',
+    chapter: (id % 9) + 1,
+  }));
 }
 
 function minGap(points: readonly { x: number; y: number; r?: number }[]): number {
@@ -41,7 +55,10 @@ describe('lineage strip (home)', () => {
     const strip = lineageStrip(entries());
     for (const mark of strip.marks) {
       assert.ok(mark.y < strip.axisY && mark.y > 0);
-      assert.ok(mark.x - 3.2 >= 0 && mark.x + 3.2 <= strip.width, `a dense last year stays inside the drawing (x = ${String(mark.x)})`);
+      assert.ok(
+        mark.x - 3.2 >= 0 && mark.x + 3.2 <= strip.width,
+        `a dense last year stays inside the drawing (x = ${String(mark.x)})`,
+      );
     }
     for (let i = 1; i < strip.ticks.length; i += 1) {
       const gap = (strip.ticks[i]?.x ?? 0) - (strip.ticks[i - 1]?.x ?? 0);
@@ -54,7 +71,10 @@ describe('lineage strip (home)', () => {
     const strip = lineageStrip(entries());
     const y2019 = strip.years.find((year) => year.year === 2019);
     assert.equal(y2019?.count, 7);
-    assert.equal(Object.values(y2019?.byRelation ?? {}).reduce((sum, n) => sum + n, 0), 7);
+    assert.equal(
+      Object.values(y2019?.byRelation ?? {}).reduce((sum, n) => sum + n, 0),
+      7,
+    );
     for (const mark of strip.marks) {
       const column = strip.years.find((year) => year.year === mark.year);
       assert.ok(column !== undefined && mark.x >= column.x0 - 8 && mark.x <= column.x1 + 8);
@@ -75,7 +95,10 @@ describe('lineage minimap (timeline)', () => {
     assert.ok(minGap(map.marks) >= 7.3);
     for (const mark of map.marks) {
       const lane = map.lanes.find((candidate) => candidate.key === mark.relationKey);
-      assert.ok(lane !== undefined && mark.x > lane.x0 && mark.x < lane.x1, `mark ${String(mark.id)} is inside its lane`);
+      assert.ok(
+        lane !== undefined && mark.x > lane.x0 && mark.x < lane.x1,
+        `mark ${String(mark.id)} is inside its lane`,
+      );
       assert.ok(mark.y >= map.top && mark.y <= map.height);
     }
   });
@@ -87,7 +110,8 @@ describe('lineage minimap (timeline)', () => {
       for (let i = 1; i < own.length; i += 1) {
         const previous = own[i - 1];
         const current = own[i];
-        if (previous !== undefined && current !== undefined && current.year > previous.year) assert.ok(current.y >= previous.y - 0.01);
+        if (previous !== undefined && current !== undefined && current.year > previous.year)
+          assert.ok(current.y >= previous.y - 0.01);
       }
     }
   });
@@ -96,14 +120,22 @@ describe('lineage minimap (timeline)', () => {
     const map = lineageMinimap(entries(), 360, 640);
     for (const mark of map.marks) {
       const band = map.years.find((year) => year.year === mark.year);
-      assert.ok(band !== undefined && mark.y >= band.y0 - 0.01 && mark.y <= band.y1 + 0.01, `year ${String(mark.year)}`);
+      assert.ok(
+        band !== undefined && mark.y >= band.y0 - 0.01 && mark.y <= band.y1 + 0.01,
+        `year ${String(mark.year)}`,
+      );
     }
   });
 });
 
 describe('citation field (papers)', () => {
   const works = [
-    ...Array.from({ length: 40 }, (_, i) => ({ key: `P${String(i)}`, type: 'paper', year: 2015 + (i % 11), weight: i % 6 })),
+    ...Array.from({ length: 40 }, (_, i) => ({
+      key: `P${String(i)}`,
+      type: 'paper',
+      year: 2015 + (i % 11),
+      weight: i % 6,
+    })),
     ...Array.from({ length: 12 }, (_, i) => ({ key: `D${String(i)}`, type: 'documentation', year: null, weight: 1 })),
     { key: 'R1', type: 'repository', year: 2020, weight: 0 },
   ];

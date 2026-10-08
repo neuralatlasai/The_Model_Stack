@@ -14,5 +14,8 @@ const Tag = `h${block.level}` as const;
 
 <Tag id={block.anchor} class={`rb-h rb-h${block.level}`} {...depthAttrs(block.depth)}>
   <Inline nodes={block.content} />
-  <a class="rb-anchor" href={`#${block.anchor}`}><span aria-hidden="true">#</span><span class="rb-vh">Link to this heading</span></a>
+  <a class="rb-anchor" href={`#${block.anchor}`}>
+    <span aria-hidden="true">#</span>
+    <span class="rb-vh">Link to this heading</span>
+  </a>
 </Tag>

@@ -44,12 +44,18 @@ function phrasingPlain(nodes: readonly PhrasingContent[]): string {
 }
 
 const NEGATION_BEFORE = /\b(?:no|not|never|nor|without|neither|none|nothing)\b/iu;
-const NEGATION_AFTER = /^\W{0,3}(?:(?:is|are|was|were|does|do|did|has|have|must|may|should|can)\s+)?(?:not|never)\b|^\W{0,3}(?:is\s+|are\s+)?(?:forbidden|absent|excluded|prohibited)\b/iu;
+const NEGATION_AFTER =
+  /^\W{0,3}(?:(?:is|are|was|were|does|do|did|has|have|must|may|should|can)\s+)?(?:not|never)\b|^\W{0,3}(?:is\s+|are\s+)?(?:forbidden|absent|excluded|prohibited)\b/iu;
 
 /** True when the label occurrence at [start, end) is mentioned rather than used. */
 export function isMention(text: string, start: number, end: number): boolean {
   const before = text.slice(0, start);
-  const boundary = Math.max(before.lastIndexOf('. '), before.lastIndexOf('; '), before.lastIndexOf('? '), before.lastIndexOf('! '));
+  const boundary = Math.max(
+    before.lastIndexOf('. '),
+    before.lastIndexOf('; '),
+    before.lastIndexOf('? '),
+    before.lastIndexOf('! '),
+  );
   const sentenceHead = before.slice(boundary === -1 ? 0 : boundary + 2);
   if (NEGATION_BEFORE.test(sentenceHead)) return true;
   return NEGATION_AFTER.test(text.slice(end, end + 48));
@@ -64,9 +70,17 @@ function checkText(text: string, line: number | null, st: CompileState): void {
     const end = start + match[0].length;
     if (isMention(text, start, end)) continue;
     if (label === 'EMPIRICALLY-OBSERVED') {
-      st.report('label-forbidden', 'EMPIRICALLY-OBSERVED is used as an evidence label; Edition 1.0 ran no experiments', line);
+      st.report(
+        'label-forbidden',
+        'EMPIRICALLY-OBSERVED is used as an evidence label; Edition 1.0 ran no experiments',
+        line,
+      );
     } else if (!/\bcommit\b/iu.test(text)) {
-      st.report('code-verified-without-commit', 'CODE-VERIFIED is used without naming the repository commit and the check performed', line);
+      st.report(
+        'code-verified-without-commit',
+        'CODE-VERIFIED is used without naming the repository commit and the check performed',
+        line,
+      );
     }
   }
 }

@@ -93,7 +93,10 @@ describe('authored figures', () => {
     assert.ok(figure.text.length > figure.spec.alt.length, 'generated description is appended');
     assert.equal(figure.scene, null);
     assert.deepEqual(codes(body, 'error'), []);
-    assert.deepEqual(body.figures.map((item) => item.id), ['fig-5.4']);
+    assert.deepEqual(
+      body.figures.map((item) => item.id),
+      ['fig-5.4'],
+    );
     const mechanism = body.rail.find((binding) => binding.regionAnchor === 'mechanism');
     assert.deepEqual(mechanism?.instruments[0], { kind: 'figure', figureId: 'fig-5.4' });
     const formulation = body.rail.find((binding) => binding.regionAnchor === 'formulation');
@@ -120,7 +123,9 @@ describe('authored figures', () => {
   });
 
   it('reports invalid YAML at its source line and keeps the source as code', async () => {
-    const body = await compile('# 5.2 A\n\n## Mechanism\n\n```figure\nid: fig-5.1\ntitle: [unclosed\n```\n', { bodyStartLine: 40 });
+    const body = await compile('# 5.2 A\n\n## Mechanism\n\n```figure\nid: fig-5.1\ntitle: [unclosed\n```\n', {
+      bodyStartLine: 40,
+    });
     const diagnostic = body.diagnostics.find((item) => item.code === 'figure-yaml-invalid');
     assert.ok(diagnostic !== undefined);
     assert.equal(diagnostic.severity, 'error');
@@ -130,22 +135,32 @@ describe('authored figures', () => {
   });
 
   it('reports schema violations with issue paths', async () => {
-    const body = await compile('# 5.2 A\n\n## Mechanism\n\n```figure\nid: fig-5.2\nkind: matrix\ntitle: Causal mask\nevidence: DERIVED\nsource: DERIVED:eq-5.5\nalt: short\nspec:\n  rows: 8\n```\n');
+    const body = await compile(
+      '# 5.2 A\n\n## Mechanism\n\n```figure\nid: fig-5.2\nkind: matrix\ntitle: Causal mask\nevidence: DERIVED\nsource: DERIVED:eq-5.5\nalt: short\nspec:\n  rows: 8\n```\n',
+    );
     const diagnostic = body.diagnostics.find((item) => item.code === 'figure-schema-invalid');
     assert.ok(diagnostic !== undefined);
     assert.match(diagnostic.message, /caption/u);
     assert.match(diagnostic.message, /alt/u);
-    assert.equal(onlyBlock(body, 'code').anchor, 'fig-5-2', 'the fallback keeps the figure anchor for cross-references');
+    assert.equal(
+      onlyBlock(body, 'code').anchor,
+      'fig-5-2',
+      'the fallback keeps the figure anchor for cross-references',
+    );
   });
 
   it('forbids EMPIRICALLY-OBSERVED figure evidence', async () => {
-    const body = await compile(`# 5.2 A\n\n## Mechanism\n\n${DIAGRAM.replace('evidence: MATHEMATICALLY-DERIVED', 'evidence: EMPIRICALLY-OBSERVED')}\n`);
+    const body = await compile(
+      `# 5.2 A\n\n## Mechanism\n\n${DIAGRAM.replace('evidence: MATHEMATICALLY-DERIVED', 'evidence: EMPIRICALLY-OBSERVED')}\n`,
+    );
     assert.ok(codes(body, 'error').includes('label-forbidden'));
     assert.equal(blocksOf(body, 'figure').length, 0);
   });
 
   it('replaces a figure with an unevaluable formula by its source', async () => {
-    const body = await compile(`# 5.2 A\n\n## Mechanism\n\n${CALCULATOR.replace('formula: B*H*T^2*b', 'formula: B*H*T^2*q')}\n`);
+    const body = await compile(
+      `# 5.2 A\n\n## Mechanism\n\n${CALCULATOR.replace('formula: B*H*T^2*b', 'formula: B*H*T^2*q')}\n`,
+    );
     assert.ok(codes(body, 'error').includes('figure-formula-invalid'));
     assert.equal(blocksOf(body, 'figure').length, 0);
     assert.equal(onlyBlock(body, 'code').anchor, 'fig-5-4');
@@ -159,21 +174,31 @@ describe('authored figures', () => {
     assert.ok(errors.includes('figure-reference-invalid'));
     assert.ok(errors.includes('figure-duplicate-id'));
     const figures = blocksOf(body, 'figure');
-    assert.deepEqual(figures.map((block) => block.figure.id), ['fig-6.1', 'fig-5.1']);
+    assert.deepEqual(
+      figures.map((block) => block.figure.id),
+      ['fig-6.1', 'fig-5.1'],
+    );
     assert.equal(figures[0]?.figure.regionAnchor, 'mechanism', 'an unknown anchor falls back to the enclosing region');
   });
 
   it('caps rail instruments per region and reports overflow', async () => {
-    const panels = ['fig-5.11', 'fig-5.12', 'fig-5.13', 'fig-5.14'].map((id) => statPanel(id, 'formulation')).join('\n\n');
+    const panels = ['fig-5.11', 'fig-5.12', 'fig-5.13', 'fig-5.14']
+      .map((id) => statPanel(id, 'formulation'))
+      .join('\n\n');
     const body = await compile(`# 5.2 A\n\n## Formulation\n\n$$\nx\n$$\n*(Eq. 5.4)*\n\n${panels}\n`);
     const binding = body.rail.find((item) => item.regionAnchor === 'formulation');
     assert.equal(binding?.instruments.length, MAX_RAIL_INSTRUMENTS);
-    assert.ok(binding?.instruments.every((instrument) => instrument.kind === 'figure'), 'authored rail figures take priority over derived instruments');
+    assert.ok(
+      binding?.instruments.every((instrument) => instrument.kind === 'figure'),
+      'authored rail figures take priority over derived instruments',
+    );
     assert.deepEqual(codes(body, 'warning'), ['rail-overflow']);
   });
 
   it('fills remaining rail slots with derived instruments', async () => {
-    const body = await compile(`# 5.2 A\n\n## Formulation\n\n$$\nx\n$$\n*(Eq. 5.4)* where x = input.\n\n> **Definition — thing.** A thing (P01).\n\n${statPanel('fig-5.11', 'formulation')}\n`);
+    const body = await compile(
+      `# 5.2 A\n\n## Formulation\n\n$$\nx\n$$\n*(Eq. 5.4)* where x = input.\n\n> **Definition — thing.** A thing (P01).\n\n${statPanel('fig-5.11', 'formulation')}\n`,
+    );
     const binding = body.rail.find((item) => item.regionAnchor === 'formulation');
     assert.deepEqual(binding?.instruments, [
       { kind: 'figure', figureId: 'fig-5.11' },
@@ -229,7 +254,9 @@ describe('Mermaid concept maps', () => {
     const withLead = conceptMap.replace('```\n\n- [Tensor]', '```\n\nText equivalent:\n\n- [Tensor]');
     const lead = await compile(withLead, { meta: { id: 'ms.chapter.5', entityType: 'chapter', section: null } });
     assert.ok(onlyBlock(lead, 'figure').figure.text.startsWith('- [Tensor]'));
-    const missing = await compile(conceptMap.split('\n- [Tensor]')[0] ?? '', { meta: { id: 'ms.chapter.5', entityType: 'chapter', section: null } });
+    const missing = await compile(conceptMap.split('\n- [Tensor]')[0] ?? '', {
+      meta: { id: 'ms.chapter.5', entityType: 'chapter', section: null },
+    });
     assert.ok(codes(missing, 'warning').includes('block-malformed'));
   });
 

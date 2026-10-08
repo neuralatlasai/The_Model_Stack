@@ -17,7 +17,11 @@ import '../styles/equations.css';
 
 const [registry, graph] = await Promise.all([getRegistry(), getGraph()]);
 const chapters = new Set(registry.equations.map((equation) => equation.number.split('.')[0])).size;
-const read = registry.equations.map((equation) => ({ number: equation.number, chapter: equation.number.split('.')[0] ?? '', symbols: equationSymbols(equation) }));
+const read = registry.equations.map((equation) => ({
+  number: equation.number,
+  chapter: equation.number.split('.')[0] ?? '',
+  symbols: equationSymbols(equation),
+}));
 const distinct = new Set(read.flatMap((equation) => equation.symbols.map((symbol) => symbol.key))).size;
 const shared = symbolThreads(read).length;
 const declared = registry.equations.reduce((sum, equation) => sum + equation.variables.length, 0);
@@ -36,11 +40,9 @@ const declared = registry.equations.reduce((sum, equation) => sum + equation.var
     meta={`${grouped(registry.equations.length)} equations · ${grouped(chapters)} chapters · ${grouped(distinct)} distinct symbols, ${grouped(shared)} shared by two or more · ${grouped(declared)} declared variables`}
   />
 
-  {
-    registry.equations.length === 0 ? (
-      <p class="sh-empty">No numbered equations are compiled in this bundle.</p>
-    ) : (
-      <EquationsExplorer equations={registry.equations} graph={graph} />
-    )
-  }
+  {registry.equations.length === 0 ? (
+    <p class="sh-empty">No numbered equations are compiled in this bundle.</p>
+  ) : (
+    <EquationsExplorer equations={registry.equations} graph={graph} />
+  )}
 </ReaderLayout>

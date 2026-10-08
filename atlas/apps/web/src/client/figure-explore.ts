@@ -22,7 +22,10 @@ interface SceneIndex {
 }
 
 function labelOf(node: Element): string {
-  const label = [...node.querySelectorAll('.vg-node__label')].map((t) => t.textContent.trim()).join(' ').trim();
+  const label = [...node.querySelectorAll('.vg-node__label')]
+    .map((t) => t.textContent.trim())
+    .join(' ')
+    .trim();
   const sub = node.querySelector('.vg-node__sub')?.textContent.trim() ?? '';
   return sub === '' ? label : `${label} ${sub}`;
 }
@@ -41,7 +44,8 @@ function readoutFor(svg: SVGSVGElement, className: string): HTMLElement {
 
 function indexScene(svg: SVGSVGElement): SceneIndex {
   const nodes = new Map<string, SVGGElement>();
-  for (const node of svg.querySelectorAll<SVGGElement>('g.vg-node[data-vg-key]')) nodes.set(node.getAttribute('data-vg-key') ?? '', node);
+  for (const node of svg.querySelectorAll<SVGGElement>('g.vg-node[data-vg-key]'))
+    nodes.set(node.getAttribute('data-vg-key') ?? '', node);
   const byKey = new Map<string, Element[]>();
   for (const part of svg.querySelectorAll('.vg-edge[data-vg-key], .vg-edge__tag[data-vg-key]')) {
     const key = part.getAttribute('data-vg-key') ?? '';
@@ -118,9 +122,13 @@ function exploreScene(svg: SVGSVGElement, signal: AbortSignal): void {
     },
     { signal },
   );
-  svg.addEventListener('pointerleave', () => {
-    if (document.activeElement !== svg) clear();
-  }, { signal });
+  svg.addEventListener(
+    'pointerleave',
+    () => {
+      if (document.activeElement !== svg) clear();
+    },
+    { signal },
+  );
 
   makeSteppable(svg, 'Use the arrow keys to step through its nodes and see what each one connects to');
   svg.addEventListener(
@@ -137,16 +145,25 @@ function exploreScene(svg: SVGSVGElement, signal: AbortSignal): void {
       event.preventDefault();
       order ??= readingOrder(index.nodes.values());
       if (order.length === 0) return;
-      cursor = jump === 'first' ? 0 : jump === 'last' ? order.length - 1 : (cursor + (step ?? 0) + order.length) % order.length;
+      cursor =
+        jump === 'first'
+          ? 0
+          : jump === 'last'
+            ? order.length - 1
+            : (cursor + (step ?? 0) + order.length) % order.length;
       const node = order[cursor];
       if (node !== undefined) focusNode(node);
     },
     { signal },
   );
-  svg.addEventListener('blur', () => {
-    clear();
-    cursor = -1;
-  }, { signal });
+  svg.addEventListener(
+    'blur',
+    () => {
+      clear();
+      cursor = -1;
+    },
+    { signal },
+  );
 }
 
 function exploreMatrix(svg: SVGSVGElement, signal: AbortSignal): void {
@@ -187,7 +204,10 @@ function exploreMatrix(svg: SVGSVGElement, signal: AbortSignal): void {
     const strong = document.createElement('b');
     strong.textContent = `${rowLabel} ${rowTicks[i] ?? String(i)} · ${colLabel} ${colTicks[j] ?? String(j)}`;
     readout.append(strong, on ? '  — admitted' : '  — masked');
-    const rowCount = bits.slice(i * cols, (i + 1) * cols).split('').filter((b) => b === '1').length;
+    const rowCount = bits
+      .slice(i * cols, (i + 1) * cols)
+      .split('')
+      .filter((b) => b === '1').length;
     readout.append(`  (${String(rowCount)} of ${String(cols)} in this row)`);
   };
 
@@ -208,12 +228,21 @@ function exploreMatrix(svg: SVGSVGElement, signal: AbortSignal): void {
     },
     { signal },
   );
-  svg.addEventListener('pointerleave', () => {
-    if (document.activeElement !== svg) off();
-  }, { signal });
+  svg.addEventListener(
+    'pointerleave',
+    () => {
+      if (document.activeElement !== svg) off();
+    },
+    { signal },
+  );
 
   makeSteppable(svg, 'Use the arrow keys to move between cells');
-  const MOVES: Readonly<Record<string, readonly [number, number]>> = { ArrowUp: [-1, 0], ArrowDown: [1, 0], ArrowLeft: [0, -1], ArrowRight: [0, 1] };
+  const MOVES: Readonly<Record<string, readonly [number, number]>> = {
+    ArrowUp: [-1, 0],
+    ArrowDown: [1, 0],
+    ArrowLeft: [0, -1],
+    ArrowRight: [0, 1],
+  };
   svg.addEventListener(
     'keydown',
     (event) => {

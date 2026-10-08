@@ -47,7 +47,9 @@ describe('validateFigure on the normative examples of VISUAL_GRAMMAR.md', () => 
    * minimal quoting fix; when the grammar is corrected, the first assertion
    * fails and the entry should be deleted.
    */
-  const YAML_DEFECTS: Readonly<Record<string, { readonly unrecognized: readonly string[]; readonly fix: readonly (readonly [string, string])[] }>> = {
+  const YAML_DEFECTS: Readonly<
+    Record<string, { readonly unrecognized: readonly string[]; readonly fix: readonly (readonly [string, string])[] }>
+  > = {
     'memory-stack': { unrecognized: ['v'], fix: [['label: Adam m, v,', 'label: "Adam m, v",']] },
     hierarchy: {
       unrecognized: ['per SM', 'device-wide'],
@@ -99,7 +101,13 @@ describe('validateFigure rejects invalid figures with typed codes', () => {
     );
 
   it('unbound symbol in a calculator output', () => {
-    assert.deepEqual(codes(calculator('B*T^2*Z')), ['figure-formula-invalid', 'figure-formula-invalid', 'figure-formula-invalid', 'figure-formula-invalid', 'figure-formula-invalid']);
+    assert.deepEqual(codes(calculator('B*T^2*Z')), [
+      'figure-formula-invalid',
+      'figure-formula-invalid',
+      'figure-formula-invalid',
+      'figure-formula-invalid',
+      'figure-formula-invalid',
+    ]);
   });
 
   it('formula syntax errors and non-finite values at defaults', () => {
@@ -138,7 +146,10 @@ describe('validateFigure rejects invalid figures with typed codes', () => {
   });
 
   it('undeclared tensor dimension', () => {
-    const spec = { dims: { B: 'batch', T: 'tokens' }, steps: [{ shape: '[B, T]' }, { shape: '[B, T, Q]', op: 'expand' }] };
+    const spec = {
+      dims: { B: 'batch', T: 'tokens' },
+      steps: [{ shape: '[B, T]' }, { shape: '[B, T, Q]', op: 'expand' }],
+    };
     const issues = validateFigure(mustParse(envelope('tensor-flow', spec, 1)), fixtureContext);
     assert.equal(issues.length, 1);
     assert.equal(issues[0]?.code, 'figure-reference-invalid');
@@ -157,7 +168,11 @@ describe('validateFigure rejects invalid figures with typed codes', () => {
   });
 
   it('EMPIRICALLY-OBSERVED is forbidden', () => {
-    const parsed = parseFigure(envelope('matrix', { rows: 4, cols: 4, pattern: 'causal', rowLabel: 'i', colLabel: 'j' }, 1, { evidence: 'EMPIRICALLY-OBSERVED' }));
+    const parsed = parseFigure(
+      envelope('matrix', { rows: 4, cols: 4, pattern: 'causal', rowLabel: 'i', colLabel: 'j' }, 1, {
+        evidence: 'EMPIRICALLY-OBSERVED',
+      }),
+    );
     assert.equal(parsed.figure, null);
     assert.deepEqual(
       parsed.issues.map((issue) => issue.code),
@@ -170,7 +185,17 @@ describe('validateFigure rejects invalid figures with typed codes', () => {
       type: 'line',
       x: { label: 'concurrency', scale: 'log2' },
       y: { label: 'decode throughput (tokens/s)' },
-      series: [{ id: 'r', label: 'reported', points: [[1, 40], [8, 250], [64, 900]] }],
+      series: [
+        {
+          id: 'r',
+          label: 'reported',
+          points: [
+            [1, 40],
+            [8, 250],
+            [64, 900],
+          ],
+        },
+      ],
     };
     const base = envelope('chart', spec, 1, { evidence: 'PAPER-REPORTED', source: 'P19' });
     assert.deepEqual(codes(base), ['figure-context-missing']);
@@ -188,7 +213,12 @@ describe('validateFigure rejects invalid figures with typed codes', () => {
   });
 
   it('derived (illustrative) charts do not need context', () => {
-    const spec = { type: 'line', x: { label: 'T', scale: 'log2' }, y: { label: 'latency (s)', format: 'seconds' }, series: [{ id: 'r', label: 'model', formula: 'x/1000', sample: { from: 1, to: 1024, count: 4 } }] };
+    const spec = {
+      type: 'line',
+      x: { label: 'T', scale: 'log2' },
+      y: { label: 'latency (s)', format: 'seconds' },
+      series: [{ id: 'r', label: 'model', formula: 'x/1000', sample: { from: 1, to: 1024, count: 4 } }],
+    };
     assert.deepEqual(codes(envelope('chart', spec, 1)), []);
   });
 
@@ -198,15 +228,26 @@ describe('validateFigure rejects invalid figures with typed codes', () => {
     assert.deepEqual(codes(envelope('matrix', matrix, 1, { source: ['P99'] })), ['figure-reference-invalid']);
     assert.deepEqual(codes(envelope('matrix', matrix, 1, { source: ['arxiv:1234'] })), ['figure-reference-invalid']);
     assert.deepEqual(codes(envelope('matrix', matrix, 1, { concepts: ['ms.volume.9'] })), ['figure-reference-invalid']);
-    assert.deepEqual(codes(envelope('matrix', matrix, 1, { evidence: 'PAPER-REPORTED', source: 'DERIVED:eq-5.8' })), ['figure-reference-invalid']);
+    assert.deepEqual(codes(envelope('matrix', matrix, 1, { evidence: 'PAPER-REPORTED', source: 'DERIVED:eq-5.8' })), [
+      'figure-reference-invalid',
+    ]);
   });
 
   it('matrix, compare, and systems-trace consistency', () => {
-    assert.deepEqual(codes(envelope('matrix', { rows: 4, cols: 4, pattern: 'explicit', rowLabel: 'i', colLabel: 'j' }, 1)), ['figure-schema-invalid']);
-    assert.deepEqual(codes(envelope('matrix', { rows: 4, cols: 4, pattern: 'banded', rowLabel: 'i', colLabel: 'j', highlight: [{ row: 9, col: 0 }] }, 1)), [
-      'figure-schema-invalid',
-      'figure-schema-invalid',
-    ]);
+    assert.deepEqual(
+      codes(envelope('matrix', { rows: 4, cols: 4, pattern: 'explicit', rowLabel: 'i', colLabel: 'j' }, 1)),
+      ['figure-schema-invalid'],
+    );
+    assert.deepEqual(
+      codes(
+        envelope(
+          'matrix',
+          { rows: 4, cols: 4, pattern: 'banded', rowLabel: 'i', colLabel: 'j', highlight: [{ row: 9, col: 0 }] },
+          1,
+        ),
+      ),
+      ['figure-schema-invalid', 'figure-schema-invalid'],
+    );
     const compare = {
       axis: 'KV bytes per token at fixed width',
       columns: [
@@ -219,12 +260,23 @@ describe('validateFigure rejects invalid figures with typed codes', () => {
       ],
     };
     assert.deepEqual(codes(envelope('compare', compare, 1)), ['figure-reference-invalid']);
-    const trace = { columns: ['latency'], stages: [{ name: 'a', values: { latency: 'x', memory: 'y' } }, { name: 'b', values: {} }] };
+    const trace = {
+      columns: ['latency'],
+      stages: [
+        { name: 'a', values: { latency: 'x', memory: 'y' } },
+        { name: 'b', values: {} },
+      ],
+    };
     assert.deepEqual(codes(envelope('systems-trace', trace, 1)), ['figure-reference-invalid']);
   });
 
   it('log axes need positive values; memory segments must be non-negative', () => {
-    const chart = { type: 'line', x: { label: 'x' }, y: { label: 'y', scale: 'log10' }, series: [{ id: 's', label: 's', formula: 'x - 5', sample: { from: 0, to: 10, count: 5 } }] };
+    const chart = {
+      type: 'line',
+      x: { label: 'x' },
+      y: { label: 'y', scale: 'log10' },
+      series: [{ id: 's', label: 's', formula: 'x - 5', sample: { from: 0, to: 10, count: 5 } }],
+    };
     assert.ok(codes(envelope('chart', chart, 1)).includes('figure-formula-invalid'));
     const stack = { bars: [{ label: 'b', segments: [{ label: 's', formula: '0 - N' }] }], variables: { N: 3 } };
     assert.deepEqual(codes(envelope('memory-stack', stack, 1)), ['figure-formula-invalid']);

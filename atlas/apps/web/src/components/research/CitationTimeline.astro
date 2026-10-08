@@ -50,55 +50,55 @@ const maxYear = years.length > 0 ? Math.max(...years) : 0;
 const span = Math.max(1, maxYear - minYear);
 const byYear = new Map<number, typeof dated>();
 for (const entry of dated) byYear.set(entry.year, [...(byYear.get(entry.year) ?? []), entry]);
-const tickYears = [...new Set([minYear, ...[...byYear.keys()].filter((year) => year % 5 === 0), maxYear])].sort((a, b) => a - b);
+const tickYears = [...new Set([minYear, ...[...byYear.keys()].filter((year) => year % 5 === 0), maxYear])].sort(
+  (a, b) => a - b,
+);
 const pct = (year: number): string => `${String(((year - minYear) / span) * 100)}%`;
 const marks = [...new Set(dated.map((entry) => entry.mark))];
 const undated = cited.length - dated.length;
 ---
 
-{
-  dated.length > 1 && (
-    <figure class="rb-ctl" aria-labelledby="ctl-title">
-      <figcaption class="rb-ctl__head" id="ctl-title">
-        <span class="rb-ctl__kicker">Sources in time</span>
-        <span class="rb-ctl__note">
-          {dated.length} dated works, {minYear}–{maxYear}
-          {undated > 0 ? ` · ${String(undated)} undated` : ''}
-        </span>
-      </figcaption>
-      <div class="rb-ctl__plot">
-        {[...byYear.entries()].map(([year, entries]) => (
-          <div class="rb-ctl__col" style={`--x: ${pct(year)}`}>
-            {entries.map((entry) => (
-              <a
-                class={`rb-ctl__mark rb-ctl__mark--${entry.mark}`}
-                href={siteHref(entry.record.atlasUrl)}
-                title={`${entry.record.key} · ${entry.record.work} (${String(year)})`}
-                aria-label={`${entry.record.key}: ${entry.record.work}, ${String(year)}`}
-              >
-                <span aria-hidden="true">{GLYPH[entry.mark]}</span>
-              </a>
-            ))}
-          </div>
-        ))}
-        <div class="rb-ctl__axis" aria-hidden="true">
-          {tickYears.map((year) => (
-            <span class="rb-ctl__tick" style={`--x: ${pct(year)}`}>
-              {year}
-            </span>
+{dated.length > 1 && (
+  <figure class="rb-ctl" aria-labelledby="ctl-title">
+    <figcaption class="rb-ctl__head" id="ctl-title">
+      <span class="rb-ctl__kicker">Sources in time</span>
+      <span class="rb-ctl__note">
+        {dated.length} dated works, {minYear}–{maxYear}
+        {undated > 0 ? ` · ${String(undated)} undated` : ''}
+      </span>
+    </figcaption>
+    <div class="rb-ctl__plot">
+      {[...byYear.entries()].map(([year, entries]) => (
+        <div class="rb-ctl__col" style={`--x: ${pct(year)}`}>
+          {entries.map((entry) => (
+            <a
+              class={`rb-ctl__mark rb-ctl__mark--${entry.mark}`}
+              href={siteHref(entry.record.atlasUrl)}
+              title={`${entry.record.key} · ${entry.record.work} (${String(year)})`}
+              aria-label={`${entry.record.key}: ${entry.record.work}, ${String(year)}`}
+            >
+              <span aria-hidden="true">{GLYPH[entry.mark]}</span>
+            </a>
           ))}
         </div>
-      </div>
-      <ul class="rb-ctl__legend" role="list">
-        {marks.map((mark) => (
-          <li>
-            <span class={`rb-ctl__glyph rb-ctl__mark--${mark}`} aria-hidden="true">
-              {GLYPH[mark]}
-            </span>
-            {LABEL[mark]}
-          </li>
+      ))}
+      <div class="rb-ctl__axis" aria-hidden="true">
+        {tickYears.map((year) => (
+          <span class="rb-ctl__tick" style={`--x: ${pct(year)}`}>
+            {year}
+          </span>
         ))}
-      </ul>
-    </figure>
-  )
-}
+      </div>
+    </div>
+    <ul class="rb-ctl__legend" role="list">
+      {marks.map((mark) => (
+        <li>
+          <span class={`rb-ctl__glyph rb-ctl__mark--${mark}`} aria-hidden="true">
+            {GLYPH[mark]}
+          </span>
+          {LABEL[mark]}
+        </li>
+      ))}
+    </ul>
+  </figure>
+)}

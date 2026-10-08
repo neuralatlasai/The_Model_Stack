@@ -85,7 +85,10 @@ describe('shouldReplaceHash', () => {
 
 describe('hrefWithHash', () => {
   test('replaces the fragment, keeps path and query', () => {
-    assert.equal(hrefWithHash('https://atlas.test/ch05/05-2/?depth=technical#scope', 'mechanism'), 'https://atlas.test/ch05/05-2/?depth=technical#mechanism');
+    assert.equal(
+      hrefWithHash('https://atlas.test/ch05/05-2/?depth=technical#scope', 'mechanism'),
+      'https://atlas.test/ch05/05-2/?depth=technical#mechanism',
+    );
   });
 
   test('removes the fragment without leaving a bare #', () => {

@@ -5,6 +5,8 @@ dist/
 coverage/
 test-results/
 playwright-report/
+# Local screenshots, audit logs, and browser verification output.
+artifacts/
 *.log
 .env
 .env.*

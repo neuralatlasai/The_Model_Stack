@@ -46,7 +46,8 @@ export function fakeContext(options: FakeOptions = {}): FakeContext {
     },
     hasCitation: (key: CitationKey) => KNOWN_CITATIONS.has(key),
     resolveXRef: (kind: XRefKind, number: string) => options.xrefs?.[`${kind}:${number}`] ?? null,
-    renderMath: (tex: string, displayMode: boolean) => katex.renderToString(tex, { displayMode, throwOnError: true, output: 'htmlAndMathml' }),
+    renderMath: (tex: string, displayMode: boolean) =>
+      katex.renderToString(tex, { displayMode, throwOnError: true, output: 'htmlAndMathml' }),
     highlight: () => null,
     layout: async (spec: FigureSpec) => {
       layoutCalls.push(spec);
@@ -92,7 +93,10 @@ export function makeMeta(overrides: Partial<NodeMeta> = {}): NodeMeta {
   };
 }
 
-export async function compile(body: string, options: { meta?: Partial<NodeMeta>; ctx?: FakeContext; bodyStartLine?: number } = {}): Promise<CompiledBody> {
+export async function compile(
+  body: string,
+  options: { meta?: Partial<NodeMeta>; ctx?: FakeContext; bodyStartLine?: number } = {},
+): Promise<CompiledBody> {
   return compileMarkdown(
     { sourcePath: 'fixture.md', body, bodyStartLine: options.bodyStartLine ?? 1, meta: makeMeta(options.meta) },
     options.ctx ?? fakeContext(),
@@ -129,7 +133,9 @@ export function onlyBlock<K extends BlockKind>(body: CompiledBody, kind: K): Blo
 }
 
 export function codes(body: CompiledBody, severity?: Diagnostic['severity']): DiagnosticCode[] {
-  return body.diagnostics.filter((item) => severity === undefined || item.severity === severity).map((item) => item.code);
+  return body.diagnostics
+    .filter((item) => severity === undefined || item.severity === severity)
+    .map((item) => item.code);
 }
 
 /** Wraps fixture content in a minimal section: an H1 and one region with the given heading. */

@@ -28,7 +28,9 @@ export interface FigureRow {
 export type KindFamily = 'structure' | 'computation' | 'quantity' | 'comparison';
 
 /** What each kind is for, and its family (colour) — one line each, for readouts and headers. */
-export const KIND_INFO: Readonly<Record<FigureKind, { readonly short: string; readonly family: KindFamily; readonly purpose: string }>> = {
+export const KIND_INFO: Readonly<
+  Record<FigureKind, { readonly short: string; readonly family: KindFamily; readonly purpose: string }>
+> = {
   diagram: { short: 'diagram', family: 'structure', purpose: 'data or control flow between components' },
   cycle: { short: 'cycle', family: 'structure', purpose: 'loops and feedback between stages' },
   hierarchy: { short: 'hier.', family: 'structure', purpose: 'levels, containment, and taxonomies' },
@@ -44,9 +46,9 @@ export const KIND_INFO: Readonly<Record<FigureKind, { readonly short: string; re
 };
 
 /** Kinds in family order, so the matrix reads structure → computation → quantity → comparison. */
-export const KIND_ORDER: readonly FigureKind[] = (['structure', 'computation', 'quantity', 'comparison'] as const).flatMap((family) =>
-  FIGURE_KINDS.filter((kind) => KIND_INFO[kind].family === family),
-);
+export const KIND_ORDER: readonly FigureKind[] = (
+  ['structure', 'computation', 'quantity', 'comparison'] as const
+).flatMap((family) => FIGURE_KINDS.filter((kind) => KIND_INFO[kind].family === family));
 
 export async function collectFigures(): Promise<FigureRow[]> {
   const [registry, graph] = await Promise.all([getRegistry(), getGraph()]);
@@ -56,22 +58,25 @@ export async function collectFigures(): Promise<FigureRow[]> {
     const doc = await getDocument(id);
     const node = graph.nodes[id];
     const chapter = doc.meta.chapter ?? 0;
-    const where = doc.meta.entityType === 'section' ? (node?.number ?? '') : doc.meta.entityType === 'chapter' ? 'README' : doc.meta.entityType;
-    return doc.figures.map(
-      (figure): FigureRow => ({
-        id: figure.id,
-        number: figure.number,
-        title: figure.spec.title,
-        kind: figure.spec.kind,
-        placement: figure.placement,
-        states: figure.spec.states.length,
-        authored: figure.origin === 'authored',
-        url: `${doc.route.url}#${figure.anchor}`,
-        chapter,
-        where,
-        whereTitle: node?.shortTitle ?? doc.header.title,
-      }),
-    );
+    const where =
+      doc.meta.entityType === 'section'
+        ? (node?.number ?? '')
+        : doc.meta.entityType === 'chapter'
+          ? 'README'
+          : doc.meta.entityType;
+    return doc.figures.map((figure): FigureRow => ({
+      id: figure.id,
+      number: figure.number,
+      title: figure.spec.title,
+      kind: figure.spec.kind,
+      placement: figure.placement,
+      states: figure.spec.states.length,
+      authored: figure.origin === 'authored',
+      url: `${doc.route.url}#${figure.anchor}`,
+      chapter,
+      where,
+      whereTitle: node?.shortTitle ?? doc.header.title,
+    }));
   });
   const rows = perDoc.flat();
   const numberKey = (row: FigureRow): number => {

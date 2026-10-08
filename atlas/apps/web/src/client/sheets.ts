@@ -263,7 +263,9 @@ const FOCUSABLE =
   'a[href], button:not([disabled]), input:not([disabled]), select:not([disabled]), textarea:not([disabled]), [tabindex]:not([tabindex="-1"])';
 
 function focusables(panel: HTMLElement): HTMLElement[] {
-  return $$(FOCUSABLE, panel).filter((element) => !element.hasAttribute('inert') && element.getClientRects().length > 0);
+  return $$(FOCUSABLE, panel).filter(
+    (element) => !element.hasAttribute('inert') && element.getClientRects().length > 0,
+  );
 }
 
 function focusTarget(panel: HTMLElement): HTMLElement | null {
@@ -293,7 +295,12 @@ function controlled(doc: Document, trigger: HTMLElement): HTMLElement | null {
 }
 
 function treePanel(doc: Document, trigger: HTMLElement): HTMLElement | null {
-  return controlled(doc, trigger) ?? $(`[${HOOK.treePanel}]`, doc) ?? $('[role="tree"]', doc)?.closest<HTMLElement>('nav, aside') ?? null;
+  return (
+    controlled(doc, trigger) ??
+    $(`[${HOOK.treePanel}]`, doc) ??
+    $('[role="tree"]', doc)?.closest<HTMLElement>('nav, aside') ??
+    null
+  );
 }
 
 function contextPanel(doc: Document, trigger: HTMLElement): HTMLElement | null {

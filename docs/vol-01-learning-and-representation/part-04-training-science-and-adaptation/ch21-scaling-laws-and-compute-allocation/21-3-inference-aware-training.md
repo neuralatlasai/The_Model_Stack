@@ -70,13 +70,23 @@ editorial_status: manuscript_draft
 
 # 21.3 Inference-aware training
 
+## Scope
+
 [DERIVED] A smaller model trained longer can have higher training cost and lower total lifecycle cost when recurring inference is sufficiently large. This statement requires a quality constraint, expected demand, a serving-work model and feasibility constraints. Without those conditions, “train longer” is not an allocation rule. The relevant comparison is between alternatives that deliver the required quality under the actual deployment workload.
+
+## Why this exists
+
+[PAPER-REPORTED] Training-only scaling minimizes a one-time budget. Sardana et al. add recurring inference and show why the selected training duration can move beyond that optimum. Their long-training sweep also tests whether an early-ratio loss fit remains predictive in the newly selected region. The economic objective and the empirical extrapolation problem must both be solved; changing the former does not validate the latter. [R21.3], §§2–6.
+
+## Intuition
+
+[MATHEMATICALLY-DERIVED] Equal quality constrains parameters and training tokens to a curve. Extra training can reduce the deployed size, paying once to reduce a recurring cost. At zero demand, the minimum is training-only; positive demand adds a slope favoring smaller size. Approaching the fitted capacity boundary makes required data diverge, preventing unlimited substitution under this law. The break-even calculation prices a finite pair of quality-matched alternatives without claiming the surface is exact.
 
 ## Formulation
 
 [PAPER-REPORTED] Sardana et al. replace training-only optimality by fixed-quality lifecycle optimization. Their basic dense approximation minimizes $6ND_{\mathrm{tr}}+2ND_{\mathrm{inf}}$ subject to the scaling law reaching a target loss. Inference demand is assumed fixed for that target quality. The additional inference term rewards smaller deployed models, while the quality constraint requires compensating training. [R21.3, sections 2–3]
 
-[MATHEMATICALLY-DERIVED] Write the target excess loss as $\ell=L_{\mathrm{target}}-E>0$. Under Eq.21.3, the required training presentations for a continuous model size $N$ are
+[MATHEMATICALLY-DERIVED] Write the target excess loss as $\ell=L_{\mathrm{target}}-E>0$. Under Eq. 21.3, the required training presentations for a continuous model size $N$ are
 
 $$
 D(N)=\left(\frac{B}{\ell-A N^{-\alpha}}\right)^{1/\beta},
@@ -103,11 +113,39 @@ $$
 
 [DERIVED] With zero demand the interior training optimum satisfies $\epsilon_D=1$. Positive demand requires $\epsilon_D=1+k_{\mathrm{inf}}Q/(k_{\mathrm{tr}}D)>1$ at an interior optimum, moving toward the smaller-model, longer-training portion of the fixed-quality curve. This is a local condition; constrained deployment may instead select a memory, data or latency boundary. A numerical solver must search a feasible interval and compare endpoints rather than assume an unconstrained stationary point exists.
 
-## Methodology
+## Mechanism
+
+```figure
+id: fig-21.5
+kind: diagram
+title: From fixed quality to lifecycle allocation
+caption: A quality constraint defines feasible model and training-duration pairs. Demand and measured serving cost determine which feasible pair minimizes lifecycle cost.
+placement: wide
+evidence: DERIVED
+source: [R21.3]
+alt: A validated loss surface and target quality produce feasible size-duration pairs. Training cost, serving cost and demand then determine lifecycle comparisons and break-even thresholds.
+spec:
+  direction: TB
+  nodes:
+    - {id: loss, kind: model, label: validated quality surface}
+    - {id: target, kind: objective, label: fixed target quality}
+    - {id: pairs, kind: state, label: feasible size-duration pairs}
+    - {id: demand, kind: dataset, label: input and output demand}
+    - {id: costs, kind: hardware, label: measured training and serving costs}
+    - {id: choose, kind: process, label: lifecycle and break-even comparison}
+  edges:
+    - {from: loss, to: pairs}
+    - {from: target, to: pairs}
+    - {from: pairs, to: choose}
+    - {from: demand, to: choose}
+    - {from: costs, to: choose}
+```
+
+### Methodology
 
 ### Separate input processing and output generation
 
-[PAPER-REPORTED] The inference-aware study extends the objective to monetary cost with separate training, prompt-processing and generation utilization assumptions. Its analytical examples recognize that prompt processing and autoregressive generation can operate at markedly different model-FLOP utilization. Those utilization values are scenario assumptions, not universal hardware measurements. [R21.3, section 3/Appendices]
+[PAPER-REPORTED] The inference-aware study extends the objective to monetary cost with separate training, prompt-processing and generation utilization assumptions. Its analytical examples recognize that prompt processing and autoregressive generation can operate at markedly different model-FLOP utilization. Those utilization values are scenario assumptions, not universal hardware measurements. [R21.3], §6, Figure 6 and Appendix B.3.
 
 [MATHEMATICALLY-DERIVED] A corresponding simplified currency model is
 
@@ -136,35 +174,76 @@ $$
 
 [MATHEMATICALLY-DERIVED] For uncertain demand in a linear cost model, expected cost uses $\mathbb E[Q]$. A risk constraint may instead involve an upper quantile or regret over several demand scenarios. This distinction matters because a point-optimal long training run can be wasteful if the model is retired early. Demand that depends on model quality, speed, price or release timing is endogenous; holding it fixed is then a simplifying assumption rather than a measured fact.
 
-## Algorithm
-
-```text
-Algorithm 21.3 — Compare quality-constrained lifecycle allocations
-INPUT: validated loss surface; target quality; demand scenarios; serving measurements
-OUTPUT: feasible allocations, break-even boundaries and scenario-dependent regret
-STATE: cost units; hardware and workload identities; independent quality evidence
-INVARIANT: alternatives satisfy the same declared quality and deployment constraints
-1. Reject target qualities at or below the fitted floor unless another validated model applies.
-2. Enumerate feasible model configurations and solve required training duration for each.
-3. Check data availability, training memory, context support and serving latency.
-4. Estimate training cost and input/output serving cost with explicit utilization boundaries.
-5. Compute lifecycle cost for every demand scenario and locate pairwise break-even points.
-6. Propagate fit and serving uncertainty into costs and feasible quality outcomes.
-7. Retain dominated and infeasible alternatives with reasons for exclusion.
-8. Report the selected allocation with demand assumptions and sensitivity, not a universal ratio.
-TERMINATION: all finite candidate/scenario pairs are evaluated or explicitly rejected
-COMPLEXITY: O(K S) evaluations for K configurations and S demand scenarios
+```figure
+id: fig-21.6
+kind: calculator
+title: Demand needed to amortize extra training
+caption: >-
+  Equation 21.13 assumes quality-matched feasible alternatives, a positive
+  one-time premium and constant positive savings per request. Inputs are
+  analytical currency units, not quoted service prices or measured demand.
+placement: rail
+anchor: mechanism
+evidence: MATHEMATICALLY-DERIVED
+source: DERIVED:eq-21.13
+alt: >-
+  An extra one million currency units in training and savings of 0.001
+  units per request break even at one billion requests. At that demand,
+  the lifecycle cost difference is zero under the linear assumptions.
+spec:
+  tex: Q_{\mathrm{break}}=\Delta T/\Delta s
+  equation: "21.13"
+  inputs:
+    - {symbol: premium, label: extra training currency, default: 1000000, min: 0, max: 1000000000}
+    - {symbol: saving, label: currency saved per request, default: 0.001, min: 0.000001, max: 1}
+    - {symbol: demand, label: lifetime request count, default: 1000000000, min: 0, max: 1000000000000, format: integer}
+  outputs:
+    - {symbol: threshold, label: break-even requests, formula: premium/saving, format: integer, emphasis: true}
+    - {symbol: difference, label: longer-trained minus baseline cost, formula: premium-demand*saving}
 ```
 
+## Algorithm
+
+**Algorithm 21.3 — Compare lifecycle allocations.** [DERIVED] Input: a validated conditional loss surface, a target excess loss $\ell$, finite sizes $\{N_k\}_{k=1}^K$, audited serving costs, and demand scenarios $\{(Q_{\mathrm{in},s},Q_{\mathrm{out},s},\mathcal W_s)\}_{s=1}^S$. The workload record $\mathcal W_s$ specifies arrival and length distributions, concurrency, capacity, and latency constraints. Output: feasible candidate costs and scenario regret. This is an allocation procedure, not evidence that a predicted checkpoint has already reached the quality target.
+
+$$
+\begin{aligned}
+1.\quad &\ell\le0\ \Longrightarrow\ \operatorname{return}(\mathrm{invalid\ target}).\\
+2.\quad &u_k\gets A N_k^{-\alpha},\qquad k=1,\ldots,K.\\
+3.\quad &D_k\gets\begin{cases}
+ [B/(\ell-u_k)]^{1/\beta},&u_k<\ell,\\
+ +\infty,&u_k\ge\ell.
+\end{cases}\\
+4.\quad &v_{ks}\gets\operatorname{finite}(D_k)\land
+ \operatorname{data\_memory\_context\_latency}(k,D_k,\mathcal W_s).\\
+5.\quad &J_{ks}\gets\begin{cases}
+ T_k+Q_{\mathrm{in},s}s_{\mathrm{in},ks}+Q_{\mathrm{out},s}s_{\mathrm{out},ks},&v_{ks},\\
+ +\infty,&\neg v_{ks}.
+\end{cases}\\
+6.\quad &\mathcal F_s\gets\{k:v_{ks}\};\quad
+ \mathcal F_s=\varnothing\ \Longrightarrow\ \operatorname{mark}(s,\mathrm{infeasible}).\\
+ &\mathcal F_s\ne\varnothing:\quad J_s^*\gets\min_{k\in\mathcal F_s}J_{ks},\qquad
+ \operatorname{regret}_{ks}\gets J_{ks}-J_s^*.\\
+7.\quad &\operatorname{return}(\{D_k,v_{ks},J_{ks},\operatorname{regret}_{ks}\},\mathrm{provenance}).
+\end{aligned}
+$$
+*(Eq. 21.26)*
+
+[DERIVED] $T_k$ is the one-time cost at the predicted horizon; $s_{\mathrm{in},ks}$ and $s_{\mathrm{out},ks}$ use common workload units and are audited for $\mathcal W_s$ within the declared serving boundary. Scenario-independent coefficients are valid only when one certified operating regime covers every scenario. Missing cost or constraint measurements return unresolved status rather than a finite estimate. If every candidate is infeasible in a scenario, its regret is undefined and is omitted with that reason. The invariant is a common quality/serving contract across comparisons, with capacity tested separately for each scenario. Independent quality evaluation remains a required gate before deployment. Cost and loss uncertainty can be propagated by repeating this finite evaluation over retained joint fit/cost draws. One draw costs $O(KS)$ arithmetic and $O(KS)$ retained outputs; this excludes measurement, training and pairwise break-even enumeration.
+
 ## Implementation
+
+[DERIVED] The cost model consumes measurements from the chosen Model / autograd framework and Inference engine layers; it does not require or validate a particular product. **FlashAttention**, the Attention kernel layer, appears in the plan-anchored context study as a source execution choice, not a measured serving advantage in this section. Chapters 42 and 48 own cache/workload measurement and lifecycle benchmarking; a candidate's runtime revision and operating point must accompany its cost inputs. [R21.9], §2.1.
 
 [DERIVED] A deployment record should retain prompt/output length distributions, concurrency, batch policy, latency percentiles, cache precision, hardware topology and serving software revision. Mean tokens alone can hide long-tail memory or latency violations. Training cost should include required pilot and failed-run work when the decision concerns a program budget, and exclude those costs only when the decision explicitly concerns a final run. Reusing a teacher or pretrained checkpoint requires the same distinction between sunk and incremental costs.
 
 [DERIVED] Monetary and energy accounting cannot be inferred from published parameter/token totals alone. Multiplying algorithmic FLOPs by a peak-power-per-peak-FLOP ratio presumes utilization and power behavior that may not hold. Measured hardware-seconds and power traces provide a different evidence boundary from a theoretical work estimate. For a source that reports only algorithmic allocation, this manuscript makes no claim that its minimum is also an energy or wall-time minimum.
 
-## Reported experiments
+## Experimental design
 
-[PAPER-REPORTED] Sardana et al. train 47 MPT models across six sizes from 150M to 6B parameters and token/parameter ratios extending to 10000 in parts of the sweep. The training corpus combines general web and code, without repeating the same corpus epochs in the reported long-training setup. The largest ratios are not observed at every size; notably the 2.5B sweep does not extend across the full range. Evaluation includes held-out loss and categorized downstream tasks. [R21.3, sections 4–5/Appendix A]
+### Reported experiments
+
+[PAPER-REPORTED] Sardana et al. train 47 MPT models across six sizes from 150M to 6B parameters and token/parameter ratios extending to 10000 in parts of the sweep. The training corpus combines general web and code, without repeating the same corpus epochs in the reported long-training setup. The largest ratios are not observed at every size; notably the 2.5B sweep does not extend across the full range. Evaluation includes held-out loss and categorized downstream tasks. [R21.3], §§3–5 and Appendices C–D.
 
 [PAPER-REPORTED] Their fits and measurements show continued gains from longer training over the tested range, while a law fit only to low token/parameter ratios can overpredict the benefit at much higher ratios. This is direct negative evidence against extrapolating an early-regime data exponent indefinitely. The results motivate inference-aware allocation but do not prove that arbitrarily long training always remains beneficial. [R21.3, section 5]
 
@@ -186,34 +265,26 @@ COMPLEXITY: O(K S) evaluations for K configurations and S demand scenarios
 
 [DERIVED] Releasing later to complete a long run can forfeit useful service months; comparing lifetime costs without a release-time assumption omits that effect. Retraining cadence and expected model obsolescence limit how much demand a checkpoint can amortize. If quality is merely predicted rather than independently confirmed, model-selection risk belongs in the decision alongside mean cost. A cheaper expected solution can have higher risk of failing the required quality constraint.
 
-## Improvements and limits
+## Siblings
+
+[DERIVED] Compare alternatives on one declared axis: training work at fixed quality; total algorithmic work at fixed demand; currency at fixed service criteria; or cost per accepted task. Constant-token comparisons do not match task success when answers and retries differ. Distillation changes supervision and teacher cost, compression changes representation/runtime, and test-time search changes the served algorithm. Each can alter lifecycle economics without sharing the same fitted training response.
+
+## Extensions
+
+### Improvements
 
 [DERIVED] Inference-aware scaling extends the training-only objective while preserving the distinction between a fitted response surface and a decision model. The next methodological improvement is to replace constant serving coefficients by workload-specific measured functions and to validate the loss surface in the longer-training region actually selected. Those changes improve the question's fidelity without asserting that a particular deployment optimum has already been observed.
 
 [DERIVED] Distillation and test-time search introduce additional alternatives: move compute to teacher supervision during training or to adaptive inference after training. Their cost boundaries and quality responses differ from simply increasing $D$. Section 21.4 reconstructs those reported studies; the unexecuted lifecycle verification protocol is in [verification](verification.md).
 
-```figure
-id: fig-21.3
-kind: diagram
-title: From fixed quality to lifecycle allocation
-caption: A quality constraint defines feasible model and training-duration pairs. Demand and measured serving cost determine which feasible pair minimizes lifecycle cost.
-placement: wide
-evidence: DERIVED
-source: [R21.3]
-alt: A validated loss surface and target quality produce feasible size-duration pairs. Training cost, serving cost and demand then determine lifecycle comparisons and break-even thresholds.
-spec:
-  direction: LR
-  nodes:
-    - {id: loss, kind: model, label: validated quality surface}
-    - {id: target, kind: objective, label: fixed target quality}
-    - {id: pairs, kind: state, label: feasible size-duration pairs}
-    - {id: demand, kind: dataset, label: input and output demand}
-    - {id: costs, kind: hardware, label: measured training and serving costs}
-    - {id: choose, kind: process, label: lifecycle and break-even comparison}
-  edges:
-    - {from: loss, to: pairs}
-    - {from: target, to: pairs}
-    - {from: pairs, to: choose}
-    - {from: demand, to: choose}
-    - {from: costs, to: choose}
-```
+## Limitations
+
+[MATHEMATICALLY-DERIVED] The analytical objective assumes the fitted quality surface, enough data, fixed workload coefficients and demand exogenous to the selected model. Context, batching and queueing can make serving cost nonlinear; finite capacity can make a demand scenario infeasible. A loss target below the floor has no solution under this family. A predicted economically favorable allocation remains conditional until independent quality and workload measurements confirm its premises.
+
+## Reproducibility
+
+[DERIVED] Retain fit revision, target metric, demand horizon/distribution, model lifetime, input/output length distribution, source prices and dates, measured utilization boundary, latency constraint and joint uncertainty draws. State whether pilots, failed runs and checkpoint reuse are sunk or incremental. No actual service demand, currency bill, power trace or deployment break-even has been measured in this manuscript.
+
+## References
+
+[R21.3](references.md#r21-3), §§2–6 and Appendices B–D; [R21.9](references.md#r21-9), §2.1; [21.4](21-4-beyond-dense-pretraining.md); [verification](verification.md).

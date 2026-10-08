@@ -25,7 +25,7 @@ implementations: [impl.pytorch]
 benchmarks: []
 datasets: []
 status: {maturity: active, disputed: false}
-evidence_summary: {labels_used: [MATHEMATICALLY-DERIVED, DERIVED, PAPER-REPORTED, OFFICIAL-DOCUMENTATION, NOT-DISCLOSED, UNVERIFIED], empirically_observed: false}
+evidence_summary: {labels_used: [ASSUMED, MATHEMATICALLY-DERIVED, DERIVED, PAPER-REPORTED, OFFICIAL-DOCUMENTATION, NOT-DISCLOSED, UNVERIFIED], empirically_observed: false}
 word_count_target: 2000
 updated_at: 2026-10-08
 editorial_status: manuscript_draft
@@ -104,7 +104,23 @@ editorial_status: manuscript_draft
 - **Interpretation.** A gain is attributable only to the reported recipe and accounting boundary. No universal optimizer ranking follows from one architecture or one target.
 - **Threats to validity.** Weak baselines, adaptive target selection, unequal implementation maturity, insufficient seeds, extrapolation near a fitted loss floor, and hardware-price changes.
 
-## 3. Coverage audit
+## 3. Acceptance criteria
+
+[ASSUMED] These are proposed acceptance rules for the declared fixtures, not results of completed checks. Before running the protocol, freeze the independent equations, manifest schema, evaluation target, endpoint policy, and accounting boundary. A failed rule rejects the corresponding equivalence or accounting claim; it need not invalidate a method on other workloads.
+
+| Check | Proposed acceptance rule | Failure interpretation |
+|---|---|---|
+| FP64 finite-transition fixtures | For each finite scalar entry, require $\lvert x_{\mathrm{test}}-x_{\mathrm{ref}}\rvert\le10^{-12}+10^{-10}\lvert x_{\mathrm{ref}}\rvert$ over the bounded fixture sequence. Compare every retained statistic and parameter, not only the final loss. | Convention, indexing, reconstruction, or arithmetic disagreement requires isolation before training comparisons. |
+| Discrete state and rejection | Group membership, step counters, schedule selectors, batch identifiers, and RNG/data references match exactly. Invalid gradients return before a moment map; rejected candidates do not mutate retained optimizer state. | A rejected-state mutation or clock mismatch violates the declared transition contract. |
+| Lower precision | Predeclare separate dtype/backend tolerances using a higher-precision reference and measured rounding envelopes. No FP64 threshold is silently reused for BF16. | An unexplained discrepancy stays unresolved; success after recasting a corrupted state is not assumed. |
+| Replay control | Under a declared deterministic configuration, the noninjected replay matches complete state under the finite-transition rule. If the backend is nondeterministic, record repeated control variability before evaluating an intervention. | Without a matching or statistically characterized control, classify the outcome as containment or unresolved, not causal identification. |
+| Budget identities | Shared-prefix plus branch suffix token/update totals agree exactly with the retained ancestry ledger. Float-valued accounting sums agree within $10^{-10}\max(1,\lvert\mathrm{reference}\rvert)$ in the same units. | Double-counted or omitted prefixes, retries, evaluation, or optimizer work invalidate the resource comparison. |
+| Quality targets | The same evaluator, target, and endpoint policy apply to all included recipes. Unreached targets remain censored; divergence remains failed. Neither receives an invented finite time-to-target. | Target selection, interpolation, or endpoint asymmetry prevents the proposed comparison. |
+| Transfer and efficiency hypotheses | Retain the complete preregistered rate grid, failed trials, seed-level outcomes, and equal search-resource boundary. Report target-scale transfer and time/token/work comparisons even when unfavorable. | There is no required winning optimizer; an unsupported gain or selectively omitted trial fails the reporting contract. |
+
+[DERIVED] A schema-valid figure or renderable equation cannot pass these scientific criteria. The chapter's equation calculators evaluate analytical identities for user-selected inputs; their outputs are not training measurements. Source-reported convergence, quality, or throughput claims remain attributed to their inspected experiments.
+
+## 4. Coverage audit
 
 | Required topic | Manuscript anchor and technical coverage | Primary basis | Remaining boundary |
 |---|---|---|---|
@@ -124,8 +140,17 @@ editorial_status: manuscript_draft
 | 20.6 Token/FLOP/second/cost comparison | [Formulation](20-6-comparative-evidence.md#formulation): target definitions, fitted inverse sensitivity, inclusive accounting and censored runs. | R20.4, R20.13, R20.17, R20.31 | No common hardware/cost benchmark supplied. |
 | 20.6 Seeds and architectures | [Mechanism](20-6-comparative-evidence.md#mechanism): training versus evaluation units, architecture families, endpoint selection and tuning. | R20.9, R20.15, R20.17, R20.31 | Replication applies only to the source's replicated slices. |
 
-## 4. Editorial and execution status
+## 5. Editorial and execution status
 
 [DERIVED] All six required topic manuscripts, the chapter map, source ledger, and verification protocol are authored. The audit covers methodology, equations, algorithm contracts, implementation boundaries, reported experimental protocols and observations, negative evidence, and documented improvements. References identify accessible full texts and exact inspected revisions. This is a manuscript coverage assessment, not a claim of external peer review.
 
 [UNVERIFIED] No training, optimizer fixture, replay experiment, distributed profiler, statistical resampling, or independent paper reproduction has been executed for this chapter. Proposed hardware, data, and evaluation choices above are design inputs requiring a concrete executable artifact before empirical claims can be made. The chapter remains `manuscript_draft`; its content parser checks are recorded separately from its scientific execution status.
+
+| Evidence gap | Status | Consequence |
+|---|---|---|
+| Independent reproduction of source training outcomes | UNVERIFIED | Reported gains and stability observations remain source-attributed. |
+| Installed PyTorch/JAX behavior and backend compatibility | UNVERIFIED | Documentation and paper implementation descriptions do not certify a local runtime. |
+| Common hardware, monetary cost, and energy across cited optimizers | NOT-DISCLOSED | Cross-paper token or FLOP comparisons do not establish a common delivery-cost ranking. |
+| Production checkpoint/batch traces sufficient for independent incident replay | NOT-DISCLOSED | Containment evidence is retained without an independently reproduced causal trace. |
+| Frontier-scale spectral failure prediction | UNVERIFIED | The measured small-model spectral observations do not establish the predicted frontier outcome. |
+| Immutable version of the originating Muon author article | UNVERIFIED | The access date and article surface are recorded; no code commit or execution is claimed. |

@@ -10,7 +10,14 @@ import { $$, matchesMedia } from './dom.ts';
 import { CLIENT_EVENTS, emit, type ThemePreference } from './events.ts';
 import { ACTIONS, actionSelector, closestAction, HOOK } from './hooks.ts';
 import type { PageContext } from './page.ts';
-import { effectiveTheme, nextTheme, themeAttribute, themeLabel, themePreferenceOf, toggledTheme } from './theme-model.ts';
+import {
+  effectiveTheme,
+  nextTheme,
+  themeAttribute,
+  themeLabel,
+  themePreferenceOf,
+  toggledTheme,
+} from './theme-model.ts';
 
 const DARK_QUERY = '(prefers-color-scheme: dark)';
 

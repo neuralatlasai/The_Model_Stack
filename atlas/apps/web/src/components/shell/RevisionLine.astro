@@ -22,8 +22,7 @@ const compiledIso = isoDate(manifest.compiledAt);
 
 <p class="sh-revision">
   <span>
-    Last updated{' '}
-    {updatedIso !== null ? <time datetime={updatedIso}>{formatDay(updatedAt)}</time> : updatedAt}
+    Last updated {updatedIso !== null ? <time datetime={updatedIso}>{formatDay(updatedAt)}</time> : updatedAt}
   </span>
   <span>Status: {stateLabel(status)}</span>
   <span>Edition {manifest.edition}</span>

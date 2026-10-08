@@ -21,7 +21,13 @@ describe('monograms (labs, systems)', () => {
   });
 
   test('a set is made unique: colliding marks grow from their leading word', () => {
-    const marks = monograms(['Salesforce AI Research', 'Sakana AI', 'Samsung Research AI', 'Mistral AI', 'Microsoft Research / Microsoft AI']);
+    const marks = monograms([
+      'Salesforce AI Research',
+      'Sakana AI',
+      'Samsung Research AI',
+      'Mistral AI',
+      'Microsoft Research / Microsoft AI',
+    ]);
     assert.deepEqual(marks, ['Sal', 'Sak', 'Sam', 'Mis', 'Mic']);
     assert.equal(new Set(marks).size, marks.length);
   });
@@ -61,13 +67,15 @@ describe('lab constellation', () => {
     assert.ok((at.get('c')?.r ?? 0) > (at.get('a')?.r ?? 0), 'more sections, larger disc');
     assert.equal(at.get('c')?.r, Math.round(discRadius(9) * 10) / 10);
     for (const [i, p] of field.marks.entries()) {
-      for (const q of field.marks.slice(i + 1)) assert.ok(Math.hypot(p.x - q.x, p.y - q.y) >= p.r + q.r - 0.2, `${p.key} and ${q.key} overlap`);
+      for (const q of field.marks.slice(i + 1))
+        assert.ok(Math.hypot(p.x - q.x, p.y - q.y) >= p.r + q.r - 0.2, `${p.key} and ${q.key} overlap`);
     }
   });
 
   test('links join labs that share a chapter, weighted by chapters shared', () => {
     const field = labConstellation(labs, parts, chapters);
-    const weight = (a: string, b: string): number | undefined => field.links.find((link) => (link.a === a && link.b === b) || (link.a === b && link.b === a))?.shared;
+    const weight = (a: string, b: string): number | undefined =>
+      field.links.find((link) => (link.a === a && link.b === b) || (link.a === b && link.b === a))?.shared;
     assert.equal(weight('a', 'b'), 1);
     assert.equal(weight('a', 'd'), 1);
     assert.equal(weight('c', 'd'), 1);
@@ -82,10 +90,16 @@ describe('citation field layouts', () => {
       { key: 'P2', type: 'paper', year: 2021, weight: 1 },
       { key: 'D1', type: 'documentation', year: null, weight: 1 },
     ];
-    const compact = citationField(works, ['paper', 'documentation'], { width: 400, labelW: 18, labelTop: 17, undatedW: 58 });
+    const compact = citationField(works, ['paper', 'documentation'], {
+      width: 400,
+      labelW: 18,
+      labelTop: 17,
+      undatedW: 58,
+    });
     for (const lane of compact.lanes) {
       assert.ok(lane.ly < lane.cy, 'label above the lane centre');
-      for (const mark of compact.marks.filter((candidate) => candidate.type === lane.type)) assert.ok(mark.y - mark.r >= lane.ly, 'dots clear the label');
+      for (const mark of compact.marks.filter((candidate) => candidate.type === lane.type))
+        assert.ok(mark.y - mark.r >= lane.ly, 'dots clear the label');
     }
     const wide = citationField(works, ['paper', 'documentation']);
     for (const lane of wide.lanes) assert.equal(lane.ly, lane.cy + 4);

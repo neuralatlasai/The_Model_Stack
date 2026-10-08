@@ -20,11 +20,26 @@
 
 /* ── status keys (dots, legend, chips, ledger) ───────────────────────────── */
 
-.pfx-st--peer { --pfx-fill: var(--pfx-peer); --pfx-stroke: var(--pfx-peer); }
-.pfx-st--pre { --pfx-fill: var(--paper); --pfx-stroke: var(--ink-2); }
-.pfx-st--doc { --pfx-fill: var(--pfx-doc); --pfx-stroke: var(--pfx-doc); }
-.pfx-st--unv { --pfx-fill: var(--paper); --pfx-stroke: var(--pfx-unv); }
-.pfx-st--other { --pfx-fill: var(--ink-3); --pfx-stroke: var(--ink-3); }
+.pfx-st--peer {
+  --pfx-fill: var(--pfx-peer);
+  --pfx-stroke: var(--pfx-peer);
+}
+.pfx-st--pre {
+  --pfx-fill: var(--paper);
+  --pfx-stroke: var(--ink-2);
+}
+.pfx-st--doc {
+  --pfx-fill: var(--pfx-doc);
+  --pfx-stroke: var(--pfx-doc);
+}
+.pfx-st--unv {
+  --pfx-fill: var(--paper);
+  --pfx-stroke: var(--pfx-unv);
+}
+.pfx-st--other {
+  --pfx-fill: var(--ink-3);
+  --pfx-stroke: var(--ink-3);
+}
 
 .pfx-key {
   display: inline-block;
@@ -43,7 +58,9 @@
 }
 
 .pfx-key.is-spine {
-  box-shadow: 0 0 0 1.5px var(--paper), 0 0 0 2.6px var(--accent);
+  box-shadow:
+    0 0 0 1.5px var(--paper),
+    0 0 0 2.6px var(--accent);
 }
 
 /* The undated column's hatch, as a legend key. */

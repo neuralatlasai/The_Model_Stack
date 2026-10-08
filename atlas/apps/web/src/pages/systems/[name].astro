@@ -21,7 +21,10 @@ type Props = { readonly id: ImplId };
 
 export const getStaticPaths = (async () => {
   const registry = await getRegistry();
-  return registry.systems.map((system) => ({ params: { name: system.id.slice('impl.'.length) }, props: { id: system.id } }));
+  return registry.systems.map((system) => ({
+    params: { name: system.id.slice('impl.'.length) },
+    props: { id: system.id },
+  }));
 }) satisfies GetStaticPaths;
 
 const { id } = Astro.props;
@@ -39,13 +42,24 @@ const layer =
         siblings: layerRow.systems
           .map((key) => model.systems.find((candidate) => candidate.key === key))
           .filter((candidate) => candidate !== undefined)
-          .map((candidate) => ({ name: candidate.name, url: candidate.url, self: candidate.key === row.key, analysed: candidate.chapters.length > 0 })),
+          .map((candidate) => ({
+            name: candidate.name,
+            url: candidate.url,
+            self: candidate.key === row.key,
+            analysed: candidate.chapters.length > 0,
+          })),
       };
-const usedBy = system.usedBy.map((nodeId) => graph.nodes[nodeId]).filter((node): node is GraphNode => node !== undefined);
+const usedBy = system.usedBy
+  .map((nodeId) => graph.nodes[nodeId])
+  .filter((node): node is GraphNode => node !== undefined);
 const mark = row === null ? '' : (systemMarks(model.systems).get(row.key) ?? '');
 const sections = row === null ? 0 : systemFootprint(row);
 const plural = (n: number, one: string, many = `${one}s`): string => `${String(n)} ${n === 1 ? one : many}`;
-const identity = ['System', system.layer ?? 'layer not stated', system.rank === null ? null : `rank ${String(system.rank)}`]
+const identity = [
+  'System',
+  system.layer ?? 'layer not stated',
+  system.rank === null ? null : `rank ${String(system.rank)}`,
+]
   .filter((part): part is string => part !== null)
   .join(' · ');
 ---
@@ -61,74 +75,72 @@ const identity = ['System', system.layer ?? 'layer not stated', system.rank === 
   <article class="sh-article">
     <PageHeader identity={identity} title={system.name}>
       <div class="em-brand">
-        {
-          mark !== '' && (
-            <span class:list={['em-mark', { 'is-idle': (row?.chapters.length ?? 0) === 0 }]} aria-hidden="true">
-              {mark}
-            </span>
-          )
-        }
+        {mark !== '' && (
+          <span class:list={['em-mark', { 'is-idle': (row?.chapters.length ?? 0) === 0 }]} aria-hidden="true">
+            {mark}
+          </span>
+        )}
         <span class="em-brand__fact">
-          {
-            row === null || row.chapters.length === 0 ? (
-              'not yet analysed by a written chapter'
-            ) : (
-              <>
-                <b>{row.chapters.length}</b> written {row.chapters.length === 1 ? 'chapter' : 'chapters'} · <b>{sections}</b> {sections === 1 ? 'section' : 'sections'}
-              </>
-            )
-          }
+          {row === null || row.chapters.length === 0 ? (
+            'not yet analysed by a written chapter'
+          ) : (
+            <>
+              <b>{row.chapters.length}</b> written {row.chapters.length === 1 ? 'chapter' : 'chapters'} ·{' '}
+              <b>{sections}</b> {sections === 1 ? 'section' : 'sections'}
+            </>
+          )}
           {row !== null && row.planned.length > 0 && ` · named in ${plural(row.planned.length, 'chapter plan')}`}
         </span>
-        {
-          system.surfaces.length > 0 && (
-            <ul class="sh-actions">
-              {system.surfaces.map((surface) => (
-                <li>
-                  <a href={surface.url} rel="external">
-                    {surface.label}
-                  </a>
-                </li>
-              ))}
-            </ul>
-          )
-        }
+        {system.surfaces.length > 0 && (
+          <ul class="sh-actions">
+            {system.surfaces.map((surface) => (
+              <li>
+                <a href={surface.url} rel="external">
+                  {surface.label}
+                </a>
+              </li>
+            ))}
+          </ul>
+        )}
       </div>
     </PageHeader>
 
-    {
-      row !== null && (
-        <EntityMap kind="system" name={system.name} chapters={model.chapters} parts={model.parts} used={row.chapters} planned={row.planned} uses={row.uses} layer={layer} />
-      )
-    }
+    {row !== null && (
+      <EntityMap
+        kind="system"
+        name={system.name}
+        chapters={model.chapters}
+        parts={model.parts}
+        used={row.chapters}
+        planned={row.planned}
+        uses={row.uses}
+        layer={layer}
+      />
+    )}
 
     <section class="sh-section" aria-labelledby="takes-heading">
       <h2 id="takes-heading">What chapters take from it</h2>
-      {
-        system.uses.length === 0 ? (
-          <p class="sh-empty">No chapter's reference-stack coverage table names this system yet.</p>
-        ) : (
-          <StackUses uses={system.uses} graph={graph} />
-        )
-      }
+      {system.uses.length === 0 ? (
+        <p class="sh-empty">No chapter's reference-stack coverage table names this system yet.</p>
+      ) : (
+        <StackUses uses={system.uses} graph={graph} />
+      )}
     </section>
 
     <section class="sh-section" aria-labelledby="usedby-heading">
       <h2 id="usedby-heading">Listed as an implementation by</h2>
-      {
-        usedBy.length === 0 ? (
-          <p class="sh-empty">No node lists this system in its implementations.</p>
-        ) : (
-          <ol class="sh-index-list">
-            {usedBy.map((node) => (
-              <li class="sh-index-row">
-                <span class="sh-num">{node.number ?? ''}</span>
-                <a href={node.url}>{node.title}</a>
-              </li>
-            ))}
-          </ol>
-        )
-      }
+      {usedBy.length === 0 ? (
+        <p class="sh-empty">No node lists this system in its implementations.</p>
+      ) : (
+        <ol class="sh-index-list">
+          {usedBy.map((node) => (
+            <li class="sh-index-row">
+              <span class="sh-num">{node.number ?? ''}</span>
+              <a href={node.url}>{node.title}</a>
+            </li>
+          ))}
+        </ol>
+      )}
     </section>
   </article>
 </ReaderLayout>

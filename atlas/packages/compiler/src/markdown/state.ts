@@ -71,7 +71,9 @@ export function createState(input: MarkdownInput, ctx: CompileContext): CompileS
   const fileLine = (bodyLine: number | null | undefined): number | null =>
     bodyLine === null || bodyLine === undefined ? null : bodyLine + input.bodyStartLine - 1;
   const report = (code: DiagnosticCode, message: string, bodyLine: number | null = null): void => {
-    diagnostics.push(diagnostic(code, message, { file: input.sourcePath, line: fileLine(bodyLine), nodeId: input.meta.id }));
+    diagnostics.push(
+      diagnostic(code, message, { file: input.sourcePath, line: fileLine(bodyLine), nodeId: input.meta.id }),
+    );
   };
   return {
     input,

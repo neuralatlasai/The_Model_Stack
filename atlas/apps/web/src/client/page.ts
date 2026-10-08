@@ -85,7 +85,13 @@ function createAnnouncer(doc: Document, ctl: Controller): (message: string) => v
 
   const ensureRegion = (): HTMLElement => {
     if (region?.isConnected !== true) {
-      region = h('div', { id: LIVE_REGION_ID, class: SR_ONLY_CLASS, role: 'status', 'aria-live': 'polite', 'aria-atomic': 'true' });
+      region = h('div', {
+        id: LIVE_REGION_ID,
+        class: SR_ONLY_CLASS,
+        role: 'status',
+        'aria-live': 'polite',
+        'aria-atomic': 'true',
+      });
       doc.body.append(region);
     }
     return region;

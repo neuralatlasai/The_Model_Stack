@@ -29,26 +29,50 @@ const [bookName = BOOK_TITLE, bookSub = ''] = BOOK_TITLE.split(' — ');
       <div class="sh-footer-col">
         <p class="sh-footer-h">The book</p>
         <ul>
-          {routes !== undefined && <li><a href={routes.url}>Reading routes</a></li>}
-          {notation !== undefined && <li><a href={notation.url}>Notation</a></li>}
-          <li><a href="/terms/">Terms</a></li>
-          <li><a href="/evidence/">Evidence labels</a></li>
+          {routes !== undefined && (
+            <li>
+              <a href={routes.url}>Reading routes</a>
+            </li>
+          )}
+          {notation !== undefined && (
+            <li>
+              <a href={notation.url}>Notation</a>
+            </li>
+          )}
+          <li>
+            <a href="/terms/">Terms</a>
+          </li>
+          <li>
+            <a href="/evidence/">Evidence labels</a>
+          </li>
         </ul>
       </div>
       <div class="sh-footer-col">
         <p class="sh-footer-h">The atlas</p>
         <ul>
-          <li><a href="/library/">Library</a></li>
-          <li><a href="/timeline/">Timeline</a></li>
-          <li><a href="/evaluation-ecosystem/">Evaluation ecosystem</a></li>
-          <li><a href="/ai-futures/">AI futures</a></li>
+          <li>
+            <a href="/library/">Library</a>
+          </li>
+          <li>
+            <a href="/timeline/">Timeline</a>
+          </li>
+          <li>
+            <a href="/evaluation-ecosystem/">Evaluation ecosystem</a>
+          </li>
+          <li>
+            <a href="/ai-futures/">AI futures</a>
+          </li>
         </ul>
       </div>
     </nav>
     <p class="sh-footer-meta">
       <span>Edition {manifest.edition}</span>
       <span aria-hidden="true">·</span>
-      {compiledIso !== null ? <time datetime={compiledIso}>{updatedLabel(manifest.compiledAt)}</time> : <span>{manifest.compiledAt}</span>}
+      {compiledIso !== null ? (
+        <time datetime={compiledIso}>{updatedLabel(manifest.compiledAt)}</time>
+      ) : (
+        <span>{manifest.compiledAt}</span>
+      )}
     </p>
   </div>
 </footer>

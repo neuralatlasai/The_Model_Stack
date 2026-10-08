@@ -38,7 +38,9 @@ import '../../styles/entities.css';
 
 const [registry, graph, stack] = await Promise.all([getRegistry(), getGraph(), getStackModel()]);
 const model = buildLabsModel(graph, registry, stack);
-const allChapters = model.parts.flatMap((part) => part.chapters.map((n) => model.chapters[String(n)]).filter((chapter) => chapter !== undefined));
+const allChapters = model.parts.flatMap((part) =>
+  part.chapters.map((n) => model.chapters[String(n)]).filter((chapter) => chapter !== undefined),
+);
 const written = allChapters.filter((chapter) => chapter.written);
 const active = model.labs.filter((lab) => lab.chapters.length > 0);
 const idle = model.labs.filter((lab) => lab.chapters.length === 0);
@@ -51,11 +53,16 @@ const domainOf = new Map(stack.parts.map((part) => [part.n, part.domain]));
 const field = labConstellation(active, model.parts, model.chapters);
 const drawings = [
   { variant: 'wide', field },
-  { variant: 'compact', field: labConstellation(active, model.parts, model.chapters, { width: 420, r0: 10.5, rk: 1.55, plannedW: 52 }) },
+  {
+    variant: 'compact',
+    field: labConstellation(active, model.parts, model.chapters, { width: 420, r0: 10.5, rk: 1.55, plannedW: 52 }),
+  },
 ] as const;
 const axisParts = model.parts.filter((part) => field.bands.some((band) => band.part === part.n));
 const restParts = model.parts.filter((part) => !axisParts.includes(part));
-const axisChapters = axisParts.flatMap((part) => part.chapters.map((n) => model.chapters[String(n)]).filter((chapter) => chapter !== undefined));
+const axisChapters = axisParts.flatMap((part) =>
+  part.chapters.map((n) => model.chapters[String(n)]).filter((chapter) => chapter !== undefined),
+);
 const partStarts = new Set(axisParts.map((part) => part.chapters[0]));
 const plannedLabel = field.planned === null ? '' : `${field.planned.from}–${field.planned.to}`;
 const labOf = new Map(active.map((lab) => [lab.key, lab]));
@@ -63,10 +70,14 @@ const labOf = new Map(active.map((lab) => [lab.key, lab]));
 // Footprint by part (the readout's and the matrix's stacked bar).
 const byPart = (lab: LabRow) =>
   axisParts
-    .map((part) => ({ part, sections: part.chapters.reduce((sum, n) => sum + (lab.sectionsByChapter[String(n)] ?? 0), 0) }))
+    .map((part) => ({
+      part,
+      sections: part.chapters.reduce((sum, n) => sum + (lab.sectionsByChapter[String(n)] ?? 0), 0),
+    }))
     .filter((entry) => entry.sections > 0);
 const maxSections = Math.max(1, ...active.map((lab) => lab.sections));
-const monoSize = (mark: string, r: number): number => Math.max(6.5, Math.min(12.5, (2 * r - 6) / (0.62 * Math.max(2, mark.length))));
+const monoSize = (mark: string, r: number): number =>
+  Math.max(6.5, Math.min(12.5, (2 * r - 6) / (0.62 * Math.max(2, mark.length))));
 
 // The readout rests on the lab with the broadest footprint (client entity-explorer.ts returns to it).
 const broadest = [...active].sort((a, b) => footprint(b) - footprint(a))[0];
@@ -75,7 +86,12 @@ const cellLabel = (lab: LabRow, n: number): string => {
   const sections = uses.map((use) => use.sections).join('; ');
   return `${lab.name} in chapter ${chapterNo(n)}: sections ${sections}`;
 };
-const clientModel = { ...model, marks: Object.fromEntries(markOf), domains: Object.fromEntries(domainOf), axis: axisParts.map((part) => part.n) };
+const clientModel = {
+  ...model,
+  marks: Object.fromEntries(markOf),
+  domains: Object.fromEntries(domainOf),
+  axis: axisParts.map((part) => part.n),
+};
 ---
 
 <ReaderLayout
@@ -91,16 +107,29 @@ const clientModel = { ...model, marks: Object.fromEntries(markOf), domains: Obje
     lede="Where the book draws on each lab: the organisations the reference stack lists, against the chapters that use their papers, reports, and code. List position is the reference stack’s, not a ranking."
   >
     <p class="en-meta">
-      <span><b>{model.labs.length}</b> labs</span>
-      <span><b>{active.length}</b> drawn on by a written chapter</span>
-      <span><b>{written.length}</b> of {allChapters.length} chapters written</span>
+      <span>
+        <b>{model.labs.length}</b> labs
+      </span>
+      <span>
+        <b>{active.length}</b> drawn on by a written chapter
+      </span>
+      <span>
+        <b>{written.length}</b> of {allChapters.length} chapters written
+      </span>
     </p>
   </PageHeader>
 
   <section class="en en--labs" data-entity-explorer="labs" data-en-rest={broadest?.key} aria-labelledby="el-title">
     <div class="en-bar">
-      <h2 class="en-title" id="el-title">Footprint</h2>
-      <p class="en-hint"><span class="en-hint__key" aria-hidden="true">◇</span> point to trace · click to open</p>
+      <h2 class="en-title" id="el-title">
+        Footprint
+      </h2>
+      <p class="en-hint">
+        <span class="en-hint__key" aria-hidden="true">
+          ◇
+        </span>{' '}
+        point to trace · click to open
+      </p>
     </div>
 
     <div class="lc" data-lc>
@@ -109,95 +138,151 @@ const clientModel = { ...model, marks: Object.fromEntries(markOf), domains: Obje
           <span>Where the book draws on each lab</span>
           <span class="lc-cap__note">x = mean chapter · size = sections</span>
         </figcaption>
-        {
-          drawings.map(({ variant, field: drawing }) => (
-            <div class={`lc-draw lc-draw--${variant}`}>
-              <svg
-                class="lc-svg"
-                viewBox={`0 0 ${String(drawing.width)} ${String(drawing.height)}`}
-                role="group"
-                aria-label={`${String(active.length)} labs drawn on by written chapters, placed by where in the book they are drawn on and sized by sections. Arrow keys move; Enter opens a lab.`}
-                data-lc-svg={variant}
-              >
-                <defs>
-                  <pattern id={`lc-hatch-${variant}`} width="6" height="6" patternUnits="userSpaceOnUse" patternTransform="rotate(45)">
-                    <line class="lc-hatch" x1="0" y1="0" x2="0" y2="6" />
-                  </pattern>
-                </defs>
-                {drawing.planned !== null && (
-                  <g class="lc-planned">
-                    <rect x={drawing.planned.x0} y="6" width={drawing.planned.x1 - drawing.planned.x0} height={drawing.axisY - 6} rx="8" fill={`url(#lc-hatch-${variant})`} />
-                    <rect class="lc-planned__edge" x={drawing.planned.x0} y="6" width={drawing.planned.x1 - drawing.planned.x0} height={drawing.axisY - 6} rx="8" />
-                    <text class="lc-planned__label" x={(drawing.planned.x0 + drawing.planned.x1) / 2} y={drawing.cy - 4}>
-                      {plannedLabel}
-                    </text>
-                    <text class="lc-planned__note" x={(drawing.planned.x0 + drawing.planned.x1) / 2} y={drawing.cy + 12}>
-                      {variant === 'wide' ? `${String(drawing.planned.chapters)} planned` : String(drawing.planned.chapters)}
-                    </text>
-                  </g>
-                )}
-                {drawing.bands.map((band) => (
-                  <g class="lc-band" data-lc-part={band.part} style={`--pc: var(--domain-${domainOf.get(band.part) ?? 'reference'})`}>
-                    <rect class="lc-band__wash" x={band.x0} y="6" width={band.x1 - band.x0} height={drawing.axisY - 6} rx="8" />
-                    <line class="lc-band__line" x1={band.x0 + 4} x2={band.x1 - 4} y1={drawing.axisY} y2={drawing.axisY} />
-                    <text class="lc-band__numeral" x={band.x0 + 8} y="22">
-                      {band.numeral}
-                    </text>
-                  </g>
-                ))}
-                <line class="lc-centre" x1={drawing.slots[0]?.x ?? 0} x2={drawing.slots.at(-1)?.x ?? 0} y1={drawing.cy} y2={drawing.cy} />
-                {drawing.slots.map((slot) => (
-                  <text class:list={['lc-tick', { 'is-planned': !slot.written }]} x={slot.x} y={drawing.axisY + 15} data-lc-tick={slot.n}>
-                    {chapterNo(slot.n)}
+        {drawings.map(({ variant, field: drawing }) => (
+          <div class={`lc-draw lc-draw--${variant}`}>
+            <svg
+              class="lc-svg"
+              viewBox={`0 0 ${String(drawing.width)} ${String(drawing.height)}`}
+              role="group"
+              aria-label={`${String(active.length)} labs drawn on by written chapters, placed by where in the book they are drawn on and sized by sections. Arrow keys move; Enter opens a lab.`}
+              data-lc-svg={variant}
+            >
+              <defs>
+                <pattern
+                  id={`lc-hatch-${variant}`}
+                  width="6"
+                  height="6"
+                  patternUnits="userSpaceOnUse"
+                  patternTransform="rotate(45)"
+                >
+                  <line class="lc-hatch" x1="0" y1="0" x2="0" y2="6" />
+                </pattern>
+              </defs>
+              {drawing.planned !== null && (
+                <g class="lc-planned">
+                  <rect
+                    x={drawing.planned.x0}
+                    y="6"
+                    width={drawing.planned.x1 - drawing.planned.x0}
+                    height={drawing.axisY - 6}
+                    rx="8"
+                    fill={`url(#lc-hatch-${variant})`}
+                  />
+                  <rect
+                    class="lc-planned__edge"
+                    x={drawing.planned.x0}
+                    y="6"
+                    width={drawing.planned.x1 - drawing.planned.x0}
+                    height={drawing.axisY - 6}
+                    rx="8"
+                  />
+                  <text class="lc-planned__label" x={(drawing.planned.x0 + drawing.planned.x1) / 2} y={drawing.cy - 4}>
+                    {plannedLabel}
                   </text>
-                ))}
-                <g class="lc-links" data-lc-links aria-hidden="true" />
-                <g class="lc-marks">
-                  {drawing.marks.map((mark, index) => {
-                    const lab = labOf.get(mark.key);
-                    if (lab === undefined) return null;
-                    const mono = markOf.get(lab.key) ?? '';
-                    const size = monoSize(mono, mark.r);
-                    return (
-                      <a
-                        class:list={['lc-mark', { 'is-rest': lab.key === broadest?.key }]}
-                        href={lab.url}
-                        data-lc-lab={lab.key}
-                        data-lc-x={mark.x}
-                        tabindex={index === 0 ? 0 : -1}
-                        aria-label={`${lab.name}: ${String(lab.sections)} sections in ${String(lab.chapters.length)} written chapters`}
-                      >
-                        <circle class="lc-mark__hit" cx={mark.x} cy={mark.y} r={mark.r + 3} />
-                        <circle class="lc-mark__disc" cx={mark.x} cy={mark.y} r={mark.r} />
-                        <text class="lc-mark__mono" x={mark.x} y={mark.y + size * 0.36} style={`font-size:${size.toFixed(2)}px`}>
-                          {mono}
-                        </text>
-                      </a>
-                    );
-                  })}
+                  <text class="lc-planned__note" x={(drawing.planned.x0 + drawing.planned.x1) / 2} y={drawing.cy + 12}>
+                    {variant === 'wide'
+                      ? `${String(drawing.planned.chapters)} planned`
+                      : String(drawing.planned.chapters)}
+                  </text>
                 </g>
-              </svg>
-            </div>
-          ))
-        }
+              )}
+              {drawing.bands.map((band) => (
+                <g
+                  class="lc-band"
+                  data-lc-part={band.part}
+                  style={`--pc: var(--domain-${domainOf.get(band.part) ?? 'reference'})`}
+                >
+                  <rect
+                    class="lc-band__wash"
+                    x={band.x0}
+                    y="6"
+                    width={band.x1 - band.x0}
+                    height={drawing.axisY - 6}
+                    rx="8"
+                  />
+                  <line class="lc-band__line" x1={band.x0 + 4} x2={band.x1 - 4} y1={drawing.axisY} y2={drawing.axisY} />
+                  <text class="lc-band__numeral" x={band.x0 + 8} y="22">
+                    {band.numeral}
+                  </text>
+                </g>
+              ))}
+              <line
+                class="lc-centre"
+                x1={drawing.slots[0]?.x ?? 0}
+                x2={drawing.slots.at(-1)?.x ?? 0}
+                y1={drawing.cy}
+                y2={drawing.cy}
+              />
+              {drawing.slots.map((slot) => (
+                <text
+                  class:list={['lc-tick', { 'is-planned': !slot.written }]}
+                  x={slot.x}
+                  y={drawing.axisY + 15}
+                  data-lc-tick={slot.n}
+                >
+                  {chapterNo(slot.n)}
+                </text>
+              ))}
+              <g class="lc-links" data-lc-links aria-hidden="true" />
+              <g class="lc-marks">
+                {drawing.marks.map((mark, index) => {
+                  const lab = labOf.get(mark.key);
+                  if (lab === undefined) return null;
+                  const mono = markOf.get(lab.key) ?? '';
+                  const size = monoSize(mono, mark.r);
+                  return (
+                    <a
+                      class:list={['lc-mark', { 'is-rest': lab.key === broadest?.key }]}
+                      href={lab.url}
+                      data-lc-lab={lab.key}
+                      data-lc-x={mark.x}
+                      tabindex={index === 0 ? 0 : -1}
+                      aria-label={`${lab.name}: ${String(lab.sections)} sections in ${String(lab.chapters.length)} written chapters`}
+                    >
+                      <circle class="lc-mark__hit" cx={mark.x} cy={mark.y} r={mark.r + 3} />
+                      <circle class="lc-mark__disc" cx={mark.x} cy={mark.y} r={mark.r} />
+                      <text
+                        class="lc-mark__mono"
+                        x={mark.x}
+                        y={mark.y + size * 0.36}
+                        style={`font-size:${size.toFixed(2)}px`}
+                      >
+                        {mono}
+                      </text>
+                    </a>
+                  );
+                })}
+              </g>
+            </svg>
+          </div>
+        ))}
         <p class="lc-key" aria-hidden="true">
-          <span><i class="lc-key__disc is-s"></i><i class="lc-key__disc is-l"></i>1 → {maxSections} sections</span>
-          <span><i class="lc-key__arc"></i>shares chapters</span>
-          {field.planned !== null && <span><i class="lc-key__hatch"></i>planned parts</span>}
+          <span>
+            <i class="lc-key__disc is-s"></i>
+            <i class="lc-key__disc is-l"></i>1 → {maxSections} sections
+          </span>
+          <span>
+            <i class="lc-key__arc"></i>shares chapters
+          </span>
+          {field.planned !== null && (
+            <span>
+              <i class="lc-key__hatch"></i>planned parts
+            </span>
+          )}
         </p>
         <div class="lc-idle">
-          <p class="lc-idle__head">Not yet drawn on <span class="lc-idle__n">{idle.length}</span></p>
+          <p class="lc-idle__head">
+            Not yet drawn on <span class="lc-idle__n">{idle.length}</span>
+          </p>
           <ul class="lc-idle__list" role="list">
-            {
-              idle.map((lab) => (
-                <li>
-                  <a class="lc-mono is-idle" href={lab.url} data-el-idle={lab.key} title={lab.name}>
-                    <span aria-hidden="true">{markOf.get(lab.key)}</span>
-                    <span class="sh-visually-hidden">{lab.name}</span>
-                  </a>
-                </li>
-              ))
-            }
+            {idle.map((lab) => (
+              <li>
+                <a class="lc-mono is-idle" href={lab.url} data-el-idle={lab.key} title={lab.name}>
+                  <span aria-hidden="true">{markOf.get(lab.key)}</span>
+                  <span class="sh-visually-hidden">{lab.name}</span>
+                </a>
+              </li>
+            ))}
           </ul>
         </div>
       </figure>
@@ -206,236 +291,299 @@ const clientModel = { ...model, marks: Object.fromEntries(markOf), domains: Obje
         <p class="en-ro__kicker" data-ro-kicker>
           {broadest === undefined ? 'Reference stack' : `Broadest footprint · ${String(broadest.sections)} §`}
         </p>
-        <p class="en-ro__title" data-ro-title>{broadest?.name ?? 'No lab drawn on yet'}</p>
+        <p class="en-ro__title" data-ro-title>
+          {broadest?.name ?? 'No lab drawn on yet'}
+        </p>
         <p class="en-ro__sub" data-ro-sub>
-          {broadest === undefined ? '' : `Drawn on by ${String(broadest.chapters.length)} of ${String(written.length)} written chapters.`}
+          {broadest === undefined
+            ? ''
+            : `Drawn on by ${String(broadest.chapters.length)} of ${String(written.length)} written chapters.`}
         </p>
         <dl class="en-ro__rows" data-ro-rows>
-          {
-            broadest !== undefined && (
-              <>
-                <div>
-                  <dt>chapters</dt>
-                  <dd>
-                    {broadest.chapters.map((n) => (
-                      <a class="en-chap" href={`${broadest.url}#${chapterFragment(n)}`}>
-                        {chapterNo(n)}
-                      </a>
-                    ))}
-                  </dd>
-                </div>
-                <div>
-                  <dt>surfaces</dt>
-                  <dd>
-                    {broadest.surfaces.map((surface) => (
-                      <a class="en-surface" href={surface.url} rel="external">
-                        {surface.label}
-                      </a>
-                    ))}
-                  </dd>
-                </div>
-              </>
-            )
-          }
+          {broadest !== undefined && (
+            <>
+              <div>
+                <dt>chapters</dt>
+                <dd>
+                  {broadest.chapters.map((n) => (
+                    <a class="en-chap" href={`${broadest.url}#${chapterFragment(n)}`}>
+                      {chapterNo(n)}
+                    </a>
+                  ))}
+                </dd>
+              </div>
+              <div>
+                <dt>surfaces</dt>
+                <dd>
+                  {broadest.surfaces.map((surface) => (
+                    <a class="en-surface" href={surface.url} rel="external">
+                      {surface.label}
+                    </a>
+                  ))}
+                </dd>
+              </div>
+            </>
+          )}
         </dl>
         <div class="en-ro__list" data-ro-list></div>
-        <p class="en-ro__foot" data-ro-foot>{broadest !== undefined && <a href={broadest.url}>open {broadest.name} →</a>}</p>
+        <p class="en-ro__foot" data-ro-foot>
+          {broadest !== undefined && <a href={broadest.url}>open {broadest.name} →</a>}
+        </p>
       </div>
-
     </div>
 
     <div class="el-controls">
       <div class="el-sort" role="group" aria-label="Row order" data-el-sortbar hidden>
-        <button type="button" class="el-sort__btn" data-el-sort="rank" aria-pressed="true">reference-stack order</button>
-        <button type="button" class="el-sort__btn" data-el-sort="footprint" aria-pressed="false">by footprint</button>
+        <button type="button" class="el-sort__btn" data-el-sort="rank" aria-pressed="true">
+          reference-stack order
+        </button>
+        <button type="button" class="el-sort__btn" data-el-sort="footprint" aria-pressed="false">
+          by footprint
+        </button>
       </div>
       <p class="el-legend" aria-hidden="true">
-        <span class="el-legend__marks"><i data-s="1"></i><i data-s="3"></i><i data-s="6"></i></span>
+        <span class="el-legend__marks">
+          <i data-s="1"></i>
+          <i data-s="3"></i>
+          <i data-s="6"></i>
+        </span>
         <span class="el-legend--ch">1 → 6+ sections</span>
         <span class="el-legend--pt">1 → 6 chapters</span>
-        <span class="el-legend__cols el-legend--ch"><i class="is-w"></i><i class="is-p"></i></span>
+        <span class="el-legend__cols el-legend--ch">
+          <i class="is-w"></i>
+          <i class="is-p"></i>
+        </span>
         <span class="el-legend--ch">written · planned</span>
-        {
-          axisParts.map((part) => (
-            <span class="el-legend__part">
-              <i style={`--pc: var(--domain-${domainOf.get(part.n) ?? 'reference'})`} />
-              {part.numeral}
-            </span>
-          ))
-        }
+        {axisParts.map((part) => (
+          <span class="el-legend__part">
+            <i style={`--pc: var(--domain-${domainOf.get(part.n) ?? 'reference'})`} />
+            {part.numeral}
+          </span>
+        ))}
       </p>
     </div>
 
     <div class="el-matrixwrap" data-el-matrix>
       <table class="el-matrix el-matrix--ch" data-el-grain="chapter">
         <caption class="sh-visually-hidden">
-          Labs by written chapter: each marked cell is a chapter whose reference-stack coverage names the lab; mark size is the number of
-          sections; the last column is the lab's footprint by part.
+          Labs by written chapter: each marked cell is a chapter whose reference-stack coverage names the lab; mark size
+          is the number of sections; the last column is the lab's footprint by part.
         </caption>
         <colgroup>
           <col class="el-col-rank" />
           <col class="el-col-name" />
-          {axisChapters.map((chapter) => <col class:list={['el-col-ch', chapter.written ? 'is-w' : 'is-p']} />)}
+          {axisChapters.map((chapter) => (
+            <col class:list={['el-col-ch', chapter.written ? 'is-w' : 'is-p']} />
+          ))}
           {restParts.length > 0 && <col class="el-col-rest" />}
           <col class="el-col-n" />
           <col class="el-col-fp" />
         </colgroup>
         <thead>
           <tr class="el-hparts">
-            <td class="el-corner" colspan="2"><span aria-hidden="true">part →</span></td>
-            {
-              axisParts.map((part) => (
-                <th scope="colgroup" colspan={part.chapters.length} class="el-ph" data-el-part={part.n} style={`--pc: var(--domain-${domainOf.get(part.n) ?? 'reference'})`}>
-                  <a href={part.url} tabindex="-1" title={`Part ${part.numeral} — ${part.title}`}>
-                    {part.numeral}
-                  </a>
-                </th>
-              ))
-            }
-            {
-              restParts.length > 0 && (
-                <th scope="col" class="el-ph el-ph--rest" title={`Parts ${plannedLabel}: planned`}>
-                  {plannedLabel}
-                </th>
-              )
-            }
+            <td class="el-corner" colspan="2">
+              <span aria-hidden="true">part →</span>
+            </td>
+            {axisParts.map((part) => (
+              <th
+                scope="colgroup"
+                colspan={part.chapters.length}
+                class="el-ph"
+                data-el-part={part.n}
+                style={`--pc: var(--domain-${domainOf.get(part.n) ?? 'reference'})`}
+              >
+                <a href={part.url} tabindex="-1" title={`Part ${part.numeral} — ${part.title}`}>
+                  {part.numeral}
+                </a>
+              </th>
+            ))}
+            {restParts.length > 0 && (
+              <th scope="col" class="el-ph el-ph--rest" title={`Parts ${plannedLabel}: planned`}>
+                {plannedLabel}
+              </th>
+            )}
             <td colspan="2"></td>
           </tr>
           <tr class="el-hchs">
-            <th scope="col" class="el-rank">#</th>
-            <th scope="col" class="el-name">Lab</th>
-            {
-              axisChapters.map((chapter) => (
-                <th
-                  scope="col"
-                  class:list={['el-ch', chapter.written ? 'is-w' : 'is-p', { 'is-pstart': partStarts.has(chapter.n) }]}
-                  data-el-col={chapter.n}
-                  title={`${chapter.number} ${chapter.title}${chapter.written ? '' : ' (planned)'}`}
-                >
-                  {chapter.written ? (
-                    <a href={chapter.url} tabindex="-1">
-                      {chapter.number}
-                    </a>
-                  ) : (
-                    <span class="sh-visually-hidden">{chapter.number} (planned)</span>
-                  )}
-                </th>
-              ))
-            }
-            {
-              restParts.length > 0 && (
-                <th scope="col" class="el-rest">
-                  <span class="sh-visually-hidden">Parts {plannedLabel} (planned)</span>
-                </th>
-              )
-            }
-            <th scope="col" class="el-n" title="Written chapters that draw on the lab">ch</th>
-            <th scope="col" class="el-fp" title="Sections that draw on the lab, by part">footprint</th>
+            <th scope="col" class="el-rank">
+              #
+            </th>
+            <th scope="col" class="el-name">
+              Lab
+            </th>
+            {axisChapters.map((chapter) => (
+              <th
+                scope="col"
+                class:list={['el-ch', chapter.written ? 'is-w' : 'is-p', { 'is-pstart': partStarts.has(chapter.n) }]}
+                data-el-col={chapter.n}
+                title={`${chapter.number} ${chapter.title}${chapter.written ? '' : ' (planned)'}`}
+              >
+                {chapter.written ? (
+                  <a href={chapter.url} tabindex="-1">
+                    {chapter.number}
+                  </a>
+                ) : (
+                  <span class="sh-visually-hidden">{chapter.number} (planned)</span>
+                )}
+              </th>
+            ))}
+            {restParts.length > 0 && (
+              <th scope="col" class="el-rest">
+                <span class="sh-visually-hidden">Parts {plannedLabel} (planned)</span>
+              </th>
+            )}
+            <th scope="col" class="el-n" title="Written chapters that draw on the lab">
+              ch
+            </th>
+            <th scope="col" class="el-fp" title="Sections that draw on the lab, by part">
+              footprint
+            </th>
           </tr>
         </thead>
         <tbody data-el-body>
-          {
-            active.map((lab, index) => (
-              <tr class:list={['el-row', { 'is-rest': lab.key === broadest?.key }]} data-el-row={lab.key} data-rank={lab.rank ?? 999} data-fp={footprint(lab)}>
-                <td class="el-rank">{lab.rank ?? '—'}</td>
-                <th scope="row" class="el-name">
-                  <a href={lab.url} data-el-nav tabindex={index === 0 ? 0 : -1}>
-                    <span class="lc-mono" aria-hidden="true">
-                      {markOf.get(lab.key)}
-                    </span>
-                    <span class="el-name__t">{lab.name}</span>
-                  </a>
-                </th>
-                {axisChapters.map((chapter) => {
-                  const sections = lab.sectionsByChapter[String(chapter.n)];
-                  return (
-                    <td class:list={['el-cell', chapter.written ? 'is-w' : 'is-p', { 'is-pstart': partStarts.has(chapter.n) }]} data-el-col={chapter.n}>
-                      {sections !== undefined && (
-                        <a class="el-mark" data-s={weightOf(Math.max(1, sections))} href={`${lab.url}#${chapterFragment(chapter.n)}`} data-el-nav data-el-cell={chapter.n} tabindex="-1" aria-label={cellLabel(lab, chapter.n)} />
-                      )}
-                    </td>
-                  );
-                })}
-                {restParts.length > 0 && <td class="el-rest" aria-hidden="true" />}
-                <td class="el-n">{lab.chapters.length}</td>
-                <td class="el-fp">
-                  <span class="el-fp__bar" style={`--w:${(lab.sections / maxSections).toFixed(3)}`}>
-                    {byPart(lab).map(({ part, sections }) => (
-                      <i style={`--pc: var(--domain-${domainOf.get(part.n) ?? 'reference'}); flex-grow:${String(sections)}`} title={`Part ${part.numeral}: ${String(sections)} sections`} />
-                    ))}
+          {active.map((lab, index) => (
+            <tr
+              class:list={['el-row', { 'is-rest': lab.key === broadest?.key }]}
+              data-el-row={lab.key}
+              data-rank={lab.rank ?? 999}
+              data-fp={footprint(lab)}
+            >
+              <td class="el-rank">{lab.rank ?? '—'}</td>
+              <th scope="row" class="el-name">
+                <a href={lab.url} data-el-nav tabindex={index === 0 ? 0 : -1}>
+                  <span class="lc-mono" aria-hidden="true">
+                    {markOf.get(lab.key)}
                   </span>
-                  <span class="el-fp__n">{lab.sections}</span>
-                </td>
-              </tr>
-            ))
-          }
+                  <span class="el-name__t">{lab.name}</span>
+                </a>
+              </th>
+              {axisChapters.map((chapter) => {
+                const sections = lab.sectionsByChapter[String(chapter.n)];
+                return (
+                  <td
+                    class:list={[
+                      'el-cell',
+                      chapter.written ? 'is-w' : 'is-p',
+                      { 'is-pstart': partStarts.has(chapter.n) },
+                    ]}
+                    data-el-col={chapter.n}
+                  >
+                    {sections !== undefined && (
+                      <a
+                        class="el-mark"
+                        data-s={weightOf(Math.max(1, sections))}
+                        href={`${lab.url}#${chapterFragment(chapter.n)}`}
+                        data-el-nav
+                        data-el-cell={chapter.n}
+                        tabindex="-1"
+                        aria-label={cellLabel(lab, chapter.n)}
+                      />
+                    )}
+                  </td>
+                );
+              })}
+              {restParts.length > 0 && <td class="el-rest" aria-hidden="true" />}
+              <td class="el-n">{lab.chapters.length}</td>
+              <td class="el-fp">
+                <span class="el-fp__bar" style={`--w:${(lab.sections / maxSections).toFixed(3)}`}>
+                  {byPart(lab).map(({ part, sections }) => (
+                    <i
+                      style={`--pc: var(--domain-${domainOf.get(part.n) ?? 'reference'}); flex-grow:${String(sections)}`}
+                      title={`Part ${part.numeral}: ${String(sections)} sections`}
+                    />
+                  ))}
+                </span>
+                <span class="el-fp__n">{lab.sections}</span>
+              </td>
+            </tr>
+          ))}
         </tbody>
       </table>
 
       <table class="el-matrix el-matrix--pt" data-el-grain="part">
         <caption class="sh-visually-hidden">
-          Labs by part: each marked cell is a part with written chapters that draw on the lab; mark size is the number of chapters.
+          Labs by part: each marked cell is a part with written chapters that draw on the lab; mark size is the number
+          of chapters.
         </caption>
         <colgroup>
           <col class="el-col-name" />
-          {axisParts.map(() => <col class="el-col-pt" />)}
+          {axisParts.map(() => (
+            <col class="el-col-pt" />
+          ))}
           {restParts.length > 0 && <col class="el-col-rest" />}
           <col class="el-col-fp" />
         </colgroup>
         <thead>
           <tr class="el-hchs">
-            <th scope="col" class="el-name">Lab</th>
-            {
-              axisParts.map((part) => (
-                <th scope="col" class="el-ch el-pcol" data-el-part={part.n} title={`Part ${part.numeral} — ${part.title}`} style={`--pc: var(--domain-${domainOf.get(part.n) ?? 'reference'})`}>
-                  <a href={part.url} tabindex="-1">
-                    {part.numeral}
-                  </a>
-                </th>
-              ))
-            }
-            {
-              restParts.length > 0 && (
-                <th scope="col" class="el-rest el-rest--head" title={`Parts ${plannedLabel}: planned`}>
-                  {plannedLabel}
-                </th>
-              )
-            }
-            <th scope="col" class="el-fp" title="Sections that draw on the lab, by part">§</th>
+            <th scope="col" class="el-name">
+              Lab
+            </th>
+            {axisParts.map((part) => (
+              <th
+                scope="col"
+                class="el-ch el-pcol"
+                data-el-part={part.n}
+                title={`Part ${part.numeral} — ${part.title}`}
+                style={`--pc: var(--domain-${domainOf.get(part.n) ?? 'reference'})`}
+              >
+                <a href={part.url} tabindex="-1">
+                  {part.numeral}
+                </a>
+              </th>
+            ))}
+            {restParts.length > 0 && (
+              <th scope="col" class="el-rest el-rest--head" title={`Parts ${plannedLabel}: planned`}>
+                {plannedLabel}
+              </th>
+            )}
+            <th scope="col" class="el-fp" title="Sections that draw on the lab, by part">
+              §
+            </th>
           </tr>
         </thead>
         <tbody data-el-body>
-          {
-            active.map((lab, index) => (
-              <tr class:list={['el-row', { 'is-rest': lab.key === broadest?.key }]} data-el-row={lab.key} data-rank={lab.rank ?? 999} data-fp={footprint(lab)}>
-                <th scope="row" class="el-name">
-                  <a href={lab.url} data-el-nav tabindex={index === 0 ? 0 : -1}>
-                    <span class="lc-mono" aria-hidden="true">
-                      {markOf.get(lab.key)}
-                    </span>
-                    <span class="el-name__t">{lab.name}</span>
-                  </a>
-                </th>
-                {axisParts.map((part) => {
-                  const count = lab.chapters.filter((n) => part.chapters.includes(n)).length;
-                  return (
-                    <td class="el-cell el-pcell" data-el-part={part.n}>
-                      {count > 0 && (
-                        <a class="el-mark" data-s={weightOf(count)} href={lab.url} data-el-nav data-el-pcell={part.n} tabindex="-1" aria-label={`${lab.name} in Part ${part.numeral}: ${String(count)} ${count === 1 ? 'chapter' : 'chapters'}`} />
-                      )}
-                    </td>
-                  );
-                })}
-                {restParts.length > 0 && <td class="el-rest" aria-hidden="true" />}
-                <td class="el-fp el-fp--n">{lab.sections}</td>
-              </tr>
-            ))
-          }
+          {active.map((lab, index) => (
+            <tr
+              class:list={['el-row', { 'is-rest': lab.key === broadest?.key }]}
+              data-el-row={lab.key}
+              data-rank={lab.rank ?? 999}
+              data-fp={footprint(lab)}
+            >
+              <th scope="row" class="el-name">
+                <a href={lab.url} data-el-nav tabindex={index === 0 ? 0 : -1}>
+                  <span class="lc-mono" aria-hidden="true">
+                    {markOf.get(lab.key)}
+                  </span>
+                  <span class="el-name__t">{lab.name}</span>
+                </a>
+              </th>
+              {axisParts.map((part) => {
+                const count = lab.chapters.filter((n) => part.chapters.includes(n)).length;
+                return (
+                  <td class="el-cell el-pcell" data-el-part={part.n}>
+                    {count > 0 && (
+                      <a
+                        class="el-mark"
+                        data-s={weightOf(count)}
+                        href={lab.url}
+                        data-el-nav
+                        data-el-pcell={part.n}
+                        tabindex="-1"
+                        aria-label={`${lab.name} in Part ${part.numeral}: ${String(count)} ${count === 1 ? 'chapter' : 'chapters'}`}
+                      />
+                    )}
+                  </td>
+                );
+              })}
+              {restParts.length > 0 && <td class="el-rest" aria-hidden="true" />}
+              <td class="el-fp el-fp--n">{lab.sections}</td>
+            </tr>
+          ))}
         </tbody>
       </table>
     </div>
 
-    <script is:inline type="application/json" data-en-model set:html={jsonForHtml(clientModel)} />
+    <script is:inline type="application/json" data-en-model set:html={jsonForHtml(clientModel)}></script>
   </section>
 
   {model.labs.length === 0 && <p class="sh-empty">No labs are recorded in this bundle.</p>}

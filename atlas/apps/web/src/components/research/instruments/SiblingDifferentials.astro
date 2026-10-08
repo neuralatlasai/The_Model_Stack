@@ -22,20 +22,22 @@ const siblings = instrument.anchors.flatMap((anchor) => {
 });
 ---
 
-{
-  siblings.length > 0 && (
-    <div class="rb-instrument rb-instrument--siblings" {...instrumentAttrs('siblings')}>
-      <InstrumentHead title="Siblings · differential" meta={String(siblings.length)} />
-      <ol class="rb-sibi" role="list">
-        {siblings.map(({ anchor, block }) => (
-          <li class="rb-sibi__item">
-            <a class="rb-sibi__name" href={`#${anchor}`}>{block.name}</a>
-            {block.differential.changedPrimitive !== null && (
-              <p class="rb-sibi__prim"><Inline nodes={block.differential.changedPrimitive} /></p>
-            )}
-          </li>
-        ))}
-      </ol>
-    </div>
-  )
-}
+{siblings.length > 0 && (
+  <div class="rb-instrument rb-instrument--siblings" {...instrumentAttrs('siblings')}>
+    <InstrumentHead title="Siblings · differential" meta={String(siblings.length)} />
+    <ol class="rb-sibi" role="list">
+      {siblings.map(({ anchor, block }) => (
+        <li class="rb-sibi__item">
+          <a class="rb-sibi__name" href={`#${anchor}`}>
+            {block.name}
+          </a>
+          {block.differential.changedPrimitive !== null && (
+            <p class="rb-sibi__prim">
+              <Inline nodes={block.differential.changedPrimitive} />
+            </p>
+          )}
+        </li>
+      ))}
+    </ol>
+  </div>
+)}

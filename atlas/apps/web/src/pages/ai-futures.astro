@@ -16,7 +16,12 @@ import '../styles/ai-futures.css';
 
 const [graph, docs] = await Promise.all([getGraph(), listDocuments()]);
 const { entries, meta } = futures();
-const asOf = new Date(`${meta.asOf}T00:00:00Z`).toLocaleDateString('en-GB', { day: 'numeric', month: 'long', year: 'numeric', timeZone: 'UTC' });
+const asOf = new Date(`${meta.asOf}T00:00:00Z`).toLocaleDateString('en-GB', {
+  day: 'numeric',
+  month: 'long',
+  year: 'numeric',
+  timeZone: 'UTC',
+});
 const fits = entries.map((entry) => entry.fit);
 const appendix = graph.nodes['ms.appendix.j' as NodeId] ?? null;
 const SOURCE = `https://github.com/neuralatlasai/The_Model_Stack/blob/main/${meta.source}`;
@@ -38,7 +43,10 @@ const SOURCE = `https://github.com/neuralatlasai/The_Model_Stack/blob/main/${met
   <dl class="aif-note">
     <div>
       <dt>Ranking</dt>
-      <dd>Order and AI-2027 fit score ({Math.min(...fits)}–{Math.max(...fits)}) are the supplier’s editorial judgement, not atlas findings.</dd>
+      <dd>
+        Order and AI-2027 fit score ({Math.min(...fits)}–{Math.max(...fits)}) are the supplier’s editorial judgement,
+        not atlas findings.
+      </dd>
     </div>
     <div>
       <dt>Descriptions</dt>
@@ -48,8 +56,15 @@ const SOURCE = `https://github.com/neuralatlasai/The_Model_Stack/blob/main/${met
       <dt>Links</dt>
       <dd>
         Each carries its status — verified, address updated, or UNVERIFIED — as checked on {asOf} ·{' '}
-        <a href={SOURCE} rel="external">the supplied list</a>
-        {appendix !== null && <> · <a href={appendix.url}>Appendix J</a></>}
+        <a href={SOURCE} rel="external">
+          the supplied list
+        </a>
+        {appendix !== null && (
+          <>
+            {' '}
+            · <a href={appendix.url}>Appendix J</a>
+          </>
+        )}
       </dd>
     </div>
   </dl>

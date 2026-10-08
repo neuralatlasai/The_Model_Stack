@@ -44,7 +44,7 @@ export function parseFrontmatter(yamlText: string): FrontmatterResult {
   try {
     raw = parseYaml(yamlText, { schema: 'core', uniqueKeys: true, prettyErrors: true, maxAliasCount: 16 });
   } catch (error: unknown) {
-    const message = error instanceof Error ? error.message.split('\n')[0] ?? error.message : String(error);
+    const message = error instanceof Error ? (error.message.split('\n')[0] ?? error.message) : String(error);
     const linePos = extractYamlLine(error);
     return { ok: false, message: `YAML: ${message}`, line: linePos === null ? null : linePos + 1 };
   }

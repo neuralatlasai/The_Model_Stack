@@ -24,16 +24,14 @@ const copy = figure === undefined ? null : figureCopy(figure, 'rail');
 const host = copy === null ? null : await figureHostProps(copy);
 ---
 
-{
-  copy !== null && host !== null && (
-    <div class={`rb-instrument rb-instrument--figure rb-instrument--${copy.spec.kind}`} {...instrumentAttrs('figure')}>
-      {isCalculator(copy) ? (
-        <Figure figure={copy} nodeHref={host.nodeHref}>
-          <Calculator client:visible figure={copy} {...host.tex} />
-        </Figure>
-      ) : (
-        <Figure figure={copy} nodeHref={host.nodeHref} />
-      )}
-    </div>
-  )
-}
+{copy !== null && host !== null && (
+  <div class={`rb-instrument rb-instrument--figure rb-instrument--${copy.spec.kind}`} {...instrumentAttrs('figure')}>
+    {isCalculator(copy) ? (
+      <Figure figure={copy} nodeHref={host.nodeHref}>
+        <Calculator client:visible figure={copy} {...host.tex} />
+      </Figure>
+    ) : (
+      <Figure figure={copy} nodeHref={host.nodeHref} />
+    )}
+  </div>
+)}

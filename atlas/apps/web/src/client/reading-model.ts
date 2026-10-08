@@ -21,7 +21,13 @@ export function clip(text: string, max: number): string {
 }
 
 /** Records the furthest point reached (never moves backwards) and the last region read. */
-export function recordProgress(state: StoredProgress, nodeId: string, fraction: number, anchor: string | null, now: string): StoredProgress {
+export function recordProgress(
+  state: StoredProgress,
+  nodeId: string,
+  fraction: number,
+  anchor: string | null,
+  now: string,
+): StoredProgress {
   const previous = state[nodeId];
   const max = Math.max(previous?.max ?? 0, Math.min(1, Math.max(0, fraction)));
   const entry = { max, anchor: clip(anchor ?? previous?.anchor ?? '', 120), at: clip(now, 40) };
@@ -53,7 +59,10 @@ export function isBookmarked(list: StoredBookmarks, nodeId: string, anchor: stri
 }
 
 /** Adds the bookmark (newest first) or removes it when already saved. */
-export function toggleBookmark(list: StoredBookmarks, bookmark: Bookmark): { readonly list: StoredBookmarks; readonly added: boolean } {
+export function toggleBookmark(
+  list: StoredBookmarks,
+  bookmark: Bookmark,
+): { readonly list: StoredBookmarks; readonly added: boolean } {
   const key = bookmarkKey(bookmark);
   if (list.some((item) => bookmarkKey(item) === key)) {
     return { list: list.filter((item) => bookmarkKey(item) !== key), added: false };

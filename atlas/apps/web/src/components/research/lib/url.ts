@@ -37,7 +37,10 @@ export function shortUrl(href: string, max = 38): string {
 }
 
 /** True when a link's visible text is just its own URL (as typed in Markdown tables and autolinks). */
-export function isBareUrl(children: readonly { readonly kind: string; readonly value?: string }[], href: string): boolean {
+export function isBareUrl(
+  children: readonly { readonly kind: string; readonly value?: string }[],
+  href: string,
+): boolean {
   if (children.length !== 1) return false;
   const only = children[0];
   if (only === undefined || (only.kind !== 'text' && only.kind !== 'code')) return false;

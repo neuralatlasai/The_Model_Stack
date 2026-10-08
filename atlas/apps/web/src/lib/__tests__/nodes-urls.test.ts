@@ -2,7 +2,15 @@ import assert from 'node:assert/strict';
 import { describe, it } from 'node:test';
 import { paperUrl } from '@atlas/core';
 import { modeLinks } from '../modes.ts';
-import { ancestorsOf, enclosing, identityLine, nodesOfType, orderNeighbours, treeContains, treeState } from '../nodes.ts';
+import {
+  ancestorsOf,
+  enclosing,
+  identityLine,
+  nodesOfType,
+  orderNeighbours,
+  treeContains,
+  treeState,
+} from '../nodes.ts';
 import { chapterFragment, compareUrl, domIdFor, mapUrl, paperParam, pathParam, withDepth } from '../urls.ts';
 import { smallGraph } from './fixtures.ts';
 
@@ -90,7 +98,13 @@ describe('mode links', () => {
   const graph = smallGraph();
 
   it('points Papers at the page references region when present', () => {
-    const links = modeLinks({ graph, url: '/ch05/05-2/', chapter: 5, referencesAnchor: 'references', hasCompare: true });
+    const links = modeLinks({
+      graph,
+      url: '/ch05/05-2/',
+      chapter: 5,
+      referencesAnchor: 'references',
+      hasCompare: true,
+    });
     assert.equal(links.read, '/ch05/05-2/');
     assert.equal(links.map, '/graph/ch05/05-2/');
     assert.equal(links.papers, '/ch05/05-2/#references');
@@ -99,13 +113,26 @@ describe('mode links', () => {
   });
 
   it('falls back to index pages when the node has no own targets', () => {
-    const links = modeLinks({ graph, url: '/ch06/', chapter: 6, referencesAnchor: null, hasCompare: false, chapterHasCompare: true });
+    const links = modeLinks({
+      graph,
+      url: '/ch06/',
+      chapter: 6,
+      referencesAnchor: null,
+      hasCompare: false,
+      chapterHasCompare: true,
+    });
     assert.equal(links.papers, '/papers/');
     assert.equal(links.compare, '/compare/#ch-06');
     // A chapter with no compare pages has no #ch-NN group on the compare index: link the index itself.
     const bare = modeLinks({ graph, url: '/ch06/', chapter: 6, referencesAnchor: null, hasCompare: false });
     assert.equal(bare.compare, '/compare/');
-    const reference = modeLinks({ graph, url: '/front-matter/notation/', chapter: null, referencesAnchor: null, hasCompare: false });
+    const reference = modeLinks({
+      graph,
+      url: '/front-matter/notation/',
+      chapter: null,
+      referencesAnchor: null,
+      hasCompare: false,
+    });
     assert.equal(reference.implementations, '/systems/');
     assert.equal(reference.compare, '/compare/');
   });

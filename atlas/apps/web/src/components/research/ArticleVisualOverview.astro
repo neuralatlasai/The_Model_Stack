@@ -5,20 +5,26 @@
  * equivalent remain accessible in a native disclosure. The canonical figures
  * remain in their original manuscript positions and receive the title links.
  */
-import type { PerformanceContext, ResearchDocument } from '@atlas/core';
+import { isCitationKey, type PerformanceContext, type ResearchDocument } from '@atlas/core';
 import { FigureBody } from '@atlas/visual/svg';
 import Calculator from '../../islands/Calculator.tsx';
 import { articleOverviewCopy, articleOverviewFigures } from './lib/article-figures.ts';
 import { figureHostProps } from './lib/figure-host.ts';
 import { figureLabel, isCalculator } from './lib/figure.ts';
+import CiteLink from './inline/CiteLink.astro';
 
 interface Props {
   readonly doc: ResearchDocument;
 }
 
 const { doc } = Astro.props;
+const training = doc.meta.chapter !== null && doc.meta.chapter >= 19 && doc.meta.chapter <= 24;
+const selectedFigures = articleOverviewFigures(doc.figures);
+const orderedFigures = training
+  ? [...selectedFigures].sort((a, b) => Number(b.spec.kind === 'calculator') - Number(a.spec.kind === 'calculator'))
+  : selectedFigures;
 const visuals = await Promise.all(
-  articleOverviewFigures(doc.figures).map(async (source) => {
+  orderedFigures.map(async (source) => {
     const figure = articleOverviewCopy(source);
     return { source, figure, ...(await figureHostProps(figure)) };
   }),
@@ -36,8 +42,27 @@ const contextFields: readonly (readonly [keyof PerformanceContext, string])[] = 
 ---
 
 {visuals.length > 0 && (
-  <div class="aw-visuals" data-overview-figures={visuals.length} role="group" aria-label="Scientific figures">
-    {visuals.map(({ source, figure, nodeHref, tex }) => (
+  <div
+    class="aw-visuals"
+    data-overview-figures={visuals.length}
+    data-overview-mode={training ? 'selected' : undefined}
+    role="group"
+    aria-label="Scientific figures"
+  >
+    {training && visuals.length > 1 && (
+      <fieldset class="aw-visuals__selector">
+        <legend>Scientific instruments</legend>
+        {visuals.map(({ source }, index) => (
+          <label>
+            <input type="radio" name={`${doc.meta.id}-overview`} data-overview-choice={index} checked={index === 0} />
+            <span>
+              {figureLabel(source)} · {source.spec.title}
+            </span>
+          </label>
+        ))}
+      </fieldset>
+    )}
+    {visuals.map(({ source, figure, nodeHref, tex }, index) => (
       <figure
         class:list={[
           'aw-visual',
@@ -51,6 +76,10 @@ const contextFields: readonly (readonly [keyof PerformanceContext, string])[] = 
         data-figure-kind={figure.spec.kind}
         data-figure-origin={figure.origin}
         data-source-figure={source.id}
+        data-overview-index={index}
+        style={
+          figure.scene === null ? undefined : `--diagram-readable-width: ${Math.round(figure.scene.width * 0.8)}px`
+        }
       >
         <header class="aw-visual__heading" id={`${figure.anchor}--heading`}>
           <a href={`#${source.anchor}`}>
@@ -58,6 +87,14 @@ const contextFields: readonly (readonly [keyof PerformanceContext, string])[] = 
             {source.number !== null && <span class="aw-visual__title">{figure.spec.title}</span>}
           </a>
         </header>
+        {doc.meta.chapter !== null &&
+          doc.meta.chapter >= 19 &&
+          doc.meta.chapter <= 24 &&
+          figure.spec.kind === 'diagram' && (
+            <label class="aw-visual__scale">
+              <input type="checkbox" /> Expand diagram
+            </label>
+          )}
         <div class="aw-visual__body" role="region" aria-labelledby={`${figure.anchor}--heading`} tabindex={0}>
           {isCalculator(figure) ? (
             <Calculator client:visible figure={figure} {...tex} />
@@ -66,18 +103,36 @@ const contextFields: readonly (readonly [keyof PerformanceContext, string])[] = 
           )}
         </div>
         <figcaption class="aw-visual__caption">
+          {training && (
+            <>
+              <p class="aw-visual__caption-text">{figure.spec.caption}</p>
+              <p class="aw-visual__source">
+                <span>{figure.evidence}</span>
+                {figure.sources.map((sourceId) => (
+                  <span>
+                    <span aria-hidden="true"> · </span>
+                    {training && isCitationKey(sourceId) ? <CiteLink citeKey={sourceId} /> : sourceId}
+                  </span>
+                ))}
+              </p>
+            </>
+          )}
           <details class="aw-visual__details">
-            <summary>Caption and sources</summary>
-            <p class="aw-visual__caption-text">{figure.spec.caption}</p>
-            <p class="aw-visual__source">
-              <span>{figure.evidence}</span>
-              {figure.sources.map((sourceId) => (
-                <span>
-                  <span aria-hidden="true"> · </span>
-                  {sourceId}
-                </span>
-              ))}
-            </p>
+            <summary>{training ? 'Context and accessible description' : 'Caption and sources'}</summary>
+            {!training && (
+              <>
+                <p class="aw-visual__caption-text">{figure.spec.caption}</p>
+                <p class="aw-visual__source">
+                  <span>{figure.evidence}</span>
+                  {figure.sources.map((sourceId) => (
+                    <span>
+                      <span aria-hidden="true"> · </span>
+                      {training && isCitationKey(sourceId) ? <CiteLink citeKey={sourceId} /> : sourceId}
+                    </span>
+                  ))}
+                </p>
+              </>
+            )}
             {figure.spec.context !== undefined && (
               <dl class="aw-visual__context">
                 {contextFields.map(([key, label]) => (

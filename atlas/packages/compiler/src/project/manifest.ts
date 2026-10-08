@@ -6,9 +6,7 @@
 import { isNodeId, parseNodeId, type NodeId } from '@atlas/core';
 import { z } from 'zod';
 
-const nodeId = z
-  .string()
-  .refine((value): value is NodeId => isNodeId(value), { message: 'not a node id' });
+const nodeId = z.string().refine((value): value is NodeId => isNodeId(value), { message: 'not a node id' });
 const slug = z.string().regex(/^[a-z0-9][a-z0-9-]*$/u);
 const docsPath = z
   .string()

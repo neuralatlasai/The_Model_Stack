@@ -1,7 +1,13 @@
 import assert from 'node:assert/strict';
 import { describe, it } from 'node:test';
 import { must } from './fixtures.ts';
-import { canonicalValue, compareCitationKeys, mergeReferences, parseReferencesFile, urlCell } from '../../src/registry/references.ts';
+import {
+  canonicalValue,
+  compareCitationKeys,
+  mergeReferences,
+  parseReferencesFile,
+  urlCell,
+} from '../../src/registry/references.ts';
 
 const ORDER_A = `# References — Chapter 05
 
@@ -30,7 +36,13 @@ const ORDER_B = `# Chapter 06 — References
 
 describe('parseReferencesFile', () => {
   it('maps columns by header name regardless of order', () => {
-    const a = parseReferencesFile({ file: 'ch05/references.md', chapter: 5, body: ORDER_A, bodyStartLine: 30, nodeId: 'ms.references.5' });
+    const a = parseReferencesFile({
+      file: 'ch05/references.md',
+      chapter: 5,
+      body: ORDER_A,
+      bodyStartLine: 30,
+      nodeId: 'ms.references.5',
+    });
     assert.equal(a.rows.length, 2);
     const p01 = must(a.rows[0]);
     assert.equal(p01.key, 'P01');
@@ -42,7 +54,13 @@ describe('parseReferencesFile', () => {
     assert.equal(a.rows[1]?.code, null, '"null" cells become null');
     assert.deepEqual(a.diagnostics, []);
 
-    const b = parseReferencesFile({ file: 'ch06/references.md', chapter: 6, body: ORDER_B, bodyStartLine: 1, nodeId: 'ms.references.6' });
+    const b = parseReferencesFile({
+      file: 'ch06/references.md',
+      chapter: 6,
+      body: ORDER_B,
+      bodyStartLine: 1,
+      nodeId: 'ms.references.6',
+    });
     const r611 = must(b.rows.find((row) => row.key === 'R6.11'));
     assert.equal(r611.work, 'LMArena leaderboards');
     assert.equal(r611.type, 'measurement source');
@@ -56,7 +74,13 @@ describe('parseReferencesFile', () => {
   });
 
   it('diagnoses malformed rows without dropping valid ones', () => {
-    const b = parseReferencesFile({ file: 'ch06/references.md', chapter: 6, body: ORDER_B, bodyStartLine: 1, nodeId: 'ms.references.6' });
+    const b = parseReferencesFile({
+      file: 'ch06/references.md',
+      chapter: 6,
+      body: ORDER_B,
+      bodyStartLine: 1,
+      nodeId: 'ms.references.6',
+    });
     const messages = b.diagnostics.map((item) => item.message);
     assert.ok(messages.some((message) => message.includes('"Q1" is not a citation key')));
     assert.ok(messages.some((message) => message.includes('type "brochure"')));
@@ -70,15 +94,33 @@ describe('parseReferencesFile', () => {
 |---|---|---|---|---|---|---|---|---|---|
 | R5.1 | paper | GELU | H | 2016 | null | null | preprint | null | x |
 `;
-    const parsed = parseReferencesFile({ file: 'ch07/references.md', chapter: 7, body, bodyStartLine: 1, nodeId: null });
+    const parsed = parseReferencesFile({
+      file: 'ch07/references.md',
+      chapter: 7,
+      body,
+      bodyStartLine: 1,
+      nodeId: null,
+    });
     assert.match(parsed.diagnostics[0]?.message ?? '', /chapter-5 key listed in chapter 7/u);
   });
 });
 
 describe('mergeReferences', () => {
   it('merges spine keys across chapters, records uses per chapter, and notes conflicts as info', () => {
-    const a = parseReferencesFile({ file: 'ch05/references.md', chapter: 5, body: ORDER_A, bodyStartLine: 1, nodeId: null });
-    const b = parseReferencesFile({ file: 'ch06/references.md', chapter: 6, body: ORDER_B, bodyStartLine: 1, nodeId: null });
+    const a = parseReferencesFile({
+      file: 'ch05/references.md',
+      chapter: 5,
+      body: ORDER_A,
+      bodyStartLine: 1,
+      nodeId: null,
+    });
+    const b = parseReferencesFile({
+      file: 'ch06/references.md',
+      chapter: 6,
+      body: ORDER_B,
+      bodyStartLine: 1,
+      nodeId: null,
+    });
     const merged = mergeReferences([...a.rows, ...b.rows]);
     const p01 = merged.records.find((record) => record.key === 'P01');
     assert.ok(p01 !== undefined);
@@ -101,7 +143,13 @@ describe('mergeReferences', () => {
   });
 
   it('lets Appendix D rows supply spine metadata without adding a use', () => {
-    const a = parseReferencesFile({ file: 'ch05/references.md', chapter: 5, body: ORDER_A, bodyStartLine: 1, nodeId: null });
+    const a = parseReferencesFile({
+      file: 'ch05/references.md',
+      chapter: 5,
+      body: ORDER_A,
+      bodyStartLine: 1,
+      nodeId: null,
+    });
     const first = a.rows[0];
     assert.ok(first !== undefined);
     const authority = [{ ...first, work: 'Attention Is All You Need (spine)', chapter: 0, file: 'appendices/d.md' }];
@@ -117,7 +165,13 @@ describe('mergeReferences', () => {
 
 describe('reference helpers', () => {
   it('orders spine keys numerically before chapter keys', () => {
-    assert.deepEqual(['R10.2', 'P19', 'R5.13', 'P01', 'R5.2'].sort(compareCitationKeys), ['P01', 'P19', 'R5.2', 'R5.13', 'R10.2']);
+    assert.deepEqual(['R10.2', 'P19', 'R5.13', 'P01', 'R5.2'].sort(compareCitationKeys), [
+      'P01',
+      'P19',
+      'R5.2',
+      'R5.13',
+      'R10.2',
+    ]);
   });
 
   it('extracts URLs from cells', () => {

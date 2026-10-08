@@ -190,7 +190,8 @@ export interface CodeBlock extends BlockBase {
   readonly html: string | null;
 }
 
-export type TensorSegment = { readonly type: 'shape'; readonly text: string } | { readonly type: 'op'; readonly text: string };
+export type TensorSegment =
+  { readonly type: 'shape'; readonly text: string } | { readonly type: 'op'; readonly text: string };
 
 /** Fenced `text` block titled `Tensor trace`. Each line is `shape → op → shape …`. */
 export interface TensorTraceBlock extends BlockBase {

@@ -28,34 +28,34 @@ const groups =
 const selfNumber = doc.meta.section ?? doc.header.number;
 ---
 
-{
-  neighbours !== undefined && (
-    <div class="rb-instrument rb-instrument--position" {...instrumentAttrs('position')}>
-      <InstrumentHead title="Position" meta={selfNumber ?? undefined} />
-      <p class="rb-pos__self">
-        <span class="rb-pos__here" aria-hidden="true">▸</span>
-        <span class="rb-vh">You are reading </span>
-        {doc.meta.shortTitle}
-      </p>
-      {groups.map((group) => (
-        <div class="rb-pos__group">
-          <p class="rb-pos__label">
-            <span>{group.label}</span>
-            <span class="rb-pos__count">{group.items.length}</span>
-          </p>
-          <ol class="rb-pos__list" role="list">
-            {group.items.slice(0, LIMIT).map((item) => (
-              <li>
-                <a class="rb-pos__link" href={href(item.url)} title={item.title}>
-                  {item.number !== null && <span class="rb-pos__num">{item.number}</span>}
-                  <span class="rb-pos__title">{item.title}</span>
-                </a>
-              </li>
-            ))}
-          </ol>
-          {group.items.length > LIMIT && <p class="rb-pos__more">+ {group.items.length - LIMIT} more</p>}
-        </div>
-      ))}
-    </div>
-  )
-}
+{neighbours !== undefined && (
+  <div class="rb-instrument rb-instrument--position" {...instrumentAttrs('position')}>
+    <InstrumentHead title="Position" meta={selfNumber ?? undefined} />
+    <p class="rb-pos__self">
+      <span class="rb-pos__here" aria-hidden="true">
+        ▸
+      </span>
+      <span class="rb-vh">You are reading </span>
+      {doc.meta.shortTitle}
+    </p>
+    {groups.map((group) => (
+      <div class="rb-pos__group">
+        <p class="rb-pos__label">
+          <span>{group.label}</span>
+          <span class="rb-pos__count">{group.items.length}</span>
+        </p>
+        <ol class="rb-pos__list" role="list">
+          {group.items.slice(0, LIMIT).map((item) => (
+            <li>
+              <a class="rb-pos__link" href={href(item.url)} title={item.title}>
+                {item.number !== null && <span class="rb-pos__num">{item.number}</span>}
+                <span class="rb-pos__title">{item.title}</span>
+              </a>
+            </li>
+          ))}
+        </ol>
+        {group.items.length > LIMIT && <p class="rb-pos__more">+ {group.items.length - LIMIT} more</p>}
+      </div>
+    ))}
+  </div>
+)}

@@ -102,14 +102,19 @@ export function nodeCard(graph: AtlasGraph, id: NodeId): NodeCardOut | null {
     parent === undefined || parent.entityType === 'volume'
       ? null
       : clip(
-          parent.number === null || parent.entityType === 'part' ? parent.title : `${parent.number} ${parent.shortTitle}`,
+          parent.number === null || parent.entityType === 'part'
+            ? parent.title
+            : `${parent.number} ${parent.shortTitle}`,
           LIMIT.nodeWithin,
         );
   const hood = node.entityType === 'chapter' ? neighbourhood(graph, id) : null;
   const chapter = node.entityType === 'chapter' ? node : node.entityType === 'section' ? parent : undefined;
-  const sections = (chapter?.children ?? []).map((child) => graph.nodes[child]).filter((child) => child?.entityType === 'section');
+  const sections = (chapter?.children ?? [])
+    .map((child) => graph.nodes[child])
+    .filter((child) => child?.entityType === 'section');
   const position = node.entityType === 'section' ? sections.findIndex((section) => section?.id === id) : -1;
-  const summary = node.summary === null ? null : squash(node.summary).replace(/^(?:Thesis|Summary|Scope)\s*[.:—-]\s*/u, '');
+  const summary =
+    node.summary === null ? null : squash(node.summary).replace(/^(?:Thesis|Summary|Scope)\s*[.:—-]\s*/u, '');
   return {
     id: node.id,
     entity: clip(node.entityType, LIMIT.nodeEntity),
@@ -118,7 +123,10 @@ export function nodeCard(graph: AtlasGraph, id: NodeId): NodeCardOut | null {
     url: node.url,
     written: node.hasManuscript,
     // Section summaries are scope objectives written as predicates ("give overflow-safe forms …").
-    summary: summary === null || summary === '' ? null : clip(summary.charAt(0).toUpperCase() + summary.slice(1), LIMIT.nodeSummary),
+    summary:
+      summary === null || summary === ''
+        ? null
+        : clip(summary.charAt(0).toUpperCase() + summary.slice(1), LIMIT.nodeSummary),
     within,
     prerequisites: Math.min(999, hood?.prerequisites.length ?? 0),
     dependents: Math.min(999, hood?.dependents.length ?? 0),

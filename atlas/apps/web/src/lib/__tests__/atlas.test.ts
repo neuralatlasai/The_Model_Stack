@@ -43,7 +43,15 @@ async function writeBundle(overrides: BundleOverrides = {}): Promise<string> {
     [BUNDLE_FILES.graph]: overrides.graph ?? smallGraph(),
     [BUNDLE_FILES.registry]: smallRegistry(),
     [BUNDLE_FILES.searchDocs]: overrides.searchDocs ?? [
-      { id: 'node:ms.section.5.2', kind: 'section', title: 'Attention calculation', context: 'Foundations', url: '/ch05/05-2/', body: 'b', keywords: '5.2' },
+      {
+        id: 'node:ms.section.5.2',
+        kind: 'section',
+        title: 'Attention calculation',
+        context: 'Foundations',
+        url: '/ch05/05-2/',
+        body: 'b',
+        keywords: '5.2',
+      },
     ],
     [BUNDLE_FILES.searchIndex]: { documentCount: 1 },
     [docFilePath('ms.section.5.2')]: overrides.document ?? sectionDoc(),

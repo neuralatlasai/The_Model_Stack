@@ -19,24 +19,10 @@ export type FrontMatterId = `ms.frontmatter.${string}` | 'ms.frontmatter' | 'ms.
 
 /** Every node of the editorial hierarchy (Volume → Part → Chapter → Section, plus satellites). */
 export type NodeId =
-  | VolumeId
-  | PartId
-  | ChapterId
-  | SectionId
-  | VerificationId
-  | ReferencesId
-  | AppendixId
-  | FrontMatterId;
+  VolumeId | PartId | ChapterId | SectionId | VerificationId | ReferencesId | AppendixId | FrontMatterId;
 
 export type EntityType =
-  | 'volume'
-  | 'part'
-  | 'chapter'
-  | 'section'
-  | 'verification'
-  | 'references'
-  | 'appendix'
-  | 'frontmatter';
+  'volume' | 'part' | 'chapter' | 'section' | 'verification' | 'references' | 'appendix' | 'frontmatter';
 
 /** Appendix D spine paper (`P01`–`P52`). */
 export type SpinePaperKey = `P${number}`;

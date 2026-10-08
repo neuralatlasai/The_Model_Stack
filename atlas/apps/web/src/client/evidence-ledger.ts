@@ -17,16 +17,29 @@ export function initEvidenceLedger(ctx: PageContext): void {
   const readout = root?.querySelector<HTMLElement>('[data-evx-readout]') ?? null;
   if (root === null || readout === null) return;
   const slot = (name: string): HTMLElement | null => readout.querySelector<HTMLElement>(`[data-evx-${name}]`);
-  const out = { kicker: slot('rk'), title: slot('rt'), text: slot('rx'), k1: slot('r1k'), v1: slot('r1'), k2: slot('r2k'), v2: slot('r2') };
+  const out = {
+    kicker: slot('rk'),
+    title: slot('rt'),
+    text: slot('rx'),
+    k1: slot('r1k'),
+    v1: slot('r1'),
+    k2: slot('r2k'),
+    v2: slot('r2'),
+  };
   type Out = Record<keyof typeof out, string>;
-  const initial = Object.fromEntries(Object.entries(out).map(([key, element]) => [key, element?.textContent ?? ''])) as Out;
+  const initial = Object.fromEntries(
+    Object.entries(out).map(([key, element]) => [key, element?.textContent ?? '']),
+  ) as Out;
   const write = (values: Out): void => {
-    for (const [key, element] of Object.entries(out)) if (element !== null) element.textContent = values[key as keyof Out];
+    for (const [key, element] of Object.entries(out))
+      if (element !== null) element.textContent = values[key as keyof Out];
   };
 
   const rows = new Map<string, HTMLElement>();
   for (const row of root.querySelectorAll<HTMLElement>('[data-evx-row]')) rows.set(row.dataset['evxRow'] ?? '', row);
-  const cellsOf = (column: string): HTMLElement[] => [...root.querySelectorAll<HTMLElement>(`.evx__cell[data-evx-col="${column}"]`)];
+  const cellsOf = (column: string): HTMLElement[] => [
+    ...root.querySelectorAll<HTMLElement>(`.evx__cell[data-evx-col="${column}"]`),
+  ];
   const defs = [...doc.querySelectorAll<HTMLElement>('[data-evx-def]')];
 
   let lit: HTMLElement[] = [];
@@ -86,7 +99,10 @@ export function initEvidenceLedger(ctx: PageContext): void {
     root.classList.add('has-lit');
     mark([head, ...cells]);
     const mix = cells
-      .map((cell) => ({ label: labelOf(cell.closest<HTMLElement>('[data-evx-row]') ?? cell), n: Number(cell.dataset['evxN'] ?? '0') }))
+      .map((cell) => ({
+        label: labelOf(cell.closest<HTMLElement>('[data-evx-row]') ?? cell),
+        n: Number(cell.dataset['evxN'] ?? '0'),
+      }))
       .filter((entry) => entry.n > 0)
       .sort((a, b) => b.n - a.n);
     const total = mix.reduce((sum, entry) => sum + entry.n, 0);
@@ -130,15 +146,27 @@ export function initEvidenceLedger(ctx: PageContext): void {
 
   const scopes = [root, ...defs];
   for (const scope of scopes) {
-    scope.addEventListener('pointerover', (event) => {
-      route(event.target);
-    }, { signal: ctl.signal });
+    scope.addEventListener(
+      'pointerover',
+      (event) => {
+        route(event.target);
+      },
+      { signal: ctl.signal },
+    );
     scope.addEventListener('pointerleave', reset, { signal: ctl.signal });
   }
-  root.addEventListener('focusin', (event) => {
-    route(event.target);
-  }, { signal: ctl.signal });
-  root.addEventListener('focusout', (event) => {
-    if (!(event.relatedTarget instanceof Node) || !root.contains(event.relatedTarget)) reset();
-  }, { signal: ctl.signal });
+  root.addEventListener(
+    'focusin',
+    (event) => {
+      route(event.target);
+    },
+    { signal: ctl.signal },
+  );
+  root.addEventListener(
+    'focusout',
+    (event) => {
+      if (!(event.relatedTarget instanceof Node) || !root.contains(event.relatedTarget)) reset();
+    },
+    { signal: ctl.signal },
+  );
 }

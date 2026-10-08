@@ -45,7 +45,13 @@ function highlightSafe(st: CompileState, code: string, lang: string | null): str
   }
 }
 
-function sourceAsCode(node: Code, st: CompileState, env: FlowEnv, anchor: string | null, highlightAs: string): CodeBlock {
+function sourceAsCode(
+  node: Code,
+  st: CompileState,
+  env: FlowEnv,
+  anchor: string | null,
+  highlightAs: string,
+): CodeBlock {
   return {
     kind: 'code',
     anchor,
@@ -67,7 +73,10 @@ function register(st: CompileState, figure: PendingFigure, spec: FigureSpec, lin
 }
 
 /** Validation codes after which a figure cannot be rendered safely (it is replaced by its source). */
-const UNSAFE_CODES: ReadonlySet<DiagnosticCode> = new Set<DiagnosticCode>(['figure-formula-invalid', 'figure-schema-invalid']);
+const UNSAFE_CODES: ReadonlySet<DiagnosticCode> = new Set<DiagnosticCode>([
+  'figure-formula-invalid',
+  'figure-schema-invalid',
+]);
 
 /** Graph kinds need unique ids and edges between existing nodes before layout can run (validateFigure reports why). */
 function graphIsWellFormed(spec: FigureSpec): boolean {
@@ -111,14 +120,31 @@ export function compileAuthoredFigure(node: Code, st: CompileState, env: FlowEnv
 
   const parsed = FigureSpecSchema.safeParse(data);
   if (!parsed.success) {
-    const issues = parsed.error.issues.slice(0, MAX_ISSUES_IN_MESSAGE).map((issue) => `${issue.path.join('.') || '(root)'}: ${issue.message}`);
-    const more = parsed.error.issues.length > MAX_ISSUES_IN_MESSAGE ? ` (+${parsed.error.issues.length - MAX_ISSUES_IN_MESSAGE} more)` : '';
-    const rawId = typeof data === 'object' && data !== null && 'id' in data && typeof data.id === 'string' ? data.id : null;
+    const issues = parsed.error.issues
+      .slice(0, MAX_ISSUES_IN_MESSAGE)
+      .map((issue) => `${issue.path.join('.') || '(root)'}: ${issue.message}`);
+    const more =
+      parsed.error.issues.length > MAX_ISSUES_IN_MESSAGE
+        ? ` (+${parsed.error.issues.length - MAX_ISSUES_IN_MESSAGE} more)`
+        : '';
+    const rawId =
+      typeof data === 'object' && data !== null && 'id' in data && typeof data.id === 'string' ? data.id : null;
     st.report('figure-schema-invalid', `figure ${rawId ?? '(no id)'}: ${issues.join('; ')}${more}`, fenceLine);
-    if (parsed.error.issues.some((issue) => issue.path.includes('evidence') && issue.message.includes('EMPIRICALLY-OBSERVED'))) {
-      st.report('label-forbidden', `figure ${rawId ?? '(no id)'}: EMPIRICALLY-OBSERVED is forbidden in Edition 1.0`, fenceLine);
+    if (
+      parsed.error.issues.some(
+        (issue) => issue.path.includes('evidence') && issue.message.includes('EMPIRICALLY-OBSERVED'),
+      )
+    ) {
+      st.report(
+        'label-forbidden',
+        `figure ${rawId ?? '(no id)'}: EMPIRICALLY-OBSERVED is forbidden in Edition 1.0`,
+        fenceLine,
+      );
     }
-    const anchor = rawId !== null && isFigureId(rawId) && !st.figureIds.has(rawId) ? st.anchors.claim(objectAnchor('fig', figureNumber(rawId))) : null;
+    const anchor =
+      rawId !== null && isFigureId(rawId) && !st.figureIds.has(rawId)
+        ? st.anchors.claim(objectAnchor('fig', figureNumber(rawId)))
+        : null;
     return sourceAsCode(node, st, env, anchor, 'yaml');
   }
   const spec = parsed.data;
@@ -147,7 +173,12 @@ export function compileAuthoredFigure(node: Code, st: CompileState, env: FlowEnv
   let regionAnchor = env.regionAnchor;
   if (spec.anchor !== undefined) {
     if (st.regionAnchors.has(spec.anchor)) regionAnchor = spec.anchor;
-    else st.report('figure-reference-invalid', `${spec.id}: anchor '${spec.anchor}' is not a region of this document`, fenceLine);
+    else
+      st.report(
+        'figure-reference-invalid',
+        `${spec.id}: anchor '${spec.anchor}' is not a region of this document`,
+        fenceLine,
+      );
   }
 
   const figure: PendingFigure = {
@@ -203,7 +234,12 @@ export function textEquivalentList(following: readonly RootContent[]): List | nu
   return null;
 }
 
-export function compileMermaidFigure(node: Code, following: readonly RootContent[], st: CompileState, env: FlowEnv): Block {
+export function compileMermaidFigure(
+  node: Code,
+  following: readonly RootContent[],
+  st: CompileState,
+  env: FlowEnv,
+): Block {
   const fenceLine = st.lineOf(node);
   const result = parseMermaid(node.value);
   for (const issue of result.issues) {
@@ -223,7 +259,11 @@ export function compileMermaidFigure(node: Code, following: readonly RootContent
   if (list !== null) {
     alt = clip(listAsText(list), MAX_ALT);
   } else {
-    st.report('block-malformed', 'Mermaid diagram is not followed by its text-equivalent nested list (CONTENT_CONTRACT §8)', fenceLine);
+    st.report(
+      'block-malformed',
+      'Mermaid diagram is not followed by its text-equivalent nested list (CONTENT_CONTRACT §8)',
+      fenceLine,
+    );
     alt = `Diagram with ${diagram.nodes.length} nodes and ${diagram.edges.length} edges.`;
   }
   const conceptMap = env.role === 'concept-map';

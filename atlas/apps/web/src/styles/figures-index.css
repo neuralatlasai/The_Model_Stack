@@ -15,10 +15,18 @@
   margin-top: 1.25rem;
 }
 
-.fx-fam--structure { --fx-fam: var(--fx-structure); }
-.fx-fam--computation { --fx-fam: var(--fx-computation); }
-.fx-fam--quantity { --fx-fam: var(--fx-quantity); }
-.fx-fam--comparison { --fx-fam: var(--fx-comparison); }
+.fx-fam--structure {
+  --fx-fam: var(--fx-structure);
+}
+.fx-fam--computation {
+  --fx-fam: var(--fx-computation);
+}
+.fx-fam--quantity {
+  --fx-fam: var(--fx-quantity);
+}
+.fx-fam--comparison {
+  --fx-fam: var(--fx-comparison);
+}
 
 /* ── matrix + readout ──────────────────────────────────────────────────── */
 .fx-top {
@@ -57,7 +65,8 @@
   /* scroll cue on the right while more kinds lie off-screen (phones) */
   background:
     linear-gradient(to left, var(--paper) 40%, transparent) right / 1.5rem 100% no-repeat local,
-    radial-gradient(farthest-side at 100% 50%, color-mix(in oklab, var(--ink) 24%, transparent), transparent) right / 0.75rem 100% no-repeat scroll;
+    radial-gradient(farthest-side at 100% 50%, color-mix(in oklab, var(--ink) 24%, transparent), transparent) right /
+      0.75rem 100% no-repeat scroll;
 }
 
 /* The chapter column stays put while the kinds scroll under it. */
@@ -155,7 +164,9 @@
   block-size: 38px;
   text-decoration: none;
   outline: none;
-  transition: background-color var(--t-hover) ease, opacity var(--t-state) ease;
+  transition:
+    background-color var(--t-hover) ease,
+    opacity var(--t-state) ease;
 }
 
 .fx-cell.is-empty::after {
@@ -195,11 +206,15 @@
 .fx-cell.is-focus .fx-cell__sq,
 .fx-cell:hover .fx-cell__sq {
   transform: scale(1.12);
-  box-shadow: 0 0 0 1.5px var(--paper), 0 0 0 2.5px var(--ink);
+  box-shadow:
+    0 0 0 1.5px var(--paper),
+    0 0 0 2.5px var(--ink);
 }
 
 .fx-cell.is-pinned .fx-cell__sq {
-  box-shadow: 0 0 0 1.5px var(--paper), 0 0 0 3px var(--accent);
+  box-shadow:
+    0 0 0 1.5px var(--paper),
+    0 0 0 3px var(--accent);
 }
 
 /* Lighting a row or column dims the rest of the matrix. */
@@ -583,7 +598,6 @@
   .fx-filters__row {
     grid-template-columns: 3.6rem minmax(0, 1fr);
   }
-
 }
 
 @media (prefers-reduced-motion: reduce) {

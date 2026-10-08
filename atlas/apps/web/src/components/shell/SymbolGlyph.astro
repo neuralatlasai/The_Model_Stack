@@ -15,4 +15,7 @@ const { base, sub, word } = symbolParts(Astro.props.symbol);
 const italic = !word && /^[A-Za-zα-ω]$/u.test(base);
 ---
 
-<span class:list={['sg', italic ? 'sg--it' : 'sg--rm']}>{base}{sub !== '' && <sub>{sub}</sub>}</span>
+<span class:list={['sg', italic ? 'sg--it' : 'sg--rm']}>
+  {base}
+  {sub !== '' && <sub>{sub}</sub>}
+</span>

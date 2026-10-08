@@ -85,7 +85,10 @@ export function createLinkResolver(table: NodeTable, sourcePath: string, selfId:
     if (node === undefined) return unresolved(href, 'resolves to an unknown node');
     if (node.doc === null) {
       report(href, () =>
-        diagnostic('link-planned', `link to planned node ${nodeId} (${node.url}) — no manuscript yet`, { file: sourcePath, nodeId: selfId }),
+        diagnostic('link-planned', `link to planned node ${nodeId} (${node.url}) — no manuscript yet`, {
+          file: sourcePath,
+          nodeId: selfId,
+        }),
       );
       return { type: 'planned', nodeId, href: node.url };
     }

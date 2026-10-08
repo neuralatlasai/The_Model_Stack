@@ -29,18 +29,42 @@
 }
 
 /* Local domain accent for any element carrying data-domain (tree items, part rows, series). */
-[data-domain='foundations'] { --domain-local: var(--domain-foundations); }
-[data-domain='data'] { --domain-local: var(--domain-data); }
-[data-domain='architecture'] { --domain-local: var(--domain-architecture); }
-[data-domain='training'] { --domain-local: var(--domain-training); }
-[data-domain='hardware'] { --domain-local: var(--domain-hardware); }
-[data-domain='post-training'] { --domain-local: var(--domain-post-training); }
-[data-domain='inference'] { --domain-local: var(--domain-inference); }
-[data-domain='serving'] { --domain-local: var(--domain-serving); }
-[data-domain='agents'] { --domain-local: var(--domain-agents); }
-[data-domain='embodied'] { --domain-local: var(--domain-embodied); }
-[data-domain='evaluation'] { --domain-local: var(--domain-evaluation); }
-[data-domain='reference'] { --domain-local: var(--domain-reference); }
+[data-domain='foundations'] {
+  --domain-local: var(--domain-foundations);
+}
+[data-domain='data'] {
+  --domain-local: var(--domain-data);
+}
+[data-domain='architecture'] {
+  --domain-local: var(--domain-architecture);
+}
+[data-domain='training'] {
+  --domain-local: var(--domain-training);
+}
+[data-domain='hardware'] {
+  --domain-local: var(--domain-hardware);
+}
+[data-domain='post-training'] {
+  --domain-local: var(--domain-post-training);
+}
+[data-domain='inference'] {
+  --domain-local: var(--domain-inference);
+}
+[data-domain='serving'] {
+  --domain-local: var(--domain-serving);
+}
+[data-domain='agents'] {
+  --domain-local: var(--domain-agents);
+}
+[data-domain='embodied'] {
+  --domain-local: var(--domain-embodied);
+}
+[data-domain='evaluation'] {
+  --domain-local: var(--domain-evaluation);
+}
+[data-domain='reference'] {
+  --domain-local: var(--domain-reference);
+}
 
 /* ── shared atoms ──────────────────────────────────────────────────────────── */
 
@@ -307,7 +331,9 @@ body > :is(.sh-frame, .sh-home, .sh-plain) {
   border-radius: 3px;
   background: transparent;
   color: var(--ink-2);
-  transition: border-color var(--t-hover) ease-out, color var(--t-hover) ease-out;
+  transition:
+    border-color var(--t-hover) ease-out,
+    color var(--t-hover) ease-out;
 }
 
 .sh-icon-button:hover {
@@ -327,7 +353,9 @@ body > :is(.sh-frame, .sh-home, .sh-plain) {
   background: transparent;
   color: var(--ink-3);
   font: 13px/1 var(--font-sans);
-  transition: border-color var(--t-hover) ease-out, color var(--t-hover) ease-out;
+  transition:
+    border-color var(--t-hover) ease-out,
+    color var(--t-hover) ease-out;
 }
 
 .sh-search:hover {
@@ -367,7 +395,9 @@ body > :is(.sh-frame, .sh-home, .sh-plain) {
   color: var(--ink-3);
   text-decoration: none;
   white-space: nowrap;
-  transition: color var(--t-hover) ease-out, background-color var(--t-state) ease-out;
+  transition:
+    color var(--t-hover) ease-out,
+    background-color var(--t-state) ease-out;
 }
 
 .sh-depth-option:hover {
@@ -905,7 +935,9 @@ html[data-depth='implementation'] .sh-depth-option[data-depth-option='implementa
   font: 13.5px/1.35 var(--font-sans);
   color: var(--ink-2);
   text-decoration: none;
-  transition: background-color var(--t-hover) ease-out, color var(--t-hover) ease-out;
+  transition:
+    background-color var(--t-hover) ease-out,
+    color var(--t-hover) ease-out;
 }
 
 .sh-tree-link:hover {
@@ -1156,7 +1188,9 @@ html[data-depth='implementation'] .sh-depth-option[data-depth-option='implementa
   font: 500 13px/1 var(--font-sans);
   color: var(--ink-3);
   text-decoration: none;
-  transition: color var(--t-hover) ease-out, border-color var(--t-state) ease-out;
+  transition:
+    color var(--t-hover) ease-out,
+    border-color var(--t-state) ease-out;
 }
 
 .sh-mode:hover {
@@ -2505,7 +2539,6 @@ a.sh-dot:focus-visible::after {
     gap: 3rem;
   }
 }
-
 
 /* ── narrow screens ────────────────────────────────────────────────────────── */
 

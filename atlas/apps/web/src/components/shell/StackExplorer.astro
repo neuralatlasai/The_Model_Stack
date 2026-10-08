@@ -31,7 +31,9 @@ const { model: source } = Astro.props;
 // On the graph page every chapter opens its Map; the readout's links follow.
 const model: StackModel = {
   ...source,
-  chapters: Object.fromEntries(Object.entries(source.chapters).map(([key, chapter]) => [key, { ...chapter, url: mapUrl(chapter.url) }])),
+  chapters: Object.fromEntries(
+    Object.entries(source.chapters).map(([key, chapter]) => [key, { ...chapter, url: mapUrl(chapter.url) }]),
+  ),
   lineage: [],
 };
 
@@ -96,7 +98,9 @@ const keystones = [...chapters].sort((a, b) => b.downstream - a.downstream || a.
 
 <section class="sx gx-inst" aria-labelledby="sx-title" data-stack-explorer>
   <p class="gx-head">
-    <span class="gx-head__title" id="sx-title">Dependency map</span>
+    <span class="gx-head__title" id="sx-title">
+      Dependency map
+    </span>
     <span class="gx-head__note">one node per chapter · line = prerequisite</span>
     <span class="gx-head__keys" aria-hidden="true">
       <span class="gx-key gx-key--up">builds on</span>
@@ -107,45 +111,49 @@ const keystones = [...chapters].sort((a, b) => b.downstream - a.downstream || a.
 
   <div class="sx-body gx-body">
     <div class="sx-map gx-main" role="group" aria-label="Chapters by part, with prerequisite links">
-      <svg class="sx-svg" viewBox={`0 0 ${String(W)} ${String(H)}`} role="img" aria-labelledby="sx-svg-title sx-svg-desc" data-sx-svg>
+      <svg
+        class="sx-svg"
+        viewBox={`0 0 ${String(W)} ${String(H)}`}
+        role="img"
+        aria-labelledby="sx-svg-title sx-svg-desc"
+        data-sx-svg
+      >
         <title id="sx-svg-title">Dependency map of the {chapters.length} chapters</title>
         <desc id="sx-svg-desc">
-          {lanes.length} lanes, one per part, in {model.volumes.length} volumes. {facts.written} chapters have manuscripts.
-          {model.edges.length} prerequisite links connect earlier chapters to later ones. Each node opens that chapter's map.
+          {lanes.length} lanes, one per part, in {model.volumes.length} volumes. {facts.written} chapters have
+          manuscripts.
+          {model.edges.length} prerequisite links connect earlier chapters to later ones. Each node opens that chapter's
+          map.
         </desc>
 
-        {
-          volumeRows.map(({ volume, y: vy }) => (
-            <g class="sx-volume">
-              <line class="sx-volume__rule" x1="0" x2={W} y1={vy + 0.5} y2={vy + 0.5} />
-              <text class="sx-volume__label" x="0" y={vy + 15}>
-                <a href={volume.url}>
-                  VOLUME {volume.numeral} · {volume.title.toUpperCase()}
-                </a>
-              </text>
-            </g>
-          ))
-        }
-
-        {
-          lanes.map(({ part, y: ly, lines }) => (
-            <g class="sx-lane" data-sx-part={part.n} data-domain={part.domain}>
-              <line class="sx-lane__rule" x1={LABEL_W + 16} x2={W} y1={ly} y2={ly} />
-              <a href={mapUrl(part.url)} class="sx-lane__link">
-                <text class="sx-lane__num" x="0" y={lines.length > 1 ? ly - 2 : ly + 4}>
-                  {part.numeral}
-                </text>
-                <text class="sx-lane__title" x="36" y={lines.length > 1 ? ly - 2 : ly + 4}>
-                  {lines.map((line, index) => (
-                    <tspan x="36" dy={index === 0 ? 0 : 13.5}>
-                      {line}
-                    </tspan>
-                  ))}
-                </text>
+        {volumeRows.map(({ volume, y: vy }) => (
+          <g class="sx-volume">
+            <line class="sx-volume__rule" x1="0" x2={W} y1={vy + 0.5} y2={vy + 0.5} />
+            <text class="sx-volume__label" x="0" y={vy + 15}>
+              <a href={volume.url}>
+                VOLUME {volume.numeral} · {volume.title.toUpperCase()}
               </a>
-            </g>
-          ))
-        }
+            </text>
+          </g>
+        ))}
+
+        {lanes.map(({ part, y: ly, lines }) => (
+          <g class="sx-lane" data-sx-part={part.n} data-domain={part.domain}>
+            <line class="sx-lane__rule" x1={LABEL_W + 16} x2={W} y1={ly} y2={ly} />
+            <a href={mapUrl(part.url)} class="sx-lane__link">
+              <text class="sx-lane__num" x="0" y={lines.length > 1 ? ly - 2 : ly + 4}>
+                {part.numeral}
+              </text>
+              <text class="sx-lane__title" x="36" y={lines.length > 1 ? ly - 2 : ly + 4}>
+                {lines.map((line, index) => (
+                  <tspan x="36" dy={index === 0 ? 0 : 13.5}>
+                    {line}
+                  </tspan>
+                ))}
+              </text>
+            </a>
+          </g>
+        ))}
 
         <g class="sx-edges" aria-hidden="true">
           {model.edges.map(([from, to]) => {
@@ -194,20 +202,47 @@ const keystones = [...chapters].sort((a, b) => b.downstream - a.downstream || a.
 
     <aside class="sx-panel" aria-label="Explorer readout">
       <div class="sx-readout gx-readout" data-sx-readout aria-live="polite">
-        <p class="gx-ro__kicker" data-sx-kicker>{chapters.length} chapters · {model.edges.length} links</p>
-        <p class="gx-ro__title" data-sx-title>Point at a chapter or a route</p>
-        <p class="gx-ro__text sx-readout__summary" data-sx-summary>{restSummary}</p>
+        <p class="gx-ro__kicker" data-sx-kicker>
+          {chapters.length} chapters · {model.edges.length} links
+        </p>
+        <p class="gx-ro__title" data-sx-title>
+          Point at a chapter or a route
+        </p>
+        <p class="gx-ro__text sx-readout__summary" data-sx-summary>
+          {restSummary}
+        </p>
         <dl class="gx-ro__rows sx-readout__rows" data-sx-rows>
-          <div><dt>chapters written</dt><dd>{facts.written} / {facts.total}</dd></div>
-          <div><dt>prerequisite links</dt><dd>{model.edges.length}</dd></div>
-          <div><dt>deepest chapter</dt><dd>{facts.deepest === null ? '—' : `${facts.deepest.number} · rests on ${String(facts.deepest.upstream)}`}</dd></div>
-          <div><dt>routes and studies</dt><dd>{model.routes.length}</dd></div>
+          <div>
+            <dt>chapters written</dt>
+            <dd>
+              {facts.written} / {facts.total}
+            </dd>
+          </div>
+          <div>
+            <dt>prerequisite links</dt>
+            <dd>{model.edges.length}</dd>
+          </div>
+          <div>
+            <dt>deepest chapter</dt>
+            <dd>
+              {facts.deepest === null ? '—' : `${facts.deepest.number} · rests on ${String(facts.deepest.upstream)}`}
+            </dd>
+          </div>
+          <div>
+            <dt>routes and studies</dt>
+            <dd>{model.routes.length}</dd>
+          </div>
         </dl>
         <p class="sx-readout__links" data-sx-links>
           <span class="sx-links__group">
             <span class="sx-links__label">most rested on</span>
             {keystones.map((chapter) => (
-              <a href={chapter.url} title={`${chapter.title} · ${String(chapter.downstream)} rest on it`} data-sx-jump={chapter.n} class={chapter.written ? 'is-written' : 'is-planned'}>
+              <a
+                href={chapter.url}
+                title={`${chapter.title} · ${String(chapter.downstream)} rest on it`}
+                data-sx-jump={chapter.n}
+                class={chapter.written ? 'is-written' : 'is-planned'}
+              >
                 {chapter.number}
               </a>
             ))}
@@ -215,25 +250,23 @@ const keystones = [...chapters].sort((a, b) => b.downstream - a.downstream || a.
         </p>
       </div>
 
-      {
-        model.routes.length > 0 && (
-          <div class="sx-routes">
-            <p class="sx-routes__head">Routes and studies</p>
-            <ol class="sx-routes__list" role="list">
-              {model.routes.map((route, index) => (
-                <li>
-                  <button type="button" class="sx-route-btn" data-sx-route={index} aria-pressed="false">
-                    <span class="sx-route-btn__label">{route.label}</span>
-                    <span class="sx-route-btn__count">{route.chapters.length} ch</span>
-                  </button>
-                </li>
-              ))}
-            </ol>
-          </div>
-        )
-      }
+      {model.routes.length > 0 && (
+        <div class="sx-routes">
+          <p class="sx-routes__head">Routes and studies</p>
+          <ol class="sx-routes__list" role="list">
+            {model.routes.map((route, index) => (
+              <li>
+                <button type="button" class="sx-route-btn" data-sx-route={index} aria-pressed="false">
+                  <span class="sx-route-btn__label">{route.label}</span>
+                  <span class="sx-route-btn__count">{route.chapters.length} ch</span>
+                </button>
+              </li>
+            ))}
+          </ol>
+        </div>
+      )}
     </aside>
   </div>
 
-  <script is:inline type="application/json" data-sx-model set:html={jsonForHtml(model)} />
+  <script is:inline type="application/json" data-sx-model set:html={jsonForHtml(model)}></script>
 </section>

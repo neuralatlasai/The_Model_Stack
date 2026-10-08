@@ -128,7 +128,11 @@ function splitDetailsHtml(node: Html): RootContent[] {
 function normaliseChildren<T extends RootContent>(children: T[], accept: (node: RootContent) => node is T): T[] {
   const out: T[] = [];
   for (const child of children) {
-    if (child.type === 'html' && /<\/?details\b|<summary\b/iu.test(child.value) && !isSingleStructuralTag(child.value)) {
+    if (
+      child.type === 'html' &&
+      /<\/?details\b|<summary\b/iu.test(child.value) &&
+      !isSingleStructuralTag(child.value)
+    ) {
       for (const piece of splitDetailsHtml(child)) {
         if (accept(piece)) out.push(piece);
       }

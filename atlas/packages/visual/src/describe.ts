@@ -9,7 +9,12 @@ import { resolveChart } from './chart.ts';
 import { calculatorDefaults, evaluateCalculator, evaluateMemoryStack, evaluateStatPanel } from './figure-math.ts';
 import { MATRIX_PATTERN_TEXT, matrixSummary } from './matrix.ts';
 
-const EDGE_KIND_TEXT = { flow: '', dependency: ' (dependency)', feedback: ' (feedback)', emphasis: ' (main path)' } as const;
+const EDGE_KIND_TEXT = {
+  flow: '',
+  dependency: ' (dependency)',
+  feedback: ' (feedback)',
+  emphasis: ' (main path)',
+} as const;
 
 function fmt(value: number | null, format: ValueFormat): string {
   return value === null ? 'not computable' : formatValue(value, format);
@@ -28,14 +33,20 @@ function sentence(text: string): string {
 
 function describeDiagram(figure: FigureSpecOf<'diagram'>): string[] {
   const { nodes, edges, groups, direction } = figure.spec;
-  const name = new Map(nodes.map((node) => [node.id, node.sub === undefined ? node.label : `${node.label} ${node.sub}`]));
+  const name = new Map(
+    nodes.map((node) => [node.id, node.sub === undefined ? node.label : `${node.label} ${node.sub}`]),
+  );
   const groupName = new Map(groups.map((group) => [group.id, group.label]));
   const lines = [
     `Diagram, ${direction === 'LR' ? 'left to right' : 'top to bottom'}: ${nodes.length} nodes, ${edges.length} edges${groups.length > 0 ? `, ${groups.length} groups` : ''}.`,
     sentence(
       `Nodes: ${nodes
         .map((node) => {
-          const traits = [node.kind, ...(node.emphasis ? ['emphasised'] : []), ...(node.group === undefined ? [] : [`in ${groupName.get(node.group) ?? node.group}`])];
+          const traits = [
+            node.kind,
+            ...(node.emphasis ? ['emphasised'] : []),
+            ...(node.group === undefined ? [] : [`in ${groupName.get(node.group) ?? node.group}`]),
+          ];
           return `${name.get(node.id) ?? node.id} (${traits.join(', ')})`;
         })
         .join('; ')}`,
@@ -45,7 +56,10 @@ function describeDiagram(figure: FigureSpecOf<'diagram'>): string[] {
     lines.push(
       sentence(
         `Edges: ${edges
-          .map((edge) => `${name.get(edge.from) ?? edge.from} → ${name.get(edge.to) ?? edge.to}${EDGE_KIND_TEXT[edge.kind]}${edge.label === undefined ? '' : ` “${edge.label}”`}`)
+          .map(
+            (edge) =>
+              `${name.get(edge.from) ?? edge.from} → ${name.get(edge.to) ?? edge.to}${EDGE_KIND_TEXT[edge.kind]}${edge.label === undefined ? '' : ` “${edge.label}”`}`,
+          )
           .join('; ')}`,
       ),
     );
@@ -79,7 +93,9 @@ function describeSystemsTrace(figure: FigureSpecOf<'systems-trace'>): string[] {
         return value === undefined || value === '' ? null : `${column} ${value}`;
       });
       const filled = cells.filter((cell): cell is string => cell !== null);
-      return sentence(`Stage ${index + 1}, ${stage.name}${stage.emphasis ? ' (emphasised)' : ''}: ${filled.length > 0 ? filled.join('; ') : 'no values'}`);
+      return sentence(
+        `Stage ${index + 1}, ${stage.name}${stage.emphasis ? ' (emphasised)' : ''}: ${filled.length > 0 ? filled.join('; ') : 'no values'}`,
+      );
     }),
   ];
 }
@@ -89,7 +105,10 @@ function describeMemoryStack(figure: FigureSpecOf<'memory-stack'>): string[] {
   const values = evaluateMemoryStack(figure.spec);
   const lines = [`Stacked ${values.bars.length === 1 ? 'bar' : 'bars'}; segments listed from the base of each bar.`];
   for (const bar of values.bars) {
-    const segments = bar.segments.map((segment) => `${segment.label} ${fmt(segment.value, format)}${segment.value === null ? '' : ` (${percent(segment.value, bar.total)})`}`);
+    const segments = bar.segments.map(
+      (segment) =>
+        `${segment.label} ${fmt(segment.value, format)}${segment.value === null ? '' : ` (${percent(segment.value, bar.total)})`}`,
+    );
     lines.push(sentence(`${bar.label}: ${segments.join('; ')}; total ${fmt(bar.total, format)}`));
   }
   const budget = values.budget;
@@ -99,9 +118,15 @@ function describeMemoryStack(figure: FigureSpecOf<'memory-stack'>): string[] {
       budgetValue === null
         ? []
         : values.bars.map((bar) =>
-            bar.total > budgetValue ? `${bar.label} exceeds it by ${fmt(bar.total - budgetValue, format)}` : `${bar.label} fits with ${fmt(budgetValue - bar.total, format)} to spare`,
+            bar.total > budgetValue
+              ? `${bar.label} exceeds it by ${fmt(bar.total - budgetValue, format)}`
+              : `${bar.label} fits with ${fmt(budgetValue - bar.total, format)} to spare`,
           );
-    lines.push(sentence(`Budget ${budget.label}: ${fmt(budgetValue, format)}${verdicts.length > 0 ? `; ${verdicts.join('; ')}` : ''}`));
+    lines.push(
+      sentence(
+        `Budget ${budget.label}: ${fmt(budgetValue, format)}${verdicts.length > 0 ? `; ${verdicts.join('; ')}` : ''}`,
+      ),
+    );
   }
   return lines;
 }
@@ -124,11 +149,19 @@ function describeCalculator(figure: FigureSpecOf<'calculator'>): string[] {
         .join('; ')}`,
     ),
   );
-  lines.push(sentence(`Outputs: ${outputs.map((output) => `${output.label} ${output.symbol} = ${fmt(output.value, output.format)}${output.emphasis ? ' (primary)' : ''}`).join('; ')}`));
+  lines.push(
+    sentence(
+      `Outputs: ${outputs.map((output) => `${output.label} ${output.symbol} = ${fmt(output.value, output.format)}${output.emphasis ? ' (primary)' : ''}`).join('; ')}`,
+    ),
+  );
   for (const preset of spec.presets) {
     const values = evaluateCalculator(spec, { ...defaults, ...preset.values });
     const set = Object.entries(preset.values).map(([symbol, value]) => `${symbol} = ${value}`);
-    lines.push(sentence(`Preset ${preset.label} (${set.join(', ')}): ${values.map((output) => `${output.symbol} = ${fmt(output.value, output.format)}`).join('; ')}`));
+    lines.push(
+      sentence(
+        `Preset ${preset.label} (${set.join(', ')}): ${values.map((output) => `${output.symbol} = ${fmt(output.value, output.format)}`).join('; ')}`,
+      ),
+    );
   }
   return lines;
 }
@@ -138,17 +171,30 @@ function describeStatPanel(figure: FigureSpecOf<'stat-panel'>): string[] {
   const lines = [
     sentence(
       `Instrument ${figure.spec.header}: ${rows
-        .map((row) => `${row.key} ${row.text.unit === '' ? row.text.value : `${row.text.value} ${row.text.unit}`}${row.note === null ? '' : ` (${row.note})`}`)
+        .map(
+          (row) =>
+            `${row.key} ${row.text.unit === '' ? row.text.value : `${row.text.value} ${row.text.unit}`}${row.note === null ? '' : ` (${row.note})`}`,
+        )
         .join('; ')}`,
     ),
   ];
   const glyph = figure.spec.glyph;
   if (glyph?.type === 'dots') {
-    const legend = glyph.legend.map((entry) => `${entry.marker} = ${entry.label}${entry.value === undefined ? '' : ` ${entry.value}`}`);
-    lines.push(sentence(`Dot glyph: ${glyph.filled} of ${glyph.total} filled${legend.length > 0 ? `; ${legend.join('; ')}` : ''}`));
+    const legend = glyph.legend.map(
+      (entry) => `${entry.marker} = ${entry.label}${entry.value === undefined ? '' : ` ${entry.value}`}`,
+    );
+    lines.push(
+      sentence(
+        `Dot glyph: ${glyph.filled} of ${glyph.total} filled${legend.length > 0 ? `; ${legend.join('; ')}` : ''}`,
+      ),
+    );
   } else if (glyph?.type === 'blocks') {
     const total = glyph.items.reduce((sum, item) => sum + item.weight, 0);
-    lines.push(sentence(`Block glyph: ${glyph.items.map((item) => `${item.label} ${percent(item.weight, total)}${item.emphasis ? ' (emphasised)' : ''}`).join('; ')}`));
+    lines.push(
+      sentence(
+        `Block glyph: ${glyph.items.map((item) => `${item.label} ${percent(item.weight, total)}${item.emphasis ? ' (emphasised)' : ''}`).join('; ')}`,
+      ),
+    );
   }
   return lines;
 }
@@ -157,7 +203,9 @@ function describeLineage(figure: FigureSpecOf<'lineage'>): string[] {
   return [
     `Lineage, ${figure.spec.entries.length} entries in order.`,
     ...figure.spec.entries.map((entry) =>
-      sentence(`${entry.year}: ${entry.work}${entry.cite === undefined ? '' : ` [${entry.cite}]`} — ${entry.relation}${entry.note === undefined ? '' : `; ${entry.note}`}`),
+      sentence(
+        `${entry.year}: ${entry.work}${entry.cite === undefined ? '' : ` [${entry.cite}]`} — ${entry.relation}${entry.note === undefined ? '' : `; ${entry.note}`}`,
+      ),
     ),
   ];
 }
@@ -173,7 +221,11 @@ function describeCycle(figure: FigureSpecOf<'cycle'>): string[] {
     const upstream = (position.get(edge.to) ?? 0) <= (position.get(edge.from) ?? 0);
     (edge.kind === 'feedback' || upstream ? feedback : forward).push(text);
   }
-  const lines = [sentence(`Cycle of ${stages.length} stages, top to bottom: ${stages.map((stage) => `${stage.label} (${stage.kind}${stage.sub === undefined ? '' : `, ${stage.sub}`})`).join(', ')}`)];
+  const lines = [
+    sentence(
+      `Cycle of ${stages.length} stages, top to bottom: ${stages.map((stage) => `${stage.label} (${stage.kind}${stage.sub === undefined ? '' : `, ${stage.sub}`})`).join(', ')}`,
+    ),
+  ];
   if (forward.length > 0) lines.push(sentence(`Forward flow: ${forward.join('; ')}`));
   if (feedback.length > 0) lines.push(sentence(`Feedback loops: ${feedback.join('; ')}`));
   return lines;
@@ -190,14 +242,22 @@ function describeMatrix(figure: FigureSpecOf<'matrix'>): string[] {
       ? `${summary.admitted} of ${summary.total} cells non-zero; total intensity ${summary.mass.toFixed(2)}.`
       : `${summary.admitted} of ${summary.total} cells admitted (${percent(summary.admitted, summary.total)}).`,
   ];
-  if (spec.highlight.length > 0) lines.push(sentence(`Highlighted cells (row, column): ${spec.highlight.map((cell) => `(${cell.row}, ${cell.col})`).join(', ')}`));
+  if (spec.highlight.length > 0)
+    lines.push(
+      sentence(
+        `Highlighted cells (row, column): ${spec.highlight.map((cell) => `(${cell.row}, ${cell.col})`).join(', ')}`,
+      ),
+    );
   if (spec.legend !== undefined) lines.push(sentence(`Legend: ${spec.legend}`));
   return lines;
 }
 
 function axisText(name: string, axis: ChartSpec['x']): string {
   const scale = axis.scale === 'linear' ? 'linear' : `${axis.scale} scale`;
-  const domain = axis.domain === undefined ? '' : `, ${formatValue(axis.domain[0], axis.format)} to ${formatValue(axis.domain[1], axis.format)}`;
+  const domain =
+    axis.domain === undefined
+      ? ''
+      : `, ${formatValue(axis.domain[0], axis.format)} to ${formatValue(axis.domain[1], axis.format)}`;
   return `${name}: ${axis.label} (${scale}${domain})`;
 }
 
@@ -214,9 +274,15 @@ function samplesOf<T>(items: readonly T[], count: number): T[] {
 function describeChart(figure: FigureSpecOf<'chart'>): string[] {
   const spec = figure.spec;
   const resolved = resolveChart(spec);
-  const lines = [sentence(`${spec.type.charAt(0).toUpperCase()}${spec.type.slice(1)} chart. ${axisText('x', spec.x)}; ${axisText('y', spec.y)}`)];
+  const lines = [
+    sentence(
+      `${spec.type.charAt(0).toUpperCase()}${spec.type.slice(1)} chart. ${axisText('x', spec.x)}; ${axisText('y', spec.y)}`,
+    ),
+  ];
   for (const series of resolved.series) {
-    const traits = [series.emphasis ? 'emphasised' : null, series.dashed ? 'dashed' : null].filter((trait): trait is string => trait !== null);
+    const traits = [series.emphasis ? 'emphasised' : null, series.dashed ? 'dashed' : null].filter(
+      (trait): trait is string => trait !== null,
+    );
     const head = `Series ${series.label}${traits.length > 0 ? ` (${traits.join(', ')})` : ''}`;
     if (series.error !== null && series.points.length === 0) {
       lines.push(sentence(`${head}: not computable`));
@@ -224,12 +290,20 @@ function describeChart(figure: FigureSpecOf<'chart'>): string[] {
     }
     const values =
       spec.type === 'bar'
-        ? series.points.map(([index, y]) => `${spec.categories?.[index] ?? `#${index + 1}`} ${formatValue(y, spec.y.format)}`)
-        : samplesOf(series.points, 5).map(([x, y]) => `at ${formatValue(x, spec.x.format)}, ${formatValue(y, spec.y.format)}`);
+        ? series.points.map(
+            ([index, y]) => `${spec.categories?.[index] ?? `#${index + 1}`} ${formatValue(y, spec.y.format)}`,
+          )
+        : samplesOf(series.points, 5).map(
+            ([x, y]) => `at ${formatValue(x, spec.x.format)}, ${formatValue(y, spec.y.format)}`,
+          );
     lines.push(sentence(`${head}: ${values.join('; ')}`));
   }
   for (const annotation of spec.annotations) {
-    lines.push(sentence(`Annotation at x = ${formatValue(annotation.x, spec.x.format)}${annotation.y === undefined ? '' : `, y = ${formatValue(annotation.y, spec.y.format)}`}: ${annotation.label}`));
+    lines.push(
+      sentence(
+        `Annotation at x = ${formatValue(annotation.x, spec.x.format)}${annotation.y === undefined ? '' : `, y = ${formatValue(annotation.y, spec.y.format)}`}: ${annotation.label}`,
+      ),
+    );
   }
   return lines;
 }
@@ -245,21 +319,29 @@ function describeHierarchy(figure: FigureSpecOf<'hierarchy'>): string[] {
         level.latency === undefined ? null : `latency ${level.latency}`,
       ].filter((metric): metric is string => metric !== null);
       const traits = [level.kind, ...(level.emphasis ? ['emphasised'] : [])].join(', ');
-      return sentence(`${index + 1}. ${level.label} (${traits})${metrics.length > 0 ? `: ${metrics.join(', ')}` : ''}${level.note === undefined ? '' : `; ${level.note}`}`);
+      return sentence(
+        `${index + 1}. ${level.label} (${traits})${metrics.length > 0 ? `: ${metrics.join(', ')}` : ''}${level.note === undefined ? '' : `; ${level.note}`}`,
+      );
     }),
   ];
 }
 
 function describeCompare(figure: FigureSpecOf<'compare'>): string[] {
   const { axis, columns, rows } = figure.spec;
-  const lines = [sentence(`Comparison on the axis: ${axis}`), sentence(`Columns: ${columns.map((column) => column.label).join(', ')}`)];
+  const lines = [
+    sentence(`Comparison on the axis: ${axis}`),
+    sentence(`Columns: ${columns.map((column) => column.label).join(', ')}`),
+  ];
   const differing: string[] = [];
   const identical: string[] = [];
   for (const row of rows) {
     const cells = columns.map((column) => row.values[column.id] ?? '—');
     const same = cells.every((cell) => cell === cells[0]);
     if (same) identical.push(`${row.dimension} (${cells[0] ?? '—'})`);
-    else differing.push(`${row.dimension} — ${columns.map((column, index) => `${column.label}: ${cells[index] ?? '—'}`).join(', ')}`);
+    else
+      differing.push(
+        `${row.dimension} — ${columns.map((column, index) => `${column.label}: ${cells[index] ?? '—'}`).join(', ')}`,
+      );
   }
   if (differing.length > 0) lines.push(sentence(`Rows that differ: ${differing.join('; ')}`));
   if (identical.length > 0) lines.push(sentence(`Rows identical across columns: ${identical.join('; ')}`));

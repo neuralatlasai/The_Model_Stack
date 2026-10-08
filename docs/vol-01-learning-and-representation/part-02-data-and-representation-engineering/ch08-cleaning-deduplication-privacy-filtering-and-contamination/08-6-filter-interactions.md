@@ -40,7 +40,7 @@ evidence_summary:
   labels_used: [PAPER-REPORTED, OFFICIAL-DOCUMENTATION, MATHEMATICALLY-DERIVED, DERIVED, ASSUMED, KNOWN, NOT-DISCLOSED, UNVERIFIED]
   empirically_observed: false
 word_count_target: 2600
-updated_at: 2026-09-25
+updated_at: 2026-10-09
 editorial_status: manuscript_draft
 ---
 
@@ -57,13 +57,13 @@ What failed before was validating filters one at a time and describing the pipel
 ```figure
 id: fig-8.30
 kind: stat-panel
-title: Reported cases where filters interact
+title: Reported filtering effects, evaluation noise and attack counts
 caption: >-
-  Each row is one paper's measurement, not a law. Read the first two rows together:
-  a heuristic chain removed high-quality tokens that a classifier would have kept, and
-  reordering the two stages recovered MMLU. The noise rows set the scale an ablation must
-  resolve. The last row is why chain recall on adversarial documents, not the fraction
-  removed, is the security quantity.
+  Separate paper-reported measurements with different populations and protocols.
+  Nemotron-CC compares conditional filter application, not a swap of fixed stages.
+  The other studies measure domain effects, regional removal disparity, ranking noise
+  and a controlled backdoor. They do not jointly measure one filter chain. Books QA
+  is F1 change versus the unfiltered model; 46% is rounded corpus retention.
 placement: rail
 anchor: why-this-exists
 evidence: PAPER-REPORTED
@@ -76,20 +76,29 @@ alt: >-
   filter at threshold 0.7 kept 46% of C4 and changed Books QA by minus 6.7 points. AboutMe
   (R8.35): pages associated with Eastern Asia were 2.4 times more likely than Northern
   Europe to be removed by CLD2. DataDecide (R8.37): seed standard deviation up to 2 points
-  at 1B for some recipes; about 80% of pairwise decisions correct from 150M. Souly et al.
+  at 1B and 100 tokens per parameter for some recipes; about 80% of pairwise decisions correct from 150M. Souly et al.
   (R8.39): 250 poisoned documents backdoored 600M to 13B models, 0.00016% of the 13B
   model's training tokens.
 spec:
-  header: "FILTER INTERACTIONS · REPORTED"
+  header: "SEPARATE STUDIES · REPORTED"
   rows:
     - { key: "HQ tokens lost to heuristics", value: "-18.1% (127B to 104B)", note: "R8.38, FineWeb-Edu-judged HQ" }
     - { key: "MMLU, heuristics on LQ only", value: "55.5 to 57.5", note: "R8.38, 8B params, 1T tokens" }
     - { key: "quality filter T = 0.7, C4 kept", value: "46%", note: "R8.33, PaLM-style classifier" }
-    - { key: "Books QA at T = 0.7", value: "-6.7 points", note: "R8.33, 1.5B model" }
-    - { key: "CLD2 removal, E. Asia vs N. Europe", value: "2.4x", note: "R8.35, English web pages" }
-    - { key: "seed std at 1B, some recipes", value: "up to 2 points", note: "R8.37" }
+    - { key: "Books QA at T = 0.7", value: "-6.7 F1 points", note: "R8.33, Fig. 6, 1.5B model" }
+    - { key: "CLD2 removal, E. Asia vs N. Europe", value: "2.4x", note: "R8.35, AboutMe-associated pages, 5.2% removed tail" }
+    - { key: "seed std at 1B, some recipes", value: "up to 2 points", note: "R8.37, 100 tokens per parameter" }
     - { key: "pairwise decisions right from 150M", value: "about 80%", note: "R8.37, target 1B" }
     - { key: "poisons for a DoS backdoor", value: "250 documents", note: "R8.39, 600M to 13B" }
+context:
+  hardware: "Separate studies: R8.38 ablations use 1024 H100 GPUs; R8.33 LM-XL uses TPU 8×8×8. No common hardware baseline."
+  model: "R8.38: 8B; R8.33: 1.5B; R8.37: 150M predictions of 1B; R8.39: 600M–13B. CLD2 is a corpus audit."
+  precision: "UNVERIFIED for these comparisons. Corpus-retention and removal ratios are counts, not arithmetic-precision benchmarks."
+  sequenceLength: "R8.33 training: 512 tokens; other selected studies: UNVERIFIED here. Corpus-audit rows have no model context window."
+  ioDistribution: "Separate Common Crawl, C4, AboutMe, 25 DataDecide recipes and controlled poisoned-training populations; see source locators."
+  concurrency: "No serving-concurrency experiment. Training parallelism and offline-audit execution differ by study; not pooled."
+  runtimeVersion: "R8.38: Megatron-LM/lm-eval; R8.33: T5X/TensorFlow; R8.37: OLMo/OLMES. Exact runtime commits UNVERIFIED here."
+  measurementBoundary: "Independent token counts, QA F1/MMLU, regional removal, seed/ranking statistics and attack counts; no shared timing or causal-interaction benchmark."
 ```
 
 ## Intuition
@@ -202,9 +211,9 @@ The product form is the compounding mechanism: five stages that each keep group 
 The adversarial counterpart concerns documents crafted to survive. Let a_k be stage k's pass probability for the adversary's documents and n_⋆ the number of surviving documents an attack needs:
 
 $$
-n_{\text{surv}} = n_{\text{inj}}\,A,\quad A=\prod_{k=1}^{K} a_k, \qquad n_{\text{inj}} = \frac{n_\star}{A}, \qquad s_{\text{post}} = s_{\text{pre}}\,\frac{A}{\sigma_{\text{chain}}}, \qquad \bar d = (n_\star - 1)\,\Big(1-\big(1-J^{\,r}\big)^{b}\Big)
+\mathbb E[n_{\text{surv}}] = n_{\text{inj}}\,A,\quad A=\prod_{k=1}^{K} a_{k\mid<k}, \qquad n_{\text{inj}} = \frac{n_\star}{A}, \qquad s_{\text{post}} = \frac{s_{\text{pre}}A}{s_{\text{pre}}A+(1-s_{\text{pre}})\sigma_{\text{chain}}} \approx s_{\text{pre}}\frac{A}{\sigma_{\text{chain}}}, \qquad \bar d = (n_\star - 1)\,\Big(1-\big(1-J^{\,r}\big)^{b}\Big)
 $$
-*(Eq. 8.20)* where A = chain pass probability for the adversary's documents; n_inj = documents the adversary must place in the crawl; s_pre, s_post = the adversary's share of records before and after the chain, σ_chain being the chain's pass rate on everything else (Eq. 8.16); d̄ = expected number of MinHash candidate edges per surviving poison when the variants have pairwise Jaccard similarity J under b bands of r rows (Eq. 8.8); a component forms among the variants when d̄ exceeds 1.
+*(Eq. 8.20)* where A > 0 is chain pass probability and each a_{k|<k} conditions on survival of earlier stages; n_inj is the budget giving n_star survivors in expectation, not a success-probability guarantee. The exact s_post is the normalized retained mass, equivalently the ratio of expected counts, with σ_chain > 0 the benign pass rate. The approximation requires the retained adversarial mass to be negligible relative to retained benign mass. The expected candidate degree d̄ follows by linearity of expectation for n_star variants with common pairwise Jaccard J and ideal b-by-r MinHash banding (Eq. 8.8); it does not require independent edges, prove connectivity, or establish verified duplicate removal.
 
 Decisions about stages are made by matched-token ablations. Let each arm be trained with n seeds and let σ_a be the seed-effect standard deviation of Eq. 6.9 ([§6.4](../../part-01-scientific-foundations/ch06-experimental-design-and-evaluation-before-optimization/06-4-measurement-uncertainty.md)) for the aggregate score. For a true difference δ between two pipeline configurations,
 
@@ -315,19 +324,18 @@ spec:
 
 **Rare-data loss.** The same compounding applies to dialects, registers and domains, and the evidence that single stages already carry the bias is consistent across four independent groups. R8.34 reproduced the GPT-3 quality classifier and found that high-school newspaper articles "from larger schools, located in wealthier, educated, and urban ZIP codes are more likely to be classified as high quality", with no difference in quality scores between high- and low-factuality news sources (p = 0.085) (PAPER-REPORTED). R8.11 found that C4's blocklist removes text in dialects associated with minority identities (PAPER-REPORTED, §8.2). R8.35 found that "some quality classifiers act like topical domain filters" (PAPER-REPORTED). R8.33 measured the downstream side at 1.5B parameters: the quality filter improved most QA domains despite removing data, but hurt Books — at threshold 0.7, which kept 46 % of C4, Books QA changed by −6.7 points while the average rose by 0.7 — and "the benefits are not predictable from text characteristics" (PAPER-REPORTED). Deduplication adds its own tail effect: P06 hypothesises that the gain lies in removing large clusters while removing clusters with fewer than ~100 duplicates "can harm performance" (PAPER-REPORTED as a hypothesis, §8.3), R8.12's filter removal rates are highest for singletons and for the most-repeated tail, and R8.38's −18.1 % is rare-data loss in the precise sense of the definition, with the classifier as the validity oracle. The mechanism is Eq. 8.3 applied per group: a filter tuned for precision on the majority has a false-positive rate on content its reference set under-represents, and Eq. 8.19 multiplies those rates. What a filter removes from the long tail is the input that [§9.2](../ch09-data-mixtures-curricula-and-sample-efficiency/09-2-quality-and-diversity.md) measures as long-tail retention; this section owns the removal side and §9.2 the exposure side.
 
-**Adversarial documents.** A filter chain is also an attack surface. R8.13 shows that web-scale datasets can be poisoned in practice. Split-view poisoning "exploits the mutable nature of internet content to ensure a dataset annotator's initial view of the dataset differs from the view downloaded by subsequent clients"; frontrunning poisoning targets datasets that "periodically snapshot crowd-sourced content -- such as Wikipedia -- where an attacker only needs a time-limited window to inject malicious examples"; the authors estimate that "for just $60 USD, we could have poisoned 0.01% of the LAION-400M or COYO-700M datasets in 2023" and that they "can poison 6.5% of Wikipedia documents absent any other defensive measures", and their Table 1 lists the text corpus Falcon RefinedWeb with 0.24 % of its documents on expired domains (R8.13 abstract, §1, §5.4, Table 1, PAPER-REPORTED). The first version of the paper states the filter interaction directly: an attack adding 1 MB of text is a 2.5 × 10⁻⁹ fraction of Common Crawl, "but if this text bypasses the curation done for the CC-100 dataset, it could instead poison a 1.2 × 10⁻⁵ fraction of the English corpus, or even a full 9.1% of the Oromo corpus" (R8.13 v1 App. B.3, PAPER-REPORTED; the passage is absent from v2). Filtering that removes benign text and passes the adversary's text *concentrates* the attack: the adversary's share after the chain is its share before, times A/σ_chain (Eq. 8.20). The count, not the fraction, is what matters to the defender: R8.39 found that "250 poisoned documents similarly compromise models across all model and dataset sizes" from 600M to 13B parameters trained on Chinchilla-optimal data, 0.00016 % of training tokens for the 13B model, and that 100 documents did not succeed (PAPER-REPORTED); R8.40 found that poisoning 0.1 % of pretraining data let three of four attacks "measurably persist through post-training", and denial-of-service at 0.001 % (PAPER-REPORTED). Eq. 8.20 converts a chain into the adversary's cost: a chain that passes adversarial documents with probability 0.1 multiplies the injection budget by 10 — 2,500 documents instead of 250, a fraction 2.5·10⁻⁷ of a 10¹⁰-document crawl — and if the same chain keeps 10 % of benign documents, the 250 survivors are 2.5·10⁻⁷ of the retained corpus, the same share as the 2,500 had in the crawl; a filter-aware adversary with A = 1 facing σ_chain = 0.1 enters the retained corpus at ten times its crawl share (DERIVED, illustrative; this is R8.13's CC-100 arithmetic in general form). Two properties of the chain limit that factor. First, the reference classifiers are public: the FineWeb-Edu classifier and the DCLM fastText model are released (R8.27, R8.31), so an adversary can score candidate documents before publishing them and drive each a_k toward 1 (DERIVED; no opened source measures filter-aware poisoning). Second, deduplication collapses only similar variants: with FineWeb's 14 × 8 banding, 250 variants at pairwise Jaccard 0.5 have candidate probability 0.053 per pair and a mean of about 13 candidate edges each, so transitive clustering (Algorithm 8.6) without per-edge verification merges almost all of them into one cluster; at pairwise Jaccard 0.2 the mean degree is 0.009 and they all survive (MATHEMATICALLY-DERIVED from Eq. 8.8 and Eq. 8.20). R8.39's construction — a random public-domain prefix, a trigger, and 400–900 tokens sampled at random from a vocabulary (PAPER-REPORTED) — has near-zero shingle overlap between documents by construction, so deduplication does not touch it; whether a perplexity or repetition filter would remove such gibberish was not tested in R8.39 and is UNVERIFIED. The defences that act on the chain are integrity and provenance rather than scoring: pinning content hashes at collection time (R8.13's proposal, §7.3), recording source identifiers so that a poisoned source can be removed with its descendants (§7.4 deletion lineage), and injecting canary documents to measure a_k directly (Algorithm 8.13).
+**Adversarial documents.** A filter chain is also an attack surface. R8.13 shows that web-scale datasets can be poisoned in practice. Split-view poisoning "exploits the mutable nature of internet content to ensure a dataset annotator's initial view of the dataset differs from the view downloaded by subsequent clients"; frontrunning poisoning targets datasets that "periodically snapshot crowd-sourced content -- such as Wikipedia -- where an attacker only needs a time-limited window to inject malicious examples"; the authors estimate that "for just $60 USD, we could have poisoned 0.01% of the LAION-400M or COYO-700M datasets in 2023" and that they "can poison 6.5% of Wikipedia documents absent any other defensive measures", and their Table 1 lists the text corpus Falcon RefinedWeb with 0.24 % of its documents on expired domains (R8.13 abstract, §1, §5.4, Table 1, PAPER-REPORTED). The first version of the paper states the filter interaction directly: an attack adding 1 MB of text is a 2.5 × 10⁻⁹ fraction of Common Crawl, "but if this text bypasses the curation done for the CC-100 dataset, it could instead poison a 1.2 × 10⁻⁵ fraction of the English corpus, or even a full 9.1% of the Oromo corpus" (R8.13 v1 App. B.3, PAPER-REPORTED; the passage is absent from v2). Filtering that removes benign text and passes the adversary's text *concentrates* the attack: the normalized retained-mass share is given by Eq. 8.20; when the retained poison mass is negligible, its amplification is approximately A/σ_chain. The count, not the fraction, is what matters to the defender: R8.39 found that "250 poisoned documents similarly compromise models across all model and dataset sizes" from 600M to 13B parameters trained on Chinchilla-optimal data, 0.00016 % of training tokens for the 13B model, and that 100 documents did not succeed (PAPER-REPORTED); R8.40 found that poisoning 0.1 % of pretraining data let three of four attacks "measurably persist through post-training", and denial-of-service at 0.001 % (PAPER-REPORTED). Eq. 8.20 converts a chain into an expected-survivor budget: a chain that passes adversarial documents with probability 0.1 needs 2,500 injections for 250 survivors in expectation, a fraction 2.5·10⁻⁷ of a 10¹⁰-document crawl — and if the same chain keeps 10 % of benign documents, the 250 survivors are 2.5·10⁻⁷ of the retained corpus, the same share as the 2,500 had in the crawl; a filter-aware adversary with A = 1 facing σ_chain = 0.1 enters the retained corpus at ten times its crawl share (DERIVED, illustrative; this is R8.13's CC-100 arithmetic in general form). Two properties of the chain limit that factor. First, the reference classifiers are public: the FineWeb-Edu classifier and the DCLM fastText model are released (R8.27, R8.31), so an adversary can score candidate documents before publishing them and drive each a_k toward 1 (DERIVED; no opened source measures filter-aware poisoning). Second, deduplication collapses only similar variants: with FineWeb's 14 × 8 banding, 250 variants at pairwise Jaccard 0.5 have candidate probability 0.053 per pair and expected candidate degree about 13; at Jaccard 0.2 the degree is about 0.009 (MATHEMATICALLY-DERIVED from Eq. 8.8 and Eq. 8.20). Neither marginal establishes connectivity or actual removal: shared MinHash randomness correlates edges, and the verification threshold and representative policy determine deduplication behavior. R8.39's construction — a random public-domain prefix, a trigger, and 400–900 tokens sampled at random from a vocabulary (PAPER-REPORTED) — motivates a low-overlap hypothesis, but neither MinHash survival nor removal by a perplexity or repetition filter was measured in R8.39; both are UNVERIFIED. The defences that act on the chain are integrity and provenance rather than scoring: pinning content hashes at collection time (R8.13's proposal, §7.3), recording source identifiers so that a poisoned source can be removed with its descendants (§7.4 deletion lineage), and injecting canary documents to measure a_k directly (Algorithm 8.13).
 
 ```figure
 id: fig-8.34
 kind: calculator
-title: Injection budget and deduplication collapse for a poisoning adversary
+title: Expected injection budget and MinHash candidate exposure
 caption: >-
-  Eq. 8.20 with Eq. 8.8's banding. The first output is what the chain charges the adversary;
-  the share outputs show the chain concentrating whatever passes it; the last is whether MinHash
-  clustering sees the variants as one family. Scroll: variants at Jaccard 0.5 form a connected
-  candidate graph and collapse; at 0.2 they are invisible to deduplication; a filter-aware
-  adversary pays nothing and gains share. The poison count of 250 is R8.39's reported
-  denial-of-service setting; both pass rates are ASSUMED.
+  Eq. 8.20's expected survival budget, normalized retained-mass share and Eq. 8.8's
+  candidate-edge marginals. Candidate degree cannot certify a connected component or
+  duplicate removal; verification and representative policy matter. The count 250 comes
+  from R8.39's controlled denial-of-service experiment. Pass rates, crawl size and pairwise
+  similarities are illustrative assumptions, not measured defenses or attack guarantees.
 placement: rail
 anchor: mechanism
 evidence: DERIVED
@@ -338,35 +346,35 @@ alt: >-
   0.1, assumed), chain pass rate on benign records (default 0.1, assumed), crawl size in
   documents (default 10 billion), pairwise Jaccard J of the variants (default 0.5), bands
   b = 14 and rows r = 8. Outputs: documents to inject 2,500; share of the crawl 2.5e-7;
-  share of the retained corpus 2.5e-7; candidate probability per pair 5.3%; mean candidate
-  degree 13.3, above 1, so the variants form one component. At J = 0.2 the candidate
+  normalized retained-mass share approximately 2.5e-7; candidate probability per pair 5.3%; mean candidate
+  degree 13.3, which alone proves neither connectivity nor removal. At J = 0.2 the candidate
   probability is 3.6e-5 and the degree 0.009. At A = 1 the injection is 250, 2.5e-8 of the
   crawl and 2.5e-7 of the retained corpus.
 spec:
   tex: >-
-    n_{\text{inj}} = \frac{n_\star}{A},\quad s_{\text{post}} = s_{\text{pre}}\frac{A}{\sigma_{\text{chain}}},\quad \bar d = (n_\star-1)\Big(1-\big(1-J^{r}\big)^{b}\Big)
+    n_{\text{inj}} = \frac{n_\star}{A},\quad s_{\text{post}} = \frac{s_{\text{pre}}A}{s_{\text{pre}}A+(1-s_{\text{pre}})\sigma_{\text{chain}}},\quad \bar d = (n_\star-1)\Big(1-\big(1-J^{r}\big)^{b}\Big)
   equation: "8.20"
   inputs:
     - { symbol: ns, label: "surviving poisons needed n_star", default: 250, min: 1, max: 100000, scale: log10, format: integer }
     - { symbol: A, label: "chain pass probability A", default: 0.1, min: 0.0001, max: 1, scale: log10, format: percent }
     - { symbol: sc, label: "chain pass rate on benign records", default: 0.1, min: 0.01, max: 1, scale: log10, format: percent }
-    - { symbol: X, label: "crawl size, documents", default: 1.0e10, min: 1.0e6, max: 1.0e12, scale: log10, format: integer }
+    - { symbol: X, label: "total crawl size, documents", default: 1.0e10, min: 1.0e9, max: 1.0e12, scale: log10, format: integer }
     - { symbol: J, label: "pairwise Jaccard of variants J", default: 0.5, min: 0.01, max: 0.95, format: fixed2 }
     - { symbol: b, label: "bands b", default: 14, min: 1, max: 500, format: integer }
     - { symbol: r, label: "rows per band r", default: 8, min: 1, max: 32, format: integer }
   outputs:
-    - { symbol: ninj, label: "documents to inject", formula: "ns/A", format: integer, emphasis: true }
+    - { symbol: ninj, label: "expected injection budget", formula: "ns/A", format: integer, emphasis: true }
     - { symbol: frac, label: "share of the crawl, s_pre", formula: "ninj/X", format: raw }
-    - { symbol: post, label: "share of the retained corpus, s_post", formula: "frac*A/sc", format: raw }
+    - { symbol: post, label: "normalized retained-mass share", formula: "frac*A/(frac*A + (1-frac)*sc)", format: raw }
     - { symbol: pc, label: "candidate probability per variant pair", formula: "1 - (1 - J^r)^b", format: percent }
     - { symbol: deg, label: "mean candidate degree", formula: "(ns - 1)*pc", format: fixed2 }
 states:
-  - { anchor: mechanism, label: "J = 0.5, A = 0.1", variables: { ns: 250, A: 0.1, sc: 0.1, J: 0.5 }, highlight: [ninj, deg], note: "2,500 injections for 250 survivors; at Jaccard 0.5 each variant has about 13 candidate edges, so transitive clustering merges the family." }
-  - { anchor: failure-modes, label: "J = 0.2", variables: { ns: 250, A: 0.1, sc: 0.1, J: 0.2 }, highlight: [pc, deg], note: "Dissimilar variants: candidate probability 3.6e-5 per pair, degree 0.009. Deduplication no longer sees an attack; only the scoring stages charge the adversary." }
-  - { anchor: limitations, label: "filter-aware, A = 1", variables: { ns: 250, A: 1, sc: 0.1, J: 0.2 }, highlight: [frac, post], note: "A filter-aware adversary pays nothing to the chain: 250 injections, 2.5e-8 of the crawl, and 2.5e-7 of a corpus that kept 10% of benign records." }
+  - { anchor: mechanism, label: "J = 0.5, A = 0.1", variables: { ns: 250, A: 0.1, sc: 0.1, J: 0.5 }, highlight: [ninj, deg], note: "2,500 injections yield 250 survivors in expectation. Mean candidate degree is about 13; connectivity and verified duplicate removal remain unestablished." }
+  - { anchor: failure-modes, label: "J = 0.2", variables: { ns: 250, A: 0.1, sc: 0.1, J: 0.2 }, highlight: [pc, deg], note: "Candidate probability 3.6e-5 per pair, mean degree 0.009. Candidate edges are rare but not impossible; this is not a measured survival rate." }
+  - { anchor: limitations, label: "assumed A = 1", variables: { ns: 250, A: 1, sc: 0.1, J: 0.2 }, highlight: [frac, post], note: "Assuming every poison passes: 250 injections, crawl share 2.5e-8, retained-mass share approximately 2.5e-7. No cited experiment establishes A = 1." }
 ```
 
-**Controlled downstream ablations.** Every interaction above is decided, in the end, by training on the two corpora at matched tokens. The published designs are one-factor-at-a-time: P06 trains 1.71B-parameter models on 28B tokens with two seeds per configuration and adds each stage on top of the previous chain (PAPER-REPORTED, §8.1–§8.2); P07 fixes the recipe per scale and varies the data (PAPER-REPORTED); R8.33 trained 28 models of 1.5B parameters and states that it proceeded "without the luxury of multiple rounds of reflection and repetition" (PAPER-REPORTED); R8.38 ran its extractor-and-filter comparison as four 8B-parameter, 1T-token trainings (PAPER-REPORTED). None estimates an interaction coefficient in the sense of Eq. 6.6 ([§6.3](../../part-01-scientific-foundations/ch06-experimental-design-and-evaluation-before-optimization/06-3-controlled-comparisons.md)), and none reports a second order of the same stages. DataDecide supplies the noise side: 1,050 models over 25 data recipes, 14 sizes from 4M to 1B and 3 seeds, trained at 100 tokens per parameter; ranking recipes at 150M predicts the 1B winner in about 80 % of pairwise comparisons; the evaluation "must separate pairs of data recipes by an amount greater than combined noise from run-to-run variance"; and the suite cost "approximately 820K H100 GPU hours" (R8.37 §2.1, §3.4, Impact statement, PAPER-REPORTED). Eq. 8.21 turns this into a sizing rule. With σ_a = 1 point, two seeds per arm give a standard error of 1 point on the difference: a true 1-point effect is ranked correctly with probability Φ(1) = 0.84 and a 0.5-point effect with Φ(0.5) = 0.69; ranking a 0.5-point effect correctly 95 % of the time needs 22 seeds per arm (MATHEMATICALLY-DERIVED). P06's reported gain of "about 1%" from its three custom filters (§8.2) sits at the edge of what a two-seed design can resolve if σ_a approaches the 2 points R8.37 reports for some recipes at 1B.
+**Controlled downstream ablations.** Every interaction above is decided, in the end, by training on the two corpora at matched tokens. The published designs are one-factor-at-a-time: P06 trains 1.71B-parameter models on 28B tokens with two seeds per configuration and adds each stage on top of the previous chain (PAPER-REPORTED, §8.1–§8.2); P07 fixes the recipe per scale and varies the data (PAPER-REPORTED); R8.33 trained 28 models of 1.5B parameters and states that it proceeded "without the luxury of multiple rounds of reflection and repetition" (PAPER-REPORTED); R8.38 ran its extractor-and-filter comparison as four 8B-parameter, 1T-token trainings (PAPER-REPORTED). None estimates an interaction coefficient in the sense of Eq. 6.6 ([§6.3](../../part-01-scientific-foundations/ch06-experimental-design-and-evaluation-before-optimization/06-3-controlled-comparisons.md)), and none reports a second order of the same stages. DataDecide supplies the noise side: 1,050 models over 25 data recipes, 14 sizes from 4M to 1B and 3 seeds, trained at 100 tokens per parameter; ranking recipes at 150M predicts the 1B winner in about 80 % of pairwise comparisons; the evaluation "must separate pairs of data recipes by an amount greater than combined noise from run-to-run variance"; and the suite cost "approximately 820K H100 GPU hours" (R8.37 §2.1, §3.4, Impact statement, PAPER-REPORTED). Eq. 8.21 turns this into a sizing rule. With σ_a = 1 point, two seeds per arm give a standard error of 1 point on the difference: a true 1-point effect is ranked correctly with probability Φ(1) = 0.84 and a 0.5-point effect with Φ(0.5) = 0.69; ranking a 0.5-point effect correctly 95 % of the time needs 22 seeds per arm (MATHEMATICALLY-DERIVED). P06's reported gain of "about 1%" from its three custom filters (§8.2) sits at the edge of what a two-seed design can resolve if σ_a approaches the two accuracy points R8.37 reports for some recipes at 1B and 100 tokens per parameter; that is a scale-specific illustration, not an estimate for the P06 runs.
 
 The combinatorics fix what to ablate. Presence of K stages is a 2^K factorial; order is K! arms; neither is affordable at K = 8 when a single P06-scale run costs 6ND = 6 × 1.71·10⁹ × 28·10⁹ ≈ 2.9·10²⁰ FLOPs (DERIVED, dense-transformer approximation of notation §2.2). Proposition 8.1 reduces the problem: only non-commuting pairs whose relative order is not forced by dependencies (LID before per-language rules; normalisation before PII scanning; decontamination before tokenisation) need an order ablation, and only stages whose conditional removal rates differ across positions need an interaction term. Algorithm 8.11 produces that list; Experiment 8.6 ablates the pair that Eq. 8.17 says matters most.
 
@@ -376,9 +384,9 @@ kind: calculator
 title: How often a matched-token ablation ranks two pipelines correctly
 caption: >-
   Eq. 8.21 with the normal CDF replaced by the logistic approximation 1/(1 + exp(−1.702 z)),
-  accurate to about 0.01. Scroll: a two-seed design against a half-point effect is right about
+  under an illustrative independent, equal-variance normal seed model. A two-seed design against a half-point effect is right about
   seven times in ten; the same design against a one-point effect about 85%; at the seed
-  noise R8.37 reports for some recipes, a one-point effect is again a coin weighted only 70:30.
+  illustrative two-point seed noise, a one-point effect is ranked correctly about 70% of the time.
   The seeds column is the n needed for a 95% correct decision (z = 1.645).
 placement: rail
 anchor: experimental-design
@@ -409,11 +417,11 @@ spec:
 states:
   - { anchor: experimental-design, label: "0.5 points, 2 seeds", variables: { delta: 0.5, sa: 1.0, n: 2 }, highlight: [pc, nreq], note: "The P06 design against a half-point effect: right about 70% of the time. A 95% decision needs 22 seeds per arm." }
   - { anchor: observations, label: "1 point, 2 seeds", variables: { delta: 1.0, sa: 1.0, n: 2 }, highlight: [zm, pc], note: "A one-point effect at one point of seed noise: about 85% correct, 6 seeds for 95%." }
-  - { anchor: limitations, label: "sigma_a = 2 points", variables: { delta: 1.0, sa: 2.0, n: 2 }, highlight: [se, pc], note: "At the 2-point seed spread R8.37 reports for some recipes at 1B, a one-point effect is ranked correctly about 70% of the time with two seeds." }
+  - { anchor: limitations, label: "sigma_a = 2 points", variables: { delta: 1.0, sa: 2.0, n: 2 }, highlight: [se, pc], note: "Illustrative two-point seed noise: about 70% correct with two seeds. R8.37 reports this spread for some recipes at 1B and 100 tokens per parameter." }
 ```
 
 <details><summary>Derivation of the numbers in Eq. 8.19–8.21</summary>
-Eq. 8.19: 0.9⁵ = 0.5905, 0.9¹⁰ = 0.3487; share 0.02·0.3·0.5905 / (0.02·0.3·0.5905 + 0.98·0.3) = 0.003543/0.297543 = 0.0119. Eq. 8.20: 1 − (1 − 0.5⁸)¹⁴ = 1 − (0.996094)¹⁴ = 0.0533, times 249 gives 13.3; 1 − (1 − 0.2⁸)¹⁴ = 3.58·10⁻⁵, times 249 gives 0.0089; an Erdős–Rényi graph acquires a giant component when the mean degree exceeds 1 (KNOWN), which is the collapse criterion used here, idealising candidate edges as independent. Eq. 8.21: SE = 1·√(2/2) = 1; Φ(1) = 0.8413, Φ(0.5) = 0.6915; n = 2·1²·1.645²/0.5² = 21.6, rounded up to 22; at δ = 1, n = 5.4, rounded up to 6. MATHEMATICALLY-DERIVED.
+Eq. 8.19: 0.9⁵ = 0.5905, 0.9¹⁰ = 0.3487; share 0.02·0.3·0.5905 / (0.02·0.3·0.5905 + 0.98·0.3) = 0.003543/0.297543 = 0.0119. Eq. 8.20: 1 − (1 − 0.5⁸)¹⁴ = 1 − (0.996094)¹⁴ = 0.0533, times 249 gives 13.3; 1 − (1 − 0.2⁸)¹⁴ = 3.58·10⁻⁵, times 249 gives 0.0089; these expected degrees follow from the marginal candidate probability and linearity of expectation. They provide neither a connectivity test nor a verified-duplicate criterion; candidate edges need not be independent. Eq. 8.21: SE = 1·√(2/2) = 1; Φ(1) = 0.8413, Φ(0.5) = 0.6915; n = 2·1²·1.645²/0.5² = 21.6, rounded up to 22; at δ = 1, n = 5.4, rounded up to 6. MATHEMATICALLY-DERIVED.
 </details>
 
 ## Algorithm
@@ -509,7 +517,7 @@ Cost line: Algorithm 8.11 is free; Algorithm 8.12 costs two passes of the chain 
 
 **What the paper claims.** R8.38 claims heuristic filters remove 18.1 % of classifier-judged high-quality tokens and that applying them only to low-quality data improves MMLU at 8B/1T (PAPER-REPORTED). R8.33 claims quality and toxicity filters have "significant but opposite effects" and that quality-filter benefits "are not predictable from text characteristics" (PAPER-REPORTED). R8.35 and R8.34 claim that quality and language filters remove content non-uniformly by region, topic and socio-economic context (PAPER-REPORTED). R8.37 claims small-scale rankings predict the 1B winner in about 80 % of pairwise comparisons and that noise sets the limit (PAPER-REPORTED). R8.39 and R8.40 claim poisoning needs a near-constant number of documents and persists through post-training at 0.1 % (PAPER-REPORTED).
 
-**What the evidence shows.** The claim that single filters carry group biases has independent support from four groups using different filters and populations (R8.11, R8.33, R8.34, R8.35). The claim that reordering or conditioning stages changes downstream quality rests on one paper (R8.38) at one scale and without seed replication in the table opened. No opened source measures an ordering effect of two stages on the same pool, an interaction coefficient between stages, or a chain-level κ_g. The poisoning results come from two overlapping author groups (R8.39, R8.40) with synthetic backdoors, and neither tests a data-filtering chain.
+**What the evidence shows.** The claim that single filters carry group biases has independent support from four groups using different filters and populations (R8.11, R8.33, R8.34, R8.35). The claim that conditioning stage application changes downstream quality rests on one paper (R8.38) at one scale and without seed replication in the table opened. No opened source measures an ordering effect of two stages on the same pool, an interaction coefficient between stages, or a chain-level κ_g. The poisoning results come from two overlapping author groups (R8.39, R8.40) with synthetic backdoors, and neither tests a data-filtering chain.
 
 **What we infer.** DERIVED: predicates commute and population stages do not (Proposition 8.1), so the ordering question reduces to a small list of pairs that can be audited on a sample before any training. DERIVED: group biases compound multiplicatively through the chain (Eq. 8.19), so per-stage ledgers that each show a small disparity are consistent with a large chain-level loss. DERIVED: against a count-limited adversary with access to released classifiers, scoring stages provide little protection and provenance controls provide most of it (Eq. 8.20).
 
@@ -552,7 +560,7 @@ For code, licence filters, deduplication at file and repository level, PII redac
 
 ## Limitations
 
-Proposition 8.1 is exact for the idealised stage types; real implementations mix them (a classifier whose threshold is re-estimated per shard is a population stage), so the classification must be read from the code, not the documentation. Eq. 8.17 assumes random representatives and independent member scores at one extreme; its magnitude on a real pool is unmeasured. Eq. 8.19 multiplies conditional rates and is exact only when those rates are estimated in the executed order. Eq. 8.20 idealises candidate edges as independent and the adversary as count-limited in the R8.39 sense, which was measured for synthetic backdoors at ≤ 13B parameters. Eq. 8.21 assumes normal seed effects; at two seeds it is optimistic. The falsification condition for the section's central claim is Experiment 8.6 showing a set effect or score difference between two orders of predicate-only stages beyond implementation noise — which would mean some "predicate" reads state it does not declare. Decision consequence: record the order and the stage types, audit non-commuting pairs and group retention on a cluster-complete sample before training, and spend training ablations only on the pairs that audit flags.
+Proposition 8.1 is exact for the idealised stage types; real implementations mix them (a classifier whose threshold is re-estimated per shard is a population stage), so the classification must be read from the code, not the documentation. Eq. 8.17 assumes random representatives and independent member scores at one extreme; its magnitude on a real pool is unmeasured. Eq. 8.19 multiplies conditional rates and is exact only when those rates are estimated in the executed order. Eq. 8.20 assumes known conditional survival probabilities and ideal MinHash banding; its expected degree cannot establish graph connectivity or removal. Its budget targets expected survivors, not attack success. The motivating R8.39 count was measured for synthetic backdoors at ≤ 13B parameters. Eq. 8.21 assumes normal seed effects; at two seeds it is optimistic. The falsification condition for the section's central claim is Experiment 8.6 showing a set effect or score difference between two orders of predicate-only stages beyond implementation noise — which would mean some "predicate" reads state it does not declare. Decision consequence: record the order and the stage types, audit non-commuting pairs and group retention on a cluster-complete sample before training, and spend training ablations only on the pairs that audit flags.
 
 ## Reproducibility
 

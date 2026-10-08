@@ -80,7 +80,9 @@ export function flowSentence(flow: Flow, chapters: ReadonlyMap<number, FlowChapt
     sentences.push('Builds on no earlier chapter.');
   } else {
     const [top, via] = [...flow.inbound].sort((a, b) => b[1].length - a[1].length || a[0] - b[0])[0] ?? [0, []];
-    sentences.push(`Builds on ${plural(flow.inbound.size, 'earlier chapter')} in ${partRange(flow.inGroups)}, most on ${name(top)} (${String(via.length)} here).`);
+    sentences.push(
+      `Builds on ${plural(flow.inbound.size, 'earlier chapter')} in ${partRange(flow.inGroups)}, most on ${name(top)} (${String(via.length)} here).`,
+    );
   }
   if (flow.outbound.size === 0) {
     sentences.push('No later chapter lists it yet.');
@@ -88,7 +90,9 @@ export function flowSentence(flow: Flow, chapters: ReadonlyMap<number, FlowChapt
     const reach = new Map<number, number>();
     for (const via of flow.outbound.values()) for (const n of via) reach.set(n, (reach.get(n) ?? 0) + 1);
     const [top, count] = [...reach].sort((a, b) => b[1] - a[1] || a[0] - b[0])[0] ?? [0, 0];
-    sentences.push(`Unlocks ${plural(flow.outbound.size, 'later chapter')} in ${partRange(flow.outGroups)}; ${name(top)} reaches furthest (${String(count)}).`);
+    sentences.push(
+      `Unlocks ${plural(flow.outbound.size, 'later chapter')} in ${partRange(flow.outGroups)}; ${name(top)} reaches furthest (${String(count)}).`,
+    );
   }
   return sentences.join(' ');
 }

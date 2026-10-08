@@ -54,7 +54,10 @@ describe('createStore', () => {
 
   test('a value that fails its schema is discarded', () => {
     const backing = new MapStorage();
-    backing.data.set(STORAGE_KEYS.recent, JSON.stringify([{ nodeId: 'ms.section.5.2', url: '/x/', title: 'X', extra: true }]));
+    backing.data.set(
+      STORAGE_KEYS.recent,
+      JSON.stringify([{ nodeId: 'ms.section.5.2', url: '/x/', title: 'X', extra: true }]),
+    );
     const store = createStore(backing);
     assert.deepEqual(store.read(STORAGE_KEYS.recent, StoredRecentSchema, []), []);
     assert.equal(backing.data.has(STORAGE_KEYS.recent), false);
@@ -62,7 +65,10 @@ describe('createStore', () => {
 
   test('an over-long list (schema max) is rejected rather than trusted', () => {
     const backing = new MapStorage();
-    backing.data.set(STORAGE_KEYS.treeExpanded, JSON.stringify(Array.from({ length: 401 }, (_, i) => `ms.section.1.${String(i + 1)}`)));
+    backing.data.set(
+      STORAGE_KEYS.treeExpanded,
+      JSON.stringify(Array.from({ length: 401 }, (_, i) => `ms.section.1.${String(i + 1)}`)),
+    );
     assert.deepEqual(createStore(backing).read(STORAGE_KEYS.treeExpanded, StoredTreeExpandedSchema, []), []);
   });
 

@@ -21,7 +21,11 @@ type Attrs = Readonly<Record<string, string | number | boolean | null | undefine
  * (`true` → empty attribute, `false`/null/undefined → omitted); string children
  * become Text nodes.
  */
-export function h<K extends keyof HTMLElementTagNameMap>(tag: K, attrs: Attrs = {}, ...children: Child[]): HTMLElementTagNameMap[K] {
+export function h<K extends keyof HTMLElementTagNameMap>(
+  tag: K,
+  attrs: Attrs = {},
+  ...children: Child[]
+): HTMLElementTagNameMap[K] {
   const element = document.createElement(tag);
   for (const [name, value] of Object.entries(attrs)) {
     if (value === null || value === undefined || value === false) continue;
@@ -96,7 +100,14 @@ export function isEditable(target: EventTarget | null): boolean {
 
 /** A plain primary-button click without modifiers (anything else keeps native link behaviour). */
 export function isPlainClick(event: MouseEvent): boolean {
-  return event.button === 0 && !event.metaKey && !event.ctrlKey && !event.shiftKey && !event.altKey && !event.defaultPrevented;
+  return (
+    event.button === 0 &&
+    !event.metaKey &&
+    !event.ctrlKey &&
+    !event.shiftKey &&
+    !event.altKey &&
+    !event.defaultPrevented
+  );
 }
 
 /** Site base with leading and trailing slash: `<meta name="atlas-base">`, else the build-time fallback. */

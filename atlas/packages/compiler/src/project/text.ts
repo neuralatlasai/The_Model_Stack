@@ -47,7 +47,8 @@ const ROMAN: readonly (readonly [number, string])[] = [
 
 /** Positive integer → upper-case Roman numeral (`11` → `XI`). */
 export function toRoman(value: number): string {
-  if (!Number.isInteger(value) || value <= 0) throw new RangeError(`toRoman expects a positive integer, got ${String(value)}`);
+  if (!Number.isInteger(value) || value <= 0)
+    throw new RangeError(`toRoman expects a positive integer, got ${String(value)}`);
   let rest = value;
   let out = '';
   for (const [unit, glyph] of ROMAN) {

@@ -45,7 +45,9 @@ const KIND_BY_PREFIX: ReadonlyMap<string, NodeKind> = new Map<string, NodeKind>(
   ['concept', 'node'],
 ]);
 
-const EDGE_KIND_BY_PREFIX: ReadonlyMap<string, EdgeKind> = new Map<string, EdgeKind>(EDGE_KINDS.map((kind): [string, EdgeKind] => [kind, kind]));
+const EDGE_KIND_BY_PREFIX: ReadonlyMap<string, EdgeKind> = new Map<string, EdgeKind>(
+  EDGE_KINDS.map((kind): [string, EdgeKind] => [kind, kind]),
+);
 
 /** Shape openers, longest first, with their accepted closers and the fallback kind when no `[Prefix]` is given. */
 const SHAPES: readonly { readonly open: string; readonly close: readonly string[]; readonly kind: NodeKind }[] = [
@@ -358,7 +360,9 @@ export function parseMermaid(source: string): MermaidParseResult {
     const parseLink = (): Link | null => {
       skipWs();
       const rest = text.slice(pos);
-      const labelled = /^(<)?(--|==|-\.)(?=[\s"])\s*("[^"]*"|[^"]+?)\s*(-{2,}>|-{3,}|\.-+>|\.-+|={2,}>|={3,})/u.exec(rest);
+      const labelled = /^(<)?(--|==|-\.)(?=[\s"])\s*("[^"]*"|[^"]+?)\s*(-{2,}>|-{3,}|\.-+>|\.-+|={2,}>|={3,})/u.exec(
+        rest,
+      );
       if (labelled !== null) {
         const open = labelled[2] ?? '--';
         pos += labelled[0].length;
@@ -466,8 +470,10 @@ export function parseMermaid(source: string): MermaidParseResult {
         }
         label = label.replace(/^\[(?:Boundary|Node)\]\s*/iu, '');
         if (label === '') label = id;
-        if (groupStack.length > 0) issue(`subgraph '${id}' is nested; groups must not nest (VISUAL_GRAMMAR §3.3)`, lineNo);
-        if (!groups.some((group) => group.id === id)) groups.push({ id, label: truncateAtWord(label, MAX_GROUP_LABEL) });
+        if (groupStack.length > 0)
+          issue(`subgraph '${id}' is nested; groups must not nest (VISUAL_GRAMMAR §3.3)`, lineNo);
+        if (!groups.some((group) => group.id === id))
+          groups.push({ id, label: truncateAtWord(label, MAX_GROUP_LABEL) });
         groupStack.push(id);
         continue;
       }

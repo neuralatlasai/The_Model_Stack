@@ -35,7 +35,13 @@ function arrowHead(from: Point, tip: Point, length: number, halfWidth: number): 
   return `${r1(tip.x)},${r1(tip.y)} ${r1(bx - uy * halfWidth)},${r1(by + ux * halfWidth)} ${r1(nx)},${r1(ny)} ${r1(bx + uy * halfWidth)},${r1(by - ux * halfWidth)}`;
 }
 
-export function EdgePath({ edge, lit = false }: { readonly edge: SceneEdge; readonly lit?: boolean }): JSX.Element | null {
+export function EdgePath({
+  edge,
+  lit = false,
+}: {
+  readonly edge: SceneEdge;
+  readonly lit?: boolean;
+}): JSX.Element | null {
   const points = edge.points;
   const tip = points[points.length - 1];
   const before = points[points.length - 2];
@@ -44,24 +50,46 @@ export function EdgePath({ edge, lit = false }: { readonly edge: SceneEdge; read
   const radius = edge.kind === 'feedback' ? FEEDBACK_CORNER : CORNER;
   const emphasis = edge.kind === 'emphasis';
   return (
-    <g class={cls('vg-edge', `vg-edge--${edge.kind}`, lit && 'is-lit')} data-edge={edge.id} data-vg-key={edgeKey(edge.from, edge.to)}>
+    <g
+      class={cls('vg-edge', `vg-edge--${edge.kind}`, lit && 'is-lit')}
+      data-edge={edge.id}
+      data-vg-key={edgeKey(edge.from, edge.to)}
+    >
       <path class="vg-edge__line" d={roundedPath(points, radius, ARROW - NOTCH - 0.5)} />
       <circle class="vg-edge__port" cx={r1(start.x)} cy={r1(start.y)} r={emphasis ? 2 : 1.6} />
-      <polygon class="vg-edge__head" points={arrowHead(before, tip, emphasis ? ARROW + 1 : ARROW, emphasis ? 3.75 : 3.25)} />
+      <polygon
+        class="vg-edge__head"
+        points={arrowHead(before, tip, emphasis ? ARROW + 1 : ARROW, emphasis ? 3.75 : 3.25)}
+      />
     </g>
   );
 }
 
 const LABEL_FONT = 10.5;
 
-export function EdgeLabel({ edge, lit = false }: { readonly edge: SceneEdge; readonly lit?: boolean }): JSX.Element | null {
+export function EdgeLabel({
+  edge,
+  lit = false,
+}: {
+  readonly edge: SceneEdge;
+  readonly lit?: boolean;
+}): JSX.Element | null {
   if (edge.label === null || edge.labelAt === null) return null;
   const width = Math.ceil(textWidth(edge.label, LABEL_FONT, 'mono')) + 8;
   const { x, y } = edge.labelAt;
   return (
-    <g class={cls('vg-edge__tag', `vg-edge__tag--${edge.kind}`, lit && 'is-lit')} data-vg-key={edgeKey(edge.from, edge.to)}>
+    <g
+      class={cls('vg-edge__tag', `vg-edge__tag--${edge.kind}`, lit && 'is-lit')}
+      data-vg-key={edgeKey(edge.from, edge.to)}
+    >
       <rect class="vg-edge__knock" x={r1(x - width / 2)} y={r1(y - 7.5)} width={width} height="15" rx="2" ry="2" />
-      <text class={cls('vg-edge__label', `vg-edge__label--${edge.kind}`)} x={r1(x)} y={r1(y)} text-anchor="middle" dominant-baseline="central">
+      <text
+        class={cls('vg-edge__label', `vg-edge__label--${edge.kind}`)}
+        x={r1(x)}
+        y={r1(y)}
+        text-anchor="middle"
+        dominant-baseline="central"
+      >
         {edge.label}
       </text>
     </g>
@@ -86,8 +114,18 @@ export interface SceneSvgProps {
 const ORDINAL_GUTTER = 26;
 
 /** Static SVG for a laid-out Scene. `width`/`height` are the natural size; CSS caps it at 100 % of the column. */
-export function SceneSvg({ scene, title, desc, idPrefix, class: extra, state = NO_STATE, ordinals = false }: SceneSvgProps): JSX.Element {
-  const prefix = idPrefix ?? `vg-${hashId(`${title}|${scene.width}x${scene.height}|${scene.nodes.map((node) => node.id).join(',')}`)}`;
+export function SceneSvg({
+  scene,
+  title,
+  desc,
+  idPrefix,
+  class: extra,
+  state = NO_STATE,
+  ordinals = false,
+}: SceneSvgProps): JSX.Element {
+  const prefix =
+    idPrefix ??
+    `vg-${hashId(`${title}|${scene.width}x${scene.height}|${scene.nodes.map((node) => node.id).join(',')}`)}`;
   const titleId = `${prefix}-title`;
   const descId = `${prefix}-desc`;
   const gutter = ordinals ? ORDINAL_GUTTER : 0;
@@ -108,7 +146,15 @@ export function SceneSvg({ scene, title, desc, idPrefix, class: extra, state = N
       <g class="vg-groups">
         {scene.groups.map((group) => (
           <g class="vg-group" key={group.id} data-group={group.id} data-vg-key={group.id}>
-            <rect class="vg-group__box" x={group.x} y={group.y} width={group.width} height={group.height} rx="3" ry="3" />
+            <rect
+              class="vg-group__box"
+              x={group.x}
+              y={group.y}
+              width={group.width}
+              height={group.height}
+              rx="3"
+              ry="3"
+            />
             <text class="vg-group__label" x={r1(group.x + 10)} y={r1(group.y + 14)}>
               {group.label}
             </text>
@@ -138,7 +184,14 @@ export function SceneSvg({ scene, title, desc, idPrefix, class: extra, state = N
       {ordinals && (
         <g class="vg-ordinals" aria-hidden="true">
           {scene.nodes.map((node, index) => (
-            <text class={cls('vg-ordinal', litClass(state, node.id))} data-vg-key={node.id} x={r1(-gutter + 2)} y={r1(node.y + node.height / 2)} dominant-baseline="central" key={`o${node.id}`}>
+            <text
+              class={cls('vg-ordinal', litClass(state, node.id))}
+              data-vg-key={node.id}
+              x={r1(-gutter + 2)}
+              y={r1(node.y + node.height / 2)}
+              dominant-baseline="central"
+              key={`o${node.id}`}
+            >
               {String(index + 1).padStart(2, '0')}
             </text>
           ))}

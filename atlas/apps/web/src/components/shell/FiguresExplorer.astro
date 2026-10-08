@@ -27,18 +27,29 @@ interface Props {
 
 const { figures, graph } = Astro.props;
 const pad = (n: number): string => String(n).padStart(2, '0');
-const chapterNodes = new Map(nodesOfType(graph, 'chapter').map((node) => [Number.parseInt(node.number ?? '0', 10), node]));
+const chapterNodes = new Map(
+  nodesOfType(graph, 'chapter').map((node) => [Number.parseInt(node.number ?? '0', 10), node]),
+);
 const chapters = [...new Set(figures.map((figure) => figure.chapter))].sort((a, b) => a - b);
 const count = (chapter: number | null, kind: FigureKind | null): number =>
-  figures.filter((figure) => (chapter === null || figure.chapter === chapter) && (kind === null || figure.kind === kind)).length;
+  figures.filter(
+    (figure) => (chapter === null || figure.chapter === chapter) && (kind === null || figure.kind === kind),
+  ).length;
 const maxCell = Math.max(1, ...chapters.flatMap((chapter) => KIND_ORDER.map((kind) => count(chapter, kind))));
 const size = (n: number): number => (n === 0 ? 0 : Math.round((0.5 + 0.5 * Math.sqrt(n / maxCell)) * 100));
 const live = figures.filter((figure) => figure.states > 0).length;
-const placements = (['rail', 'inline', 'wide'] as const).map((placement) => ({ placement, n: figures.filter((figure) => figure.placement === placement).length }));
+const placements = (['rail', 'inline', 'wide'] as const).map((placement) => ({
+  placement,
+  n: figures.filter((figure) => figure.placement === placement).length,
+}));
 const maxRow = Math.max(1, ...chapters.map((chapter) => count(chapter, null)));
 // Idle readout: where the live (scroll-driven) instruments are, most first.
 const liveByChapter = chapters
-  .map((chapter) => ({ chapter, live: figures.filter((figure) => figure.chapter === chapter && figure.states > 0).length, total: count(chapter, null) }))
+  .map((chapter) => ({
+    chapter,
+    live: figures.filter((figure) => figure.chapter === chapter && figure.states > 0).length,
+    total: count(chapter, null),
+  }))
   .filter((row) => row.live > 0)
   .sort((a, b) => b.live - a.live || a.chapter - b.chapter)
   .slice(0, 5);
@@ -52,15 +63,32 @@ const liveByChapter = chapters
         <span class="fx-head__note">chapters × kinds · square size = figures</span>
       </p>
       <div class="fx-matrix-scroll">
-        <div class="fx-matrix" role="grid" aria-label="Figures by chapter and kind. Arrow keys move between cells; Enter filters the ledger." data-fx-matrix style={`--fx-cols:${String(KIND_ORDER.length)}`}>
+        <div
+          class="fx-matrix"
+          role="grid"
+          aria-label="Figures by chapter and kind. Arrow keys move between cells; Enter filters the ledger."
+          data-fx-matrix
+          style={`--fx-cols:${String(KIND_ORDER.length)}`}
+        >
           <div class="fx-row fx-row--head" role="row">
-            <span class="fx-corner" role="columnheader">chapter</span>
+            <span class="fx-corner" role="columnheader">
+              chapter
+            </span>
             {KIND_ORDER.map((kind) => (
-              <button type="button" class={`fx-colhead fx-fam--${KIND_INFO[kind].family}`} role="columnheader" data-fx-col={kind} title={`${kind}: ${KIND_INFO[kind].purpose}`} tabindex="-1">
+              <button
+                type="button"
+                class={`fx-colhead fx-fam--${KIND_INFO[kind].family}`}
+                role="columnheader"
+                data-fx-col={kind}
+                title={`${kind}: ${KIND_INFO[kind].purpose}`}
+                tabindex="-1"
+              >
                 {kind}
               </button>
             ))}
-            <span class="fx-total-head" role="columnheader">total · live</span>
+            <span class="fx-total-head" role="columnheader">
+              total · live
+            </span>
           </div>
           {chapters.map((chapter, r) => {
             const node = chapterNodes.get(chapter);
@@ -68,7 +96,14 @@ const liveByChapter = chapters
             const rowLive = figures.filter((figure) => figure.chapter === chapter && figure.states > 0).length;
             return (
               <div class="fx-row" role="row" data-fx-row={chapter}>
-                <button type="button" class="fx-rowhead" role="rowheader" data-fx-rowhead={chapter} tabindex="-1" title={node?.title ?? ''}>
+                <button
+                  type="button"
+                  class="fx-rowhead"
+                  role="rowheader"
+                  data-fx-rowhead={chapter}
+                  tabindex="-1"
+                  title={node?.title ?? ''}
+                >
                   <span class="fx-rowhead__n">{pad(chapter)}</span>
                   <span class="fx-rowhead__t">{node?.shortTitle ?? `Chapter ${pad(chapter)}`}</span>
                 </button>
@@ -95,7 +130,10 @@ const liveByChapter = chapters
                 <span class="fx-total">
                   <span class="fx-total__bar" aria-hidden="true">
                     <span style={`inline-size:${String(Math.round((rowTotal / maxRow) * 100))}%`} />
-                    <span class="fx-total__live" style={`inline-size:${String(Math.round((rowLive / maxRow) * 100))}%`} />
+                    <span
+                      class="fx-total__live"
+                      style={`inline-size:${String(Math.round((rowLive / maxRow) * 100))}%`}
+                    />
                   </span>
                   <span class="fx-total__n">
                     {rowTotal} · {rowLive}
@@ -105,37 +143,56 @@ const liveByChapter = chapters
             );
           })}
           <div class="fx-row fx-row--foot" role="row">
-            <span class="fx-corner" role="rowheader">all</span>
+            <span class="fx-corner" role="rowheader">
+              all
+            </span>
             {KIND_ORDER.map((kind) => (
               <span class="fx-coltotal" role="gridcell">
                 {count(null, kind)}
               </span>
             ))}
-            <span class="fx-total__n">{figures.length} · {live}</span>
+            <span class="fx-total__n">
+              {figures.length} · {live}
+            </span>
           </div>
         </div>
       </div>
       <p class="fx-families" aria-hidden="true">
-        <span class="fx-fam--structure"><i></i>structure</span>
-        <span class="fx-fam--computation"><i></i>computation</span>
-        <span class="fx-fam--quantity"><i></i>quantity</span>
-        <span class="fx-fam--comparison"><i></i>comparison</span>
-        <span class="fx-families__live"><i></i>live = scroll-driven rail instrument</span>
+        <span class="fx-fam--structure">
+          <i></i>structure
+        </span>
+        <span class="fx-fam--computation">
+          <i></i>computation
+        </span>
+        <span class="fx-fam--quantity">
+          <i></i>quantity
+        </span>
+        <span class="fx-fam--comparison">
+          <i></i>comparison
+        </span>
+        <span class="fx-families__live">
+          <i></i>live = scroll-driven rail instrument
+        </span>
       </p>
     </div>
 
     <aside class="fx-readout" aria-live="polite" data-fx-readout>
-      <p class="fx-readout__kicker" data-fx-kicker>Live instruments, by chapter</p>
-      <p class="fx-readout__title" data-fx-title>The visual grammar, chapter by chapter</p>
-      <p class="fx-readout__meta" data-fx-meta>Point at a cell, row, or column.</p>
+      <p class="fx-readout__kicker" data-fx-kicker>
+        Live instruments, by chapter
+      </p>
+      <p class="fx-readout__title" data-fx-title>
+        The visual grammar, chapter by chapter
+      </p>
+      <p class="fx-readout__meta" data-fx-meta>
+        Point at a cell, row, or column.
+      </p>
       <ol class="fx-readout__list" data-fx-list>
-        {
-          liveByChapter.map((row) => (
-            <li>
-              <b>{pad(row.chapter)}</b> {chapterNodes.get(row.chapter)?.shortTitle ?? `Chapter ${pad(row.chapter)}`} · {row.live} live of {row.total}
-            </li>
-          ))
-        }
+        {liveByChapter.map((row) => (
+          <li>
+            <b>{pad(row.chapter)}</b> {chapterNodes.get(row.chapter)?.shortTitle ?? `Chapter ${pad(row.chapter)}`} ·{' '}
+            {row.live} live of {row.total}
+          </li>
+        ))}
       </ol>
     </aside>
   </div>
@@ -145,7 +202,12 @@ const liveByChapter = chapters
       <span class="fx-filters__label">Kind</span>
       <div class="fx-filters__chips">
         {KIND_ORDER.map((kind) => (
-          <button type="button" class={`fx-chip fx-fam--${KIND_INFO[kind].family}`} data-fx-kind={kind} aria-pressed="false">
+          <button
+            type="button"
+            class={`fx-chip fx-fam--${KIND_INFO[kind].family}`}
+            data-fx-kind={kind}
+            aria-pressed="false"
+          >
             <i aria-hidden="true"></i>
             {kind} <span class="fx-chip__n">{count(null, kind)}</span>
           </button>
@@ -168,9 +230,17 @@ const liveByChapter = chapters
         </button>
         <label class="fx-search">
           <span class="sh-visually-hidden">Filter figures by title or number</span>
-          <input type="search" placeholder="Filter by title or number…" data-fx-search autocomplete="off" spellcheck="false" />
+          <input
+            type="search"
+            placeholder="Filter by title or number…"
+            data-fx-search
+            autocomplete="off"
+            spellcheck="false"
+          />
         </label>
-        <span class="fx-shown" data-fx-shown aria-live="polite">{figures.length} of {figures.length}</span>
+        <span class="fx-shown" data-fx-shown aria-live="polite">
+          {figures.length} of {figures.length}
+        </span>
       </div>
     </div>
   </div>
@@ -221,7 +291,12 @@ const liveByChapter = chapters
                 <td class="fx-title">
                   <a href={figure.url}>{figure.title}</a>
                   <span class="fx-where">
-                    {figure.where === 'README' ? 'chapter opening' : figure.where === 'verification' ? 'verification' : `§${figure.where}`} · {figure.whereTitle}
+                    {figure.where === 'README'
+                      ? 'chapter opening'
+                      : figure.where === 'verification'
+                        ? 'verification'
+                        : `§${figure.where}`}{' '}
+                    · {figure.whereTitle}
                   </span>
                 </td>
                 <td class="fx-place">{figure.placement}</td>

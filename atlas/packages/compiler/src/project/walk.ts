@@ -56,7 +56,10 @@ export function* walkBlocks(blocks: readonly Block[], region: Region | null): Ge
 }
 
 /** Every block of a compiled body: lead first, then each region. */
-export function* walkDocument(body: { readonly lead: readonly Block[]; readonly regions: readonly Region[] }): Generator<BlockVisit> {
+export function* walkDocument(body: {
+  readonly lead: readonly Block[];
+  readonly regions: readonly Region[];
+}): Generator<BlockVisit> {
   yield* walkBlocks(body.lead, null);
   for (const region of body.regions) yield* walkBlocks(region.blocks, region);
 }

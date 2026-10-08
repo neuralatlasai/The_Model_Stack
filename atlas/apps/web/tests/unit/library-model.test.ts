@@ -4,11 +4,17 @@ import { WEAVE, compactCount, splitThesis, weaveLayout } from '../../src/lib/lib
 
 describe('library thesis markers', () => {
   test('a bare "Thesis." marker is stripped', () => {
-    assert.deepEqual(splitThesis('Thesis. A training program is trustworthy.'), { text: 'A training program is trustworthy.', label: null });
+    assert.deepEqual(splitThesis('Thesis. A training program is trustworthy.'), {
+      text: 'A training program is trustworthy.',
+      label: null,
+    });
   });
 
   test('an evidence label before the marker is kept, lower-cased', () => {
-    assert.deepEqual(splitThesis('DERIVED — thesis. A dense architecture must be specified.'), { text: 'A dense architecture must be specified.', label: 'derived' });
+    assert.deepEqual(splitThesis('DERIVED — thesis. A dense architecture must be specified.'), {
+      text: 'A dense architecture must be specified.',
+      label: 'derived',
+    });
     assert.deepEqual(splitThesis('NOT DISCLOSED — thesis. Unknown.'), { text: 'Unknown.', label: 'not disclosed' });
   });
 

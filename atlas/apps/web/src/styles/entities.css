@@ -515,7 +515,9 @@ a.en-chap:focus-visible {
   border: 1px solid color-mix(in oklab, var(--ink) 45%, var(--paper));
   border-radius: 10px;
   background: var(--paper);
-  box-shadow: 0 4px 0 -1px color-mix(in oklab, var(--ink) 16%, var(--paper)), 0 4px 0 0 color-mix(in oklab, var(--ink) 30%, var(--paper));
+  box-shadow:
+    0 4px 0 -1px color-mix(in oklab, var(--ink) 16%, var(--paper)),
+    0 4px 0 0 color-mix(in oklab, var(--ink) 30%, var(--paper));
   transition:
     background-color var(--t-state) ease,
     border-color var(--t-state) ease;
@@ -1225,7 +1227,9 @@ a.en-chap:focus-visible {
 .es-bych__row:target,
 .es-bych__rest .en-chap:target {
   background: var(--accent-wash);
-  box-shadow: -0.5rem 0 0 var(--accent-wash), 0.5rem 0 0 var(--accent-wash);
+  box-shadow:
+    -0.5rem 0 0 var(--accent-wash),
+    0.5rem 0 0 var(--accent-wash);
 }
 
 .es-bych__ch {
@@ -1726,8 +1730,6 @@ a.en-chap:focus-visible {
   padding-top: 0.75rem;
   border-top: 1px dashed var(--rule-strong);
 }
-
-
 
 .en .lc-idle__head {
   display: flex;
@@ -2236,7 +2238,11 @@ a.en-chap:focus-visible {
 /* Planned parts: one hatched column. */
 .el-rest {
   border-inline: 1px solid var(--rule) !important;
-  background: repeating-linear-gradient(-45deg, color-mix(in oklab, var(--rule-strong) 70%, transparent) 0 1px, transparent 1px 5px);
+  background: repeating-linear-gradient(
+    -45deg,
+    color-mix(in oklab, var(--rule-strong) 70%, transparent) 0 1px,
+    transparent 1px 5px
+  );
 }
 
 .el-hchs th.el-rest {
@@ -2260,14 +2266,32 @@ a.en-chap:focus-visible {
 }
 
 .el-mark[data-s='1'],
-.el-legend__marks i[data-s='1'] { inline-size: 7px; block-size: 7px; }
-.el-mark[data-s='2'] { inline-size: 9px; block-size: 9px; }
+.el-legend__marks i[data-s='1'] {
+  inline-size: 7px;
+  block-size: 7px;
+}
+.el-mark[data-s='2'] {
+  inline-size: 9px;
+  block-size: 9px;
+}
 .el-mark[data-s='3'],
-.el-legend__marks i[data-s='3'] { inline-size: 11px; block-size: 11px; }
-.el-mark[data-s='4'] { inline-size: 13px; block-size: 13px; }
-.el-mark[data-s='5'] { inline-size: 15px; block-size: 15px; }
+.el-legend__marks i[data-s='3'] {
+  inline-size: 11px;
+  block-size: 11px;
+}
+.el-mark[data-s='4'] {
+  inline-size: 13px;
+  block-size: 13px;
+}
+.el-mark[data-s='5'] {
+  inline-size: 15px;
+  block-size: 15px;
+}
 .el-mark[data-s='6'],
-.el-legend__marks i[data-s='6'] { inline-size: 17px; block-size: 17px; }
+.el-legend__marks i[data-s='6'] {
+  inline-size: 17px;
+  block-size: 17px;
+}
 
 /* States: row focus, column focus, crosshair on a single mark. */
 .el-matrix.is-active .el-row:not(.is-lit, .is-focus) .el-mark {
@@ -2313,7 +2337,9 @@ a.en-chap:focus-visible {
 
 .el-matrix.is-colmode .el-row.is-lit .el-cell.is-col .el-mark,
 .el-mark.is-focus {
-  box-shadow: 0 0 0 2px var(--paper), 0 0 0 3.5px var(--ink);
+  box-shadow:
+    0 0 0 2px var(--paper),
+    0 0 0 3.5px var(--ink);
 }
 
 .el-matrix.is-colmode .el-row:not(.is-lit) .el-mark {
@@ -2322,7 +2348,9 @@ a.en-chap:focus-visible {
 
 .el-mark:focus-visible {
   outline: none;
-  box-shadow: 0 0 0 2px var(--paper), 0 0 0 4px var(--focus);
+  box-shadow:
+    0 0 0 2px var(--paper),
+    0 0 0 4px var(--focus);
 }
 
 .el-name a:focus-visible {

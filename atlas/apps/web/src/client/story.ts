@@ -90,14 +90,22 @@ export function initStory(ctx: PageContext): void {
     fig.dispatchEvent(new CustomEvent('hx:chapter', { detail: n }));
   };
   for (const type of ['pointerover', 'focusin'] as const) {
-    root.addEventListener(type, (event) => {
-      const n = chapterOf(event.target);
-      if (n !== null) light(n);
-    }, { signal });
+    root.addEventListener(
+      type,
+      (event) => {
+        const n = chapterOf(event.target);
+        if (n !== null) light(n);
+      },
+      { signal },
+    );
   }
   for (const type of ['pointerout', 'focusout'] as const) {
-    root.addEventListener(type, (event) => {
-      if (chapterOf(event.target) !== null) light(null);
-    }, { signal });
+    root.addEventListener(
+      type,
+      (event) => {
+        if (chapterOf(event.target) !== null) light(null);
+      },
+      { signal },
+    );
   }
 }

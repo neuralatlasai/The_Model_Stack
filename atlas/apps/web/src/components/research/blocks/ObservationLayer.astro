@@ -18,17 +18,24 @@ const { block } = Astro.props;
 const rows = OBSERVATION_PARTS.flatMap((part) => {
   const content = block.parts[part];
   const cls = OBSERVATION_PART_CLASS[part];
-  return content === null ? [] : [{ part, content, cls, glyph: EVIDENCE_GLYPH[cls], title: OBSERVATION_PART_TITLES[part] }];
+  return content === null
+    ? []
+    : [{ part, content, cls, glyph: EVIDENCE_GLYPH[cls], title: OBSERVATION_PART_TITLES[part] }];
 });
 ---
 
 <dl class="rb-obs" id={block.anchor ?? undefined} {...depthAttrs(block.depth)}>
-  {
-    rows.map((row) => (
-      <div class={`rb-obs__row rb-obs__row--${row.part}`}>
-        <dt class={`rb-obs__label rb-ev--${row.cls}`}><span class="rb-obs__glyph" aria-hidden="true">{row.glyph}</span>{row.title}</dt>
-        <dd class="rb-obs__text"><Inline nodes={row.content} /></dd>
-      </div>
-    ))
-  }
+  {rows.map((row) => (
+    <div class={`rb-obs__row rb-obs__row--${row.part}`}>
+      <dt class={`rb-obs__label rb-ev--${row.cls}`}>
+        <span class="rb-obs__glyph" aria-hidden="true">
+          {row.glyph}
+        </span>
+        {row.title}
+      </dt>
+      <dd class="rb-obs__text">
+        <Inline nodes={row.content} />
+      </dd>
+    </div>
+  ))}
 </dl>

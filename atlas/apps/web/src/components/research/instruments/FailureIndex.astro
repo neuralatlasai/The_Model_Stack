@@ -18,20 +18,18 @@ const modes = instrument.anchors.flatMap((anchor) => {
 });
 ---
 
-{
-  modes.length > 0 && (
-    <div class="rb-instrument rb-instrument--failure-modes" {...instrumentAttrs('failure-modes')}>
-      <InstrumentHead title="Failure-mode index" meta={String(modes.length)} />
-      <ol class="rb-fmi" role="list">
-        {modes.map((mode, index) => (
-          <li>
-            <a class="rb-fmi__link" href={`#${mode.anchor}`}>
-              <span class="rb-fmi__n">{String(index + 1).padStart(2, '0')}</span>
-              <span class="rb-fmi__name">{mode.name}</span>
-            </a>
-          </li>
-        ))}
-      </ol>
-    </div>
-  )
-}
+{modes.length > 0 && (
+  <div class="rb-instrument rb-instrument--failure-modes" {...instrumentAttrs('failure-modes')}>
+    <InstrumentHead title="Failure-mode index" meta={String(modes.length)} />
+    <ol class="rb-fmi" role="list">
+      {modes.map((mode, index) => (
+        <li>
+          <a class="rb-fmi__link" href={`#${mode.anchor}`}>
+            <span class="rb-fmi__n">{String(index + 1).padStart(2, '0')}</span>
+            <span class="rb-fmi__name">{mode.name}</span>
+          </a>
+        </li>
+      ))}
+    </ol>
+  </div>
+)}

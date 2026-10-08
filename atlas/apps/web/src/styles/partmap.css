@@ -176,7 +176,10 @@
   padding: 0.6rem 0.65rem 0.55rem;
   border: 1px solid var(--rule-strong);
   background: var(--paper);
-  transition: opacity var(--t-state) ease, box-shadow var(--t-hover) ease, border-color var(--t-hover) ease;
+  transition:
+    opacity var(--t-state) ease,
+    box-shadow var(--t-hover) ease,
+    border-color var(--t-hover) ease;
 }
 
 .pm-tile.is-written {

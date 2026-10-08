@@ -60,7 +60,10 @@ const EntrySchema = z.object({
   refs: z.array(z.object({ label: z.string(), n: z.number().int() })),
   links: z.object({ official: url.nullable(), repo: url.nullable(), paper: url.nullable() }),
   org: z.string().nullable(),
-  released: z.string().regex(/^\d{4}(?:-\d{2})?$/u).nullable(),
+  released: z
+    .string()
+    .regex(/^\d{4}(?:-\d{2})?$/u)
+    .nullable(),
   access: z.string().nullable(),
   verification: z.object({
     status: z.enum(['confirmed', 'renamed', 'unconfirmed', 'pending']),
@@ -86,7 +89,9 @@ export function ecosystem(): EcoData {
   const sources = new Set(data.sources.map((source) => source.n));
   data.entries.forEach((entry, index) => {
     if (entry.rank !== index + 1) throw new Error(`evaluation ecosystem: rank ${String(index + 1)} is out of order`);
-    for (const ref of entry.refs) if (!sources.has(ref.n)) throw new Error(`evaluation ecosystem: #${String(entry.rank)} cites missing source [${String(ref.n)}]`);
+    for (const ref of entry.refs)
+      if (!sources.has(ref.n))
+        throw new Error(`evaluation ecosystem: #${String(entry.rank)} cites missing source [${String(ref.n)}]`);
   });
   cached = data;
   return data;
@@ -97,12 +102,23 @@ export function ecosystem(): EcoData {
 const escape = (text: string): string => text.replace(/[.*+?^${}()|[\]\\]/gu, '\\$&');
 
 /** One regex per entry: any alias as a whole token (`~` prefix = case-insensitive). */
-export function aliasMatcher(aliases: readonly string[]): { readonly exact: RegExp | null; readonly folded: RegExp | null } {
+export function aliasMatcher(aliases: readonly string[]): {
+  readonly exact: RegExp | null;
+  readonly folded: RegExp | null;
+} {
   const build = (list: readonly string[], flags: string): RegExp | null =>
-    list.length === 0 ? null : new RegExp(`(?<![\\p{L}\\p{N}_-])(?:${list.map(escape).join('|')})(?![\\p{L}\\p{N}_])`, flags);
+    list.length === 0
+      ? null
+      : new RegExp(`(?<![\\p{L}\\p{N}_-])(?:${list.map(escape).join('|')})(?![\\p{L}\\p{N}_])`, flags);
   return {
-    exact: build(aliases.filter((alias) => !alias.startsWith('~')), 'u'),
-    folded: build(aliases.filter((alias) => alias.startsWith('~')).map((alias) => alias.slice(1)), 'iu'),
+    exact: build(
+      aliases.filter((alias) => !alias.startsWith('~')),
+      'u',
+    ),
+    folded: build(
+      aliases.filter((alias) => alias.startsWith('~')).map((alias) => alias.slice(1)),
+      'iu',
+    ),
   };
 }
 
@@ -130,17 +146,29 @@ export interface Mention {
 }
 
 /** For each rank, the written pages whose prose names the entry, in reading order. */
-export function findMentions(entries: readonly EcoEntry[], docs: readonly ResearchDocument[], graph: AtlasGraph): Map<number, Mention[]> {
+export function findMentions(
+  entries: readonly EcoEntry[],
+  docs: readonly ResearchDocument[],
+  graph: AtlasGraph,
+): Map<number, Mention[]> {
   const order = new Map(graph.order.map((id, index) => [id, index]));
   const texts = docs
-    .filter((doc) => doc.meta.chapter !== null && (doc.meta.entityType === 'section' || doc.meta.entityType === 'chapter'))
+    .filter(
+      (doc) => doc.meta.chapter !== null && (doc.meta.entityType === 'section' || doc.meta.entityType === 'chapter'),
+    )
     .map((doc) => ({ doc, text: documentText(doc) }));
   const out = new Map<number, Mention[]>();
   for (const entry of entries) {
     const matcher = aliasMatcher(entry.aliases);
     const found = texts
       .filter(({ text }) => matches(matcher, text))
-      .map(({ doc }) => ({ id: doc.meta.id, url: doc.route.url, number: doc.meta.section, title: doc.meta.shortTitle, chapter: doc.meta.chapter ?? 0 }))
+      .map(({ doc }) => ({
+        id: doc.meta.id,
+        url: doc.route.url,
+        number: doc.meta.section,
+        title: doc.meta.shortTitle,
+        chapter: doc.meta.chapter ?? 0,
+      }))
       .sort((a, b) => (order.get(a.id) ?? 0) - (order.get(b.id) ?? 0));
     out.set(entry.rank, found);
   }
@@ -148,19 +176,29 @@ export function findMentions(entries: readonly EcoEntry[], docs: readonly Resear
 }
 
 /** For each rank, registry works whose title names the entry. */
-export function findPapers(entries: readonly EcoEntry[], references: readonly ReferenceRecord[]): Map<number, ReferenceRecord[]> {
+export function findPapers(
+  entries: readonly EcoEntry[],
+  references: readonly ReferenceRecord[],
+): Map<number, ReferenceRecord[]> {
   const out = new Map<number, ReferenceRecord[]>();
   for (const entry of entries) {
     const matcher = aliasMatcher(entry.aliases);
-    out.set(entry.rank, references.filter((record) => matches(matcher, record.work)));
+    out.set(
+      entry.rank,
+      references.filter((record) => matches(matcher, record.work)),
+    );
   }
   return out;
 }
 
 /** Domain × kind counts, rows in DOMAINS order, columns in KINDS order. */
-export function domainKindMatrix(entries: readonly EcoEntry[]): readonly { readonly domain: DomainKey; readonly cells: readonly number[]; readonly total: number }[] {
+export function domainKindMatrix(
+  entries: readonly EcoEntry[],
+): readonly { readonly domain: DomainKey; readonly cells: readonly number[]; readonly total: number }[] {
   return DOMAINS.map(({ key }) => {
-    const cells = KINDS.map((kind) => entries.filter((entry) => entry.domain === key && entry.kind === kind.key).length);
+    const cells = KINDS.map(
+      (kind) => entries.filter((entry) => entry.domain === key && entry.kind === kind.key).length,
+    );
     return { domain: key, cells, total: cells.reduce((a, b) => a + b, 0) };
   });
 }

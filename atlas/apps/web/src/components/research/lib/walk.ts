@@ -83,7 +83,10 @@ export function findBlock<K extends BlockKind>(
 }
 
 /** The definition block that owns a glossary slug in this document, or null. */
-export function findDefinition(doc: Pick<ResearchDocument, 'lead' | 'regions'>, slug: string): BlockOf<'definition'> | null {
+export function findDefinition(
+  doc: Pick<ResearchDocument, 'lead' | 'regions'>,
+  slug: string,
+): BlockOf<'definition'> | null {
   for (const block of documentBlocks(doc)) {
     if (isBlockKind(block, 'definition') && block.termSlug === slug) return block;
   }

@@ -70,7 +70,11 @@ export function radiusFor(weight: number): number {
 const GAP = 1.3;
 const STEP = 3.5;
 
-export function citationField(works: readonly FieldWork[], typeOrder: readonly string[], options: FieldOptions = {}): FieldGeometry {
+export function citationField(
+  works: readonly FieldWork[],
+  typeOrder: readonly string[],
+  options: FieldOptions = {},
+): FieldGeometry {
   const { width = 780, labelW = 132, labelTop = 0, lanePad = 5 } = options;
   const x0 = labelW;
   const hasUndated = works.some((work) => work.year === null);
@@ -120,7 +124,9 @@ export function citationField(works: readonly FieldWork[], typeOrder: readonly s
         }
         candidates.sort((a, b) => a.cost - b.cost || Math.abs(a.dy) - Math.abs(b.dy));
         for (const candidate of candidates) {
-          if (placed.every((other) => Math.hypot(other.dx - candidate.dx, other.dy - candidate.dy) >= other.r + r + GAP)) {
+          if (
+            placed.every((other) => Math.hypot(other.dx - candidate.dx, other.dy - candidate.dy) >= other.r + r + GAP)
+          ) {
             best = candidate;
             break;
           }
@@ -147,7 +153,9 @@ export function citationField(works: readonly FieldWork[], typeOrder: readonly s
   }
   const axisY = y + 4;
 
-  const candidates = [...new Set([yMin, ...dated.filter((year) => year % 10 === 0 || (year > split && year % 2 === 0)), yMax])].sort((a, b) => a - b);
+  const candidates = [
+    ...new Set([yMin, ...dated.filter((year) => year % 10 === 0 || (year > split && year % 2 === 0)), yMax]),
+  ].sort((a, b) => a - b);
   const ticks: { x: number; label: string }[] = [];
   for (const year of candidates) {
     const x = xOf(year);

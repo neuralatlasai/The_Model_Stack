@@ -2475,7 +2475,18 @@ body:is([data-domain='foundations'], [data-domain='reference']) {
 .has-lit [data-vg-key]:not(.is-lit, .vg-plotarea, .vg-mstack__bars) {
   opacity: var(--vg-dim);
 }
-.has-lit :is(.vg-hier__level, .vg-compare__row, .vg-systrace__row, .vg-lineage__entry, .vg-stat__row, .vg-mstack__item, .vg-calc__field, .vg-calc__out, .vg-tensor__step):not(.is-lit) {
+.has-lit
+  :is(
+    .vg-hier__level,
+    .vg-compare__row,
+    .vg-systrace__row,
+    .vg-lineage__entry,
+    .vg-stat__row,
+    .vg-mstack__item,
+    .vg-calc__field,
+    .vg-calc__out,
+    .vg-tensor__step
+  ):not(.is-lit) {
   opacity: 0.42;
 }
 .has-lit .vg-mstack__bars:not(.is-lit) > .vg-mstack__budget,
@@ -2684,7 +2695,6 @@ body:is([data-domain='foundations'], [data-domain='reference']) {
     print-color-adjust: exact;
   }
 }
-
 
 /* ── exploration (client figure-explore.ts) ───────────────────────────────
  * Pointing at a node lights it, its edges, and its neighbours; the rest steps

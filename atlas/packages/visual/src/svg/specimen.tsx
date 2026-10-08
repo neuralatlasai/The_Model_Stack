@@ -26,8 +26,22 @@ export function NodeSpecimen({ kind, label, sub = null, emphasis = false }: Node
   const width = Math.ceil(size.width + 2 * PAD);
   const height = Math.ceil(size.height + 2 * PAD);
   return (
-    <svg class={cls('vg-svg', 'vg-specimen', 'vg-specimen--node')} viewBox={`0 0 ${width} ${height}`} width={width} height={height} role="img" aria-label={`${kind} primitive: ${label}${sub === null ? '' : ` ${sub}`}`}>
-      <NodeGlyph kind={kind} label={label} sub={sub} box={{ x: PAD, y: PAD, width: size.width, height: size.height }} emphasis={emphasis} id={`specimen-${kind}`} />
+    <svg
+      class={cls('vg-svg', 'vg-specimen', 'vg-specimen--node')}
+      viewBox={`0 0 ${width} ${height}`}
+      width={width}
+      height={height}
+      role="img"
+      aria-label={`${kind} primitive: ${label}${sub === null ? '' : ` ${sub}`}`}
+    >
+      <NodeGlyph
+        kind={kind}
+        label={label}
+        sub={sub}
+        box={{ x: PAD, y: PAD, width: size.width, height: size.height }}
+        emphasis={emphasis}
+        id={`specimen-${kind}`}
+      />
     </svg>
   );
 }
@@ -67,9 +81,24 @@ export function EdgeSpecimen({ kind, label }: { readonly kind: EdgeKind; readonl
     ];
     labelAt = { x: PAD + a.width + gap / 2, y: ay };
   }
-  const edge: SceneEdge = { id: `specimen-${kind}`, from: feedback ? 'b' : 'a', to: feedback ? 'a' : 'b', kind, label, points, labelAt };
+  const edge: SceneEdge = {
+    id: `specimen-${kind}`,
+    from: feedback ? 'b' : 'a',
+    to: feedback ? 'a' : 'b',
+    kind,
+    label,
+    points,
+    labelAt,
+  };
   return (
-    <svg class={cls('vg-svg', 'vg-specimen', 'vg-specimen--edge')} viewBox={`0 0 ${r1(width)} ${r1(height)}`} width={r1(width)} height={r1(height)} role="img" aria-label={EDGE_TEXT[kind]}>
+    <svg
+      class={cls('vg-svg', 'vg-specimen', 'vg-specimen--edge')}
+      viewBox={`0 0 ${r1(width)} ${r1(height)}`}
+      width={r1(width)}
+      height={r1(height)}
+      role="img"
+      aria-label={EDGE_TEXT[kind]}
+    >
       <g class="vg-edges">
         <EdgePath edge={edge} />
       </g>

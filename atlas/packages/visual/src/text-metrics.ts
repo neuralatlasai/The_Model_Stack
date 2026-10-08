@@ -11,7 +11,7 @@
 export type TextFamily = 'sans' | 'mono' | 'serif';
 
 /** Advance widths in em for Inter at text sizes (rounded up). */
-const SANS_NARROW = new Set(Array.from('iljI|!.,:;\'`’‘ı·'));
+const SANS_NARROW = new Set(Array.from("iljI|!.,:;'`’‘ı·"));
 const SANS_SEMI_NARROW = new Set(Array.from('ftr()[]{}-/\\"”“ '));
 const SANS_WIDE = new Set(Array.from('mwMW@%'));
 const SERIF_FACTOR = 0.92;
@@ -83,7 +83,10 @@ export function wrapText(
   family: TextFamily = 'sans',
   maxLines: number = Number.POSITIVE_INFINITY,
 ): string[] {
-  const words = text.trim().split(/\s+/u).filter((word) => word !== '');
+  const words = text
+    .trim()
+    .split(/\s+/u)
+    .filter((word) => word !== '');
   const lines: string[] = [];
   let current = '';
   for (const word of words) {

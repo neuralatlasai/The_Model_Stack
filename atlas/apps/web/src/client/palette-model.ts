@@ -5,7 +5,8 @@
  */
 import { SEARCH_KIND_LABELS, type SearchHit, type SearchKind } from '@atlas/core';
 
-export type ParsedQuery = { readonly mode: 'search'; readonly text: string } | { readonly mode: 'command'; readonly text: string };
+export type ParsedQuery =
+  { readonly mode: 'search'; readonly text: string } | { readonly mode: 'command'; readonly text: string };
 
 /** A query starting with `>` is a command query (UI_UX §33); anything else searches. */
 export function parseQuery(raw: string): ParsedQuery {
@@ -39,10 +40,18 @@ export interface CommandSpec {
 
 export const COMMANDS: readonly CommandSpec[] = [
   { id: 'go-to-concept', title: 'Go to concept', keywords: ['find', 'section', 'chapter', 'term', 'navigate'] },
-  { id: 'open-graph', title: 'Open graph for this page', keywords: ['map', 'neighbourhood', 'neighborhood', 'relations'] },
+  {
+    id: 'open-graph',
+    title: 'Open graph for this page',
+    keywords: ['map', 'neighbourhood', 'neighborhood', 'relations'],
+  },
   { id: 'compare', title: 'Compare this section', keywords: ['siblings', 'alternatives', 'differential'] },
   { id: 'copy-citation', title: 'Copy citation for this page', keywords: ['cite', 'reference', 'clipboard'] },
-  { id: 'show-prerequisites', title: 'Show prerequisites', keywords: ['position', 'depends', 'downstream', 'siblings'] },
+  {
+    id: 'show-prerequisites',
+    title: 'Show prerequisites',
+    keywords: ['position', 'depends', 'downstream', 'siblings'],
+  },
   { id: 'depth-overview', title: 'Depth: Overview', keywords: ['toggle depth', 'narrative', 'intuition'] },
   { id: 'depth-technical', title: 'Depth: Technical', keywords: ['toggle depth', 'equations', 'algorithms'] },
   { id: 'depth-research', title: 'Depth: Research', keywords: ['toggle depth', 'experiments', 'papers', 'evidence'] },
@@ -57,7 +66,12 @@ function scoreToken(title: string, keywords: readonly string[], token: string): 
   if (title.startsWith(token)) return 3;
   if (title.split(/[\s:—-]+/u).some((word) => word.startsWith(token))) return 2;
   if (title.includes(token)) return 1;
-  if (keywords.some((keyword) => keyword.startsWith(token) || keyword.split(/\s+/u).some((word) => word.startsWith(token)))) return 0.5;
+  if (
+    keywords.some(
+      (keyword) => keyword.startsWith(token) || keyword.split(/\s+/u).some((word) => word.startsWith(token)),
+    )
+  )
+    return 0.5;
   return 0;
 }
 
@@ -65,8 +79,14 @@ function scoreToken(title: string, keywords: readonly string[], token: string): 
  * Commands matching every token of `text` (title first, then keywords),
  * best first; ties keep catalogue order. An empty query lists everything.
  */
-export function rankCommands<T extends { readonly title: string; readonly keywords: readonly string[] }>(commands: readonly T[], text: string): T[] {
-  const tokens = text.toLocaleLowerCase().split(/\s+/u).filter((token) => token !== '');
+export function rankCommands<T extends { readonly title: string; readonly keywords: readonly string[] }>(
+  commands: readonly T[],
+  text: string,
+): T[] {
+  const tokens = text
+    .toLocaleLowerCase()
+    .split(/\s+/u)
+    .filter((token) => token !== '');
   if (tokens.length === 0) return [...commands];
   const scored: { readonly command: T; readonly score: number; readonly index: number }[] = [];
   commands.forEach((command, index) => {
@@ -106,7 +126,13 @@ export function groupHits(hits: readonly SearchHit[], limit: number): HitGroup[]
 }
 
 /** Object kinds reachable through "Go to concept". */
-export const CONCEPT_KINDS: ReadonlySet<SearchKind> = new Set<SearchKind>(['volume', 'part', 'chapter', 'section', 'term']);
+export const CONCEPT_KINDS: ReadonlySet<SearchKind> = new Set<SearchKind>([
+  'volume',
+  'part',
+  'chapter',
+  'section',
+  'term',
+]);
 
 /** Type line under a result: `CONCEPT · Foundations / Minimal Transformer`. */
 export function typeLine(hit: Pick<SearchHit, 'kind' | 'context'>): string {

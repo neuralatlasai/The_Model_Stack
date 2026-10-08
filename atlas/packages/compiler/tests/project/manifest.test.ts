@@ -30,12 +30,25 @@ describe('parseManifest', () => {
   });
 
   it('rejects invalid JSON with a ManifestError', () => {
-    assert.throws(() => parseManifest('{ not json'), (error: unknown) => error instanceof ManifestError && error.message.includes('not valid JSON'));
+    assert.throws(
+      () => parseManifest('{ not json'),
+      (error: unknown) => error instanceof ManifestError && error.message.includes('not valid JSON'),
+    );
   });
 
   it('rejects a schema violation and names the path', () => {
-    const bad = JSON.stringify({ edition: '1.0', date: '2026-09-20', root: 'docs', volumes: [{ id: 'nope' }], appendices: [], front_matter: [] });
-    assert.throws(() => parseManifest(bad), (error: unknown) => error instanceof ManifestError && error.message.includes('volumes.0'));
+    const bad = JSON.stringify({
+      edition: '1.0',
+      date: '2026-09-20',
+      root: 'docs',
+      volumes: [{ id: 'nope' }],
+      appendices: [],
+      front_matter: [],
+    });
+    assert.throws(
+      () => parseManifest(bad),
+      (error: unknown) => error instanceof ManifestError && error.message.includes('volumes.0'),
+    );
   });
 
   it('rejects paths that escape docs/', () => {

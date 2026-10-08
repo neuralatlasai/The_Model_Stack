@@ -240,8 +240,22 @@ const blockEnvelope = z.looseObject({
   anchor: z.string().nullable(),
   depth: z.enum(DEPTHS),
 });
-const routeRefSchema = z.object({ id: nodeIdSchema, title: z.string(), number: z.string().nullable(), url: z.string() });
-const RAIL_KINDS = ['figure', 'equations', 'position', 'siblings', 'citations', 'evidence', 'failure-modes', 'terms'] as const;
+const routeRefSchema = z.object({
+  id: nodeIdSchema,
+  title: z.string(),
+  number: z.string().nullable(),
+  url: z.string(),
+});
+const RAIL_KINDS = [
+  'figure',
+  'equations',
+  'position',
+  'siblings',
+  'citations',
+  'evidence',
+  'failure-modes',
+  'terms',
+] as const;
 
 export const documentEnvelopeSchema = z.looseObject({
   // Not `z.literal(DOCUMENT_SCHEMA_VERSION)`: a mismatch must reach atlas.ts's own

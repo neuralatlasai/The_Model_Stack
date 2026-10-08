@@ -51,7 +51,8 @@ describe('link resolution', () => {
 
   it('marks links to planned nodes as planned with an info diagnostic (once per href)', () => {
     const resolver = createLinkResolver(table, FROM, 'ms.section.5.2');
-    const href = '../../../vol-02-execution-and-optimization/part-07-inference-algorithms-distillation-and-compression/ch42-prefill-decode-kv-state-and-inference-resource-models/42-2-state-accounting.md';
+    const href =
+      '../../../vol-02-execution-and-optimization/part-07-inference-algorithms-distillation-and-compression/ch42-prefill-decode-kv-state-and-inference-resource-models/42-2-state-accounting.md';
     const target = resolver.resolve(href);
     assert.ok(target.type === 'planned');
     assert.equal(target.nodeId, 'ms.section.42.2');
@@ -68,8 +69,14 @@ describe('link resolution', () => {
 
   it('keeps external http(s) and mailto links external', () => {
     const resolver = createLinkResolver(table, FROM, 'ms.section.5.2');
-    assert.deepEqual(resolver.resolve('https://arxiv.org/abs/1706.03762'), { type: 'external', href: 'https://arxiv.org/abs/1706.03762' });
-    assert.deepEqual(resolver.resolve('mailto:editor@example.org'), { type: 'external', href: 'mailto:editor@example.org' });
+    assert.deepEqual(resolver.resolve('https://arxiv.org/abs/1706.03762'), {
+      type: 'external',
+      href: 'https://arxiv.org/abs/1706.03762',
+    });
+    assert.deepEqual(resolver.resolve('mailto:editor@example.org'), {
+      type: 'external',
+      href: 'mailto:editor@example.org',
+    });
     assert.deepEqual(resolver.diagnostics(), []);
   });
 

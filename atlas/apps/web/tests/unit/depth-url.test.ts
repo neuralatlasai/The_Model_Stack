@@ -26,25 +26,40 @@ describe('resolveDepth', () => {
 
 describe('pageUrlWithDepth', () => {
   test('sets the parameter and keeps the fragment', () => {
-    assert.equal(pageUrlWithDepth('https://atlas.test/a/#eq-5-4', 'overview'), 'https://atlas.test/a/?depth=overview#eq-5-4');
+    assert.equal(
+      pageUrlWithDepth('https://atlas.test/a/#eq-5-4', 'overview'),
+      'https://atlas.test/a/?depth=overview#eq-5-4',
+    );
   });
 
   test('the default depth removes the parameter', () => {
-    assert.equal(pageUrlWithDepth(PAGE, 'implementation'), 'https://atlas.test/ch05-minimal-transformer/05-2-attention/#formulation');
+    assert.equal(
+      pageUrlWithDepth(PAGE, 'implementation'),
+      'https://atlas.test/ch05-minimal-transformer/05-2-attention/#formulation',
+    );
   });
 
   test('other query parameters survive', () => {
-    assert.equal(pageUrlWithDepth('https://atlas.test/graph/?node=ms.section.5.2', 'research'), 'https://atlas.test/graph/?node=ms.section.5.2&depth=research');
+    assert.equal(
+      pageUrlWithDepth('https://atlas.test/graph/?node=ms.section.5.2', 'research'),
+      'https://atlas.test/graph/?node=ms.section.5.2&depth=research',
+    );
   });
 });
 
 describe('linkWithDepth', () => {
   test('internal page links carry the depth', () => {
-    assert.equal(linkWithDepth('/ch05-minimal-transformer/05-3-mlp/', 'technical', PAGE), '/ch05-minimal-transformer/05-3-mlp/?depth=technical');
+    assert.equal(
+      linkWithDepth('/ch05-minimal-transformer/05-3-mlp/', 'technical', PAGE),
+      '/ch05-minimal-transformer/05-3-mlp/?depth=technical',
+    );
   });
 
   test('relative links are resolved against the page', () => {
-    assert.equal(linkWithDepth('../05-1-scope/#why', 'overview', PAGE), '/ch05-minimal-transformer/05-1-scope/?depth=overview#why');
+    assert.equal(
+      linkWithDepth('../05-1-scope/#why', 'overview', PAGE),
+      '/ch05-minimal-transformer/05-1-scope/?depth=overview#why',
+    );
   });
 
   test('an existing depth parameter is replaced, and removed for the default depth', () => {

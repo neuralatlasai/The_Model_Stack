@@ -58,40 +58,77 @@ describe('inlineView', () => {
 
   it('maps link targets to link, planned, external, and plain views', () => {
     const children = [text('§5.1')];
-    const node = inlineView({ kind: 'link', target: { type: 'node', nodeId: 'ms.section.5.1', anchor: null, href: '/ch05/05-1/' }, children }, base);
+    const node = inlineView(
+      { kind: 'link', target: { type: 'node', nodeId: 'ms.section.5.1', anchor: null, href: '/ch05/05-1/' }, children },
+      base,
+    );
     assert.equal(node.kind, 'link');
     assert.equal(node.kind === 'link' ? node.href : '', '/atlas/ch05/05-1/');
     // Internal links carry their node id: the client shows a preview card (written or planned, what it holds).
     assert.equal(node.kind === 'link' ? node.node : '', 'ms.section.5.1');
 
-    const planned = inlineView({ kind: 'link', target: { type: 'planned', nodeId: 'ms.section.14.1', href: '/ch14/14-1/' }, children }, base);
-    assert.equal(planned.kind === 'link' ? `${planned.className}|${planned.node ?? ''}` : '', 'rb-link rb-planned|ms.section.14.1');
+    const planned = inlineView(
+      { kind: 'link', target: { type: 'planned', nodeId: 'ms.section.14.1', href: '/ch14/14-1/' }, children },
+      base,
+    );
+    assert.equal(
+      planned.kind === 'link' ? `${planned.className}|${planned.node ?? ''}` : '',
+      'rb-link rb-planned|ms.section.14.1',
+    );
 
-    const external = inlineView({ kind: 'link', target: { type: 'external', href: 'https://arxiv.org/abs/2205.14135' }, children }, base);
-    assert.equal(external.kind === 'link' ? `${external.href}|${external.rel ?? ''}|${external.node ?? 'none'}` : '', 'https://arxiv.org/abs/2205.14135|noopener|none');
+    const external = inlineView(
+      { kind: 'link', target: { type: 'external', href: 'https://arxiv.org/abs/2205.14135' }, children },
+      base,
+    );
+    assert.equal(
+      external.kind === 'link' ? `${external.href}|${external.rel ?? ''}|${external.node ?? 'none'}` : '',
+      'https://arxiv.org/abs/2205.14135|noopener|none',
+    );
 
-    assert.equal(inlineView({ kind: 'link', target: { type: 'unresolved', raw: 'x.md' }, children }, base).kind, 'plain');
+    assert.equal(
+      inlineView({ kind: 'link', target: { type: 'unresolved', raw: 'x.md' }, children }, base).kind,
+      'plain',
+    );
   });
 
   it('degrades unsafe hrefs to plain text', () => {
     const children = [text('click')];
-    assert.equal(inlineView({ kind: 'link', target: { type: 'external', href: 'javascript:alert(1)' }, children }, '/').kind, 'plain');
     assert.equal(
-      inlineView({ kind: 'link', target: { type: 'node', nodeId: 'ms.root', anchor: null, href: 'javascript:alert(1)' }, children }, '/').kind,
+      inlineView({ kind: 'link', target: { type: 'external', href: 'javascript:alert(1)' }, children }, '/').kind,
+      'plain',
+    );
+    assert.equal(
+      inlineView(
+        {
+          kind: 'link',
+          target: { type: 'node', nodeId: 'ms.root', anchor: null, href: 'javascript:alert(1)' },
+          children,
+        },
+        '/',
+      ).kind,
       'plain',
     );
   });
 
   it('resolves xrefs to data-xref values and keeps unresolved ones as text', () => {
     const resolved = inlineView(
-      { kind: 'xref', ref: 'equation', number: '5.4', text: 'Eq. 5.4', target: { nodeId: 'ms.section.5.2', anchor: 'eq-5-4', href: '/ch05/05-2/#eq-5-4' } },
+      {
+        kind: 'xref',
+        ref: 'equation',
+        number: '5.4',
+        text: 'Eq. 5.4',
+        target: { nodeId: 'ms.section.5.2', anchor: 'eq-5-4', href: '/ch05/05-2/#eq-5-4' },
+      },
       '/',
     );
     assert.deepEqual(resolved, { kind: 'xref', href: '/ch05/05-2/#eq-5-4', xref: 'equation:5.4', text: 'Eq. 5.4' });
-    assert.deepEqual(inlineView({ kind: 'xref', ref: 'figure', number: '9.9', text: 'Figure 9.9', target: null }, '/'), {
-      kind: 'xref-missing',
-      text: 'Figure 9.9',
-    });
+    assert.deepEqual(
+      inlineView({ kind: 'xref', ref: 'figure', number: '9.9', text: 'Figure 9.9', target: null }, '/'),
+      {
+        kind: 'xref-missing',
+        text: 'Figure 9.9',
+      },
+    );
   });
 });
 
@@ -114,8 +151,10 @@ describe('table profiling', () => {
   };
 
   it('recognises quantities and rejects prose', () => {
-    for (const cell of ['5.1', '8 GiB', '1,024', '≈ 4×', '2.5e9', '−3', '12 ms', '64%']) assert.equal(isNumericCell(cell), true, cell);
-    for (const cell of ['P01', 'H_q', 'End-to-end', '', 'a score matrix appears after 5 steps']) assert.equal(isNumericCell(cell), false, cell);
+    for (const cell of ['5.1', '8 GiB', '1,024', '≈ 4×', '2.5e9', '−3', '12 ms', '64%'])
+      assert.equal(isNumericCell(cell), true, cell);
+    for (const cell of ['P01', 'H_q', 'End-to-end', '', 'a score matrix appears after 5 steps'])
+      assert.equal(isNumericCell(cell), false, cell);
   });
 
   it('marks numeric and emphasis columns for the sections role', () => {
@@ -173,14 +212,27 @@ describe('algorithm rows', () => {
 describe('claim provenance', () => {
   it('maps sources to cite, equation, documentation, and text items', () => {
     assert.deepEqual(provenanceItem({ raw: 'P19', type: 'paper', key: 'P19' }), { type: 'cite', key: 'P19' });
-    assert.deepEqual(provenanceItem({ raw: 'DERIVED:eq-5.8', type: 'derived', key: null }), { type: 'equation', number: '5.8', anchor: 'eq-5-8' });
-    assert.deepEqual(provenanceItem({ raw: 'OD:vllm-docs', type: 'official-doc', key: null }), { type: 'doc', id: 'vllm-docs' });
-    assert.deepEqual(provenanceItem({ raw: 'author note', type: 'other', key: null }), { type: 'text', text: 'author note' });
+    assert.deepEqual(provenanceItem({ raw: 'DERIVED:eq-5.8', type: 'derived', key: null }), {
+      type: 'equation',
+      number: '5.8',
+      anchor: 'eq-5-8',
+    });
+    assert.deepEqual(provenanceItem({ raw: 'OD:vllm-docs', type: 'official-doc', key: null }), {
+      type: 'doc',
+      id: 'vllm-docs',
+    });
+    assert.deepEqual(provenanceItem({ raw: 'author note', type: 'other', key: null }), {
+      type: 'text',
+      text: 'author note',
+    });
   });
 
   it('truncates at a word boundary', () => {
     assert.equal(truncate('Attention Is All You Need', 60), 'Attention Is All You Need');
-    assert.equal(truncate('FlashAttention: Fast and Memory-Efficient Exact Attention with IO-Awareness', 40), 'FlashAttention: Fast and…');
+    assert.equal(
+      truncate('FlashAttention: Fast and Memory-Efficient Exact Attention with IO-Awareness', 40),
+      'FlashAttention: Fast and…',
+    );
     assert.equal(truncate('Supercalifragilisticexpialidocious words', 12), 'Supercalifr…');
     assert.ok(truncate('a '.repeat(80), 20).length <= 20);
   });
@@ -227,17 +279,28 @@ describe('header anatomy', () => {
   });
 
   it('names a volume, which has no ancestors, by its own number', () => {
-    const volume = { ...doc, header: { ...HEADER, number: 'I' }, meta: { ...META, entityType: 'volume' as const }, route: { ...ROUTE, breadcrumbs: [] } };
+    const volume = {
+      ...doc,
+      header: { ...HEADER, number: 'I' },
+      meta: { ...META, entityType: 'volume' as const },
+      route: { ...ROUTE, breadcrumbs: [] },
+    };
     assert.equal(identityLine(volume), 'Volume I');
   });
 
   it('prefers the authored identity line', () => {
-    const authored = { ...doc, header: { ...HEADER, identityLine: 'VOLUME I / PART I — SCIENTIFIC FOUNDATIONS / CHAPTER 05' } };
+    const authored = {
+      ...doc,
+      header: { ...HEADER, identityLine: 'VOLUME I / PART I — SCIENTIFIC FOUNDATIONS / CHAPTER 05' },
+    };
     assert.equal(identityLine(authored), 'VOLUME I / PART I — SCIENTIFIC FOUNDATIONS / CHAPTER 05');
   });
 
   it('builds a derived meta line from stats', () => {
-    assert.equal(derivedMetaLine(doc), '9 min read · 5 equations · 1 algorithm · 5 sources · foundational · updated 2026-09-20');
+    assert.equal(
+      derivedMetaLine(doc),
+      '9 min read · 5 equations · 1 algorithm · 5 sources · foundational · updated 2026-09-20',
+    );
   });
 
   it('sentence-cases a lowercase thesis and leaves others untouched', () => {
@@ -273,7 +336,14 @@ describe('block traversal', () => {
     summary: [text('Derivation')],
     blocks: [
       para('inside', 'p-inside'),
-      { kind: 'definition', anchor: 'term-kv', depth: 'overview', term: 'KV cache', termSlug: 'kv', content: [text('state')] },
+      {
+        kind: 'definition',
+        anchor: 'term-kv',
+        depth: 'overview',
+        term: 'KV cache',
+        termSlug: 'kv',
+        content: [text('state')],
+      },
     ],
   };
 

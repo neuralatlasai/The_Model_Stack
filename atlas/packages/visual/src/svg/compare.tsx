@@ -29,7 +29,8 @@ export function CompareView({ spec, nodeHref, state = NO_STATE }: CompareViewPro
       <div class="vg-table-scroll" role="region" aria-label={`Comparison: ${spec.axis}`} tabIndex={0}>
         <table class="vg-compare">
           <caption class="vg-visually-hidden">
-            Comparison on the axis: {spec.axis}. {differing} of {spec.rows.length} rows differ across {spec.columns.map((column) => column.label).join(', ')}.
+            Comparison on the axis: {spec.axis}. {differing} of {spec.rows.length} rows differ across{' '}
+            {spec.columns.map((column) => column.label).join(', ')}.
           </caption>
           <thead>
             <tr>
@@ -51,7 +52,11 @@ export function CompareView({ spec, nodeHref, state = NO_STATE }: CompareViewPro
               const cells = spec.columns.map((column) => row.values[column.id] ?? '—');
               const same = cells.every((cell) => cell === cells[0]);
               return (
-                <tr class={cls('vg-compare__row', same ? 'vg-same' : 'vg-diff', litClass(state, row.dimension))} data-vg-key={row.dimension} key={`${index}:${row.dimension}`}>
+                <tr
+                  class={cls('vg-compare__row', same ? 'vg-same' : 'vg-diff', litClass(state, row.dimension))}
+                  data-vg-key={row.dimension}
+                  key={`${index}:${row.dimension}`}
+                >
                   <th scope="row" class="vg-compare__dim">
                     <span class="vg-compare__dimwrap">
                       <span class="vg-compare__mark" aria-hidden="true">

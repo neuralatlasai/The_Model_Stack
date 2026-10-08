@@ -143,7 +143,11 @@ export function siteJsonLd(graph: AtlasGraph, site: URL | undefined, edition: st
     inLanguage: 'en',
     about: {
       ...book(edition),
-      hasPart: volumes.map((volume) => ({ '@type': 'CreativeWorkSeries', name: volume.title, url: absoluteUrl(volume.url, site) })),
+      hasPart: volumes.map((volume) => ({
+        '@type': 'CreativeWorkSeries',
+        name: volume.title,
+        url: absoluteUrl(volume.url, site),
+      })),
     },
   };
 }

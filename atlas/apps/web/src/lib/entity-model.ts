@@ -14,7 +14,16 @@
  * "1.1, 1.3", "verification"): ranges expand, named non-numbered parts count
  * once, free text ("chapter page only") counts zero.
  */
-import { inlineToText, STACK_LAYERS, type AtlasGraph, type LabEntity, type NodeId, type Registry, type StackUse, type SystemEntity } from '@atlas/core';
+import {
+  inlineToText,
+  STACK_LAYERS,
+  type AtlasGraph,
+  type LabEntity,
+  type NodeId,
+  type Registry,
+  type StackUse,
+  type SystemEntity,
+} from '@atlas/core';
 import { compareStrings } from './format.ts';
 import { enclosing } from './nodes.ts';
 import type { StackModel } from './stack.ts';
@@ -146,10 +155,19 @@ function projectChapters(stack: StackModel): { chapters: Record<string, EntityCh
       written: chapter.written,
     };
   }
-  const order = new Map(stack.volumes.flatMap((volume) => volume.parts.map((part, index) => [part, volume.n * 100 + index] as const)));
+  const order = new Map(
+    stack.volumes.flatMap((volume) => volume.parts.map((part, index) => [part, volume.n * 100 + index] as const)),
+  );
   const parts = [...stack.parts]
     .sort((a, b) => (order.get(a.n) ?? a.n) - (order.get(b.n) ?? b.n))
-    .map((part) => ({ n: part.n, numeral: part.numeral, title: part.title, url: part.url, volume: part.volume, chapters: part.chapters }));
+    .map((part) => ({
+      n: part.n,
+      numeral: part.numeral,
+      title: part.title,
+      url: part.url,
+      volume: part.volume,
+      chapters: part.chapters,
+    }));
   return { chapters, parts };
 }
 
@@ -204,7 +222,11 @@ function systemRow(system: SystemEntity, graph: AtlasGraph, written: ReadonlySet
 
 export function buildSystemsModel(graph: AtlasGraph, registry: Registry, stack: StackModel): SystemsModel {
   const { chapters, parts } = projectChapters(stack);
-  const written = new Set(Object.values(chapters).filter((chapter) => chapter.written).map((chapter) => chapter.n));
+  const written = new Set(
+    Object.values(chapters)
+      .filter((chapter) => chapter.written)
+      .map((chapter) => chapter.n),
+  );
   const systems = [...registry.systems].sort(byRank).map((system) => systemRow(system, graph, written));
   const layers: LayerRow[] = STACK_LAYERS.map((name, index) => ({
     index,
@@ -212,7 +234,12 @@ export function buildSystemsModel(graph: AtlasGraph, registry: Registry, stack: 
     systems: systems.filter((system) => system.layer === index).map((system) => system.key),
   }));
   const unstated = systems.filter((system) => system.layer === -1);
-  if (unstated.length > 0) layers.push({ index: -1, name: 'Layer not stated in the reference stack', systems: unstated.map((system) => system.key) });
+  if (unstated.length > 0)
+    layers.push({
+      index: -1,
+      name: 'Layer not stated in the reference stack',
+      systems: unstated.map((system) => system.key),
+    });
   return { chapters, parts, layers, systems };
 }
 
@@ -235,7 +262,11 @@ function labRow(lab: LabEntity, graph: AtlasGraph, written: ReadonlySet<number>)
 
 export function buildLabsModel(graph: AtlasGraph, registry: Registry, stack: StackModel): LabsModel {
   const { chapters, parts } = projectChapters(stack);
-  const written = new Set(Object.values(chapters).filter((chapter) => chapter.written).map((chapter) => chapter.n));
+  const written = new Set(
+    Object.values(chapters)
+      .filter((chapter) => chapter.written)
+      .map((chapter) => chapter.n),
+  );
   return { chapters, parts, labs: [...registry.labs].sort(byRank).map((lab) => labRow(lab, graph, written)) };
 }
 

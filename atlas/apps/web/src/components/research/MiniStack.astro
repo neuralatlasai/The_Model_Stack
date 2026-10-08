@@ -84,55 +84,69 @@ const path = (a: number, b: number): string | null => {
 const chapters = Object.values(model.chapters).sort((a, b) => a.n - b.n);
 ---
 
-{
-  current !== undefined && (
-    <figure class="sx-mini" data-mini-stack aria-labelledby="sx-mini-title">
-      <figcaption class="sx-mini__head" id="sx-mini-title">
-        <span>Where this sits</span>
-        <span class="sx-mini__counts">
-          <span class="sx-mini__up">{up.size} upstream</span> · <span class="sx-mini__down">{down.size} downstream</span>
-        </span>
-      </figcaption>
-      <svg class="sx-mini__svg" viewBox={`0 0 ${String(W)} ${String(H)}`} role="img" aria-label={`${focusSet.size > 1 ? restLabel : `Chapter ${current.number}`} in the book: builds on ${String(up.size)} chapters, unlocks ${String(down.size)}.`}>
-        {lanes.map((lane) => (
-          <g class="sx-mini__lane">
-            <line x1={X0 - 12} x2={W - 8} y1={lane.y} y2={lane.y} />
-            <a href={lane.url}>
-              <text x="2" y={lane.y + 3.5}>
-                {lane.numeral}
-                <title>Part {lane.numeral} — {lane.title}</title>
-              </text>
-            </a>
-          </g>
-        ))}
-        <g class="sx-mini__edges" aria-hidden="true">
-          {direct.map(([a, b]) => {
-            const d = path(a, b);
-            return d === null ? null : <path class={focusSet.has(a) ? (focusSet.has(b) ? 'is-inside' : 'is-down') : 'is-up'} d={d} />;
-          })}
+{current !== undefined && (
+  <figure class="sx-mini" data-mini-stack aria-labelledby="sx-mini-title">
+    <figcaption class="sx-mini__head" id="sx-mini-title">
+      <span>Where this sits</span>
+      <span class="sx-mini__counts">
+        <span class="sx-mini__up">{up.size} upstream</span> · <span class="sx-mini__down">{down.size} downstream</span>
+      </span>
+    </figcaption>
+    <svg
+      class="sx-mini__svg"
+      viewBox={`0 0 ${String(W)} ${String(H)}`}
+      role="img"
+      aria-label={`${focusSet.size > 1 ? restLabel : `Chapter ${current.number}`} in the book: builds on ${String(up.size)} chapters, unlocks ${String(down.size)}.`}
+    >
+      {lanes.map((lane) => (
+        <g class="sx-mini__lane">
+          <line x1={X0 - 12} x2={W - 8} y1={lane.y} y2={lane.y} />
+          <a href={lane.url}>
+            <text x="2" y={lane.y + 3.5}>
+              {lane.numeral}
+              <title>Part {lane.numeral} — {lane.title}</title>
+            </text>
+          </a>
         </g>
-        {chapters.map((chapter) => {
-          const p = pos.get(chapter.n);
-          if (p === undefined) return null;
-          const state = focusSet.has(chapter.n) ? 'is-focus' : up.has(chapter.n) ? 'is-up' : down.has(chapter.n) ? 'is-down' : 'is-other';
-          return (
-            <a
-              class:list={['sx-mini__node', state, { 'is-written': chapter.written }]}
-              href={chapter.url}
-              data-mini-node={chapter.n}
-              data-mini-label={`${chapter.number} · ${chapter.short}${chapter.written ? '' : ' · planned'} — builds on ${String(chapter.prereqs.length)} · unlocks ${String(chapter.unlocks.length)}`}
-              data-mini-links={[...chapter.prereqs.map((n) => `u${String(n)}`), ...chapter.unlocks.map((n) => `d${String(n)}`)].join(' ')}
-              aria-label={`${chapter.number} ${chapter.title}`}
-              tabindex="-1"
-            >
-              <circle cx={p.x} cy={p.y} r={focusSet.has(chapter.n) ? (focusSet.size > 1 ? 5.6 : 6.5) : 4.6} />
-            </a>
+      ))}
+      <g class="sx-mini__edges" aria-hidden="true">
+        {direct.map(([a, b]) => {
+          const d = path(a, b);
+          return d === null ? null : (
+            <path class={focusSet.has(a) ? (focusSet.has(b) ? 'is-inside' : 'is-down') : 'is-up'} d={d} />
           );
         })}
-      </svg>
-      <p class="sx-mini__readout" data-mini-readout data-default={restLabel}>
-        {restLabel}
-      </p>
-    </figure>
-  )
-}
+      </g>
+      {chapters.map((chapter) => {
+        const p = pos.get(chapter.n);
+        if (p === undefined) return null;
+        const state = focusSet.has(chapter.n)
+          ? 'is-focus'
+          : up.has(chapter.n)
+            ? 'is-up'
+            : down.has(chapter.n)
+              ? 'is-down'
+              : 'is-other';
+        return (
+          <a
+            class:list={['sx-mini__node', state, { 'is-written': chapter.written }]}
+            href={chapter.url}
+            data-mini-node={chapter.n}
+            data-mini-label={`${chapter.number} · ${chapter.short}${chapter.written ? '' : ' · planned'} — builds on ${String(chapter.prereqs.length)} · unlocks ${String(chapter.unlocks.length)}`}
+            data-mini-links={[
+              ...chapter.prereqs.map((n) => `u${String(n)}`),
+              ...chapter.unlocks.map((n) => `d${String(n)}`),
+            ].join(' ')}
+            aria-label={`${chapter.number} ${chapter.title}`}
+            tabindex="-1"
+          >
+            <circle cx={p.x} cy={p.y} r={focusSet.has(chapter.n) ? (focusSet.size > 1 ? 5.6 : 6.5) : 4.6} />
+          </a>
+        );
+      })}
+    </svg>
+    <p class="sx-mini__readout" data-mini-readout data-default={restLabel}>
+      {restLabel}
+    </p>
+  </figure>
+)}

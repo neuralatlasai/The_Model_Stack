@@ -115,7 +115,10 @@ describe('mapBounded', () => {
       }),
       (error: unknown) => error instanceof Error && error.cause === 'plain string',
     );
-    await assert.rejects(mapBounded([1], 0, async (value) => value), RangeError);
+    await assert.rejects(
+      mapBounded([1], 0, async (value) => value),
+      RangeError,
+    );
     assert.deepEqual(await mapBounded([], 4, async (value) => value), []);
   });
 });

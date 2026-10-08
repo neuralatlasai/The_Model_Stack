@@ -16,9 +16,15 @@ import '../styles/eval-ecosystem.css';
 
 const [graph, registry, docs] = await Promise.all([getGraph(), getRegistry(), listDocuments()]);
 const { entries, meta } = ecosystem();
-const asOf = new Date(`${meta.asOf}T00:00:00Z`).toLocaleDateString('en-GB', { day: 'numeric', month: 'long', year: 'numeric', timeZone: 'UTC' });
+const asOf = new Date(`${meta.asOf}T00:00:00Z`).toLocaleDateString('en-GB', {
+  day: 'numeric',
+  month: 'long',
+  year: 'numeric',
+  timeZone: 'UTC',
+});
 const appendix = graph.nodes['ms.appendix.i' as NodeId] ?? null;
-const DOCX = 'https://github.com/neuralatlasai/The_Model_Stack/blob/main/research/evaluation-ecosystem/top-100-evaluation-ecosystem-2026.docx';
+const DOCX =
+  'https://github.com/neuralatlasai/The_Model_Stack/blob/main/research/evaluation-ecosystem/top-100-evaluation-ecosystem-2026.docx';
 ---
 
 <ReaderLayout
@@ -35,16 +41,17 @@ const DOCX = 'https://github.com/neuralatlasai/The_Model_Stack/blob/main/researc
     meta={`${String(entries.length)} systems in priority order · ${String(KINDS.length)} kinds · ${String(DOMAINS.length)} domains · as of ${asOf}`}
   />
   <p class="eco-provenance">
-    Ranking and rationales are an editorial priority list, reproduced verbatim — an ordering by usefulness as an evaluation signal, not a measured score. Kind, domain, and chapter
-    anchors are the atlas’s classification; links point to each system’s own site, code, and paper, and were checked on {asOf}.{' '}
-    {
-      appendix !== null && (
-        <>
-          In the book: <a href={appendix.url}>Appendix I — {appendix.title.split(' — ')[0]}</a> ·{' '}
-        </>
-      )
-    }
-    <a href={DOCX} rel="external">the list as a document (.docx)</a>
+    Ranking and rationales are an editorial priority list, reproduced verbatim — an ordering by usefulness as an
+    evaluation signal, not a measured score. Kind, domain, and chapter anchors are the atlas’s classification; links
+    point to each system’s own site, code, and paper, and were checked on {asOf}.{' '}
+    {appendix !== null && (
+      <>
+        In the book: <a href={appendix.url}>Appendix I — {appendix.title.split(' — ')[0]}</a> ·{' '}
+      </>
+    )}
+    <a href={DOCX} rel="external">
+      the list as a document (.docx)
+    </a>
   </p>
   <EvalEcosystemExplorer graph={graph} registry={registry} docs={docs} />
 </ReaderLayout>

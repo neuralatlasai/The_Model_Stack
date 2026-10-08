@@ -29,7 +29,9 @@ function clip(text: string): string {
 function markerFor(block: Block): OutlineMarker | null {
   switch (block.kind) {
     case 'equation':
-      return block.number !== null && block.anchor !== null ? { type: 'equation', anchor: block.anchor, label: `Eq. ${block.number}` } : null;
+      return block.number !== null && block.anchor !== null
+        ? { type: 'equation', anchor: block.anchor, label: `Eq. ${block.number}` }
+        : null;
     case 'figure':
       return {
         type: 'figure',
@@ -37,7 +39,9 @@ function markerFor(block: Block): OutlineMarker | null {
         label: block.figure.number !== null ? `Fig. ${block.figure.number}` : clip(block.figure.spec.title),
       };
     case 'algorithm':
-      return block.anchor !== null ? { type: 'algorithm', anchor: block.anchor, label: `Alg. ${block.number ?? ''}`.trim() } : null;
+      return block.anchor !== null
+        ? { type: 'algorithm', anchor: block.anchor, label: `Alg. ${block.number ?? ''}`.trim() }
+        : null;
     case 'experiment':
       return block.anchor !== null ? { type: 'experiment', anchor: block.anchor, label: `Exp. ${block.number}` } : null;
     case 'code':
@@ -45,11 +49,15 @@ function markerFor(block: Block): OutlineMarker | null {
     case 'failure-mode':
       return block.anchor !== null ? { type: 'failure-mode', anchor: block.anchor, label: clip(block.name) } : null;
     case 'open-question':
-      return block.anchor !== null ? { type: 'open-question', anchor: block.anchor, label: clip(plainText(block.content)) } : null;
+      return block.anchor !== null
+        ? { type: 'open-question', anchor: block.anchor, label: clip(plainText(block.content)) }
+        : null;
     case 'definition':
       return block.anchor !== null ? { type: 'definition', anchor: block.anchor, label: clip(block.term) } : null;
     case 'claim':
-      return block.anchor !== null ? { type: 'claim', anchor: block.anchor, label: `Claim · ${EVIDENCE_SHORT[block.label]}` } : null;
+      return block.anchor !== null
+        ? { type: 'claim', anchor: block.anchor, label: `Claim · ${EVIDENCE_SHORT[block.label]}` }
+        : null;
     default:
       return null;
   }
@@ -64,9 +72,13 @@ export function buildOutline(regions: readonly Region[]): OutlineEntry[] {
     });
     const children: { anchor: string; title: string }[] = [];
     for (const block of region.blocks) {
-      if (block.kind === 'heading' && block.level === 3) children.push({ anchor: block.anchor, title: plainText(block.content).trim() });
+      if (block.kind === 'heading' && block.level === 3)
+        children.push({ anchor: block.anchor, title: plainText(block.content).trim() });
       else if (block.kind === 'experiment' && block.anchor !== null) {
-        children.push({ anchor: block.anchor, title: block.name === '' ? `Experiment ${block.number}` : `Experiment ${block.number} — ${block.name}` });
+        children.push({
+          anchor: block.anchor,
+          title: block.name === '' ? `Experiment ${block.number}` : `Experiment ${block.number} — ${block.name}`,
+        });
       }
     }
     return { anchor: region.anchor, title: region.title, role: region.role, depth: region.depth, markers, children };
@@ -88,11 +100,19 @@ export function countWords(blocks: readonly Block[]): number {
   return words;
 }
 
-export function buildStats(blocks: readonly Block[], figures: readonly CompiledFigure[], citations: readonly CitationKey[]): DocumentStats {
+export function buildStats(
+  blocks: readonly Block[],
+  figures: readonly CompiledFigure[],
+  citations: readonly CitationKey[],
+): DocumentStats {
   const counts = { equations: 0, algorithms: 0, experiments: 0, failureModes: 0, definitions: 0 };
   walkBlocks(blocks, (block) => {
     if (block.kind === 'equation') counts.equations += 1;
-    else if (block.kind === 'algorithm') counts.algorithms += 1;
+    else if (
+      block.kind === 'algorithm' ||
+      ((block.kind === 'heading' || block.kind === 'paragraph') && block.anchor?.startsWith('alg-') === true)
+    )
+      counts.algorithms += 1;
     else if (block.kind === 'experiment') counts.experiments += 1;
     else if (block.kind === 'failure-mode') counts.failureModes += 1;
     else if (block.kind === 'definition') counts.definitions += 1;
@@ -125,7 +145,6 @@ export function citationOrder(blocks: readonly Block[], st: CompileState): Citat
   return [...seen];
 }
 
-
 export function definedTerms(blocks: readonly Block[]): string[] {
   const out: string[] = [];
   walkBlocks(blocks, (block) => {
@@ -141,10 +160,15 @@ export function linkedNodes(blocks: readonly Block[], self: NodeId): NodeId[] {
     if (id !== self && !out.includes(id)) out.push(id);
   };
   walkAllInline(blocks, (node) => {
-    if (node.kind === 'link' && (node.target.type === 'node' || node.target.type === 'planned')) add(node.target.nodeId);
+    if (node.kind === 'link' && (node.target.type === 'node' || node.target.type === 'planned'))
+      add(node.target.nodeId);
   });
   walkBlocks(blocks, (block) => {
-    if (block.kind === 'sibling' && block.target !== null && (block.target.type === 'node' || block.target.type === 'planned')) {
+    if (
+      block.kind === 'sibling' &&
+      block.target !== null &&
+      (block.target.type === 'node' || block.target.type === 'planned')
+    ) {
       add(block.target.nodeId);
     }
   });

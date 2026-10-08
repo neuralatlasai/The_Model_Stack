@@ -31,7 +31,19 @@ import { BEAD_FRAGMENT, BEAD_VERTEX, GLASS_FRAGMENT, GLASS_VERTEX, isNight } fro
 const Vec3 = z.tuple([z.number(), z.number(), z.number()]);
 const IslandSchema = z.object({
   regions: z.array(z.object({ n: z.number(), label: z.string(), domain: z.string(), p: Vec3 })),
-  neurons: z.array(z.object({ n: z.number(), title: z.string(), url: z.string(), part: z.number(), region: z.string(), domain: z.string(), written: z.boolean(), concepts: z.number(), p: Vec3 })),
+  neurons: z.array(
+    z.object({
+      n: z.number(),
+      title: z.string(),
+      url: z.string(),
+      part: z.number(),
+      region: z.string(),
+      domain: z.string(),
+      written: z.boolean(),
+      concepts: z.number(),
+      p: Vec3,
+    }),
+  ),
   concepts: z.array(z.object({ chapter: z.number(), term: z.string(), domain: z.string(), p: Vec3 })),
   fibres: z.array(z.object({ from: z.number(), to: z.number(), c: Vec3 })),
 });
@@ -63,7 +75,10 @@ export function initBrain3D(ctx: PageContext, fig: HTMLElement, reduced: boolean
   canvas.className = 'hb3-canvas';
   canvas.tabIndex = 0;
   canvas.setAttribute('role', 'img');
-  canvas.setAttribute('aria-label', 'A three-dimensional glass brain: the chapters of the book as neurons. Drag to turn it; arrow keys step through chapters; Enter opens one.');
+  canvas.setAttribute(
+    'aria-label',
+    'A three-dimensional glass brain: the chapters of the book as neurons. Drag to turn it; arrow keys step through chapters; Enter opens one.',
+  );
   host.prepend(canvas);
   fig.classList.add('is-3d');
 
@@ -107,7 +122,10 @@ export function initBrain3D(ctx: PageContext, fig: HTMLElement, reduced: boolean
     (glassFront.uniforms as { uOpacity: { value: number } }).uOpacity.value = k;
   };
   const addGlass = (geo: THREE.BufferGeometry, transform?: (mesh: THREE.Mesh) => void): void => {
-    for (const [material, order] of [[glassBack, 0], [glassFront, 1]] as const) {
+    for (const [material, order] of [
+      [glassBack, 0],
+      [glassFront, 1],
+    ] as const) {
       const mesh = new THREE.Mesh(geo, material);
       mesh.renderOrder = order;
       transform?.(mesh);
@@ -137,10 +155,14 @@ export function initBrain3D(ctx: PageContext, fig: HTMLElement, reduced: boolean
     ctl.defer(() => {
       worker.terminate();
     });
-    worker.addEventListener('message', (event: MessageEvent<MeshArrays[]>) => {
-      addCortex(event.data);
-      worker.terminate();
-    }, { signal });
+    worker.addEventListener(
+      'message',
+      (event: MessageEvent<MeshArrays[]>) => {
+        addCortex(event.data);
+        worker.terminate();
+      },
+      { signal },
+    );
     worker.addEventListener('error', buildHere, { signal });
     worker.postMessage({ small });
   } catch {
@@ -179,7 +201,10 @@ export function initBrain3D(ctx: PageContext, fig: HTMLElement, reduced: boolean
 
   // ── neural layer ──────────────────────────────────────────────────────────
   const glowMaterials: THREE.ShaderMaterial[] = [];
-  const pointsOf = (count: number, order: number): { geo: THREE.BufferGeometry; pos: Float32Array; col: Float32Array; size: Float32Array; alpha: Float32Array } => {
+  const pointsOf = (
+    count: number,
+    order: number,
+  ): { geo: THREE.BufferGeometry; pos: Float32Array; col: Float32Array; size: Float32Array; alpha: Float32Array } => {
     const geo = new THREE.BufferGeometry();
     const pos = new Float32Array(count * 3);
     const col = new Float32Array(count * 3);
@@ -190,7 +215,13 @@ export function initBrain3D(ctx: PageContext, fig: HTMLElement, reduced: boolean
     geo.setAttribute('aSize', new THREE.BufferAttribute(size, 1));
     geo.setAttribute('aAlpha', new THREE.BufferAttribute(alpha, 1));
     const material = new THREE.ShaderMaterial({
-      uniforms: { uPixelRatio: { value: renderer.getPixelRatio() }, uNear: { value: 3.4 }, uFar: { value: 5.6 }, uPaper: { value: 1 }, uScale: { value: 4.4 } },
+      uniforms: {
+        uPixelRatio: { value: renderer.getPixelRatio() },
+        uNear: { value: 3.4 },
+        uFar: { value: 5.6 },
+        uPaper: { value: 1 },
+        uScale: { value: 4.4 },
+      },
       vertexShader: BEAD_VERTEX,
       fragmentShader: BEAD_FRAGMENT,
       transparent: true,
@@ -231,17 +262,27 @@ export function initBrain3D(ctx: PageContext, fig: HTMLElement, reduced: boolean
     const b = neurons[indexOf.get(fibre?.to ?? 0) ?? 0]?.p ?? [0, 0, 0];
     const c = fibre?.c ?? [0, 0, 0];
     const u = 1 - t;
-    return [u * u * a[0] + 2 * u * t * c[0] + t * t * b[0], u * u * a[1] + 2 * u * t * c[1] + t * t * b[1], u * u * a[2] + 2 * u * t * c[2] + t * t * b[2]];
+    return [
+      u * u * a[0] + 2 * u * t * c[0] + t * t * b[0],
+      u * u * a[1] + 2 * u * t * c[1] + t * t * b[1],
+      u * u * a[2] + 2 * u * t * c[2] + t * t * b[2],
+    ];
   };
   const lineGeo = new THREE.BufferGeometry();
   const linePos = new Float32Array(fibres.length * SEGMENTS * 6);
   const lineCol = new Float32Array(fibres.length * SEGMENTS * 8);
   fibres.forEach((_, i) => {
-    for (let s = 0; s < SEGMENTS; s += 1) linePos.set([...curve(i, s / SEGMENTS), ...curve(i, (s + 1) / SEGMENTS)], (i * SEGMENTS + s) * 6);
+    for (let s = 0; s < SEGMENTS; s += 1)
+      linePos.set([...curve(i, s / SEGMENTS), ...curve(i, (s + 1) / SEGMENTS)], (i * SEGMENTS + s) * 6);
   });
   lineGeo.setAttribute('position', new THREE.BufferAttribute(linePos, 3));
   lineGeo.setAttribute('color', new THREE.BufferAttribute(lineCol, 4));
-  const lineMat = new THREE.LineBasicMaterial({ vertexColors: true, transparent: true, depthTest: false, depthWrite: false });
+  const lineMat = new THREE.LineBasicMaterial({
+    vertexColors: true,
+    transparent: true,
+    depthTest: false,
+    depthWrite: false,
+  });
   disposables.push(lineGeo, lineMat);
   const lines = new THREE.LineSegments(lineGeo, lineMat);
   lines.renderOrder = 2;
@@ -254,7 +295,8 @@ export function initBrain3D(ctx: PageContext, fig: HTMLElement, reduced: boolean
     if (reduced || pulses.length >= MAX_PULSES) return;
     pulses.push({ fibre, reverse, start: performance.now() + delay, dur: 1100 + Math.random() * 700 });
     const edge = fibres[fibre];
-    if (edge !== undefined) fig.dispatchEvent(new CustomEvent('hx:signal', { detail: { from: edge.from, to: edge.to }, bubbles: true }));
+    if (edge !== undefined)
+      fig.dispatchEvent(new CustomEvent('hx:signal', { detail: { from: edge.from, to: edge.to }, bubbles: true }));
   };
 
   // ── theme: ink on paper, or light on night ────────────────────────────────
@@ -330,7 +372,9 @@ export function initBrain3D(ctx: PageContext, fig: HTMLElement, reduced: boolean
     paintFibres();
   };
   applyTheme();
-  ctl.observe(new MutationObserver(applyTheme)).observe(doc.documentElement, { attributes: true, attributeFilter: ['data-theme'] });
+  ctl
+    .observe(new MutationObserver(applyTheme))
+    .observe(doc.documentElement, { attributes: true, attributeFilter: ['data-theme'] });
 
   // ── labels and tag (HTML over the canvas) ─────────────────────────────────
   const regionLabels = data.regions.map((region) => {
@@ -349,7 +393,11 @@ export function initBrain3D(ctx: PageContext, fig: HTMLElement, reduced: boolean
 
   // ── readout ───────────────────────────────────────────────────────────────
   const readout = fig.querySelector('[data-brain-readout]');
-  const slots = { k: readout?.querySelector('[data-k]') ?? null, t: readout?.querySelector('[data-t]') ?? null, m: readout?.querySelector('[data-m]') ?? null };
+  const slots = {
+    k: readout?.querySelector('[data-k]') ?? null,
+    t: readout?.querySelector('[data-t]') ?? null,
+    m: readout?.querySelector('[data-m]') ?? null,
+  };
   let idle = { k: slots.k?.textContent ?? '', t: slots.t?.textContent ?? '', m: slots.m?.textContent ?? '' };
 
   const activate = (n: number | null, fire: boolean): void => {
@@ -369,7 +417,8 @@ export function initBrain3D(ctx: PageContext, fig: HTMLElement, reduced: boolean
         return;
       }
       N.size[i] = (baseSize[i] ?? 15) * (on ? 2 : linked.has(neuron.n) ? 1.35 : 1);
-      N.alpha[i] = on || linked.has(neuron.n) ? Math.min(1, (baseAlpha[i] ?? 0.6) + (on ? 0.4 : 0)) : (baseAlpha[i] ?? 0.6) * 0.45;
+      N.alpha[i] =
+        on || linked.has(neuron.n) ? Math.min(1, (baseAlpha[i] ?? 0.6) + (on ? 0.4 : 0)) : (baseAlpha[i] ?? 0.6) * 0.45;
     });
     data.concepts.forEach((concept, i) => {
       if (n === null) {
@@ -395,11 +444,15 @@ export function initBrain3D(ctx: PageContext, fig: HTMLElement, reduced: boolean
     const ins = fibres.filter((fibre) => fibre.to === neuron.n).length;
     const outs = fibres.filter((fibre) => fibre.from === neuron.n).length;
     const names = data.concepts.filter((concept) => concept.chapter === neuron.n).map((concept) => concept.term);
-    if (slots.k !== null) slots.k.textContent = `Chapter ${pad(neuron.n)} · ${neuron.region} · ${neuron.written ? 'written' : 'planned'}`;
+    if (slots.k !== null)
+      slots.k.textContent = `Chapter ${pad(neuron.n)} · ${neuron.region} · ${neuron.written ? 'written' : 'planned'}`;
     if (slots.t !== null) slots.t.textContent = neuron.title;
     if (slots.m !== null) {
       const links = `builds on ${String(ins)} · unlocks ${String(outs)}`;
-      slots.m.textContent = names.length > 0 ? `${links} · ${String(names.length)} concepts: ${names.slice(0, 5).join(', ')}${names.length > 5 ? '…' : ''}` : `${links} · ${neuron.written ? 'no glossary terms owned' : 'manuscript planned'}`;
+      slots.m.textContent =
+        names.length > 0
+          ? `${links} · ${String(names.length)} concepts: ${names.slice(0, 5).join(', ')}${names.length > 5 ? '…' : ''}`
+          : `${links} · ${neuron.written ? 'no glossary terms owned' : 'manuscript planned'}`;
     }
     tag.textContent = `${pad(neuron.n)} · ${neuron.title.length > 40 ? `${neuron.title.slice(0, 38)}…` : neuron.title}`;
     tag.classList.add('is-on');
@@ -422,11 +475,16 @@ export function initBrain3D(ctx: PageContext, fig: HTMLElement, reduced: boolean
         const other = pick(fibre);
         if (other !== null && other !== part) counts.set(other, (counts.get(other) ?? 0) + 1);
       }
-      return [...counts.entries()].sort((a, b) => b[1] - a[1]).slice(0, 4).map(([n]) => labelOf(n));
+      return [...counts.entries()]
+        .sort((a, b) => b[1] - a[1])
+        .slice(0, 4)
+        .map(([n]) => labelOf(n));
     };
     const from = tally((fibre) => (partOf(fibre.to) === part ? partOf(fibre.from) : null));
     const to = tally((fibre) => (partOf(fibre.from) === part ? partOf(fibre.to) : null));
-    return [from.length > 0 ? `draws on ${from.join(' · ')}` : '', to.length > 0 ? `feeds ${to.join(' · ')}` : ''].filter((text) => text !== '').join('   ·   ');
+    return [from.length > 0 ? `draws on ${from.join(' · ')}` : '', to.length > 0 ? `feeds ${to.join(' · ')}` : '']
+      .filter((text) => text !== '')
+      .join('   ·   ');
   };
   let targetYaw = brain.rotation.y;
   let targetPitch = brain.rotation.x;
@@ -453,14 +511,22 @@ export function initBrain3D(ctx: PageContext, fig: HTMLElement, reduced: boolean
       });
     }
   };
-  fig.addEventListener('hx:chapter', (event) => {
-    const n = (event as CustomEvent<number | null>).detail;
-    activate(typeof n === 'number' ? n : null, typeof n === 'number');
-  }, { signal });
-  fig.addEventListener('hx:part', (event) => {
-    const detail = (event as CustomEvent<{ part: number; k: string; t: string }>).detail;
-    focus(detail.part > 0 ? detail.part : null, detail.k, detail.t);
-  }, { signal });
+  fig.addEventListener(
+    'hx:chapter',
+    (event) => {
+      const n = (event as CustomEvent<number | null>).detail;
+      activate(typeof n === 'number' ? n : null, typeof n === 'number');
+    },
+    { signal },
+  );
+  fig.addEventListener(
+    'hx:part',
+    (event) => {
+      const detail = (event as CustomEvent<{ part: number; k: string; t: string }>).detail;
+      focus(detail.part > 0 ? detail.part : null, detail.k, detail.t);
+    },
+    { signal },
+  );
 
   // ── interaction ───────────────────────────────────────────────────────────
   const baseYaw = brain.rotation.y;
@@ -503,50 +569,75 @@ export function initBrain3D(ctx: PageContext, fig: HTMLElement, reduced: boolean
     const url = n === null ? undefined : neurons[indexOf.get(n) ?? -1]?.url;
     if (url !== undefined) window.location.assign(url);
   };
-  canvas.addEventListener('pointerdown', (event) => {
-    dragging = true;
-    moved = 0;
-    last = { x: event.clientX, y: event.clientY };
-    canvas.setPointerCapture(event.pointerId);
-    engagedUntil = performance.now() + 4000;
-  }, { signal });
-  canvas.addEventListener('pointermove', (event) => {
-    engagedUntil = performance.now() + 4000;
-    if (dragging && last !== null) {
-      const dx = event.clientX - last.x;
-      const dy = event.clientY - last.y;
-      moved += Math.abs(dx) + Math.abs(dy);
-      offset += dx * 0.007;
-      pitch = Math.max(-0.45, Math.min(0.6, pitch + dy * 0.004));
-      velocity = dx * 0.007;
+  canvas.addEventListener(
+    'pointerdown',
+    (event) => {
+      dragging = true;
+      moved = 0;
       last = { x: event.clientX, y: event.clientY };
-      return;
-    }
-    const n = pick(event.clientX, event.clientY);
-    canvas.style.cursor = n === null ? 'grab' : 'pointer';
-    if (n !== active && n !== null) activate(n, true);
-  }, { signal });
-  canvas.addEventListener('pointerup', (event) => {
-    dragging = false;
-    last = null;
-    if (moved < 6) open(pick(event.clientX, event.clientY));
-  }, { signal });
-  canvas.addEventListener('pointerleave', () => {
-    if (!dragging) activate(null, false);
-  }, { signal });
+      canvas.setPointerCapture(event.pointerId);
+      engagedUntil = performance.now() + 4000;
+    },
+    { signal },
+  );
+  canvas.addEventListener(
+    'pointermove',
+    (event) => {
+      engagedUntil = performance.now() + 4000;
+      if (dragging && last !== null) {
+        const dx = event.clientX - last.x;
+        const dy = event.clientY - last.y;
+        moved += Math.abs(dx) + Math.abs(dy);
+        offset += dx * 0.007;
+        pitch = Math.max(-0.45, Math.min(0.6, pitch + dy * 0.004));
+        velocity = dx * 0.007;
+        last = { x: event.clientX, y: event.clientY };
+        return;
+      }
+      const n = pick(event.clientX, event.clientY);
+      canvas.style.cursor = n === null ? 'grab' : 'pointer';
+      if (n !== active && n !== null) activate(n, true);
+    },
+    { signal },
+  );
+  canvas.addEventListener(
+    'pointerup',
+    (event) => {
+      dragging = false;
+      last = null;
+      if (moved < 6) open(pick(event.clientX, event.clientY));
+    },
+    { signal },
+  );
+  canvas.addEventListener(
+    'pointerleave',
+    () => {
+      if (!dragging) activate(null, false);
+    },
+    { signal },
+  );
   const order = neurons.map((neuron) => neuron.n);
-  canvas.addEventListener('keydown', (event) => {
-    if (event.key === 'Enter') {
-      open(active);
-      return;
-    }
-    const step = event.key === 'ArrowRight' || event.key === 'ArrowDown' ? 1 : event.key === 'ArrowLeft' || event.key === 'ArrowUp' ? -1 : 0;
-    if (step === 0) return;
-    event.preventDefault();
-    engagedUntil = performance.now() + 8000;
-    const at = active === null ? -1 : order.indexOf(active);
-    activate(order[(at + step + order.length) % order.length] ?? null, true);
-  }, { signal });
+  canvas.addEventListener(
+    'keydown',
+    (event) => {
+      if (event.key === 'Enter') {
+        open(active);
+        return;
+      }
+      const step =
+        event.key === 'ArrowRight' || event.key === 'ArrowDown'
+          ? 1
+          : event.key === 'ArrowLeft' || event.key === 'ArrowUp'
+            ? -1
+            : 0;
+      if (step === 0) return;
+      event.preventDefault();
+      engagedUntil = performance.now() + 8000;
+      const at = active === null ? -1 : order.indexOf(active);
+      activate(order[(at + step + order.length) % order.length] ?? null, true);
+    },
+    { signal },
+  );
 
   // ── frame loop (only while visible) ───────────────────────────────────────
   let visible = true;
@@ -558,13 +649,21 @@ export function initBrain3D(ctx: PageContext, fig: HTMLElement, reduced: boolean
       raf = requestAnimationFrame(frame);
     }
   };
-  ctl.observe(new IntersectionObserver((entries) => {
-    visible = entries.some((entry) => entry.isIntersecting);
-    if (visible) kick();
-  })).observe(fig);
-  doc.addEventListener('visibilitychange', () => {
-    if (doc.visibilityState === 'visible') kick();
-  }, { signal });
+  ctl
+    .observe(
+      new IntersectionObserver((entries) => {
+        visible = entries.some((entry) => entry.isIntersecting);
+        if (visible) kick();
+      }),
+    )
+    .observe(fig);
+  doc.addEventListener(
+    'visibilitychange',
+    () => {
+      if (doc.visibilityState === 'visible') kick();
+    },
+    { signal },
+  );
   const resize = (): void => {
     const rect = host.getBoundingClientRect();
     renderer.setSize(Math.max(1, rect.width), Math.max(1, rect.height), false);
@@ -590,8 +689,12 @@ export function initBrain3D(ctx: PageContext, fig: HTMLElement, reduced: boolean
   let intro = reduced ? 1 : 0;
   const assemble = (k: number): void => {
     const spread = 1 + (1 - k) * 1.1;
-    neurons.forEach((neuron, i) => { N.pos.set([neuron.p[0] * spread, neuron.p[1] * spread, neuron.p[2] * spread], i * 3); });
-    data.concepts.forEach((concept, i) => { C.pos.set([concept.p[0] * spread, concept.p[1] * spread, concept.p[2] * spread], i * 3); });
+    neurons.forEach((neuron, i) => {
+      N.pos.set([neuron.p[0] * spread, neuron.p[1] * spread, neuron.p[2] * spread], i * 3);
+    });
+    data.concepts.forEach((concept, i) => {
+      C.pos.set([concept.p[0] * spread, concept.p[1] * spread, concept.p[2] * spread], i * 3);
+    });
     N.geo.getAttribute('position').needsUpdate = true;
     C.geo.getAttribute('position').needsUpdate = true;
     lineMat.opacity = k * k;
@@ -635,7 +738,11 @@ export function initBrain3D(ctx: PageContext, fig: HTMLElement, reduced: boolean
       brain.localToWorld(focusView).applyMatrix4(camera.matrixWorldInverse);
     }
     for (const m of [glassBack, glassFront]) {
-      const u = m.uniforms as { uFocus: { value: THREE.Vector3 }; uFocusK: { value: number }; uGlow: { value: THREE.Color } };
+      const u = m.uniforms as {
+        uFocus: { value: THREE.Vector3 };
+        uFocusK: { value: number };
+        uGlow: { value: THREE.Color };
+      };
       u.uFocus.value.copy(focusView);
       u.uFocusK.value = focusK;
       // paper: a soft rose from the oxblood accent; night: the part's own glow
@@ -643,7 +750,10 @@ export function initBrain3D(ctx: PageContext, fig: HTMLElement, reduced: boolean
     }
 
     if (!reduced && now > nextAmbient && live.length > 0) {
-      const focused = focusPart === null ? [] : everyFibre.filter(({ fibre }) => partOf(fibre.from) === focusPart || partOf(fibre.to) === focusPart);
+      const focused =
+        focusPart === null
+          ? []
+          : everyFibre.filter(({ fibre }) => partOf(fibre.from) === focusPart || partOf(fibre.to) === focusPart);
       const pool = focused.length > 0 && Math.random() < 0.75 ? focused : live;
       const chosen = pool[Math.floor(Math.random() * pool.length)];
       if (chosen !== undefined) spawn(chosen.i, Math.random() < 0.2);
@@ -664,7 +774,8 @@ export function initBrain3D(ctx: PageContext, fig: HTMLElement, reduced: boolean
       P.size[i] = 22;
       P.alpha[i] = Math.min(1, t * 5, (1 - t) * 5);
     }
-    for (let i = pulses.length - 1; i >= 0; i -= 1) if ((now - (pulses[i]?.start ?? 0)) / (pulses[i]?.dur ?? 1) >= 1) pulses.splice(i, 1);
+    for (let i = pulses.length - 1; i >= 0; i -= 1)
+      if ((now - (pulses[i]?.start ?? 0)) / (pulses[i]?.dur ?? 1) >= 1) pulses.splice(i, 1);
     for (const attr of ['position', 'aColor', 'aSize', 'aAlpha'] as const) P.geo.getAttribute(attr).needsUpdate = true;
 
     const centre = camera.position.distanceTo(brain.position);

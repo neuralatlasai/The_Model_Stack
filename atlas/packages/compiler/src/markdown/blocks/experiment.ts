@@ -57,7 +57,8 @@ function fieldsFromList(list: List, st: CompileState, env: FlowEnv, flow: FlowCo
       const name = canonicalField(toString(lead));
       const content = trimInline(stripLead(convertPhrasing(first.children.slice(1), st), /^[\s:.—–-]+/u));
       const blocks: Block[] = [];
-      if (content.length > 0) blocks.push({ kind: 'paragraph', anchor: null, depth: depthOf('paragraph', env), content });
+      if (content.length > 0)
+        blocks.push({ kind: 'paragraph', anchor: null, depth: depthOf('paragraph', env), content });
       blocks.push(...flow(others, env));
       fields.push({ name, blocks });
       continue;
@@ -79,7 +80,10 @@ function fieldsFromParagraphs(paragraphs: readonly Paragraph[], st: CompileState
   const split = splitByMarkers(content, PARAGRAPH_MARKERS);
   return split.parts.map((part) => ({
     name: part.key,
-    blocks: part.content.length === 0 ? [] : [{ kind: 'paragraph', anchor: null, depth: depthOf('paragraph', env), content: part.content }],
+    blocks:
+      part.content.length === 0
+        ? []
+        : [{ kind: 'paragraph', anchor: null, depth: depthOf('paragraph', env), content: part.content }],
   }));
 }
 

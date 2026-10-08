@@ -21,24 +21,24 @@ const entries = orderedCounts(instrument.counts);
 const { dots, scale, total } = evidenceDots(instrument.counts);
 ---
 
-{
-  entries.length > 0 && (
-    <div class="rb-instrument rb-instrument--evidence" {...instrumentAttrs('evidence')}>
-      <InstrumentHead title="Evidence profile" meta={`${total} labelled`} />
-      <p class="rb-dots" aria-hidden="true">
-        {dots.map((dot) => (
-          <span class={`rb-dot rb-ev--${dot.cls}`}>{dot.glyph}</span>
-        ))}
-      </p>
-      <dl class="rb-kv rb-kv--legend">
-        {entries.map((entry) => (
-          <div class="rb-kv__row">
-            <dt class="rb-kv__key"><EvidenceMark label={entry.marker.label} /></dt>
-            <dd class="rb-kv__value">{entry.count}</dd>
-          </div>
-        ))}
-      </dl>
-      {scale > 1 && <p class="rb-instrument__note">1 dot ≈ {scale} statements</p>}
-    </div>
-  )
-}
+{entries.length > 0 && (
+  <div class="rb-instrument rb-instrument--evidence" {...instrumentAttrs('evidence')}>
+    <InstrumentHead title="Evidence profile" meta={`${total} labelled`} />
+    <p class="rb-dots" aria-hidden="true">
+      {dots.map((dot) => (
+        <span class={`rb-dot rb-ev--${dot.cls}`}>{dot.glyph}</span>
+      ))}
+    </p>
+    <dl class="rb-kv rb-kv--legend">
+      {entries.map((entry) => (
+        <div class="rb-kv__row">
+          <dt class="rb-kv__key">
+            <EvidenceMark label={entry.marker.label} />
+          </dt>
+          <dd class="rb-kv__value">{entry.count}</dd>
+        </div>
+      ))}
+    </dl>
+    {scale > 1 && <p class="rb-instrument__note">1 dot ≈ {scale} statements</p>}
+  </div>
+)}

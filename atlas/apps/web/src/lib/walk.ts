@@ -136,7 +136,8 @@ export function documentFacts(doc: ResearchDocument): DocumentFacts {
       if (block.kind === 'equation' && block.number !== null) defined.push(block.number);
     },
     inline: (node) => {
-      if (node.kind === 'link' && (node.target.type === 'node' || node.target.type === 'planned')) linked.add(node.target.nodeId);
+      if (node.kind === 'link' && (node.target.type === 'node' || node.target.type === 'planned'))
+        linked.add(node.target.nodeId);
       if (node.kind !== 'xref') return;
       xrefs.push({ ref: node.ref, number: node.number });
       if (node.ref === 'equation') referenced.add(node.number);

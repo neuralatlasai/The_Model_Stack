@@ -70,7 +70,17 @@ editorial_status: manuscript_draft
 
 # 21.5 Pilot methodology
 
+## Scope
+
 [DERIVED] A pilot program trains smaller or shorter runs to predict a decision-relevant target, such as the loss of a larger model or the allocation minimizing cost at required quality. Its scientific value is the accuracy of independent predictions, including uncertainty, rather than the visual smoothness of a fitted curve. The design must reveal the coordinates needed for the decision and retain a target region that does not participate in fitting or model selection.
+
+## Why this exists
+
+[PAPER-REPORTED] Retrospective estimation finds useful trajectory information but family-dependent extrapolation errors; controlled allocation studies identify training calibration and work accounting as consequential. These results expose the failure of treating a large collection of logged points as automatic validation. Pilot spending must buy independent coordinate information and target-relevant proximity while preserving enough budget to test the forecast. [R21.1], §§2–4; [R21.17], §§3–8.
+
+## Intuition
+
+[MATHEMATICALLY-DERIVED] A local fit can explain a narrow observed strip with several coefficient combinations. Farther away, their predictions diverge. Correlated checkpoints add curve shape but less independent information than an equivalent number of separately trained models. The pilot therefore controls both geometry and dependence: vary the required coordinates, record trajectory grouping, and reserve a target that cannot influence fitting. Uncertainty must pass through the allocation decision as well as the regression.
 
 ## Formulation
 
@@ -83,9 +93,38 @@ $$
 
 [DERIVED] Here $\phi$ contains the scaling coefficients, $z_r$ records recipe and measurement differences, $\delta$ represents model discrepancy and $\varepsilon$ measurement/training randomness. This is a statistical decomposition, not a claim that the discrepancy is known or independent of $N,D$. If every large run uses a different corpus or schedule, size effects and recipe effects can be confounded. More observations on that same confounded path do not identify the missing comparison.
 
-[MATHEMATICALLY-DERIVED] For Eq.21.3 in log-amplitude coordinates, the Jacobian columns of the raw loss include $E$, $AN^{-\alpha}$, $BD^{-\beta}$, $-AN^{-\alpha}\log N$ and $-BD^{-\beta}\log D$. When observed sizes or token counts cover little log range, columns can become nearly dependent. Then local covariance based on $(J^\top WJ)^{-1}$ is unstable or undefined. Numerical optimizer convergence does not imply statistical identification; the design matrix and profile objective must be examined separately.
+[MATHEMATICALLY-DERIVED] For Eq. 21.3 in log-amplitude coordinates, the Jacobian columns of the raw loss include $E$, $AN^{-\alpha}$, $BD^{-\beta}$, $-AN^{-\alpha}\log N$ and $-BD^{-\beta}\log D$. When observed sizes or token counts cover little log range, columns can become nearly dependent. Then local covariance based on $(J^\top WJ)^{-1}$ is unstable or undefined. Numerical optimizer convergence does not imply statistical identification; the design matrix and profile objective must be examined separately.
 
-## Methodology
+## Mechanism
+
+```figure
+id: fig-21.9
+kind: diagram
+title: Independent validation of a pilot prediction
+caption: Splitting whole run lineages protects target independence. Uncertainty resampling repeats fitting and allocation rather than treating correlated checkpoints as independent runs.
+placement: wide
+evidence: DERIVED
+source: [R21.1, R21.17]
+alt: An immutable run table splits into training groups and untouched targets. Training groups produce fitted families and resampled decisions, whose frozen predictions are then compared with targets.
+spec:
+  direction: TB
+  nodes:
+    - {id: table, kind: dataset, label: immutable run and checkpoint table}
+    - {id: train, kind: dataset, label: training run lineages}
+    - {id: test, kind: boundary, label: untouched target region}
+    - {id: fit, kind: process, label: fit and grouped resampling}
+    - {id: freeze, kind: state, label: frozen predictions and intervals}
+    - {id: assess, kind: metric, label: error coverage and decision regret}
+  edges:
+    - {from: table, to: train}
+    - {from: table, to: test}
+    - {from: train, to: fit}
+    - {from: fit, to: freeze}
+    - {from: freeze, to: assess}
+    - {from: test, to: assess}
+```
+
+### Methodology
 
 ### Select a proxy family that preserves the intervention
 
@@ -124,27 +163,73 @@ $$
 
 [PAPER-REPORTED] Porian et al. reconstruct iso-compute optima with noise-aware interpolation and resampling before estimating the allocation exponent. Their procedure addresses uncertainty in the minimization stage as well as the final power-law regression. [R21.1, section 3/Appendix B]
 
-## Algorithm
+[MATHEMATICALLY-DERIVED] Holding the fitted allocation at reference budget $C_0$ fixed isolates exponent sensitivity. Two allocation curves $N_1=N_0(C/C_0)^a$ and $N_2=N_0(C/C_0)^{a+\delta a}$ have
 
-```text
-Algorithm 21.5 — Fit a pilot law with independent extrapolation validation
-INPUT: immutable run table; target region; candidate fit families; uncertainty policy
-OUTPUT: fitted artifact, held-out predictions, intervals and allocation sensitivity
-STATE: split manifest; preprocessing; fit starts; failed-fit and exclusion logs
-INVARIANT: held-out targets never select preprocessing, coefficients or fit families
-1. Split by whole run lineage and reserve target sizes, durations or mixtures.
-2. Audit units, parameter counts, token counts, proxy losses and recipe identities.
-3. Fit each declared family on training data with recorded bounds and multiple starts.
-4. Check convergence, Jacobian conditioning, residual structure and profile sensitivity.
-5. Resample independent groups and repeat preprocessing, fitting and allocation.
-6. Freeze predictions and intervals for the untouched target observations.
-7. Reveal targets and measure error, interval coverage and decision regret.
-8. Report failed predictions and family sensitivity; do not relabel the holdout as training.
-TERMINATION: predefined candidates and resampling runs finish with an auditable result
-COMPLEXITY: O(F B J R) objective work for F families and B resamples
+$$
+\frac{N_2(C)}{N_1(C)}=(C/C_0)^{\delta a},\qquad
+\log\frac{N_2(C)}{N_1(C)}=\delta a\log(C/C_0).
+$$
+*(Eq. 21.30)*
+
+[DERIVED] This comparison holds the reference allocation constant; it does not represent a joint coefficient confidence interval. Amplitude uncertainty and covariance must be restored in the full fit draws. The calculation isolates why a small exponent perturbation matters more farther from measured budgets.
+
+```figure
+id: fig-21.10
+kind: calculator
+title: Allocation sensitivity beyond the reference budget
+caption: >-
+  Equation 21.30 compares two analytical allocation curves sharing the same
+  reference point. It isolates exponent perturbation and excludes amplitude
+  covariance, model discrepancy and training variability.
+placement: rail
+anchor: mechanism
+evidence: MATHEMATICALLY-DERIVED
+source: DERIVED:eq-21.30
+alt: >-
+  At sixteen times the reference compute, increasing the allocation exponent
+  by 0.05 changes predicted optimum size by a factor of about 1.149.
+spec:
+  tex: N_2/N_1=k^{\delta a}
+  equation: "21.30"
+  inputs:
+    - {symbol: factor, label: target over reference compute, default: 16, min: 1, max: 10000}
+    - {symbol: delta, label: allocation-exponent perturbation, default: 0.05, min: -0.5, max: 0.5}
+  outputs:
+    - {symbol: ratio, label: predicted size ratio, formula: factor^delta, emphasis: true}
+    - {symbol: shift, label: log size shift, formula: delta*ln(factor)}
 ```
 
+## Algorithm
+
+**Algorithm 21.5 — Bounded fitting and frozen validation.** [DERIVED] Input: whole-lineage split $(\mathcal T,\mathcal V)$, finite families $\mathcal F$, starting points $\mathcal Z_f$, compact admissible parameter sets $\Theta_f$, finite step-size set $\mathcal H_f$ including zero, iteration cap $J$, tolerance $\epsilon$, and grouped resamples. Output: full fit state, forecasts and independent errors. This book-defined optimizer specifies an auditable fallback procedure; it is not represented as the original papers' L-BFGS implementation.
+
+$$
+\begin{aligned}
+1.\quad &Q_f(\phi;\mathcal T)\gets\sum_{r\in\mathcal T}
+ w_r\rho_f\bigl(\psi_f(y_r)-\psi_f(f(x_r;\phi))\bigr).\\
+2.\quad &\phi_{0,z}\gets z\in\Theta_f,\qquad z\in\mathcal Z_f.\\
+3.\quad &g_{j,z}\gets\nabla_\phi Q_f(\phi_{j,z};\mathcal T),\qquad j<J.\\
+4.\quad &\eta_{j,z}\gets\operatorname*{arg\,min}_{\eta\in\mathcal H_f}
+ Q_f\bigl(\Pi_{\Theta_f}(\phi_{j,z}-\eta g_{j,z});\mathcal T\bigr).\\
+5.\quad &\phi_{j+1,z}\gets\Pi_{\Theta_f}(\phi_{j,z}-\eta_{j,z}g_{j,z}).\\
+6.\quad &|Q_f(\phi_{j+1,z})-Q_f(\phi_{j,z})|\le\epsilon
+ \ \Longrightarrow\ j_z\gets j+1\ \text{and terminate this start}.\\
+7.\quad &\widehat\phi_f\gets\operatorname*{arg\,min}_{\phi\in\{\phi_{j_z,z}:z\in\mathcal Z_f^{\mathrm{finite}}\}}
+ Q_f(\phi;\mathcal T).\\
+8.\quad &\mathcal P\gets\operatorname{freeze}\bigl(
+ \{f(x_v;\widehat\phi_f)\}_{f,v},\mathrm{resampled\ forecasts},\mathrm{fit\ diagnostics}\bigr).\\
+9.\quad &\operatorname{return}\bigl(\mathcal P,\{y_v-\widehat y_{f,v}\}_{f,v\in\operatorname{reveal}(\mathcal V)}\bigr).
+\end{aligned}
+$$
+*(Eq. 21.28)*
+
+[DERIVED] $\psi_f$ is identity or log, $\rho_f$ is the declared squared/Huber residual penalty, and positive group weights $w_r$ fix checkpoint influence. Log objectives reject nonpositive observations. Projection enforces declared coefficient/exponent bounds. An invalid initial objective or nonfinite gradient terminates that start before projection; its failure remains in the audit and it is excluded from $\mathcal Z_f^{\mathrm{finite}}$. Nonfinite trial objectives are inadmissible step candidates. If every start fails, that family produces no forecast. Equal finite objectives use the predefined step/start ordering. At cap $J$, the final finite iterate is retained with its cap-reached status. Zero step permits a nonincreasing objective, but a zero selected step can indicate stagnation rather than stationarity; the gradient and profile diagnostics remain mandatory. No global-optimality guarantee follows from termination.
+
+[DERIVED] Repeat lines 1–7 on each declared whole-lineage resample, preserving its preprocessing and fit failures, before line 8. A fitting-family comparison uses inner training validation or remains a reported family sensitivity; it never selects a winner from revealed target outcomes. The invariant is that $\mathcal V$ cannot alter starts, bounds, weights, transformations or coefficients. For $F$ families, $B$ resamples, $Z$ starts, $H$ candidate steps and $R$ observations, the bounded work is $O(F(B+1)ZJHR)$ at fixed parameter dimension. Observation storage is $O(R)$; coefficient draws and target forecasts add their explicit $O(FB)$ and $O(FB|\mathcal V|)$ terms.
+
 ## Implementation
+
+[DERIVED] The fit is a numerical-analysis artifact with no required Model / autograd framework. The training observations come from the declared source/runtime layer, but this manuscript has not executed those programs or inspected a pinned fitting implementation. A bounded optimizer is fully specified mathematically above; substituting a package solver requires preserving its bounds, initialization, tolerance, failures and exact numerical revision in the artifact.
 
 [DERIVED] The research artifact needs machine-readable observations, source/run IDs, model configuration, training presentations, unique-data estimates, cost formulas, evaluation identity and split membership. Fit output should include the full-precision coefficient vector, units, objective, bounds, initializations, convergence diagnostics, resampling seeds, predictions and plot data. A rounded prose table is insufficient for reproducing a sensitive optimum. Missing data should retain explicit missingness rather than receive customary values.
 
@@ -152,7 +237,9 @@ COMPLEXITY: O(F B J R) objective work for F families and B resamples
 
 [DERIVED] Training time dominates most pilot programs. Record pilot, tuning, failed-run and final-run work separately, then combine them according to the program's cost question. Data curation and evaluation can also consume material compute and human labor. A “compute saving” that counts only the selected run but omits the search program has a different boundary from total research-program efficiency. Hardware topology, precision and achieved throughput are needed for wall-time claims; FLOPs alone are insufficient.
 
-## Reported experiments
+## Experimental design
+
+### Reported experiments
 
 [PAPER-REPORTED] The Hitchhiker study's archive includes 485 unique pretrained models from over 40 scaled families and roughly 1.9M evaluated training steps. Its main prediction error is mean absolute relative loss error on withheld largest-size models/checkpoints. Borrowing some coefficients across families can work in selected cases, but the paper also reports large errors when extrapolating to OPT-175B. Intermediate-checkpoint usefulness is an empirical archive finding with family-dependent accuracy. [R21.17, sections 3–6]
 
@@ -176,35 +263,26 @@ COMPLEXITY: O(F B J R) objective work for F families and B resamples
 
 [MATHEMATICALLY-DERIVED] Extrapolation distance is a vector, not a single “scale-up” factor. A target can lie near observed $N$ but far beyond observed $D/N$, context length or language share. Report $N_{\mathrm{target}}/N_{\max}$, $D_{\mathrm{target}}/D_{\max}$ and relevant additional coordinates, with the geometry of the training support. A target within separate marginal ranges can still lie outside their jointly observed region.
 
-## Improvements and limits
+## Siblings
+
+[DERIVED] Random row holdouts test interpolation among dependent checkpoints; whole-run holdouts test a new trajectory; largest-size holdouts test scale extrapolation; new-family holdouts additionally test recipe transfer. Their reported errors answer different questions. A coefficient confidence interval describes a fitted parameter population; a mean-response band describes its fitted mean; a new-run prediction interval additionally includes training variability under the adopted model. None supplies an unmodeled domain-shift guarantee.
+
+## Extensions
+
+### Improvements
 
 [DERIVED] The methodological progression is from fitting attractive curves to designing identifiable pilots, using trajectory data with dependence acknowledged, testing coefficient transfer explicitly, recording numerical convergence, and evaluating untouched target regions. Fit-family sensitivity and prediction intervals make the decision's uncertainty reviewable. They do not prove robustness to a new training distribution.
 
 [DERIVED] A successful pilot is one whose predictions resolve the intended decision at acceptable error and cost. When uncertainty exceeds the loss difference between candidate allocations, reporting both as plausible is more informative than declaring a numerically precise winner. The proposed artifact and tests in [verification](verification.md) implement this standard without claiming they have already been run.
 
-```figure
-id: fig-21.5
-kind: diagram
-title: Independent validation of a pilot prediction
-caption: Splitting whole run lineages protects target independence. Uncertainty resampling repeats fitting and allocation rather than treating correlated checkpoints as independent runs.
-placement: wide
-evidence: DERIVED
-source: [R21.1, R21.17]
-alt: An immutable run table splits into training groups and untouched targets. Training groups produce fitted families and resampled decisions, whose frozen predictions are then compared with targets.
-spec:
-  direction: LR
-  nodes:
-    - {id: table, kind: dataset, label: immutable run and checkpoint table}
-    - {id: train, kind: dataset, label: training run lineages}
-    - {id: test, kind: boundary, label: untouched target region}
-    - {id: fit, kind: process, label: fit and grouped resampling}
-    - {id: freeze, kind: state, label: frozen predictions and intervals}
-    - {id: assess, kind: metric, label: error coverage and decision regret}
-  edges:
-    - {from: table, to: train}
-    - {from: table, to: test}
-    - {from: train, to: fit}
-    - {from: fit, to: freeze}
-    - {from: freeze, to: assess}
-    - {from: test, to: assess}
-```
+## Limitations
+
+[MATHEMATICALLY-DERIVED] Bootstrap draws cannot identify variability missing from the observed sampling units. A few seeds limit the evidence for a new-run interval; a few model sizes limit the evidence for extrapolation. A fitted family can be identifiable yet wrong outside its support. Reusing a revealed target for refitting can improve the next version, but that target no longer independently validates it. The proposed protocol records this distinction instead of preserving an invalid holdout label.
+
+## Reproducibility
+
+[DERIVED] Archive the immutable run/checkpoint table, split manifest, every preprocessing decision, fit objective and constraints, all starts and stopping states, resampling population, frozen forecasts and failed target predictions. Retain nominal and audited compute, hardware-time boundaries and support-distance coordinates. No fit, bootstrap coverage estimate or archive reconstruction has been executed for this chapter; the verification artifact remains an unexecuted specification.
+
+## References
+
+[P07](references.md#p07), controlled scales; [P09](references.md#p09), Appendix D.2; [R21.1](references.md#r21-1), uncertainty procedure; [R21.2](references.md#r21-2), numerical sensitivity; [R21.17](references.md#r21-17), §§3–8 and Appendix E; [verification](verification.md).

@@ -18,18 +18,29 @@ const last = siblings.length - 1;
 ---
 
 <div class="rb-sibstrip">
-  <p class="rb-sibstrip__self"><span class="rb-vh">Alternatives to </span>{self}</p>
+  <p class="rb-sibstrip__self">
+    <span class="rb-vh">Alternatives to </span>
+    {self}
+  </p>
   <ol class="rb-sibstrip__list" role="list">
-    {
-      siblings.map((sibling, index) => (
-        <li class="rb-sibstrip__item">
-          <span class="rb-sibstrip__branch" aria-hidden="true">{index === last ? '└─' : '├─'}</span>
-          {sibling.anchor !== null ? <a class="rb-sibstrip__name" href={`#${sibling.anchor}`}>{sibling.name}</a> : <span class="rb-sibstrip__name">{sibling.name}</span>}
-          {sibling.differential.changedPrimitive !== null && (
-            <span class="rb-sibstrip__prim"><Inline nodes={sibling.differential.changedPrimitive} /></span>
-          )}
-        </li>
-      ))
-    }
+    {siblings.map((sibling, index) => (
+      <li class="rb-sibstrip__item">
+        <span class="rb-sibstrip__branch" aria-hidden="true">
+          {index === last ? '└─' : '├─'}
+        </span>
+        {sibling.anchor !== null ? (
+          <a class="rb-sibstrip__name" href={`#${sibling.anchor}`}>
+            {sibling.name}
+          </a>
+        ) : (
+          <span class="rb-sibstrip__name">{sibling.name}</span>
+        )}
+        {sibling.differential.changedPrimitive !== null && (
+          <span class="rb-sibstrip__prim">
+            <Inline nodes={sibling.differential.changedPrimitive} />
+          </span>
+        )}
+      </li>
+    ))}
   </ol>
 </div>

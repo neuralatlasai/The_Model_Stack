@@ -59,7 +59,9 @@ export default function Calculator({ figure, texHtml }: CalculatorProps): JSX.El
       });
     };
     host.addEventListener(FIGURE_STATE_EVENT, onState);
-    return () => { host.removeEventListener(FIGURE_STATE_EVENT, onState); };
+    return () => {
+      host.removeEventListener(FIGURE_STATE_EVENT, onState);
+    };
   }, [model, figure.spec.id]);
 
   if (spec === null || model === null) return null;
@@ -68,9 +70,21 @@ export default function Calculator({ figure, texHtml }: CalculatorProps): JSX.El
 
   return (
     <div class="cx-calc" data-calculator={figure.id} ref={rootRef}>
-      <CalculatorView spec={spec} values={values} onInput={onInput} idPrefix={figure.anchor} {...(texHtml === undefined ? {} : { texHtml })} />
+      <CalculatorView
+        spec={spec}
+        values={values}
+        onInput={onInput}
+        idPrefix={figure.anchor}
+        {...(texHtml === undefined ? {} : { texHtml })}
+      />
       <div class="cx-calc__foot">
-        <button type="button" class="cx-calc__reset" onClick={reset} disabled={atDefaults} aria-label={`Reset ${figure.spec.title} to its default values`}>
+        <button
+          type="button"
+          class="cx-calc__reset"
+          onClick={reset}
+          disabled={atDefaults}
+          aria-label={`Reset ${figure.spec.title} to its default values`}
+        >
           Reset to defaults
         </button>
         {undefinedOutputs.length > 0 && (

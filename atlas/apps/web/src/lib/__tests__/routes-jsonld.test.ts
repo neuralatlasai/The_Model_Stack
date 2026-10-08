@@ -6,7 +6,8 @@ import { documentJsonLd, paperJsonLd, referenceSchemaType, siteJsonLd } from '..
 import { routeTables, tokenizeRoute } from '../reading-routes.ts';
 import { sectionDoc, smallGraph, smallRegistry, text } from './fixtures.ts';
 
-const chapterUrl = (chapter: number): string | null => (chapter <= 66 ? `/ch${chapter.toString().padStart(2, '0')}/` : null);
+const chapterUrl = (chapter: number): string | null =>
+  chapter <= 66 ? `/ch${chapter.toString().padStart(2, '0')}/` : null;
 
 describe('tokenizeRoute', () => {
   it('links two-digit chapter numbers and keeps the rest as text', () => {
@@ -79,7 +80,9 @@ describe('routeTables', () => {
     const tables = routeTables(routesDoc);
     assert.equal(tables.length, 1);
     assert.equal(tables[0]?.title, 'Reader entry routes');
-    assert.deepEqual(tables[0]?.rows, [{ label: 'Systems engineer', route: '01–06 → 13–17', why: 'Foundations first' }]);
+    assert.deepEqual(tables[0]?.rows, [
+      { label: 'Systems engineer', route: '01–06 → 13–17', why: 'Foundations first' },
+    ]);
   });
 });
 
@@ -102,7 +105,13 @@ describe('structured data', () => {
   });
 
   it('lists only resolved citations and resolves URLs against the site when configured', () => {
-    const ld = documentJsonLd({ doc: sectionDoc(), graph, registry, site: new URL('https://atlas.example/'), edition: '1.0' });
+    const ld = documentJsonLd({
+      doc: sectionDoc(),
+      graph,
+      registry,
+      site: new URL('https://atlas.example/'),
+      edition: '1.0',
+    });
     assert.equal(ld['url'], 'https://atlas.example/ch05/05-2/');
     const citations = ld['citation'];
     assert.ok(Array.isArray(citations));

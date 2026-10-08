@@ -29,7 +29,8 @@ interface Entry {
 
 function firstNodeHref(cell: readonly InlineNode[]): string | null {
   for (const node of cell) {
-    if (node.kind === 'link' && (node.target.type === 'node' || node.target.type === 'planned')) return siteHref(node.target.href);
+    if (node.kind === 'link' && (node.target.type === 'node' || node.target.type === 'planned'))
+      return siteHref(node.target.href);
   }
   return null;
 }
@@ -47,32 +48,30 @@ const entries: Entry[] = table.rows.map((row) => {
 ---
 
 <ol class="rb-secidx" role="list" {...(table.anchor !== null ? { id: table.anchor } : {})}>
-  {
-    entries.map((entry) => (
-      <li class="rb-secidx__item">
-        <p class="rb-secidx__head">
-          <span class="rb-secidx__num">{entry.number}</span>
-          {entry.href !== null ? (
-            <a class="rb-secidx__title" href={entry.href}>
-              <Inline nodes={entry.title} />
-            </a>
-          ) : (
-            <span class="rb-secidx__title">
-              <Inline nodes={entry.title} />
-            </span>
-          )}
+  {entries.map((entry) => (
+    <li class="rb-secidx__item">
+      <p class="rb-secidx__head">
+        <span class="rb-secidx__num">{entry.number}</span>
+        {entry.href !== null ? (
+          <a class="rb-secidx__title" href={entry.href}>
+            <Inline nodes={entry.title} />
+          </a>
+        ) : (
+          <span class="rb-secidx__title">
+            <Inline nodes={entry.title} />
+          </span>
+        )}
+      </p>
+      {entry.change.length > 0 && (
+        <p class="rb-secidx__change">
+          <Inline nodes={entry.change} />
         </p>
-        {entry.change.length > 0 && (
-          <p class="rb-secidx__change">
-            <Inline nodes={entry.change} />
-          </p>
-        )}
-        {entry.labels.length > 0 && (
-          <p class="rb-secidx__labels">
-            <Inline nodes={entry.labels} />
-          </p>
-        )}
-      </li>
-    ))
-  }
+      )}
+      {entry.labels.length > 0 && (
+        <p class="rb-secidx__labels">
+          <Inline nodes={entry.labels} />
+        </p>
+      )}
+    </li>
+  ))}
 </ol>

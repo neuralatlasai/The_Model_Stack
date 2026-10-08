@@ -45,7 +45,11 @@ export const BundleManifestSchema = z
       })
       .strict(),
     diagnostics: z
-      .object({ error: z.number().int().nonnegative(), warning: z.number().int().nonnegative(), info: z.number().int().nonnegative() })
+      .object({
+        error: z.number().int().nonnegative(),
+        warning: z.number().int().nonnegative(),
+        info: z.number().int().nonnegative(),
+      })
       .strict(),
   })
   .strict();

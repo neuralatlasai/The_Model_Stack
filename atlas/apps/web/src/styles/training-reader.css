@@ -1,0 +1,454 @@
+/* The training volume combines a continuous research argument with scientific
+ * plates. The scope preserves other volumes' existing reading composition. */
+html:has(
+  .sh-article:is(
+    [data-chapter='19'],
+    [data-chapter='20'],
+    [data-chapter='21'],
+    [data-chapter='22'],
+    [data-chapter='23'],
+    [data-chapter='24']
+  )
+) {
+  .aw-masthead-title {
+    font-size: clamp(25px, 2.5vw, 36px);
+    font-weight: 400;
+    line-height: 1.18;
+  }
+}
+
+html[data-reading-mode='complete'][data-article-layout='workspace']
+  .sh-article:is(
+    [data-chapter='19'],
+    [data-chapter='20'],
+    [data-chapter='21'],
+    [data-chapter='22'],
+    [data-chapter='23'],
+    [data-chapter='24']
+  ) {
+  --measure: 780px;
+
+  .rb-math {
+    display: inline-block;
+    max-inline-size: 100%;
+    overflow-x: auto;
+    vertical-align: middle;
+  }
+
+  .rb-records__body {
+    overflow-wrap: anywhere;
+  }
+
+  .aw-manuscript {
+    margin-inline: auto;
+    margin-block-start: 56px;
+    font: 19px/1.58 var(--font-serif);
+  }
+
+  .aw-manuscript :is(.rb-p, .rb-list, .rb-def__text, .rb-note__text, .rb-obs__text) {
+    font: 19px/1.58 var(--font-serif);
+  }
+
+  .aw-manuscript .rb-region {
+    margin-block-start: 56px;
+  }
+
+  .aw-manuscript .rb-region__title {
+    margin-block-end: 22px;
+    font: 400 29px/1.2 var(--font-serif);
+    text-wrap: balance;
+  }
+
+  .aw-manuscript .rb-h3 {
+    margin-block: 30px 14px;
+    font: 600 18px/1.45 var(--font-sans);
+  }
+
+  .aw-manuscript :is(.rb-region, .rb-flow) > .rb-p + .rb-p {
+    margin-block-start: 20px;
+  }
+
+  :is(.rb-p, .rb-h)[id^='alg-'] {
+    padding-block: 18px 8px;
+    border-block-start: 2px solid var(--accent);
+  }
+  .aw-workspace {
+    grid-template-columns: minmax(0, 640px) minmax(0, 1fr);
+    padding-block: 24px 36px;
+    column-gap: 48px;
+    border-block-end: 1px solid var(--rule-strong);
+  }
+
+  .aw-explanation .rb-p {
+    font: 21px/1.48 var(--font-serif);
+  }
+
+  .aw-visuals {
+    grid-template-columns: minmax(0, 1fr);
+    gap: 24px;
+  }
+
+  .aw-visuals__selector {
+    margin: 0;
+    padding: 0 0 14px;
+    border: 0;
+    border-block-end: 1px solid var(--rule);
+  }
+
+  .aw-visuals__selector legend {
+    margin-block-end: 10px;
+    font: 11px/1.5 var(--font-mono);
+    color: var(--ink-3);
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+  }
+
+  .aw-visuals__selector label {
+    display: flex;
+    align-items: baseline;
+    gap: 8px;
+    padding-block: 6px;
+    font: 12px/1.5 var(--font-sans);
+    cursor: pointer;
+  }
+
+  .aw-visuals__selector input {
+    accent-color: var(--accent);
+  }
+
+  .aw-visuals__selector label:has(input:checked) {
+    color: var(--accent);
+    font-weight: 600;
+  }
+
+  .aw-visuals:has([data-overview-choice='0']:checked) [data-overview-index='1'],
+  .aw-visuals:has([data-overview-choice='1']:checked) [data-overview-index='0'] {
+    display: none;
+  }
+
+  .aw-visual {
+    border-block-start: 2px solid var(--accent);
+    padding-block-start: 12px;
+  }
+
+  .aw-visual__heading a {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: baseline;
+    gap: 6px 12px;
+  }
+
+  .aw-visual__number {
+    position: static;
+    inline-size: auto;
+    block-size: auto;
+    overflow: visible;
+    clip-path: none;
+    color: var(--accent);
+    font: 11px/1.5 var(--font-mono);
+  }
+
+  .aw-visual__title {
+    font: 600 14px/1.45 var(--font-sans);
+  }
+
+  .aw-visual__body {
+    block-size: auto;
+    min-block-size: 300px;
+    max-block-size: none;
+    padding-block: 16px;
+    justify-content: start;
+  }
+
+  .aw-visual--diagram .aw-visual__body {
+    overflow: auto;
+    overscroll-behavior: auto;
+  }
+
+  .aw-visual--diagram .vg-svg {
+    width: 100%;
+    min-inline-size: 0;
+    max-inline-size: 100%;
+    max-block-size: 650px;
+    height: auto;
+  }
+
+  .aw-visual__scale {
+    display: flex;
+    align-items: center;
+    justify-content: end;
+    gap: 6px;
+    min-block-size: 28px;
+    font: 11px/1.5 var(--font-mono);
+    color: var(--ink-2);
+    cursor: pointer;
+  }
+
+  .aw-visual:has(.aw-visual__scale input:checked) .aw-visual__body {
+    max-block-size: none;
+  }
+
+  .aw-visual:has(.aw-visual__scale input:checked) .vg-svg {
+    width: max(100%, var(--diagram-readable-width, 100%));
+    min-inline-size: var(--diagram-readable-width, 0);
+    max-inline-size: none;
+    max-block-size: none;
+  }
+
+  .aw-visual__caption {
+    padding-block: 12px;
+    border-block-start: 1px solid var(--rule);
+    line-height: 1.7;
+  }
+
+  .aw-visual__details > summary {
+    min-block-size: 24px;
+  }
+
+  .aw-visual__caption-text {
+    grid-column: 1 / -1;
+    margin: 0;
+    font: 16px/1.5 var(--font-serif);
+  }
+
+  .aw-visual__source {
+    grid-column: 1 / -1;
+    margin: 0;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 4px;
+  }
+
+  .aw-visual--calculator .vg-calc__inputs {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 16px 24px;
+  }
+
+  .vg-calc__outputs {
+    padding: 12px;
+    background: var(--accent-wash);
+    border-inline-start: 2px solid var(--accent);
+  }
+
+  .rb-region__title {
+    font: 500 17px/1.45 var(--font-sans);
+    padding-block-start: 12px;
+  }
+
+  .rb-eq {
+    margin-block: 24px;
+  }
+
+  .rb-eq__frame {
+    grid-template-columns: minmax(0, 1fr) auto;
+    gap: 12px;
+    padding-block: 12px 22px;
+    border-block-start-color: var(--rule-strong);
+  }
+
+  .rb-eq--numbered .rb-eq__frame {
+    grid-template-columns: minmax(0, 1fr) auto;
+  }
+
+  .rb-eq__label {
+    grid-column: 2;
+    grid-row: 1;
+    justify-self: end;
+    align-self: start;
+  }
+
+  .rb-eq__num {
+    font-size: 12px;
+    color: var(--ink-2);
+  }
+
+  .rb-eq__tools {
+    position: static;
+    grid-column: 1;
+    grid-row: 1;
+    align-items: center;
+    min-block-size: 24px;
+    opacity: 1;
+  }
+
+  .rb-eq__tools .rb-tool {
+    min-block-size: 24px;
+  }
+
+  .rb-eq__math {
+    grid-row: 2;
+    grid-column: 1 / -1;
+    padding-block: 6px;
+    font-size: 18px;
+  }
+
+  .rb-eq--numbered .rb-eq__math {
+    grid-column: 1 / -1;
+  }
+
+  .rb-eq__math .katex {
+    font-size: 1em;
+  }
+
+  .rb-eq__note {
+    font: 14px/1.6 var(--font-serif);
+  }
+
+  .rb-eq--numbered :is(.rb-eq__legend, .rb-eq__note) {
+    padding-inline-start: 0;
+  }
+
+  .rb-math-procedure {
+    margin-block: 36px;
+    border-block: 2px solid var(--ink-2);
+  }
+
+  .rb-math-procedure__header {
+    padding-block: 20px 16px;
+  }
+
+  .aw-manuscript .rb-math-procedure__title {
+    margin: 0 0 16px;
+    font: 600 19px/1.4 var(--font-sans);
+    text-wrap: balance;
+  }
+
+  .aw-manuscript .rb-math-procedure__context {
+    margin: 0;
+    font: 17px/1.55 var(--font-serif);
+  }
+
+  .rb-math-procedure > .rb-eq {
+    margin: 0;
+  }
+
+  .rb-math-procedure .rb-eq__frame {
+    border-block-end: 0;
+    padding-block-end: 24px;
+  }
+
+  .rb-math-procedure .rb-eq__math {
+    font-size: 18px;
+    line-height: 1.6;
+  }
+
+  .rb-figure__inline {
+    margin-block: 28px;
+    padding-block: 16px;
+    border-block: 1px solid var(--rule-strong);
+  }
+
+  .rb-table__scroll {
+    max-inline-size: 100%;
+  }
+
+  .rb-table {
+    margin-block: 28px;
+    font: 14px/1.5 var(--font-sans);
+  }
+
+  .rb-table thead th {
+    padding-block: 12px;
+    font-size: 12px;
+  }
+
+  .rb-table tbody :is(td, th) {
+    padding-block: 12px;
+    vertical-align: top;
+  }
+
+  .vg-figure__title {
+    font: 600 15px/1.45 var(--font-sans);
+  }
+
+  .vg-figure__caption {
+    font: 16px/1.5 var(--font-serif);
+  }
+
+  .sh-crumb > a {
+    display: inline-flex;
+    align-items: center;
+    min-block-size: 24px;
+  }
+
+  @media (max-width: 1023.98px) {
+    .aw-workspace {
+      grid-template-columns: minmax(0, 1fr);
+    }
+
+    .aw-explanation {
+      max-inline-size: 700px;
+    }
+  }
+
+  @media (max-width: 719.98px) {
+    .aw-explanation .rb-p {
+      font-size: 19px;
+    }
+    .aw-manuscript {
+      margin-block-start: 36px;
+    }
+
+    .aw-manuscript :is(.rb-p, .rb-list, .rb-def__text, .rb-note__text, .rb-obs__text) {
+      font-size: 18px;
+      line-height: 1.55;
+    }
+
+    .aw-manuscript .rb-region__title {
+      font-size: 26px;
+    }
+
+    /* Preserve scientific chart labels at a readable scale on small screens. */
+    .rb-figure .vg-figure--diagram .vg-scroll .vg-svg {
+      min-width: var(--figure-readable-width, 700px);
+      max-width: none;
+    }
+
+    .rb-figure .vg-figure--chart .vg-scroll .vg-svg {
+      min-width: 720px;
+      max-width: none;
+    }
+
+    .rb-figure :is(.vg-figure--chart, .vg-figure--diagram) .vg-scroll::before {
+      content: 'Scroll horizontally to inspect the figure.';
+      display: block;
+      position: sticky;
+      left: 0;
+      width: fit-content;
+      margin-block-end: 12px;
+      font: 12px/1.5 var(--font-sans);
+      color: var(--ink-2);
+    }
+
+    /* Expanded diagrams stay within a native horizontal inspection region. */
+    .aw-visual--diagram .aw-visual__body {
+      overflow-x: auto;
+    }
+
+    .aw-workspace {
+      padding-block-start: 0;
+    }
+
+    .aw-visual--calculator .vg-calc__inputs {
+      grid-template-columns: minmax(0, 1fr);
+    }
+
+    .aw-visual__body {
+      min-block-size: 0;
+    }
+
+    .rb-eq--numbered .rb-eq__frame {
+      grid-template-columns: minmax(0, 1fr) auto;
+      gap: 12px;
+    }
+
+    .rb-eq--numbered .rb-eq__math {
+      grid-column: 1 / -1;
+    }
+
+    .rb-eq__tools {
+      opacity: 1;
+    }
+  }
+}

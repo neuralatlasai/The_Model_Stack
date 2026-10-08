@@ -32,7 +32,14 @@ export interface FigureStateDetail {
 export type ValueHook = (
   spec: FigureSpec,
   overrides: Readonly<Record<string, number>> | null,
-) => { readonly values: Readonly<Record<string, { readonly value: number; readonly text: string; readonly format: ValueFormat; readonly frac?: number }>> };
+) => {
+  readonly values: Readonly<
+    Record<
+      string,
+      { readonly value: number; readonly text: string; readonly format: ValueFormat; readonly frac?: number }
+    >
+  >;
+};
 
 interface Live {
   readonly host: HTMLElement;
@@ -69,7 +76,10 @@ function tweenNumber(element: HTMLElement, to: number, format: ValueFormat, text
     const t = Math.min(1, (now - start) / duration);
     const eased = 1 - (1 - t) ** 3;
     // Interpolate in log space for positive magnitudes spanning orders of magnitude.
-    const value = fromRaw > 0 && to > 0 ? Math.exp(Math.log(fromRaw) + (Math.log(to) - Math.log(fromRaw)) * eased) : fromRaw + (to - fromRaw) * eased;
+    const value =
+      fromRaw > 0 && to > 0
+        ? Math.exp(Math.log(fromRaw) + (Math.log(to) - Math.log(fromRaw)) * eased)
+        : fromRaw + (to - fromRaw) * eased;
     element.textContent = t < 1 ? formatValue(value, format) : text;
     if (t < 1) requestAnimationFrame(step);
   };
@@ -118,7 +128,13 @@ export function initLiveInstruments(ctx: PageContext, valueHook: ValueHook | nul
     const spec = parseSpec(host);
     const root = host.querySelector<HTMLElement>('[data-figure]') ?? host;
     if (spec === null) continue;
-    lives.push({ host, root, spec, anchors: new Set((host.dataset['liveAnchors'] ?? '').split(/\s+/u).filter(Boolean)), current: null });
+    lives.push({
+      host,
+      root,
+      spec,
+      anchors: new Set((host.dataset['liveAnchors'] ?? '').split(/\s+/u).filter(Boolean)),
+      current: null,
+    });
   }
 
   const onRegion = (anchor: string): void => {
@@ -136,5 +152,11 @@ export function initLiveInstruments(ctx: PageContext, valueHook: ValueHook | nul
   const firstRegion = doc.querySelector<HTMLElement>('[data-region]')?.dataset['region'];
   if (firstRegion !== undefined) onRegion(firstRegion);
 
-  doc.addEventListener(EVENTS.activeRegion, (event) => { onRegion(event.detail.anchor); }, { signal: ctl.signal });
+  doc.addEventListener(
+    EVENTS.activeRegion,
+    (event) => {
+      onRegion(event.detail.anchor);
+    },
+    { signal: ctl.signal },
+  );
 }

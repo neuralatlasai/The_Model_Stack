@@ -19,17 +19,20 @@ const present = rows.flatMap(([label, content]) => (content === null ? [] : [{ l
 ---
 
 <div class="rb-fm" id={block.anchor ?? undefined} {...depthAttrs(block.depth)}>
-  <p class="rb-fm__name"><span class="rb-vh">Failure mode: </span><span class="rb-fm__title">{block.name}</span></p>
-  {
-    present.length > 0 && (
-      <dl class="rb-grid rb-fm__grid">
-        {present.map((row) => (
-          <div class="rb-grid__row">
-            <dt class="rb-grid__key">{row.label}</dt>
-            <dd class="rb-grid__value"><Inline nodes={row.content} /></dd>
-          </div>
-        ))}
-      </dl>
-    )
-  }
+  <p class="rb-fm__name">
+    <span class="rb-vh">Failure mode: </span>
+    <span class="rb-fm__title">{block.name}</span>
+  </p>
+  {present.length > 0 && (
+    <dl class="rb-grid rb-fm__grid">
+      {present.map((row) => (
+        <div class="rb-grid__row">
+          <dt class="rb-grid__key">{row.label}</dt>
+          <dd class="rb-grid__value">
+            <Inline nodes={row.content} />
+          </dd>
+        </div>
+      ))}
+    </dl>
+  )}
 </div>

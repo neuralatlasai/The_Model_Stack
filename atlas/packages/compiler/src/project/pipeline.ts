@@ -94,14 +94,18 @@ export async function runPipeline(options: CompileAtlasOptions, engine: CompileE
   const project = await loadProject(docsDir, concurrency, signal).catch((error: unknown) => {
     if (error instanceof ManifestError) throw error;
     if (signal?.aborted === true) throw error;
-    throw new AtlasInputError('docs-unreadable', `cannot read the docs directory ${docsDir}: ${describe(error)}`, { cause: error });
+    throw new AtlasInputError('docs-unreadable', `cannot read the docs directory ${docsDir}: ${describe(error)}`, {
+      cause: error,
+    });
   });
   let stackText: string;
   try {
     stackText = normaliseText(await readFile(stackPath, { encoding: 'utf8', signal }));
   } catch (error: unknown) {
     if (signal?.aborted === true) throw error;
-    throw new AtlasInputError('reference-stack-unreadable', `cannot read the reference stack ${stackPath}`, { cause: error });
+    throw new AtlasInputError('reference-stack-unreadable', `cannot read the reference stack ${stackPath}`, {
+      cause: error,
+    });
   }
 
   const table = buildNodeTable(project.manifest, project.sources);
@@ -118,7 +122,13 @@ export async function runPipeline(options: CompileAtlasOptions, engine: CompileE
     const isSpineAppendix = source.meta.id === APPENDIX_D_ID;
     if (!isChapterReferences && !isSpineAppendix) continue;
     const chapter = source.meta.chapter ?? chapterNumberOf(source.meta.id) ?? 0;
-    const parsed = parseReferencesFile({ file: source.path, chapter, body: source.body, bodyStartLine: source.bodyStartLine, nodeId: source.meta.id });
+    const parsed = parseReferencesFile({
+      file: source.path,
+      chapter,
+      body: source.body,
+      bodyStartLine: source.bodyStartLine,
+      nodeId: source.meta.id,
+    });
     if (isSpineAppendix) {
       authorityRows.push(...parsed.rows.filter((row) => row.key.startsWith('P')));
     } else {
@@ -131,7 +141,12 @@ export async function runPipeline(options: CompileAtlasOptions, engine: CompileE
   const citationKeys = new Set<string>(merged.records.map((record) => record.key));
 
   // ── pass 1: numbered objects → cross-reference index ───────────────────────
-  const numbered = await mapLimit(table.docs, concurrency, async (source) => engine.indexNumberedObjects(markdownInput(source)), signal);
+  const numbered = await mapLimit(
+    table.docs,
+    concurrency,
+    async (source) => engine.indexNumberedObjects(markdownInput(source)),
+    signal,
+  );
   const xrefSources: XRefSource[] = table.docs.map((source, index) => ({
     nodeId: source.meta.id,
     url: table.nodes.get(source.meta.id)?.url ?? '/',
@@ -164,7 +179,11 @@ export async function runPipeline(options: CompileAtlasOptions, engine: CompileE
           body = await engine.compileMarkdown(markdownInput(source), ctx);
         } catch (error: unknown) {
           if (signal?.aborted === true) throw error;
-          throw new AtlasInputError('compile-failed', `the Markdown compiler failed on ${source.path}: ${describe(error)}`, { cause: error });
+          throw new AtlasInputError(
+            'compile-failed',
+            `the Markdown compiler failed on ${source.path}: ${describe(error)}`,
+            { cause: error },
+          );
         }
         return { compiled: { source, body }, diagnostics: [...body.diagnostics, ...resolver.diagnostics()] };
       },
@@ -225,7 +244,13 @@ export async function runPipeline(options: CompileAtlasOptions, engine: CompileE
 
   // ── graph, search ──────────────────────────────────────────────────────────
   const graph = buildGraph(table, documentsById);
-  const searchDocs = buildSearchDocs({ table, documents: documentsById, registry, systems: stack.systems, labs: stack.labs });
+  const searchDocs = buildSearchDocs({
+    table,
+    documents: documentsById,
+    registry,
+    systems: stack.systems,
+    labs: stack.labs,
+  });
   const searchIndex = buildSearchIndex(searchDocs);
   signal?.throwIfAborted();
 

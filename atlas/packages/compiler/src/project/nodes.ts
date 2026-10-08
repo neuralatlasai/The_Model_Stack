@@ -4,14 +4,7 @@
  * authoritative for the editorial hierarchy and URLs (slugs are stable URLs,
  * CONTENT_CONTRACT §1.1); documents are authoritative for their own content.
  */
-import {
-  diagnostic,
-  urlForNode,
-  type Diagnostic,
-  type EntityType,
-  type NodeId,
-  type NodePlan,
-} from '@atlas/core';
+import { diagnostic, urlForNode, type Diagnostic, type EntityType, type NodeId, type NodePlan } from '@atlas/core';
 import type { Manifest } from './manifest.ts';
 import { satelliteIds } from './manifest.ts';
 import { toRoman, twoDigit } from './text.ts';
@@ -74,11 +67,15 @@ export function buildNodeTable(manifest: Manifest, sourceDocs: readonly SourceDo
     const existing = docsById.get(doc.meta.id);
     if (existing !== undefined) {
       diagnostics.push(
-        diagnostic('frontmatter-id-mismatch', `duplicate id ${doc.meta.id}: already declared by ${existing.path}; this file is skipped`, {
-          file: doc.path,
-          line: 2,
-          nodeId: doc.meta.id,
-        }),
+        diagnostic(
+          'frontmatter-id-mismatch',
+          `duplicate id ${doc.meta.id}: already declared by ${existing.path}; this file is skipped`,
+          {
+            file: doc.path,
+            line: 2,
+            nodeId: doc.meta.id,
+          },
+        ),
       );
       continue;
     }
@@ -163,7 +160,11 @@ export function buildNodeTable(manifest: Manifest, sourceDocs: readonly SourceDo
             artifact: chapter.artifact,
             prerequisitesText: chapter.prerequisites_text,
             outcome: part.outcome,
-            sections: chapter.sections.map((section) => ({ id: section.id, number: section.number, title: section.title })),
+            sections: chapter.sections.map((section) => ({
+              id: section.id,
+              number: section.number,
+              title: section.title,
+            })),
           },
           chapterSlug: chapter.slug,
         });
@@ -305,17 +306,27 @@ export function buildNodeTable(manifest: Manifest, sourceDocs: readonly SourceDo
       const owner = idAtManifestPath.get(doc.path);
       if (owner !== undefined) {
         diagnostics.push(
-          diagnostic('frontmatter-id-mismatch', `frontmatter id ${doc.meta.id} does not match the manifest id ${owner} for this path`, location),
+          diagnostic(
+            'frontmatter-id-mismatch',
+            `frontmatter id ${doc.meta.id} does not match the manifest id ${owner} for this path`,
+            location,
+          ),
         );
       } else {
-        diagnostics.push(diagnostic('manifest-unknown-node', `${doc.meta.id} is not listed in atlas-manifest.json`, location));
+        diagnostics.push(
+          diagnostic('manifest-unknown-node', `${doc.meta.id} is not listed in atlas-manifest.json`, location),
+        );
       }
       extras.push(doc);
       continue;
     }
     if (draft.path !== null && draft.path !== doc.path) {
       diagnostics.push(
-        diagnostic('frontmatter-id-mismatch', `${doc.meta.id} is declared here but the manifest places it at ${draft.path}`, location),
+        diagnostic(
+          'frontmatter-id-mismatch',
+          `${doc.meta.id} is declared here but the manifest places it at ${draft.path}`,
+          location,
+        ),
       );
     }
     if (draft.slug !== doc.meta.slug && draft.id !== ROOT_ID) {
@@ -352,7 +363,8 @@ export function buildNodeTable(manifest: Manifest, sourceDocs: readonly SourceDo
       plan: null,
       chapterSlug: parentDraft?.entityType === 'chapter' ? parentDraft.slug : null,
     });
-    if (parentDraft !== undefined && !parentDraft.children.includes(doc.meta.id)) parentDraft.children.push(doc.meta.id);
+    if (parentDraft !== undefined && !parentDraft.children.includes(doc.meta.id))
+      parentDraft.children.push(doc.meta.id);
     attached.set(doc.meta.id, doc);
   }
 

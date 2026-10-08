@@ -34,14 +34,19 @@ export function initFiguresExplorer(ctx: PageContext): void {
     meta: root.querySelector<HTMLElement>('[data-fx-meta]'),
     list: root.querySelector<HTMLElement>('[data-fx-list]'),
   };
-  const initial = { kicker: out.kicker?.textContent ?? '', title: out.title?.textContent ?? '', meta: out.meta?.textContent ?? '' };
+  const initial = {
+    kicker: out.kicker?.textContent ?? '',
+    title: out.title?.textContent ?? '',
+    meta: out.meta?.textContent ?? '',
+  };
   // The idle list (live instruments by chapter) is server-rendered; keep a copy to restore.
   const initialList = [...(out.list?.children ?? [])].map((node) => node.cloneNode(true));
   const shown = root.querySelector<HTMLElement>('[data-fx-shown]');
   const clearButton = root.querySelector<HTMLButtonElement>('[data-fx-clear]');
 
   const keyOf = (item: HTMLElement): string => `${item.dataset['chapter'] ?? ''}|${item.dataset['kind'] ?? ''}`;
-  const chapterTitle = (chapter: string): string => rowHeads.find((head) => head.dataset['fxRowhead'] === chapter)?.querySelector('.fx-rowhead__t')?.textContent ?? '';
+  const chapterTitle = (chapter: string): string =>
+    rowHeads.find((head) => head.dataset['fxRowhead'] === chapter)?.querySelector('.fx-rowhead__t')?.textContent ?? '';
   const titleOf = (item: HTMLElement): string => item.querySelector('.fx-title a')?.textContent ?? '';
 
   // ── readout ────────────────────────────────────────────────────────────────
@@ -95,11 +100,16 @@ export function initFiguresExplorer(ctx: PageContext): void {
     clear();
     matrix.classList.add('has-focus');
     rowHeads.find((head) => head.dataset['fxRowhead'] === chapter)?.classList.add('is-lit');
-    for (const cell of cells) if (cell.dataset['fxCell']?.startsWith(`${chapter}|`) === true && cell.dataset['fxN'] !== '0') cell.classList.add('is-lit');
+    for (const cell of cells)
+      if (cell.dataset['fxCell']?.startsWith(`${chapter}|`) === true && cell.dataset['fxN'] !== '0')
+        cell.classList.add('is-lit');
     const own = items.filter((item) => item.dataset['chapter'] === chapter);
     const kinds = new Map<string, number>();
     for (const item of own) kinds.set(item.dataset['kind'] ?? '', (kinds.get(item.dataset['kind'] ?? '') ?? 0) + 1);
-    const mix = [...kinds].sort((a, b) => b[1] - a[1]).map(([kind, n]) => `${String(n)} ${kind}`).join(' · ');
+    const mix = [...kinds]
+      .sort((a, b) => b[1] - a[1])
+      .map(([kind, n]) => `${String(n)} ${kind}`)
+      .join(' · ');
     const live = own.filter((item) => item.dataset['live'] === 'yes').length;
     write(`ch ${pad(chapter)} · ${String(own.length)} figures · ${String(live)} live`, chapterTitle(chapter), mix, []);
   };
@@ -108,10 +118,17 @@ export function initFiguresExplorer(ctx: PageContext): void {
     matrix.classList.add('has-focus');
     const head = colHeads.find((candidate) => candidate.dataset['fxCol'] === kind);
     head?.classList.add('is-lit');
-    for (const cell of cells) if (cell.dataset['fxCell']?.endsWith(`|${kind}`) === true && cell.dataset['fxN'] !== '0') cell.classList.add('is-lit');
+    for (const cell of cells)
+      if (cell.dataset['fxCell']?.endsWith(`|${kind}`) === true && cell.dataset['fxN'] !== '0')
+        cell.classList.add('is-lit');
     const own = items.filter((item) => item.dataset['kind'] === kind);
     const chapters = new Set(own.map((item) => item.dataset['chapter'] ?? ''));
-    write(`${kind} · ${String(own.length)} figures · ${String(chapters.size)} chapters`, head?.title.split(': ')[1] ?? kind, `Used in chapters ${[...chapters].map(pad).join(' ')}.`, []);
+    write(
+      `${kind} · ${String(own.length)} figures · ${String(chapters.size)} chapters`,
+      head?.title.split(': ')[1] ?? kind,
+      `Used in chapters ${[...chapters].map(pad).join(' ')}.`,
+      [],
+    );
   };
   const release = (): void => {
     clear();
@@ -121,35 +138,47 @@ export function initFiguresExplorer(ctx: PageContext): void {
     } else reset();
   };
 
-  matrix.addEventListener('pointerover', (event) => {
-    const target = event.target instanceof Element ? event.target : null;
-    const cell = target?.closest<HTMLElement>('[data-fx-cell]');
-    if (cell !== null && cell !== undefined) {
-      showCell(cell);
-      return;
-    }
-    const row = target?.closest<HTMLElement>('[data-fx-rowhead]');
-    if (row !== null && row !== undefined) {
-      showRow(row.dataset['fxRowhead'] ?? '');
-      return;
-    }
-    const col = target?.closest<HTMLElement>('[data-fx-col]');
-    if (col !== null && col !== undefined) showColumn(col.dataset['fxCol'] ?? '');
-  }, { signal });
+  matrix.addEventListener(
+    'pointerover',
+    (event) => {
+      const target = event.target instanceof Element ? event.target : null;
+      const cell = target?.closest<HTMLElement>('[data-fx-cell]');
+      if (cell !== null && cell !== undefined) {
+        showCell(cell);
+        return;
+      }
+      const row = target?.closest<HTMLElement>('[data-fx-rowhead]');
+      if (row !== null && row !== undefined) {
+        showRow(row.dataset['fxRowhead'] ?? '');
+        return;
+      }
+      const col = target?.closest<HTMLElement>('[data-fx-col]');
+      if (col !== null && col !== undefined) showColumn(col.dataset['fxCol'] ?? '');
+    },
+    { signal },
+  );
   matrix.addEventListener('pointerleave', release, { signal });
-  matrix.addEventListener('focusin', (event) => {
-    const cell = event.target instanceof Element ? event.target.closest<HTMLElement>('[data-fx-cell]') : null;
-    if (cell !== null) showCell(cell);
-  }, { signal });
+  matrix.addEventListener(
+    'focusin',
+    (event) => {
+      const cell = event.target instanceof Element ? event.target.closest<HTMLElement>('[data-fx-cell]') : null;
+      if (cell !== null) showCell(cell);
+    },
+    { signal },
+  );
 
   const ledger = root.querySelector('.fx-table');
-  ledger?.addEventListener('pointerover', (event) => {
-    const item = event.target instanceof Element ? event.target.closest<HTMLTableRowElement>('[data-fx-item]') : null;
-    if (item === null) return;
-    clear();
-    item.classList.add('is-lit');
-    cellOf.get(keyOf(item))?.classList.add('is-focus');
-  }, { signal });
+  ledger?.addEventListener(
+    'pointerover',
+    (event) => {
+      const item = event.target instanceof Element ? event.target.closest<HTMLTableRowElement>('[data-fx-item]') : null;
+      if (item === null) return;
+      clear();
+      item.classList.add('is-lit');
+      cellOf.get(keyOf(item))?.classList.add('is-focus');
+    },
+    { signal },
+  );
   ledger?.addEventListener('pointerleave', release, { signal });
 
   // ── filters ────────────────────────────────────────────────────────────────
@@ -170,11 +199,14 @@ export function initFiguresExplorer(ctx: PageContext): void {
       item.hidden = !visible;
       if (visible) n += 1;
     }
-    for (const group of groups) group.hidden = [...group.querySelectorAll<HTMLElement>('[data-fx-item]')].every((item) => item.hidden);
+    for (const group of groups)
+      group.hidden = [...group.querySelectorAll<HTMLElement>('[data-fx-item]')].every((item) => item.hidden);
     // The matrix follows the kind and placement filters: cells with no matching figure step back.
     for (const cell of cells) {
       const [chapter = '', kind = ''] = (cell.dataset['fxCell'] ?? '').split('|');
-      const any = items.some((item) => item.dataset['chapter'] === chapter && item.dataset['kind'] === kind && !item.hidden);
+      const any = items.some(
+        (item) => item.dataset['chapter'] === chapter && item.dataset['kind'] === kind && !item.hidden,
+      );
       cell.classList.toggle('is-filtered', !any && cell.dataset['fxN'] !== '0');
       cell.classList.toggle('is-pinned', pinned === cell.dataset['fxCell']);
     }
@@ -186,17 +218,25 @@ export function initFiguresExplorer(ctx: PageContext): void {
     pinned = pinned === key ? null : key;
     apply();
   };
-  matrix.addEventListener('click', (event) => {
-    const cell = event.target instanceof Element ? event.target.closest<HTMLElement>('[data-fx-cell]') : null;
-    if (cell === null || cell.dataset['fxN'] === '0') return;
-    pin(cell);
-    // The link's #fx-ledger jump is kept so the filtered ledger comes into view.
-  }, { signal });
-  clearButton?.addEventListener('click', () => {
-    pinned = null;
-    apply();
-    release();
-  }, { signal });
+  matrix.addEventListener(
+    'click',
+    (event) => {
+      const cell = event.target instanceof Element ? event.target.closest<HTMLElement>('[data-fx-cell]') : null;
+      if (cell === null || cell.dataset['fxN'] === '0') return;
+      pin(cell);
+      // The link's #fx-ledger jump is kept so the filtered ledger comes into view.
+    },
+    { signal },
+  );
+  clearButton?.addEventListener(
+    'click',
+    () => {
+      pinned = null;
+      apply();
+      release();
+    },
+    { signal },
+  );
   const toggle = (chip: HTMLButtonElement, set: Set<string>, value: string): void => {
     if (set.has(value)) set.delete(value);
     else set.add(value);
@@ -204,57 +244,87 @@ export function initFiguresExplorer(ctx: PageContext): void {
     apply();
   };
   for (const chip of root.querySelectorAll<HTMLButtonElement>('[data-fx-kind]')) {
-    chip.addEventListener('click', () => {
-      toggle(chip, kinds, chip.dataset['fxKind'] ?? '');
-    }, { signal });
+    chip.addEventListener(
+      'click',
+      () => {
+        toggle(chip, kinds, chip.dataset['fxKind'] ?? '');
+      },
+      { signal },
+    );
   }
   for (const chip of root.querySelectorAll<HTMLButtonElement>('[data-fx-place]')) {
-    chip.addEventListener('click', () => {
-      toggle(chip, places, chip.dataset['fxPlace'] ?? '');
-    }, { signal });
+    chip.addEventListener(
+      'click',
+      () => {
+        toggle(chip, places, chip.dataset['fxPlace'] ?? '');
+      },
+      { signal },
+    );
   }
   const liveChip = root.querySelector<HTMLButtonElement>('[data-fx-live]');
-  liveChip?.addEventListener('click', () => {
-    liveOnly = !liveOnly;
-    liveChip.setAttribute('aria-pressed', String(liveOnly));
-    apply();
-  }, { signal });
+  liveChip?.addEventListener(
+    'click',
+    () => {
+      liveOnly = !liveOnly;
+      liveChip.setAttribute('aria-pressed', String(liveOnly));
+      apply();
+    },
+    { signal },
+  );
   const search = root.querySelector<HTMLInputElement>('[data-fx-search]');
   let debounce: (() => void) | null = null;
-  search?.addEventListener('input', () => {
-    debounce?.();
-    debounce = ctl.timeout(() => {
-      query = search.value.trim().toLowerCase();
-      apply();
-    }, 90);
-  }, { signal });
+  search?.addEventListener(
+    'input',
+    () => {
+      debounce?.();
+      debounce = ctl.timeout(() => {
+        query = search.value.trim().toLowerCase();
+        apply();
+      }, 90);
+    },
+    { signal },
+  );
 
   // ── keyboard: one tab stop, arrows across the grid ─────────────────────────
-  const rows = [...matrix.querySelectorAll<HTMLElement>('[data-fx-row]')].map((row) => [...row.querySelectorAll<HTMLAnchorElement>('[data-fx-cell]')]);
-  const MOVES: Readonly<Record<string, readonly [number, number]>> = { ArrowUp: [-1, 0], ArrowDown: [1, 0], ArrowLeft: [0, -1], ArrowRight: [0, 1] };
-  matrix.addEventListener('keydown', (event) => {
-    const cell = event.target instanceof Element ? event.target.closest<HTMLAnchorElement>('[data-fx-cell]') : null;
-    if (cell === null) return;
-    if (event.key === 'Escape') {
-      pinned = null;
-      apply();
-      release();
-      return;
-    }
-    if (event.key === 'Enter' || event.key === ' ') {
+  const rows = [...matrix.querySelectorAll<HTMLElement>('[data-fx-row]')].map((row) => [
+    ...row.querySelectorAll<HTMLAnchorElement>('[data-fx-cell]'),
+  ]);
+  const MOVES: Readonly<Record<string, readonly [number, number]>> = {
+    ArrowUp: [-1, 0],
+    ArrowDown: [1, 0],
+    ArrowLeft: [0, -1],
+    ArrowRight: [0, 1],
+  };
+  matrix.addEventListener(
+    'keydown',
+    (event) => {
+      const cell = event.target instanceof Element ? event.target.closest<HTMLAnchorElement>('[data-fx-cell]') : null;
+      if (cell === null) return;
+      if (event.key === 'Escape') {
+        pinned = null;
+        apply();
+        release();
+        return;
+      }
+      if (event.key === 'Enter' || event.key === ' ') {
+        event.preventDefault();
+        if (cell.dataset['fxN'] !== '0') pin(cell);
+        return;
+      }
+      const move = MOVES[event.key];
+      if (move === undefined) return;
       event.preventDefault();
-      if (cell.dataset['fxN'] !== '0') pin(cell);
-      return;
-    }
-    const move = MOVES[event.key];
-    if (move === undefined) return;
-    event.preventDefault();
-    const r = rows.findIndex((row) => row.includes(cell));
-    const c = rows[r]?.indexOf(cell) ?? 0;
-    const next = rows[Math.max(0, Math.min(rows.length - 1, r + move[0]))]?.[Math.max(0, Math.min((rows[0]?.length ?? 1) - 1, c + move[1]))];
-    if (next === undefined) return;
-    for (const other of cells) other.setAttribute('tabindex', '-1');
-    next.setAttribute('tabindex', '0');
-    next.focus();
-  }, { signal });
+      const r = rows.findIndex((row) => row.includes(cell));
+      const c = rows[r]?.indexOf(cell) ?? 0;
+      const next =
+        rows[Math.max(0, Math.min(rows.length - 1, r + move[0]))]?.[
+          Math.max(0, Math.min((rows[0]?.length ?? 1) - 1, c + move[1]))
+        ];
+      if (next === undefined) return;
+      for (const other of cells) other.setAttribute('tabindex', '-1');
+      next.setAttribute('tabindex', '0');
+      next.focus();
+    },
+    { signal },
+  );
 }

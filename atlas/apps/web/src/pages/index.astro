@@ -16,21 +16,50 @@ import { getStackModel } from '../lib/stack.ts';
 import { buildDashboard } from '../lib/stack-dashboard.ts';
 import '../styles/home.css';
 
-const [graph, manifest, registry, stack, docs] = await Promise.all([getGraph(), getManifest(), getRegistry(), getStackModel(), listDocuments()]);
+const [graph, manifest, registry, stack, docs] = await Promise.all([
+  getGraph(),
+  getManifest(),
+  getRegistry(),
+  getStackModel(),
+  listDocuments(),
+]);
 const dash = buildDashboard(stack, registry, docs);
 
 const chapters = Object.values(stack.chapters).sort((a, b) => a.n - b.n);
 const startUrl = chapters[0]?.url ?? '/library/';
-const terms = registry.terms.flatMap((term) => (term.chapter === null ? [] : [{ term: term.term, chapter: term.chapter, url: term.url }]));
+const terms = registry.terms.flatMap((term) =>
+  term.chapter === null ? [] : [{ term: term.term, chapter: term.chapter, url: term.url }],
+);
 const brain = brainMap(
-  stack.parts.map((part) => ({ n: part.n, numeral: part.numeral, title: part.title, domain: part.domain, url: part.url })),
-  chapters.map((chapter) => ({ n: chapter.n, number: chapter.number, title: chapter.title, url: chapter.url, part: chapter.part, domain: chapter.domain, written: chapter.written })),
+  stack.parts.map((part) => ({
+    n: part.n,
+    numeral: part.numeral,
+    title: part.title,
+    domain: part.domain,
+    url: part.url,
+  })),
+  chapters.map((chapter) => ({
+    n: chapter.n,
+    number: chapter.number,
+    title: chapter.title,
+    url: chapter.url,
+    part: chapter.part,
+    domain: chapter.domain,
+    written: chapter.written,
+  })),
   terms,
   stack.edges,
 );
 const brain3d = brainLayout({
   parts: stack.parts.map((part) => ({ n: part.n, title: part.title, domain: part.domain })),
-  chapters: chapters.map((chapter) => ({ n: chapter.n, title: chapter.title, url: chapter.url, part: chapter.part, domain: chapter.domain, written: chapter.written })),
+  chapters: chapters.map((chapter) => ({
+    n: chapter.n,
+    title: chapter.title,
+    url: chapter.url,
+    part: chapter.part,
+    domain: chapter.domain,
+    written: chapter.written,
+  })),
   terms,
   prereqs: stack.edges,
 });
@@ -38,7 +67,13 @@ const description =
   'The Model Stack: how modern AI models are built, from data and silicon to intelligence — the learning objective, representation, execution, and deployment evidence studied as one loop.';
 ---
 
-<BaseLayout title={SITE_TITLE} description={description} canonicalPath="/" navKey="atlas" jsonLd={siteJsonLd(graph, Astro.site, manifest.edition)}>
+<BaseLayout
+  title={SITE_TITLE}
+  description={description}
+  canonicalPath="/"
+  navKey="atlas"
+  jsonLd={siteJsonLd(graph, Astro.site, manifest.edition)}
+>
   <main id="main" class="sh-home bs-home" tabindex="-1">
     <BrainStory brain={brain} brain3d={brain3d} stack={stack} dash={dash} startUrl={startUrl} />
   </main>

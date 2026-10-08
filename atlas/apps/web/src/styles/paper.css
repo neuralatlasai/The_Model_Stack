@@ -521,11 +521,21 @@
   border-top: 1px solid var(--rule-strong);
 }
 
-.pp-rel--anc { --pp-rel: var(--ink-3); }
-.pp-rel--opt { --pp-rel: var(--domain-hardware); }
-.pp-rel--alt { --pp-rel: var(--ev-inference); }
-.pp-rel--sup { --pp-rel: var(--rule-strong); }
-.pp-rel--fro { --pp-rel: var(--accent); }
+.pp-rel--anc {
+  --pp-rel: var(--ink-3);
+}
+.pp-rel--opt {
+  --pp-rel: var(--domain-hardware);
+}
+.pp-rel--alt {
+  --pp-rel: var(--ev-inference);
+}
+.pp-rel--sup {
+  --pp-rel: var(--rule-strong);
+}
+.pp-rel--fro {
+  --pp-rel: var(--accent);
+}
 
 .pp-lin {
   display: grid;

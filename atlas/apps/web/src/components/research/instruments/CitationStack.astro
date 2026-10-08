@@ -30,41 +30,48 @@ const entries: StackEntry[] = instrument.keys.map((key) => {
   const record = pageData?.references[key];
   return record === undefined
     ? { key, work: null, venue: null, status: null }
-    : { key, work: truncate(record.work, 72), venue: record.venue === '' ? null : truncate(record.venue, 40), status: referenceStatusGlyph(record.status) };
+    : {
+        key,
+        work: truncate(record.work, 72),
+        venue: record.venue === '' ? null : truncate(record.venue, 40),
+        status: referenceStatusGlyph(record.status),
+      };
 });
-const legend = [...new Map(entries.flatMap((entry) => (entry.status === null ? [] : [[entry.status.name, entry.status] as const]))).values()];
+const legend = [
+  ...new Map(
+    entries.flatMap((entry) => (entry.status === null ? [] : [[entry.status.name, entry.status] as const])),
+  ).values(),
+];
 ---
 
-{
-  entries.length > 0 && (
-    <div class="rb-instrument rb-instrument--citations" {...instrumentAttrs('citations')}>
-      <InstrumentHead title="Citation stack" meta={String(entries.length)} />
-      <ol class="rb-cites" role="list">
-        {entries.map((entry) => (
-          <li class="rb-cites__item">
-            <a class="rb-cites__link" href={citeHref(entry.key)} {...citeAttrs(entry.key)}>
-              <span class="rb-cites__key">{entry.key}</span>
-              <span class="rb-cites__work">{entry.work ?? 'Not in the reference registry'}</span>
-              {entry.venue !== null && <span class="rb-cites__venue">{entry.venue}</span>}
-              {entry.status !== null && (
-                <span class="rb-cites__status" title={entry.status.name}>
-                  <span aria-hidden="true">{entry.status.glyph}</span>
-                  <span class="rb-vh">{entry.status.name}</span>
-                </span>
-              )}
-            </a>
-          </li>
+{entries.length > 0 && (
+  <div class="rb-instrument rb-instrument--citations" {...instrumentAttrs('citations')}>
+    <InstrumentHead title="Citation stack" meta={String(entries.length)} />
+    <ol class="rb-cites" role="list">
+      {entries.map((entry) => (
+        <li class="rb-cites__item">
+          <a class="rb-cites__link" href={citeHref(entry.key)} {...citeAttrs(entry.key)}>
+            <span class="rb-cites__key">{entry.key}</span>
+            <span class="rb-cites__work">{entry.work ?? 'Not in the reference registry'}</span>
+            {entry.venue !== null && <span class="rb-cites__venue">{entry.venue}</span>}
+            {entry.status !== null && (
+              <span class="rb-cites__status" title={entry.status.name}>
+                <span aria-hidden="true">{entry.status.glyph}</span>
+                <span class="rb-vh">{entry.status.name}</span>
+              </span>
+            )}
+          </a>
+        </li>
+      ))}
+    </ol>
+    {legend.length > 0 && (
+      <p class="rb-instrument__legend">
+        {legend.map((status) => (
+          <span class="rb-instrument__legend-item">
+            <span aria-hidden="true">{status.glyph}</span> {status.name}
+          </span>
         ))}
-      </ol>
-      {legend.length > 0 && (
-        <p class="rb-instrument__legend">
-          {legend.map((status) => (
-            <span class="rb-instrument__legend-item">
-              <span aria-hidden="true">{status.glyph}</span> {status.name}
-            </span>
-          ))}
-        </p>
-      )}
-    </div>
-  )
-}
+      </p>
+    )}
+  </div>
+)}

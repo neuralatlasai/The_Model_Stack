@@ -24,7 +24,10 @@ describe('typed blockquotes', () => {
 
   it('reads a claim label and typed sources', async () => {
     const body = await compile(
-      section('Formulation', '> **Claim [MATHEMATICALLY-DERIVED · DERIVED:eq-42.1; P19, R5.13, OD:vllm-docs, some note].** For L=32 the tensors occupy 8 GiB.'),
+      section(
+        'Formulation',
+        '> **Claim [MATHEMATICALLY-DERIVED · DERIVED:eq-42.1; P19, R5.13, OD:vllm-docs, some note].** For L=32 the tensors occupy 8 GiB.',
+      ),
     );
     const claim = onlyBlock(body, 'claim');
     assert.equal(claim.label, 'MATHEMATICALLY-DERIVED');
@@ -58,7 +61,10 @@ describe('typed blockquotes', () => {
     );
     const assumption = onlyBlock(body, 'assumption');
     assert.equal(text(assumption.content), 'The scale is exactly 1/√Dh');
-    assert.equal(text(assumption.sensitivity ?? []), 'PAPER-REPORTED (P01, §3.2.1, footnote): a learned scale changes the softmax temperature.');
+    assert.equal(
+      text(assumption.sensitivity ?? []),
+      'PAPER-REPORTED (P01, §3.2.1, footnote): a learned scale changes the softmax temperature.',
+    );
     assert.equal(assumption.depth, 'technical');
   });
 
@@ -148,11 +154,20 @@ describe('typed blockquotes', () => {
     assert.equal(proposition.number, '7.1');
     assert.equal(proposition.anchor, 'prop-7-1');
     assert.equal(proposition.proof?.length, 1);
-    assert.equal(blocksOf(body, 'paragraph').length, 2, 'proof paragraph is nested; the following paragraph stays in the region');
+    assert.equal(
+      blocksOf(body, 'paragraph').length,
+      2,
+      'proof paragraph is nested; the following paragraph stays in the region',
+    );
   });
 
   it('attaches a following <details> derivation as a theorem proof', async () => {
-    const body = await compile(section('Mechanism', '> **Theorem 2.3.** A statement.\n\n<details><summary>Proof of Theorem 2.3</summary>\n\nStep one.\n\n</details>'));
+    const body = await compile(
+      section(
+        'Mechanism',
+        '> **Theorem 2.3.** A statement.\n\n<details><summary>Proof of Theorem 2.3</summary>\n\nStep one.\n\n</details>',
+      ),
+    );
     const proposition = onlyBlock(body, 'proposition');
     assert.equal(proposition.variant, 'theorem');
     assert.equal(text(proposition.proof?.[0]?.kind === 'paragraph' ? proposition.proof[0].content : []), 'Step one.');
@@ -203,16 +218,25 @@ describe('equations', () => {
   });
 
   it('parses where-clauses at top level only and stops at the sentence end', () => {
-    assert.deepEqual(parseWhereClause('where q_k(u) ≥ 0 = sampling proportion (q_k < 1 sub-samples, q_k > 1 repeats), tok_u = tokenizer. The identity holds.'), [
-      { symbol: 'q_k(u) ≥ 0', meaning: 'sampling proportion (q_k < 1 sub-samples, q_k > 1 repeats)' },
-      { symbol: 'tok_u', meaning: 'tokenizer' },
+    assert.deepEqual(
+      parseWhereClause(
+        'where q_k(u) ≥ 0 = sampling proportion (q_k < 1 sub-samples, q_k > 1 repeats), tok_u = tokenizer. The identity holds.',
+      ),
+      [
+        { symbol: 'q_k(u) ≥ 0', meaning: 'sampling proportion (q_k < 1 sub-samples, q_k > 1 repeats)' },
+        { symbol: 'tok_u', meaning: 'tokenizer' },
+      ],
+    );
+    assert.deepEqual(parseWhereClause('where b = bytes per value, typically 2'), [
+      { symbol: 'b', meaning: 'bytes per value, typically 2' },
     ]);
-    assert.deepEqual(parseWhereClause('where b = bytes per value, typically 2'), [{ symbol: 'b', meaning: 'bytes per value, typically 2' }]);
     assert.deepEqual(parseWhereClause('(MATHEMATICALLY-DERIVED)'), []);
   });
 
   it('diagnoses duplicate numbers and render errors without throwing', async () => {
-    const body = await compile(section('Formulation', '$$\na\n$$\n*(Eq. 5.4)*\n\n$$\nb\n$$\n*(Eq. 5.4)*\n\n$$\n\\frac{1}{\n$$\n*(Eq. 5.5)*'));
+    const body = await compile(
+      section('Formulation', '$$\na\n$$\n*(Eq. 5.4)*\n\n$$\nb\n$$\n*(Eq. 5.4)*\n\n$$\n\\frac{1}{\n$$\n*(Eq. 5.5)*'),
+    );
     assert.ok(codes(body).includes('equation-duplicate-number'));
     assert.ok(codes(body, 'error').includes('equation-render-error'));
     const broken = blocksOf(body, 'equation').find((equation) => equation.number === '5.5');
@@ -347,8 +371,14 @@ describe('experiments', () => {
     const setup = experiment.fields[1]?.blocks[0];
     assert.equal(setup?.kind === 'paragraph' ? text(setup.content) : null, 'Build T_0 by sampling.');
     assert.deepEqual(codes(body), []);
-    assert.equal(blocksOf(body, 'paragraph').filter((paragraph) => text(paragraph.content).startsWith('This is a proposal')).length, 1);
-    assert.deepEqual(body.outline[0]?.children, [{ anchor: 'exp-1-1', title: 'Experiment 1.1 — Rejection test of a proposed design' }]);
+    assert.equal(
+      blocksOf(body, 'paragraph').filter((paragraph) => text(paragraph.content).startsWith('This is a proposal'))
+        .length,
+      1,
+    );
+    assert.deepEqual(body.outline[0]?.children, [
+      { anchor: 'exp-1-1', title: 'Experiment 1.1 — Rejection test of a proposed design' },
+    ]);
   });
 
   it('reads the compact paragraph form and reports missing fields as info', async () => {
@@ -396,7 +426,11 @@ describe('observation layer and siblings', () => {
       ['observation-layer', 'open-question'],
     );
     const evidence = body.rail[0]?.instruments.find((instrument) => instrument.kind === 'evidence');
-    assert.deepEqual(evidence?.kind === 'evidence' ? evidence.counts : null, { 'PAPER-REPORTED': 1, DERIVED: 1, 'NOT-DISCLOSED': 1 });
+    assert.deepEqual(evidence?.kind === 'evidence' ? evidence.counts : null, {
+      'PAPER-REPORTED': 1,
+      DERIVED: 1,
+      'NOT-DISCLOSED': 1,
+    });
   });
 
   it('reports an incomplete observation layer', async () => {
@@ -446,8 +480,10 @@ describe('observation layer and siblings', () => {
 
 describe('tables, lists, details, rules, raw html', () => {
   it('assigns table roles and the wide flag', async () => {
-    const references = '| Key | Type | Work | Authors / organisation | Venue / year | Primary URL | Official code | Status | Accessed | Used for |\n|---|---|---|---|---|---|---|---|---|---|\n| P01 | paper | Attention | Vaswani | 2017 | https://arxiv.org/abs/1706.03762 | null | peer-reviewed | 2026-09-20 | §5.2 |';
-    const performance = '| Model | Hardware | Precision | Concurrency | TTFT |\n|---|---|---|---|---|\n| m | h | BF16 | 8 | 20 ms |';
+    const references =
+      '| Key | Type | Work | Authors / organisation | Venue / year | Primary URL | Official code | Status | Accessed | Used for |\n|---|---|---|---|---|---|---|---|---|---|\n| P01 | paper | Attention | Vaswani | 2017 | https://arxiv.org/abs/1706.03762 | null | peer-reviewed | 2026-09-20 | §5.2 |';
+    const performance =
+      '| Model | Hardware | Precision | Concurrency | TTFT |\n|---|---|---|---|---|\n| m | h | BF16 | 8 | 20 ms |';
     const generic = '| Symbol | Meaning |\n|:--|--:|\n| B | batch |';
     const body = await compile(section('References', `${references}\n\n${performance}\n\n${generic}`));
     const tables = blocksOf(body, 'table');
@@ -463,7 +499,12 @@ describe('tables, lists, details, rules, raw html', () => {
       tables[2]?.columns.map((column) => column.align),
       ['left', 'right'],
     );
-    const stack = await compile(section('Reference-stack coverage', '| Stack section | Entry | Layer |\n|---|---|---|\n| §4 | vLLM | Inference engine |'));
+    const stack = await compile(
+      section(
+        'Reference-stack coverage',
+        '| Stack section | Entry | Layer |\n|---|---|---|\n| §4 | vLLM | Inference engine |',
+      ),
+    );
     assert.equal(onlyBlock(stack, 'table').role, 'stack-coverage');
   });
 

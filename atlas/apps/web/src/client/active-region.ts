@@ -20,7 +20,12 @@ export interface ActivePick {
  * the first region is active (the rail shows its instruments) but `crossed`
  * is false so the URL hash is left alone.
  */
-export function pickActiveRegion(tops: readonly number[], line: number, atBottom: boolean, viewportHeight: number): ActivePick {
+export function pickActiveRegion(
+  tops: readonly number[],
+  line: number,
+  atBottom: boolean,
+  viewportHeight: number,
+): ActivePick {
   if (tops.length === 0) return { index: -1, crossed: false };
   let index = -1;
   const limit = atBottom ? viewportHeight - 1 : line;

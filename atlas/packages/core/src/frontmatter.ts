@@ -90,14 +90,19 @@ const nodeIdSchema = z
 const nullableNodeId = nodeIdSchema.nullable();
 
 /** Tolerates an absent list (normalised to []) but not a malformed one. */
-const idList = z.array(nodeIdSchema).nullish().transform((value) => value ?? []);
-const stringList = z.array(z.string()).nullish().transform((value) => value ?? []);
+const idList = z
+  .array(nodeIdSchema)
+  .nullish()
+  .transform((value) => value ?? []);
+const stringList = z
+  .array(z.string())
+  .nullish()
+  .transform((value) => value ?? []);
 
 const relationTargetSchema = z
   .string()
   .refine(
-    (value) =>
-      isNodeId(value) || RELATION_TARGET_NAMESPACES.some((namespace) => value.startsWith(`${namespace}.`)),
+    (value) => isNodeId(value) || RELATION_TARGET_NAMESPACES.some((namespace) => value.startsWith(`${namespace}.`)),
     { message: 'relation target must be a node id or <namespace>.<name>' },
   )
   .transform((value) => value as RelationTarget);
@@ -132,7 +137,10 @@ export const FrontmatterSchema = z
     downstream: idList,
     related: idList,
     siblings_by_mechanism: idList,
-    relations: z.array(RelationSchema).nullish().transform((value) => value ?? []),
+    relations: z
+      .array(RelationSchema)
+      .nullish()
+      .transform((value) => value ?? []),
     axes: z
       .object({
         lifecycle: z.array(z.enum(LIFECYCLE_STAGES)).default([]),

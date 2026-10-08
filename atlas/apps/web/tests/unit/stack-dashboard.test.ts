@@ -25,7 +25,13 @@ describe('stack dashboard', () => {
   });
 
   test('a cycle terminates', () => {
-    const up = closure([[1, 2], [2, 1]], 'up');
+    const up = closure(
+      [
+        [1, 2],
+        [2, 1],
+      ],
+      'up',
+    );
     assert.ok((up.get(1)?.size ?? 0) <= 2);
   });
 });
@@ -36,7 +42,8 @@ describe('home story', () => {
       STORY_PARTS.map((part) => part.n),
       Array.from({ length: 11 }, (_, i) => i + 1),
     );
-    for (const part of STORY_PARTS) assert.ok(part.heading.length > 0 && part.body.length > 0 && part.outcome.length > 0);
+    for (const part of STORY_PARTS)
+      assert.ok(part.heading.length > 0 && part.body.length > 0 && part.outcome.length > 0);
   });
 
   test('bold markup splits into runs', () => {

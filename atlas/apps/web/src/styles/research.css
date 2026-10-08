@@ -824,7 +824,8 @@ a.rb-cite:hover {
 .rb-eq__frame {
   position: relative;
   display: grid;
-  grid-template-columns: minmax(0, 1fr);
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 12px;
   align-items: center;
   padding-block: 0.85rem;
   border-block: 1px solid var(--rule);
@@ -832,7 +833,7 @@ a.rb-cite:hover {
 }
 
 .rb-eq--numbered .rb-eq__frame {
-  grid-template-columns: var(--eq-num-w) minmax(0, 1fr);
+  grid-template-columns: minmax(0, 1fr) auto;
 }
 
 .rb-eq:hover .rb-eq__frame,
@@ -851,9 +852,11 @@ a.rb-cite:hover {
 }
 
 .rb-eq__label {
-  grid-column: 1;
+  grid-column: 2;
+  grid-row: 1;
   margin: 0;
-  align-self: center;
+  align-self: start;
+  justify-self: end;
 }
 
 .rb-eq__num {
@@ -871,7 +874,8 @@ a.rb-eq__num:hover {
 }
 
 .rb-eq__math {
-  grid-column: 1;
+  grid-column: 1 / -1;
+  grid-row: 2;
   min-inline-size: 0;
   padding-block: 0.15rem;
   overflow-x: auto;
@@ -881,11 +885,11 @@ a.rb-eq__num:hover {
 }
 
 .rb-eq--numbered .rb-eq__math {
-  grid-column: 2;
+  grid-column: 1 / -1;
 }
 
-/* Display math holds the column's left edge (the number column, then the
- * math, the "where" note and the legend all start on shared lines). */
+/* Math, variable legends and notes share the argument's left edge. The tag
+ * belongs to the metadata row, rather than floating beside a middle step. */
 .rb-eq__math .katex-display,
 .rb-eqi__math .katex-display {
   margin: 0;
@@ -923,19 +927,27 @@ a.rb-eq__num:hover {
 }
 
 .rb-eq__tools {
-  position: absolute;
-  inset-block-start: 0.2rem;
-  inset-inline-end: 0;
+  position: static;
+  grid-column: 1;
+  grid-row: 1;
   display: flex;
   gap: 0.6rem;
   margin: 0;
-  opacity: 0;
+  align-items: center;
+  min-block-size: 24px;
+  opacity: 1;
   transition: opacity var(--t-hover) ease;
 }
 
 .rb-eq:hover .rb-eq__tools,
 .rb-eq:focus-within .rb-eq__tools {
   opacity: 1;
+}
+
+.rb-eq__tools .rb-tool {
+  min-inline-size: 24px;
+  min-block-size: 24px;
+  text-align: start;
 }
 
 .rb-tool {
@@ -967,7 +979,7 @@ a.rb-eq__num:hover {
 }
 
 .rb-eq__tools:has(.rb-tool--run) .rb-tool:not(.rb-tool--run) {
-  opacity: 0;
+  opacity: 1;
   transition: opacity var(--t-hover) ease;
 }
 
@@ -990,7 +1002,7 @@ a.rb-eq__num:hover {
 }
 
 .rb-eq--numbered .rb-eq__legend {
-  padding-inline-start: var(--eq-num-w);
+  padding-inline-start: 0;
 }
 
 .rb-eq__var {
@@ -1029,7 +1041,7 @@ a.rb-eq__num:hover {
 }
 
 .rb-eq--numbered .rb-eq__note {
-  padding-inline-start: var(--eq-num-w);
+  padding-inline-start: 0;
 }
 
 /* Symbol ↔ variable-row cross-highlight (client equations.ts sets is-var-hit). */
@@ -1065,7 +1077,7 @@ a.rb-eq__num:hover {
   }
 
   .rb-eq--numbered .rb-eq__frame {
-    grid-template-columns: var(--eq-num-w) minmax(0, 1fr);
+    grid-template-columns: minmax(0, 1fr) auto;
   }
 
   .rb-eq--numbered .rb-eq__legend,

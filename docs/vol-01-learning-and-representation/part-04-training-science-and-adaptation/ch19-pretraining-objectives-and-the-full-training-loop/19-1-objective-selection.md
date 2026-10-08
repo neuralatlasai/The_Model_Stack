@@ -69,13 +69,13 @@ For categorical events, the contract identifies the vocabulary, EOS convention, 
 
 An autoregressive decoder assigns normalized next-token conditionals to a serialized sequence. The training record contains shifted inputs and labels, and its causal mask enforces the conditioning order. Raw-document pretraining can score ordinary text and boundary tokens according to the chosen document model. Conditional generation can retain a conditioning prefix in attention while scoring only the answer. Both use the same chain-rule construction, but their sampling distribution over contexts and their directly scored events differ. (MATHEMATICALLY-DERIVED; canonical derivation in §4.1.)
 
-Denoising introduces a corruption draw. An encoder-only selected-position classifier predicts hidden labels from corrupted visible context; an encoder-decoder can reconstruct either the whole clean record or a shorter serialization of removed spans. The latter changes decoder length as well as the statistical task. T5's method replaces removed spans with sentinels and predicts those spans with matching sentinels; its comparison explicitly includes prefix language modeling, full reconstruction, and shorter-target variants. (PAPER-REPORTED: [P02](references.md#p02), §§3.1–3.3.) The loop must save or reconstruct the corruption draw when replaying a batch, and count sentinel targets according to the implemented loss mask. (DERIVED from the transform's stochastic state.)
+Denoising introduces a corruption draw. An encoder-only selected-position classifier predicts hidden labels from corrupted visible context; an encoder-decoder can reconstruct either the whole clean record or a shorter serialization of removed spans. The latter changes decoder length as well as the statistical task. T5's method replaces removed spans with sentinels and predicts those spans with matching sentinels; its comparison explicitly includes prefix language modeling, full reconstruction, and shorter-target variants. (PAPER-REPORTED: [P02], §§3.1–3.3.) The loop must save or reconstruct the corruption draw when replaying a batch, and count sentinel targets according to the implemented loss mask. (DERIVED from the transform's stochastic state.)
 
-Infilling can preserve a decoder-only architecture while changing serialization. Prefix, middle, and suffix are drawn from a clean record; control tokens expose the prefix and suffix before the model predicts the middle. The source's PSM and SPM constructions, tokenization order, and document-versus-context transform boundary are material parts of this method. (PAPER-REPORTED: [R19.18](references.md#r1918), §3.) A recipe that permutes token IDs after tokenization is not automatically equivalent to one that splits text and retokenizes it, because token boundaries can cross the selected cut. (MATHEMATICALLY-DERIVED from non-compositional tokenization.)
+Infilling can preserve a decoder-only architecture while changing serialization. Prefix, middle, and suffix are drawn from a clean record; control tokens expose the prefix and suffix before the model predicts the middle. The source's PSM and SPM constructions, tokenization order, and document-versus-context transform boundary are material parts of this method. (PAPER-REPORTED: [R19.18], §3.) A recipe that permutes token IDs after tokenization is not automatically equivalent to one that splits text and retokenizes it, because token boundaries can cross the selected cut. (MATHEMATICALLY-DERIVED from non-compositional tokenization.)
 
-Auxiliary prediction adds terms with distinct parameter paths. For multi-offset prediction, a shared trunk produces a context representation and separate heads predict later offsets from that representation. The offsets have different boundary masks: head $h$ can score a location only if its target exists within the permitted document. The original multi-token method describes sequential head forward/backward execution with gradient accumulation at the trunk to limit simultaneous vocabulary-logit storage. (PAPER-REPORTED: [R19.19](references.md#r1919), §2, Figure 2.) The loop therefore needs component counts and weights, not one scalar token count applied indiscriminately to every head. (DERIVED.)
+Auxiliary prediction adds terms with distinct parameter paths. For multi-offset prediction, a shared trunk produces a context representation and separate heads predict later offsets from that representation. The offsets have different boundary masks: head $h$ can score a location only if its target exists within the permitted document. The original multi-token method describes sequential head forward/backward execution with gradient accumulation at the trunk to limit simultaneous vocabulary-logit storage. (PAPER-REPORTED: [R19.19], §2, Figure 2.) The loop therefore needs component counts and weights, not one scalar token count applied indiscriminately to every head. (DERIVED.)
 
-A multimodal generative objective scores an output conditional on an image, audio segment, or other input. A contrastive objective instead classifies the paired item among a candidate set. CLIP uses normalized image and text representations with a symmetric cross-entropy over pairwise similarities. (PAPER-REPORTED: [P44](references.md#p44), §2.3, Figure 3.) Increasing an ordinary language-model microbatch can preserve the event definition; increasing a contrastive candidate batch changes the denominator inside each event. Gradient accumulation over independent small contrastive batches consequently does not recreate one large contrastive batch. The missing cross-batch negatives are mathematical terms, not a numerical rounding difference. (MATHEMATICALLY-DERIVED.)
+A multimodal generative objective scores an output conditional on an image, audio segment, or other input. A contrastive objective instead classifies the paired item among a candidate set. CLIP uses normalized image and text representations with a symmetric cross-entropy over pairwise similarities. (PAPER-REPORTED: [P44], §2.3, Figure 3.) Increasing an ordinary language-model microbatch can preserve the event definition; increasing a contrastive candidate batch changes the denominator inside each event. Gradient accumulation over independent small contrastive batches consequently does not recreate one large contrastive batch. The missing cross-batch negatives are mathematical terms, not a numerical rounding difference. (MATHEMATICALLY-DERIVED.)
 
 ### Objective weighting and directly scored events
 
@@ -123,22 +123,29 @@ spec:
 
 **Algorithm 19.1 — Construct a training record.** Input: a versioned clean record, objective identifier, transform configuration, and augmentation RNG state. Output: inputs, targets, visibility metadata, per-component masks/counts, and the next augmentation state. This is a mathematical reconstruction of the contract rather than a claim of an executed trainer. (DERIVED.)
 
-```text
-1. Validate record modality, document boundaries, and tokenizer/processor identity.
-2. Draw the objective component and its corruption or infilling variables.
-3. Apply the specified transform at its declared text/token/packed-context boundary.
-4. Construct decoder shifts or encoder-decoder alignments exactly once.
-5. Construct visibility metadata independently of the directly scored target masks.
-6. Compute each component's valid-event count from the actual target mask.
-7. Reject malformed alignments; retain zero-count components as absent observations.
-8. Return tensors plus record/transform identities and the resulting RNG state.
-```
+[DERIVED] Let $u$ be the record, $r$ the augmentation RNG state, $\chi$ the versioned objective configuration, $\mathsf V$ the record validator, $\mathsf D$ the configured stochastic draw, $\mathsf F$ the declared transform, and $\mathsf A$ its alignment check. The visible-position relation $v$ and scoring masks $m_h$ are distinct outputs of $\mathsf F$; $\bot$ denotes a rejected record.
+
+$$
+\begin{aligned}
+1.\quad &\neg\mathsf V(u,\chi)\ \Longrightarrow\ \operatorname{return}(\bot,r).\\
+2.\quad &(h,a,r^+)\gets\mathsf D(u,\chi,r).\\
+3.\quad &(x,y,v,(m_j)_j)\gets\mathsf F_h(u,a;\chi).\\
+4.\quad &\neg\mathsf A(x,y,v,(m_j)_j;\chi)
+ \ \Longrightarrow\ \operatorname{return}(\bot,r^+).\\
+5.\quad &n_j\gets\sum_t m_{jt},\quad
+ \mathcal H^+\gets\{j:n_j>0\}.\\
+6.\quad &\operatorname{return}
+ (x,y,v,(m_j,n_j)_j,\mathcal H^+,\operatorname{id}(u,\chi),r^+).
+\end{aligned}
+$$
+
+[DERIVED] Alignment in line 3 includes the objective-specific label shift exactly once. Both rejection branches terminate immediately; any external replacement policy must bound the number of attempts. The returned RNG state records draws even when an aligned candidate is rejected, so a replay policy can specify whether to restore or consume them.
 
 The invariant is that every scored target has exactly the intended admissible context. Termination follows from a bounded input record and bounded transform; repeated rejection requires a bounded data policy rather than an unbounded retry loop. The transform is linear in processed text/token count when its chosen tokenizer and sampling algorithm have that cost; no general complexity bound for an arbitrary tokenizer is asserted. (MATHEMATICALLY-DERIVED.)
 
 ## Implementation
 
-**PyTorch**, the Framework layer, executes the model, objective reduction, and autograd. **TorchTitan**, the Distributed training layer, provides a concrete inspected loss interface: summed cross-entropy can be divided by supplied global objective counts. Its pinned trainer gathers loss and routing counts across all microbatch groups before forward/backward. (OFFICIAL-DOCUMENTATION: [R19.2](references.md#r192), `Trainer.train_step`; [R19.3](references.md#r193), `BaseLoss` and `CrossEntropyLoss`.) The source inspection establishes interface behavior; this chapter does not claim to have executed that revision.
+**PyTorch**, the Framework layer, executes the model, objective reduction, and autograd. **TorchTitan**, the Distributed training layer, provides a concrete inspected loss interface: summed cross-entropy can be divided by supplied global objective counts. Its pinned trainer gathers loss and routing counts across all microbatch groups before forward/backward. (OFFICIAL-DOCUMENTATION: [R19.2], `Trainer.train_step`; [R19.3], `BaseLoss` and `CrossEntropyLoss`.) The source inspection establishes interface behavior; this chapter does not claim to have executed that revision.
 
 For causal categorical training, inputs/labels/masks have shape `[B,T]`, hidden states `[B,T,d_model]`, and an unfused full output tensor `[B,T,V]`. The output alone occupies $BTVb_{\mathrm{logit}}$ bytes. Selected scoring can reduce output work only if the implementation actually gathers selected hidden states before projection; a mask applied after full projection leaves that allocation and its matrix multiplication intact. Multi-head objectives add head parameters and projection work, even when serial execution limits simultaneous activation storage. (MATHEMATICALLY-DERIVED accounting.)
 
