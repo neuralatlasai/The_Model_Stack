@@ -1,6 +1,9 @@
 ---
 import HeaderInstrument from '../../islands/HeaderInstrument.tsx';
-const page = Astro.url.pathname;
+// Astro.url includes the GitHub Pages deployment prefix during prerendering.
+const base = import.meta.env.BASE_URL;
+const pathname = Astro.url.pathname;
+const page = pathname.startsWith(base) ? `/${pathname.slice(base.length)}` : pathname;
 const topic = page.split('/')[1] ?? 'library';
 ---
 

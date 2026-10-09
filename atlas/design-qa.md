@@ -59,3 +59,5 @@ Browser sampling does not constitute a manual visual review of all 165 compiled 
 - The Equations catalogue defers offscreen row layout without forcing their geometry during metadata measurement. Visible-row updates refresh symbol overflow indicators; focused/hovered rows and print output render fully. The live masthead is isolated from catalogue painting. A real pointer check exercised play, pause, and mobile resize in approximately 6.5 seconds with no overflow.
 
 - Final maintained browser suite: all 28 tests passed. Reduced-motion mode starts paused; explicitly choosing Play enables gentle local motion. Focus outlines remain inside the isolated illustration boundary.
+
+- Production route selection strips the GitHub Pages base prefix before choosing each page's illustration. The static release checker now rejects illustrations whose topic differs from their built route, preventing repeated fallback visuals after deployment.

@@ -65,6 +65,7 @@ async function idsOf(file: string): Promise<ReadonlySet<string>> {
 }
 
 const failures = {
+  visuals: new Map<string, string>(),
   broken: new Map<string, string>(),
   outside: new Map<string, string>(),
   anchors: new Map<string, string>(),
@@ -94,6 +95,10 @@ const pages = (await listFiles(dist)).filter((file) => file.endsWith('.html'));
 for (const file of pages) {
   const page = file.slice(dist.length).split(sep).join('/');
   const text = await readFile(file, 'utf8');
+  const topic = /\sdata-topic="([^"]+)"/u.exec(text)?.[1];
+  const expectedTopic = page.split('/').find((segment) => segment !== '');
+  if (topic !== undefined && topic !== expectedTopic)
+    note(failures.visuals, `${topic} (expected ${expectedTopic ?? ''})`, page);
   for (const match of text.matchAll(/\s(?:href|src|xlink:href|action|poster)=["']([^"']+)["']/gu)) {
     const url = (match[1] ?? '').replaceAll('&amp;', '&');
     if (url.startsWith('#')) {
@@ -137,6 +142,7 @@ for (const [label, map] of [
   [`links outside ${base}`, failures.outside],
   ['fragments with no matching id', failures.anchors],
   [`data-island URLs outside ${base}`, failures.data],
+  ['page illustrations with the wrong topic', failures.visuals],
 ] as const) {
   console.log(`${label}: ${String(map.size)}`);
   for (const [key, page] of [...map].slice(0, 15)) console.log(`  ${key}  (on ${page})`);
