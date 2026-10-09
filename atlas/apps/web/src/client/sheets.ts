@@ -20,7 +20,7 @@
  * Motion is CSS-only and disabled under prefers-reduced-motion.
  */
 import { ATTR } from './contract.ts';
-import { $, $$, h } from './dom.ts';
+import { $, $$, focusElement, h } from './dom.ts';
 import { ACTIONS, actionSelector, closestAction, DESKTOP_MIN_WIDTH, HOOK } from './hooks.ts';
 import type { PageContext } from './page.ts';
 
@@ -41,6 +41,7 @@ interface OpenSheet {
   readonly placeholder: Comment | null;
   /** `hidden` may be `true`, `false`, or `"until-found"`; restored exactly. */
   readonly wasHidden: HTMLElement['hidden'];
+  navigationTarget: HTMLElement | null;
 }
 
 let current: OpenSheet | null = null;
@@ -71,7 +72,7 @@ export function openSheet(ctx: PageContext, request: SheetRequest): void {
   }
   bodyEl.append(request.content);
   doc.body.append(dialog);
-  current = { dialog, request, placeholder, wasHidden };
+  current = { dialog, request, placeholder, wasHidden, navigationTarget: null };
 
   close.addEventListener(
     'click',
@@ -93,11 +94,16 @@ export function openSheet(ctx: PageContext, request: SheetRequest): void {
   bodyEl.addEventListener(
     'click',
     (event) => {
-      if (event.target instanceof Element && event.target.closest('a[href]') !== null) {
-        ctl.timeout(() => {
-          if (!event.defaultPrevented && dialog.open) dialog.close();
-        }, 0);
-      }
+      const anchor = event.target instanceof Element ? event.target.closest<HTMLAnchorElement>('a[href]') : null;
+      if (anchor === null || event.button !== 0 || event.metaKey || event.ctrlKey || event.shiftKey || event.altKey)
+        return;
+      const target = outlineTarget(anchor);
+      ctl.timeout(() => {
+        if ((!event.defaultPrevented || target !== null) && dialog.open) {
+          if (current?.dialog === dialog) current.navigationTarget = target;
+          dialog.close();
+        }
+      }, 0);
     },
     listen,
   );
@@ -136,7 +142,8 @@ function finish(dialog: HTMLDialogElement): void {
   }
   dialog.remove();
   request.trigger?.setAttribute('aria-expanded', 'false');
-  if (request.returnFocus?.isConnected === true) request.returnFocus.focus({ preventScroll: true });
+  const focus = sheet.navigationTarget ?? request.returnFocus;
+  if (focus?.isConnected === true) focusElement(focus);
 }
 
 /** Shows a native popover panel if it is one and currently closed. Returns true when it is open afterwards. */
@@ -240,17 +247,42 @@ function enhancePopoverPanels(ctx: PageContext): void {
     panel.addEventListener(
       'click',
       (event) => {
-        if (!(event.target instanceof Element) || event.target.closest('a[href]') === null) return;
-        if (event.button !== 0 || event.metaKey || event.ctrlKey || event.shiftKey) return;
+        const anchor = event.target instanceof Element ? event.target.closest<HTMLAnchorElement>('a[href]') : null;
+        if (anchor === null || event.button !== 0 || event.metaKey || event.ctrlKey || event.shiftKey || event.altKey)
+          return;
+        const target = outlineTarget(anchor);
         if (panel.matches(':popover-open') && !isColumn(panel)) {
           ctl.timeout(() => {
             // A handler further up (citation pinning) may have kept the reader on the page.
-            if (!event.defaultPrevented && panel.matches(':popover-open')) panel.hidePopover();
+            // Outline navigation can be handled by the router and still needs to dismiss the panel.
+            if ((!event.defaultPrevented || target !== null) && panel.matches(':popover-open')) {
+              panel.hidePopover();
+              if (target !== null) focusElement(target);
+            }
           }, 0);
         }
       },
       { signal: ctl.signal },
     );
+  }
+}
+
+/** A local outline link remains navigation when the router prevents its native default. */
+function outlineTarget(anchor: HTMLAnchorElement): HTMLElement | null {
+  if (anchor.closest(`[${ATTR.minimap}]`) === null) return null;
+  const currentUrl = new URL(anchor.ownerDocument.location.href);
+  const destination = new URL(anchor.href, currentUrl);
+  if (
+    destination.origin !== currentUrl.origin ||
+    destination.pathname !== currentUrl.pathname ||
+    destination.search !== currentUrl.search ||
+    destination.hash.length < 2
+  )
+    return null;
+  try {
+    return anchor.ownerDocument.getElementById(decodeURIComponent(destination.hash.slice(1)));
+  } catch {
+    return null;
   }
 }
 

@@ -905,7 +905,7 @@ a.rb-eq__num:hover {
  * figures and tables on phones): a soft shadow shows on the side that
  * still has content; the paper-coloured covers scroll with the content and
  * hide the shadow once an end is reached. */
-:is(.rb-eq__math, .rb-eqi__math, .rb-figure .vg-scroll, .rb-table__scroll, .rb-alg__body) {
+:is(.rb-eq__math, .rb-eqi__math, .vg-calc__tex, .rb-figure .vg-scroll, .rb-table__scroll, .rb-alg__body) {
   background:
     linear-gradient(to right, var(--paper) 40%, transparent) left / 1.5rem 100% no-repeat local,
     linear-gradient(to left, var(--paper) 40%, transparent) right / 1.5rem 100% no-repeat local,
@@ -2902,7 +2902,7 @@ a.rb-secidx__title:hover {
 /* Citation timeline */
 .rb-ctl__plot {
   position: relative;
-  block-size: 7.5rem;
+  block-size: max(7.5rem, var(--citation-stack-height, 7.5rem));
   margin: 0.4rem 0.6rem 1.6rem;
   border-block-end: 1px solid var(--ink-2);
 }

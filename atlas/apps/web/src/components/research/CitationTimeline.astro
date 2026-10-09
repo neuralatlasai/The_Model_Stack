@@ -1,8 +1,9 @@
 ---
 /**
  * Citation timeline for a chapter's references page: every cited work placed
- * on a year axis, marked by type (paper ●, technical report ◆, documentation
- * ■, repository ▲, other ○), stacked where years coincide. Each mark links to
+ * on a date axis when complete dates are available over a short span, otherwise
+ * a year axis. Types are marked (paper ●, technical report ◆, documentation
+ * ■, repository ▲, other ○), with coincident sources stacked. Each mark links to
  * the work's paper page. The chapter's intellectual time-span at one glance —
  * unique per chapter, derived from its references table.
  */
@@ -21,6 +22,23 @@ const cited = references.filter((record) => chapter !== null && record.uses.some
 const yearOf = (record: ReferenceRecord): number | null => {
   const match = /\b(19[5-9]\d|20[0-4]\d)\b/u.exec(record.venue) ?? /\b(19[5-9]\d|20[0-4]\d)\b/u.exec(record.work);
   return match?.[1] === undefined ? null : Number(match[1]);
+};
+interface SourceDate {
+  iso: string;
+  time: number;
+  year: number;
+}
+// Venues carry the inspected first-publication/release date. Do not substitute
+// the inspection date, or manufacture a month/day from a year-only record.
+const dateOf = (record: ReferenceRecord): SourceDate | null => {
+  const match = /\b((?:19[5-9]\d|20[0-4]\d)-\d{2}-\d{2})\b/u.exec(record.venue);
+  if (match === null || match[1] === undefined) return null;
+  const iso = match[1];
+  const prefix = record.venue.slice(0, match.index);
+  if (/\b(?:inspect(?:ed|ion)?|accessed|updated|revis(?:ed|ion))\b/iu.test(prefix)) return null;
+  const date = new Date(`${iso}T00:00:00Z`);
+  if (!Number.isFinite(date.getTime()) || date.toISOString().slice(0, 10) !== iso) return null;
+  return { iso, time: date.getTime(), year: date.getUTCFullYear() };
 };
 type Mark = 'paper' | 'report' | 'doc' | 'repo' | 'other';
 const markOf = (record: ReferenceRecord): Mark => {
@@ -41,48 +59,111 @@ const LABEL: Readonly<Record<Mark, string>> = {
 };
 
 const dated = cited
-  .map((record) => ({ record, year: yearOf(record), mark: markOf(record) }))
-  .filter((entry): entry is { record: ReferenceRecord; year: number; mark: Mark } => entry.year !== null)
+  .map((record) => ({ record, year: yearOf(record), date: dateOf(record), mark: markOf(record) }))
+  .filter(
+    (entry): entry is { record: ReferenceRecord; year: number; date: SourceDate | null; mark: Mark } =>
+      entry.year !== null,
+  )
   .sort((a, b) => a.year - b.year || a.record.key.localeCompare(b.record.key));
 const years = dated.map((entry) => entry.year);
 const minYear = years.length > 0 ? Math.min(...years) : 0;
 const maxYear = years.length > 0 ? Math.max(...years) : 0;
-const span = Math.max(1, maxYear - minYear);
-const byYear = new Map<number, typeof dated>();
-for (const entry of dated) byYear.set(entry.year, [...(byYear.get(entry.year) ?? []), entry]);
-const candidates = [...new Set([minYear, ...[...byYear.keys()].filter((year) => year % 5 === 0), maxYear])].sort(
-  (a, b) => a - b,
-);
-// Reserve enough space between labels even at the 358px mobile manuscript width.
-// Every source mark remains plotted; only redundant year labels are omitted.
-const tickYears = [minYear];
-for (const year of candidates) {
-  if ((year - (tickYears.at(-1) ?? minYear)) / span >= 0.15 && (maxYear - year) / span >= 0.15) tickYears.push(year);
+const completeDates = dated.length > 1 && dated.every((entry) => entry.date !== null && entry.date.year === entry.year);
+const times = dated.flatMap((entry) => (entry.date === null ? [] : [entry.date.time]));
+const minTime = times.length > 0 ? Math.min(...times) : 0;
+const maxTime = times.length > 0 ? Math.max(...times) : 0;
+const twoYearsLater = new Date(minTime);
+twoYearsLater.setUTCFullYear(twoYearsLater.getUTCFullYear() + 2);
+const dateAxis = completeDates && maxTime <= twoYearsLater.getTime();
+const axisMin = dateAxis ? minTime : minYear;
+const axisMax = dateAxis ? maxTime : maxYear;
+const span = Math.max(1, axisMax - axisMin);
+const fraction = (value: number): number => (axisMin === axisMax ? 0.5 : (value - axisMin) / span);
+const pct = (value: number): string => `${String(fraction(value) * 100)}%`;
+const grouped = new Map<number, typeof dated>();
+for (const entry of dated) {
+  const position = dateAxis && entry.date !== null ? entry.date.time : entry.year;
+  grouped.set(position, [...(grouped.get(position) ?? []), entry]);
 }
-if (maxYear !== minYear) tickYears.push(maxYear);
-const pct = (year: number): string => `${String(((year - minYear) / span) * 100)}%`;
+const columns = [...grouped.entries()]
+  .sort(([a], [b]) => a - b)
+  .map(([position, entries]) => ({ position, entries, lane: 0 }));
+// Adjacent release dates can have overlapping 18px hit targets on mobile.
+// Keep their true horizontal position and offset the stacks vertically. The
+// conservative 260px plot width also covers a 320px phone with page gutters.
+for (const [index, column] of columns.entries()) {
+  if (!dateAxis) continue;
+  const neighbours = columns
+    .slice(0, index)
+    .filter((other) => fraction(column.position) - fraction(other.position) < 18 / 260);
+  while (
+    neighbours.some(
+      (other) => column.lane < other.lane + other.entries.length && other.lane < column.lane + column.entries.length,
+    )
+  ) {
+    column.lane += 1;
+  }
+}
+const stackRows = Math.max(0, ...columns.map((column) => column.lane + column.entries.length));
+const plotHeight = stackRows * 16 + 8;
+const monthLabel = (time: number): string =>
+  new Intl.DateTimeFormat('en', { month: 'short', year: 'numeric', timeZone: 'UTC' }).format(time);
+const sameMonth = dateAxis && monthLabel(axisMin) === monthLabel(axisMax);
+const dateLabel = (time: number): string =>
+  new Intl.DateTimeFormat('en', {
+    ...(sameMonth ? { day: 'numeric' as const } : {}),
+    month: 'short',
+    year: 'numeric',
+    timeZone: 'UTC',
+  }).format(time);
+const candidates: number[] = [];
+if (dateAxis) {
+  const month = new Date(axisMin);
+  month.setUTCDate(1);
+  month.setUTCMonth(month.getUTCMonth() + 1);
+  while (month.getTime() < axisMax) {
+    candidates.push(month.getTime());
+    month.setUTCMonth(month.getUTCMonth() + 1);
+  }
+} else {
+  candidates.push(...[...grouped.keys()].filter((year) => year % 5 === 0).sort((a, b) => a - b));
+}
+// Sparse labels remain legible at the 358px mobile manuscript width; source
+// marks themselves are never omitted. Edge labels stay inside the plot.
+const tickPositions = [axisMin];
+const labelGap = dateAxis ? 0.22 : 0.15;
+for (const value of candidates) {
+  if ((value - (tickPositions.at(-1) ?? axisMin)) / span >= labelGap && (axisMax - value) / span >= labelGap)
+    tickPositions.push(value);
+}
+if (axisMax !== axisMin) tickPositions.push(axisMax);
+const rangeLabel = dateAxis
+  ? sameMonth
+    ? monthLabel(axisMin)
+    : `${monthLabel(axisMin)}–${monthLabel(axisMax)}`
+  : `${minYear}–${maxYear}`;
 const marks = [...new Set(dated.map((entry) => entry.mark))];
 const undated = cited.length - dated.length;
 ---
 
 {dated.length > 1 && (
-  <figure class="rb-ctl" aria-labelledby="ctl-title">
+  <figure class="rb-ctl" aria-labelledby="ctl-title" data-axis={dateAxis ? 'date' : 'year'}>
     <figcaption class="rb-ctl__head" id="ctl-title">
       <span class="rb-ctl__kicker">Sources in time</span>
       <span class="rb-ctl__note">
-        {dated.length} dated works, {minYear}–{maxYear}
+        {dated.length} dated works, {rangeLabel}
         {undated > 0 ? ` · ${String(undated)} undated` : ''}
       </span>
     </figcaption>
-    <div class="rb-ctl__plot">
-      {[...byYear.entries()].map(([year, entries]) => (
-        <div class="rb-ctl__col" style={`--x: ${pct(year)}`}>
+    <div class="rb-ctl__plot" style={`--citation-stack-height: ${String(plotHeight)}px`}>
+      {columns.map(({ position, entries, lane }) => (
+        <div class="rb-ctl__col" style={`--x: ${pct(position)}; inset-block-end: ${String(2 + lane * 16)}px`}>
           {entries.map((entry) => (
             <a
               class={`rb-ctl__mark rb-ctl__mark--${entry.mark}`}
               href={siteHref(entry.record.atlasUrl)}
-              title={`${entry.record.key} · ${entry.record.work} (${String(year)})`}
-              aria-label={`${entry.record.key}: ${entry.record.work}, ${String(year)}`}
+              title={`${entry.record.key} · ${entry.record.work} (${dateAxis && entry.date !== null ? entry.date.iso : String(entry.year)})`}
+              aria-label={`${entry.record.key}: ${entry.record.work}, ${dateAxis && entry.date !== null ? entry.date.iso : String(entry.year)}`}
             >
               <span aria-hidden="true">{GLYPH[entry.mark]}</span>
             </a>
@@ -90,9 +171,12 @@ const undated = cited.length - dated.length;
         </div>
       ))}
       <div class="rb-ctl__axis" aria-hidden="true">
-        {tickYears.map((year) => (
-          <span class="rb-ctl__tick" style={`--x: ${pct(year)}`}>
-            {year}
+        {tickPositions.map((position, index) => (
+          <span
+            class="rb-ctl__tick"
+            style={`--x: ${pct(position)}; white-space: nowrap${dateAxis && axisMin !== axisMax && (index === 0 || index === tickPositions.length - 1) ? `; translate: ${index === 0 ? '0' : '-100%'} 0` : ''}`}
+          >
+            {dateAxis ? dateLabel(position) : position}
           </span>
         ))}
       </div>

@@ -666,10 +666,18 @@ html[data-reading-mode='complete'][data-article-layout='workspace'] {
     min-inline-size: 0;
     overflow-x: auto;
     overscroll-behavior-inline: contain;
+    font-size: 18px;
+    scrollbar-width: thin;
   }
 
   .vg-calc__tex .katex-display {
     overflow: visible;
+    text-align: start;
+  }
+
+  .vg-calc__tex .katex-display > .katex {
+    font-size: 1em;
+    text-align: start;
   }
 
   .vg-calc__tex:focus-visible {

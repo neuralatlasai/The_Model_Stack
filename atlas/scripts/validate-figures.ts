@@ -92,7 +92,9 @@ async function referenceKeys(chapterDir: string): Promise<Set<string>> {
 
 function extractFigures(text: string): { yaml: string; line: number }[] {
   const out: { yaml: string; line: number }[] = [];
-  const lines = text.split('\n');
+  // Match the compiler's newline normalization before extracting YAML. A CRLF
+  // closing fence otherwise leaves a bare trailing CR at the YAML document's end.
+  const lines = text.replace(/\r\n?/gu, '\n').split('\n');
   for (let i = 0; i < lines.length; i += 1) {
     if ((lines[i] ?? '').trim() === '```figure') {
       const start = i + 1;
@@ -236,9 +238,14 @@ function semanticChecks(fig: FigureSpec, refs: ReadonlySet<string>, nodes: Reado
         const sources = [series.points, series.values, series.formula].filter((v) => v !== undefined).length;
         if (sources !== 1) problems.push(`series ${series.id}: give exactly one of points, values, formula`);
         if (series.formula !== undefined) {
-          if (series.sample === undefined) problems.push(`series ${series.id}: formula needs sample {from, to, count}`);
+          const range =
+            series.sample ??
+            (fig.spec.x.domain === undefined
+              ? undefined
+              : { from: fig.spec.x.domain[0], to: fig.spec.x.domain[1], count: 32 });
+          if (range === undefined) problems.push(`series ${series.id}: formula needs sample or an x domain`);
           else {
-            for (const x of sampleXs(series.sample, log)) {
+            for (const x of sampleXs(range, log)) {
               const issue = checkFormula(
                 series.formula,
                 bound,

@@ -456,8 +456,9 @@ export function initEquationsExplorer(ctx: PageContext): void {
     const results: [HTMLElement, number][] = [];
     for (const eq of eqs) {
       if (eq.row.hidden || eq.line === null || eq.meta === null) continue;
-      // Do not force offscreen KaTeX rows to render just to measure their labels.
-      if (!eq.row.checkVisibility({ contentVisibilityAuto: true })) continue;
+      // The row's own box stays visible when content-visibility skips its
+      // contents. Check the label inside it before reading layout dimensions.
+      if (!eq.line.checkVisibility({ contentVisibilityAuto: true })) continue;
       const width = eq.line.clientWidth;
       if (eq.line.scrollWidth <= width + 1) {
         results.push([eq.meta, 0]);
