@@ -178,7 +178,7 @@ body > :is(.sh-frame, .sh-home, .sh-plain) {
 }
 
 .sh-wordmark-title {
-  font: 500 21px/1 var(--font-serif);
+  font: 550 22px/1 var(--font-serif);
   font-variant-caps: all-small-caps;
   letter-spacing: 0.06em;
 }
@@ -277,7 +277,7 @@ body > :is(.sh-frame, .sh-home, .sh-plain) {
   position: relative;
   display: inline-block;
   padding-block: 0.35rem;
-  font: 450 13px/1.2 var(--font-sans);
+  font: 500 13.5px/1.2 var(--font-sans);
   letter-spacing: 0.005em;
   color: var(--ink-2);
   text-decoration: none;
@@ -1118,6 +1118,8 @@ html[data-depth='implementation'] .sh-depth-option[data-depth-option='implementa
 .sh-page-title {
   margin: 0 0 1rem;
   font-size: var(--fs-h1);
+  font-weight: 500;
+  letter-spacing: -0.02em;
 }
 
 .sh-title-num {
@@ -2544,13 +2546,13 @@ a.sh-dot:focus-visible::after {
 
 @media (max-width: 719.98px) {
   :root {
-    --fs-h1: 31px;
-    --fs-h2: 25px;
-    --fs-display: 38px;
+    --fs-h1: 36px;
+    --fs-h2: 28px;
+    --fs-display: 46px;
   }
 
   body {
-    font-size: 18px;
+    font-size: var(--fs-body);
   }
 
   .sh-kv {

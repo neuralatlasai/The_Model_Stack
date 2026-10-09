@@ -4,10 +4,9 @@
  * rules, small-caps section heads. Component classes live in shell.css (sh-),
  * research.css (rb-) and visual-grammar.css (vg-).
  *
- * Numerals: prose uses old-style proportional figures (OpenType onum/pnum);
- * tables, metadata and instruments switch to lining tabular figures
- * (lnum/tnum). Small caps use `all-small-caps`, which selects the font's real
- * smcp/c2sc glyphs in EB Garamond rather than synthesising them.
+ * Tables, metadata and instruments request tabular numerals. Editorial
+ * headings use drawn variable weights; font synthesis is disabled so missing
+ * small-cap features do not become shrunken artificial capitals.
  */
 
 @import 'katex/dist/katex.min.css';
@@ -38,11 +37,12 @@ body {
   font-family: var(--font-serif);
   font-size: var(--fs-body);
   line-height: var(--lh-body);
-  font-weight: 400;
+  font-weight: 430;
   font-kerning: normal;
   font-variant-ligatures: common-ligatures;
   font-variant-numeric: oldstyle-nums proportional-nums;
   font-optical-sizing: auto;
+  font-synthesis: none;
   hanging-punctuation: first;
   text-rendering: optimizeLegibility;
   -webkit-font-smoothing: antialiased;
@@ -113,7 +113,7 @@ h6 {
 h1 {
   font-size: var(--fs-h1);
   line-height: 1.12;
-  letter-spacing: -0.005em;
+  letter-spacing: -0.018em;
 }
 
 /* Section heads à la AI 2040: real small caps, open tracking. */
@@ -121,7 +121,7 @@ h2 {
   font-size: var(--fs-h2);
   line-height: 1.2;
   font-variant-caps: all-small-caps;
-  letter-spacing: 0.04em;
+  letter-spacing: 0.025em;
 }
 
 h3 {

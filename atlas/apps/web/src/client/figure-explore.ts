@@ -83,10 +83,18 @@ function exploreScene(svg: SVGSVGElement, signal: AbortSignal): void {
   let readout: HTMLElement | null = null;
   let order: SVGGElement[] | null = null;
   let cursor = -1;
+  const research = svg.closest('.sc-plate') !== null;
+  let pinned = false;
+  const idle = 'Point or tap a node · arrows explore · Enter pins · Esc clears';
+  if (research) {
+    readout = readoutFor(svg, 'vg-explore');
+    readout.textContent = idle;
+  }
   const clear = (): void => {
     svg.classList.remove('has-explore');
-    for (const el of svg.querySelectorAll('.is-hot, .is-near')) el.classList.remove('is-hot', 'is-near');
-    if (readout !== null) readout.textContent = '';
+    for (const el of svg.querySelectorAll('.is-hot, .is-near, .is-upstream, .is-downstream'))
+      el.classList.remove('is-hot', 'is-near', 'is-upstream', 'is-downstream');
+    if (readout !== null) readout.textContent = research ? idle : '';
   };
   const focusNode = (node: SVGGElement): void => {
     const id = node.getAttribute('data-vg-key') ?? '';
@@ -105,6 +113,29 @@ function exploreScene(svg: SVGSVGElement, signal: AbortSignal): void {
       if (edge.from === id) outOf.push(name);
       else into.push(name);
     }
+    if (research) {
+      // Follow only actual directed edges; visited sets bound cycles and repeated paths.
+      const trace = (upstream: boolean): void => {
+        const seen = new Set([id]);
+        const queue = [id];
+        for (let at = 0; at < queue.length && at < index.nodes.size; at += 1) {
+          const here = queue[at];
+          for (const edge of index.edges) {
+            if ((upstream ? edge.to : edge.from) !== here) continue;
+            const next = upstream ? edge.from : edge.to;
+            for (const part of edge.parts) part.classList.add('is-hot', upstream ? 'is-upstream' : 'is-downstream');
+            if (next !== id)
+              index.nodes.get(next)?.classList.add('is-near', upstream ? 'is-upstream' : 'is-downstream');
+            if (!seen.has(next)) {
+              seen.add(next);
+              queue.push(next);
+            }
+          }
+        }
+      };
+      trace(true);
+      trace(false);
+    }
     readout ??= readoutFor(svg, 'vg-explore');
     readout.replaceChildren();
     const strong = document.createElement('b');
@@ -113,36 +144,58 @@ function exploreScene(svg: SVGSVGElement, signal: AbortSignal): void {
     if (into.length > 0) readout.append(`  ← ${into.join(', ')}`);
     if (outOf.length > 0) readout.append(`  → ${outOf.join(', ')}`);
     if (into.length === 0 && outOf.length === 0) readout.append('  (no drawn connections)');
+    if (research) readout.append(pinned ? '  · Pinned; Esc clears.' : '  · Enter or tap pins this path.');
   };
   svg.addEventListener(
     'pointerover',
     (event) => {
       const node = event.target instanceof Element ? event.target.closest<SVGGElement>('g.vg-node[data-vg-key]') : null;
-      if (node !== null) focusNode(node);
+      if (node !== null && !pinned) focusNode(node);
     },
     { signal },
   );
   svg.addEventListener(
     'pointerleave',
     () => {
-      if (document.activeElement !== svg) clear();
+      if (!pinned && document.activeElement !== svg) clear();
     },
     { signal },
   );
+  if (research)
+    svg.addEventListener(
+      'click',
+      (event) => {
+        const node =
+          event.target instanceof Element ? event.target.closest<SVGGElement>('g.vg-node[data-vg-key]') : null;
+        if (node === null) return;
+        pinned = !pinned || !node.classList.contains('is-hot');
+        focusNode(node);
+      },
+      { signal },
+    );
 
   makeSteppable(svg, 'Use the arrow keys to step through its nodes and see what each one connects to');
   svg.addEventListener(
     'keydown',
     (event) => {
       if (event.key === 'Escape') {
+        pinned = false;
         clear();
         cursor = -1;
+        return;
+      }
+      if (research && event.key === 'Enter') {
+        event.preventDefault();
+        pinned = !pinned;
+        const node = svg.querySelector<SVGGElement>('g.vg-node.is-hot') ?? index.nodes.values().next().value;
+        if (node !== undefined) focusNode(node);
         return;
       }
       const step = STEP_KEYS[event.key];
       const jump = event.key === 'Home' ? 'first' : event.key === 'End' ? 'last' : null;
       if (step === undefined && jump === null) return;
       event.preventDefault();
+      pinned = false;
       order ??= readingOrder(index.nodes.values());
       if (order.length === 0) return;
       cursor =
@@ -159,7 +212,7 @@ function exploreScene(svg: SVGSVGElement, signal: AbortSignal): void {
   svg.addEventListener(
     'blur',
     () => {
-      clear();
+      if (!pinned) clear();
       cursor = -1;
     },
     { signal },

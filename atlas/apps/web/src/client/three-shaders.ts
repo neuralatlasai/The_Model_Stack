@@ -1,13 +1,13 @@
 /**
  * Shaders for the home page's 3D brain (brain3d.ts):
  *
- *   glass   Fresnel glass at night — nearly clear where the surface faces the
- *           viewer, dense at grazing angles, with a specular glint; drawn back
- *           faces first (faint), then front faces. On paper (uPorcelain) an
- *           opaque sculpted porcelain form. Either way the region of the part
- *           in view glows in the part's colour (uFocus, uFocusK, uGlow)
+ *   cortex  Wrapped key/fill shading on an opaque ivory or slate form.
+ *           uDark retains a deeper shadow range at night. The region of the
+ *           part in view is tinted gently (uFocus, uFocusK, uGlow).
  *   bead    points as lit glass beads on paper (sphere shading + highlight
- *           inside a faint halo) or as additive glows at night (uPaper 0)
+ *           inside a faint halo), with coloured, non-additive cores at night.
+ * Both custom shaders convert linear working colours to the renderer's
+ * output colour space, as Three's built-in line material already does.
  */
 export const GLASS_VERTEX = /* glsl */ `
   varying vec3 vN;
@@ -29,6 +29,7 @@ export const GLASS_FRAGMENT = /* glsl */ `
   uniform float uOpacity;
   uniform float uFill;
   uniform float uPorcelain;
+  uniform float uDark;
   uniform float uCrease;
   uniform vec3 uFocus;
   uniform float uFocusK;
@@ -58,12 +59,13 @@ export const GLASS_FRAGMENT = /* glsl */ `
       float fill = max(dot(n, normalize(vec3(0.75, 0.15, 0.55))), 0.0);
       float sky = 0.5 + 0.5 * n.y;
       float crease = clamp(length(fwidth(n)) * uCrease, 0.0, 1.0);
-      vec3 shade = mix(vec3(0.72, 0.735, 0.70), vec3(1.0, 0.995, 0.975), wrap);
+      vec3 shadow = mix(vec3(0.72, 0.735, 0.70), vec3(0.45, 0.50, 0.48), uDark);
+      vec3 shade = mix(shadow, vec3(1.0, 0.995, 0.975), wrap);
       shade += vec3(0.04, 0.038, 0.034) * fill + vec3(0.03) * sky;
-      shade *= 1.0 - 0.16 * crease;
+      shade *= 1.0 - mix(0.16, 0.24, uDark) * crease;
       shade *= 1.0 - 0.12 * fres;
       shade += vec3(0.055, 0.055, 0.035) * fres;
-      float sheen = pow(max(dot(reflect(-l, n), v), 0.0), 18.0) * 0.10;
+      float sheen = pow(max(dot(reflect(-l, n), v), 0.0), 18.0) * mix(0.045, 0.025, uDark);
       col = uBody * shade + vec3(sheen);
       a = uOpacity;
     }
@@ -77,6 +79,8 @@ export const GLASS_FRAGMENT = /* glsl */ `
       a = max(a, glow * 0.3 * uOpacity);
     }
     gl_FragColor = vec4(col, clamp(a, 0.0, 1.0));
+    #include <tonemapping_fragment>
+    #include <colorspace_fragment>
   }
 `;
 
@@ -109,8 +113,8 @@ export const BEAD_FRAGMENT = /* glsl */ `
     if (d > 0.5) discard;
     float glow = pow(1.0 - d * 2.0, 2.2);
     float core = smoothstep(0.22, 0.0, d);
-    vec3 night = vColor * glow + vec3(core) * 0.9;
-    float aNight = (glow * 0.85 + core) * vAlpha;
+    vec3 night = vColor * (0.56 + 0.44 * glow + core * 0.18);
+    float aNight = (glow * 0.45 + core * 0.5) * vAlpha;
     float r = d / 0.3;
     float bead = 1.0 - smoothstep(0.92, 1.0, r);
     float nz = sqrt(max(0.0, 1.0 - r * r));
@@ -118,6 +122,8 @@ export const BEAD_FRAGMENT = /* glsl */ `
     vec3 paper = mix(vColor * (0.45 + 0.6 * nz) + vec3(spec) * 0.75, vColor, 1.0 - bead);
     float aPaper = max(bead, (1.0 - smoothstep(0.3, 0.5, d)) * 0.16) * vAlpha;
     gl_FragColor = vec4(mix(night, paper, uPaper), mix(aNight, aPaper, uPaper));
+    #include <tonemapping_fragment>
+    #include <colorspace_fragment>
   }
 `;
 

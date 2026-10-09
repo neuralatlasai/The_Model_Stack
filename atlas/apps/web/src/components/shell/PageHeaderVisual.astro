@@ -1,10 +1,70 @@
 ---
-import HeaderInstrument from '../../islands/HeaderInstrument.tsx';
-// Astro.url includes the GitHub Pages deployment prefix during prerendering.
+import HeaderInstrument, { type HeaderVisualContext } from '../../islands/HeaderInstrument.tsx';
+import { neighbourhood, type NodeId } from '@atlas/core';
+import { getGraph, getRegistry } from '../../lib/atlas.ts';
+import { enclosing } from '../../lib/nodes.ts';
+import '../../styles/header-instrument.css';
+// Strip the deployment prefix before looking up canonical object URLs.
 const base = import.meta.env.BASE_URL;
 const pathname = Astro.url.pathname;
 const page = pathname.startsWith(base) ? `/${pathname.slice(base.length)}` : pathname;
-const topic = page.split('/')[1] ?? 'library';
+const segments = page.split('/').filter(Boolean);
+const topic = segments[0] ?? 'library';
+let context: HeaderVisualContext | undefined;
+if (segments.length > 1 && ['papers', 'systems', 'labs', 'graph', 'compare'].includes(topic)) {
+  const [graph, registry] = await Promise.all([getGraph(), getRegistry()]);
+  const footprint = (ids: readonly NodeId[]): readonly number[] => {
+    const chapters = new Set<number>();
+    for (const id of ids) {
+      const chapter = enclosing(graph, id, 'chapter');
+      const number = chapter === null ? undefined : /^ms\.chapter\.(\d+)$/u.exec(chapter.id)?.[1];
+      if (number !== undefined) chapters.add(Number(number));
+    }
+    return Array.from(
+      { length: 11 },
+      (_, part) => [...chapters].filter((number) => Math.floor((number - 1) / 6) === part).length,
+    );
+  };
+  if (topic === 'papers') {
+    const record = registry.references.find((entry) => entry.atlasUrl === page);
+    if (record !== undefined)
+      context = {
+        id: record.key,
+        summary: `${record.type}; ${record.status}. The footprint counts distinct citing chapters in each of the eleven book parts.`,
+        footprint: footprint(record.citedBy),
+      };
+  } else if (topic === 'systems') {
+    const system = registry.systems.find((entry) => entry.atlasUrl === page);
+    if (system !== undefined)
+      context = {
+        id: system.id,
+        summary: `${system.name}; ${system.layer ?? 'layer unspecified'}. The footprint counts distinct written chapters with a recorded implementation or reference-stack use.`,
+        footprint: footprint([
+          ...system.usedBy.filter((id) => graph.nodes[id]?.hasManuscript === true),
+          ...system.uses.map((use) => use.nodeId),
+        ]),
+      };
+  } else if (topic === 'labs') {
+    const lab = registry.labs.find((entry) => entry.atlasUrl === page);
+    if (lab !== undefined)
+      context = {
+        id: lab.id,
+        summary: `${lab.name}. The footprint counts distinct chapters with recorded reference-stack use, not laboratory performance.`,
+        footprint: footprint(lab.uses.map((use) => use.nodeId)),
+      };
+  } else {
+    const node = Object.values(graph.nodes).find((entry) => `/${topic}${entry.url}` === page);
+    if (node !== undefined) {
+      const hood = neighbourhood(graph, node.id);
+      if (hood !== null)
+        context = {
+          id: node.id,
+          summary: `${node.title}; ${hood.prerequisites.length} prerequisite and ${hood.dependents.length} dependent nodes. The footprint counts their distinct enclosing chapters by book part; the larger motif is illustrative.`,
+          footprint: footprint([...hood.prerequisites, ...hood.dependents].map((entry) => entry.id)),
+        };
+    }
+  }
+}
 ---
 
-<HeaderInstrument topic={topic} page={page} client:visible />
+<HeaderInstrument topic={topic} page={page} context={context} client:visible />

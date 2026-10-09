@@ -1,5 +1,91 @@
 /* Open research notes and ruled indexes, in the editorial language of the
  * supplied references. Scientific plots and their semantic marks stay intact. */
+
+/* Chapter entries share the paper; progress lives in the six section marks. */
+:root body .lib-tile {
+  --tile-ink: var(--ink-2);
+  --tile-num: var(--d);
+  --cell-fill: var(--d);
+  --cell-empty: color-mix(in oklab, var(--d) 30%, var(--rule-strong));
+
+  padding-block: 8px 19px;
+  border: 0;
+  border-block-end: 1px solid var(--rule);
+  border-radius: 0;
+  background: transparent;
+  box-shadow: none;
+}
+
+:root body .lib-tile.is-written {
+  --tile-ink: var(--ink);
+}
+
+:root body .lib-tile.is-planned .lib-tile__t {
+  text-shadow: none;
+}
+
+:root body .lib-tile__link {
+  font-size: 11.5px;
+  line-height: 1.35;
+}
+
+:root body .lib-tile__n {
+  font-size: 14px;
+}
+
+:root body .lib-tile.is-written .lib-cell.is-written {
+  background: var(--d);
+  border-color: var(--d);
+}
+
+:root body .lib-ch__n {
+  font-size: 22px;
+}
+
+.lib-weave__pan {
+  overflow-x: auto;
+  overscroll-behavior-inline: contain;
+  scrollbar-width: thin;
+}
+
+.lib-weave__pan:focus-visible {
+  outline: 2px solid var(--focus);
+  outline-offset: 4px;
+}
+
+:root body .lib-weave__scale {
+  position: static;
+  margin-block: 8px;
+  text-align: end;
+}
+
+@container lib (max-width: 560px) {
+  :root body .lib-weave__stage {
+    --arc-h: 130px;
+    --dots-h: 46px;
+
+    min-inline-size: 760px;
+  }
+
+  :root body .lib-weave__cols {
+    block-size: calc(13px + var(--dots-h));
+  }
+
+  :root body .lib-wc__node {
+    block-size: 7px;
+  }
+
+  :root body .lib-wc__dots {
+    background-image: radial-gradient(circle, var(--d) 1.15px, transparent 1.45px);
+    background-size: 4px 4px;
+  }
+
+  :root body .lib-wp a {
+    font-size: 11px;
+    line-height: 16px;
+  }
+}
+
 :root body :is(.lib-readout, .eco-readout, .pfx-readout, .fx-readout, .en-readout) {
   padding: 20px 0 24px;
   border: 0;

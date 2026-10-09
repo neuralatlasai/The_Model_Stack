@@ -16,10 +16,18 @@ const MINUS = '−';
 
 /** Up to `digits` significant digits, trailing zeros trimmed, typographic minus. */
 export function significant(value: number, digits = 3): string {
+  if (!Number.isFinite(value)) return '—';
   if (value === 0) return '0';
+  const precision = Number.isFinite(digits) ? Math.min(100, Math.max(1, Math.trunc(digits))) : 3;
   const magnitude = Math.abs(value);
-  const decimals = Math.max(0, digits - 1 - Math.floor(Math.log10(magnitude)));
-  const fixed = magnitude.toFixed(Math.min(decimals, 10));
+  const decimals = Math.max(0, precision - 1 - Math.floor(Math.log10(magnitude)));
+  if (decimals > 10) {
+    const [mantissa = '', exponent = '0'] = magnitude.toExponential(precision - 1).split('e');
+    const trimmed = mantissa.includes('.') ? mantissa.replace(/\.?0+$/u, '') : mantissa;
+    const scientific = `${trimmed}e${exponent}`;
+    return value < 0 ? `${MINUS}${scientific}` : scientific;
+  }
+  const fixed = magnitude.toFixed(decimals);
   const trimmed = fixed.includes('.') ? fixed.replace(/\.?0+$/u, '') : fixed;
   return value < 0 ? `${MINUS}${trimmed}` : trimmed;
 }

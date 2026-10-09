@@ -40,10 +40,6 @@ import { cls, fracStyle, hashId, litClass, NO_STATE, r1, widthClass, type StateV
 import { resolveChartSize, type ChartDimensions } from './chart-size.ts';
 
 export type { ChartDimensions } from './chart-size.ts';
-const TICK_FONT = 10.5;
-const LABEL_FONT = 11.5;
-const ANNOT_FONT = 10.5;
-const ANNOT_ROW = 14;
 const MAX_POINTS = 64;
 const LOG_NAME = { linear: '', log2: 'log₂', log10: 'log₁₀' } as const;
 
@@ -77,6 +73,8 @@ export interface ChartViewProps {
   readonly placement?: FigurePlacement;
   /** Optional bounded SVG geometry; omitted or invalid values preserve placement defaults. */
   readonly dimensions?: ChartDimensions | undefined;
+  /** Reflow research-plate labels at the actual display width. */
+  readonly editorial?: boolean;
   /** Live-instrument state: lit series, variable overrides, and the cursor variable `x`. */
   readonly state?: StateView;
 }
@@ -88,8 +86,13 @@ export function ChartView({
   idPrefix,
   placement = 'inline',
   dimensions,
+  editorial = false,
   state = NO_STATE,
 }: ChartViewProps): JSX.Element {
+  const TICK_FONT = editorial ? 12 : 10.5;
+  const LABEL_FONT = editorial ? 13 : 11.5;
+  const ANNOT_FONT = editorial ? 12 : 10.5;
+  const ANNOT_ROW = editorial ? 32 : 14;
   const prefix = idPrefix ?? `vg-ch-${hashId(`${title}|${spec.series.map((series) => series.id).join(',')}`)}`;
   const resolved = resolveChart(spec, state.overrides);
   const { w, h } = resolveChartSize(placement, dimensions);
@@ -106,10 +109,10 @@ export function ChartView({
   const yLabels = yProbe.ticks.map((tick) => formatTick(tick, spec.y.format, spec.y.scale));
   const left = Math.ceil(Math.max(20, ...yLabels.map((label) => textWidth(label, TICK_FONT, 'mono'))) + 10);
   const lineSeries = resolved.series.filter((series) => series.points.length > 0);
-  const directLabels = !rail && !isBar && spec.type !== 'scatter';
+  const directLabels = !rail && !isBar && spec.type !== 'scatter' && (!editorial || w >= 600);
   const labelRoom = directLabels
     ? Math.min(
-        168,
+        editorial ? 220 : 168,
         Math.ceil(Math.max(0, ...lineSeries.map((series) => textWidth(series.label, LABEL_FONT, 'sans')))) + 18,
       )
     : 0;
@@ -127,6 +130,7 @@ export function ChartView({
     anchor: 'start' | 'middle' | 'end';
     from: number;
     to: number;
+    lines: readonly string[];
   }[] = [];
   if (!isBar) {
     const rowsEnd: number[] = [];
@@ -135,7 +139,9 @@ export function ChartView({
       .sort((a, b) => a.x - b.x);
     for (const { index, x } of sorted) {
       if (!(x >= left - 0.5 && x <= w - right + 0.5)) continue;
-      const width = textWidth(spec.annotations[index]?.label ?? '', ANNOT_FONT, 'mono');
+      const label = spec.annotations[index]?.label ?? '';
+      const lines = editorial ? wrapText(label, Math.min(240, w - 16), ANNOT_FONT, 'mono', 2) : [label];
+      const width = Math.max(0, ...lines.map((line) => textWidth(line, ANNOT_FONT, 'mono')));
       const anchor = x - width / 2 < 2 ? 'start' : x + width / 2 > w - 2 ? 'end' : 'middle';
       const from = anchor === 'start' ? x - 3 : anchor === 'end' ? x - width : x - width / 2;
       const to = from + width + 3;
@@ -146,12 +152,14 @@ export function ChartView({
       } else {
         rowsEnd[row] = to;
       }
-      flags.push({ index, x, row, anchor, from, to });
+      flags.push({ index, x, row, anchor, from, to, lines });
     }
   }
   const flagRows = flags.length === 0 ? 0 : Math.max(...flags.map((flag) => flag.row)) + 1;
-  const top = 26 + flagRows * ANNOT_ROW;
-  const bottom = 40;
+  const yTitle = editorial ? wrapText(spec.y.label, w - 8, LABEL_FONT, 'sans', 2) : [spec.y.label];
+  const xTitle = editorial ? wrapText(spec.x.label, w - left - 8, LABEL_FONT, 'sans', 2) : [spec.x.label];
+  const top = 26 + (yTitle.length - 1) * 16 + flagRows * ANNOT_ROW;
+  const bottom = 40 + (xTitle.length - 1) * 16;
   const x0 = left;
   const x1 = w - right;
   const y0 = top;
@@ -231,7 +239,9 @@ export function ChartView({
   const yAttrs = scaleAttrs(yScale);
 
   return (
-    <div class={cls('vg-chart', `vg-chart--${spec.type}`, `vg-chart--${placement}`)}>
+    <div
+      class={cls('vg-chart', `vg-chart--${spec.type}`, `vg-chart--${placement}`, editorial && 'vg-chart--editorial')}
+    >
       <svg
         class={`vg-svg vg-chart__svg ${widthClass(w)}`}
         viewBox={`0 0 ${w} ${h}`}
@@ -248,6 +258,8 @@ export function ChartView({
         data-y-range={yAttrs.range}
         data-x-format={spec.x.format}
         data-y-format={spec.y.format}
+        data-x-label={spec.x.label}
+        data-y-label={spec.y.label}
         data-plot={`${plot.x} ${plot.y} ${plot.w} ${plot.h}`}
       >
         <title id={`${prefix}-title`}>{title}</title>
@@ -258,7 +270,11 @@ export function ChartView({
           </clipPath>
         </defs>
         <text class="vg-axis-label vg-axis-label--y" x="0" y="11">
-          {spec.y.label}
+          {yTitle.map((line, index) => (
+            <tspan x="0" dy={index === 0 ? 0 : 16} key={index}>
+              {line}
+            </tspan>
+          ))}
           {spec.y.scale !== 'linear' && <tspan class="vg-axis-scale">{` · ${LOG_NAME[spec.y.scale]}`}</tspan>}
         </text>
         <g class="vg-grid">
@@ -300,8 +316,12 @@ export function ChartView({
             </text>
           </g>
         ))}
-        <text class="vg-axis-label vg-axis-label--x" x={x1} y={h - 5} text-anchor="end">
-          {spec.x.label}
+        <text class="vg-axis-label vg-axis-label--x" x={x1} y={h - 5 - (xTitle.length - 1) * 16} text-anchor="end">
+          {xTitle.map((line, index) => (
+            <tspan x={x1} dy={index === 0 ? 0 : 16} key={index}>
+              {line}
+            </tspan>
+          ))}
           {spec.x.scale !== 'linear' && !isBar && <tspan class="vg-axis-scale">{` · ${LOG_NAME[spec.x.scale]}`}</tspan>}
           <tspan class="vg-axis-scale">{' →'}</tspan>
         </text>
@@ -309,9 +329,10 @@ export function ChartView({
         {flags.map((flag) => {
           const annotation = spec.annotations[flag.index];
           if (annotation === undefined) return null;
-          const ty = y0 - 7 - (flagRows - 1 - flag.row) * ANNOT_ROW;
+          const ty = y0 - 7 - (flagRows - 1 - flag.row) * ANNOT_ROW - (flag.lines.length - 1) * 15;
           return (
             <g class="vg-annot" key={`a${flag.index}`}>
+              <title>{annotation.label}</title>
               <line class="vg-annot__rule" x1={r1(flag.x)} y1={r1(ty + 3)} x2={r1(flag.x)} y2={y1} />
               {annotation.y !== undefined && (
                 <circle class="vg-annot__dot" cx={r1(flag.x)} cy={r1(py(annotation.y))} r="3" />
@@ -322,7 +343,15 @@ export function ChartView({
                 y={r1(ty)}
                 text-anchor={flag.anchor}
               >
-                {annotation.label}
+                {flag.lines.map((line, index) => (
+                  <tspan
+                    x={r1(flag.anchor === 'start' ? flag.x - 3 : flag.anchor === 'end' ? flag.x + 3 : flag.x)}
+                    dy={index === 0 ? 0 : 15}
+                    key={index}
+                  >
+                    {line}
+                  </tspan>
+                ))}
               </text>
             </g>
           );
@@ -352,6 +381,8 @@ export function ChartView({
               <g
                 class={cls('vg-series-g', styleClass(series, index), litClass(state, series.id))}
                 data-vg-key={series.id}
+                data-series={editorial ? series.id : undefined}
+                data-series-label={editorial ? series.label : undefined}
                 data-vg-frac={series.id}
                 style={fracStyle(value?.frac ?? 0)}
                 key={series.id}
@@ -380,7 +411,7 @@ export function ChartView({
                       class="vg-series__line"
                       data-series={series.id}
                       data-series-label={series.label}
-                      d={pathFor(series.points)}
+                      d={editorial && spec.type === 'scatter' ? '' : pathFor(series.points)}
                     />
                     {last !== undefined && spec.type !== 'scatter' && (
                       <circle
@@ -394,7 +425,7 @@ export function ChartView({
                 )}
                 {end !== undefined && (
                   <>
-                    {Math.abs(end.y - end.anchorY) > 3 && (
+                    {(Math.abs(end.y - end.anchorY) > 3 || (editorial && end.x < x1 - 8)) && (
                       <path
                         class="vg-series__leader"
                         d={`M${r1(end.x + 3)} ${r1(end.anchorY)} L${r1(x1 + 5)} ${r1(end.y)}`}
@@ -426,10 +457,15 @@ export function ChartView({
         </g>
 
         <g class="vg-points">
-          {resolved.series.map((series) =>
+          {resolved.series.map((series, index) =>
             thin(series.points, MAX_POINTS).map(([x, y]) => (
               <circle
-                class={cls('vg-pt', spec.type === 'scatter' && 'vg-pt--visible', series.emphasis && 'vg-pt--emph')}
+                class={cls(
+                  'vg-pt',
+                  editorial && styleClass(series, index),
+                  spec.type === 'scatter' && 'vg-pt--visible',
+                  series.emphasis && 'vg-pt--emph',
+                )}
                 cx={r1(
                   isBar
                     ? x0 + band * x + (band - groupWidth) / 2 + barWidth * (indexOf.get(series.id) ?? 0) + barWidth / 2

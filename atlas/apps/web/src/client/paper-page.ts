@@ -121,7 +121,6 @@ export function initPaperPage(ctx: PageContext): void {
         item.className = 'pp-ro__item';
         const link = doc.createElement('a');
         link.href = page.url;
-        link.tabIndex = -1;
         link.append(span('pp-ro__num', page.label), span('pp-ro__text2', page.title));
         item.append(link);
         return item;
@@ -174,7 +173,7 @@ export function initPaperPage(ctx: PageContext): void {
         : `Used for: ${chapter.uses.join(' · ')}`,
     );
     listHead(
-      'Citing pages',
+      chapter.pages.length === 0 ? 'Recorded use' : 'Citing pages',
       chapter.uses.length === 0
         ? 'no use recorded'
         : chapter.accessed.length > 0

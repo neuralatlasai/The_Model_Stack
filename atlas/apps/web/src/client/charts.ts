@@ -6,7 +6,7 @@
  * - hover (or keyboard focus + arrows) marks the nearest data point and
  *   reads out its exact x and y;
  * - a legend entry isolates its series (click again to restore all), with
- *   `aria-pressed` meaning "series shown"; nothing animates.
+ *   `aria-pressed` meaning "series shown"; research plates use brief opacity feedback.
  *
  * Markup contract (the visual chart renderer, packages/visual/src/svg/chart.tsx):
  *   <figure data-figure-kind="chart"> … <div class="vg-chart vg-chart--{type}">
@@ -44,6 +44,7 @@ const ACTIVE = 'is-active';
 export function initCharts(ctx: PageContext): void {
   for (const figure of $$(`[${ATTR.figureKind}="chart"]`, ctx.doc)) {
     const svg = figure.querySelector<SVGSVGElement>('svg');
+    if (svg !== null && svg.closest('[data-responsive-chart]') !== null) continue;
     if (svg !== null && svg.querySelector(`[${HOOK.chartX}][${HOOK.chartY}]`) !== null)
       enhanceChart(ctx.ctl, figure, svg);
   }
@@ -66,7 +67,7 @@ function axisLabels(svg: SVGSVGElement, figure: HTMLElement): { x: string | null
   return { x, y };
 }
 
-function enhanceChart(ctl: Controller, figure: HTMLElement, svg: SVGSVGElement): void {
+export function enhanceChart(ctl: Controller, figure: HTMLElement, svg: SVGSVGElement): void {
   const labelsForAxes = axisLabels(svg, figure);
   const axes: ReadoutAxes = {
     xFormat: parseFormat(attrFrom(svg, figure, HOOK.chartXFormat)),
@@ -81,7 +82,9 @@ function enhanceChart(ctl: Controller, figure: HTMLElement, svg: SVGSVGElement):
   const toggles = $$<Element>(`[${HOOK.chartToggle}], button[${HOOK.chartSeries}]`, figure).filter(
     (element) => !svg.contains(element),
   );
-  const seriesEls = $$<Element>(`[${HOOK.chartSeries}]`, svg);
+  const seriesEls = $$<Element>(`[${HOOK.chartSeries}]`, svg).filter(
+    (element) => element.parentElement?.closest(`[${HOOK.chartSeries}]`) === null,
+  );
   const toggleId = (toggle: Element): string =>
     toggle.getAttribute(HOOK.chartToggle) ?? toggle.getAttribute(HOOK.chartSeries) ?? '';
 
@@ -139,21 +142,33 @@ function enhanceChart(ctl: Controller, figure: HTMLElement, svg: SVGSVGElement):
   marker.setAttribute('aria-hidden', 'true');
   marker.setAttribute('visibility', 'hidden');
   svg.append(marker);
-  const readout = h('p', { class: 'cx-chart-readout', role: 'status', 'aria-live': 'polite' });
-  const hintId = `${figure.id === '' ? 'chart' : figure.id}-keys`;
+  const guide = document.createElementNS(SVG_NS, 'line');
+  guide.setAttribute('class', 'sc-chart-guide');
+  guide.setAttribute('aria-hidden', 'true');
+  guide.setAttribute('visibility', 'hidden');
+  if (svg.closest('[data-responsive-chart]') !== null) svg.append(guide);
+  const existingReadout = figure.querySelector<HTMLElement>('[data-chart-readout]');
+  const readout = existingReadout ?? h('p', { class: 'cx-chart-readout', role: 'status', 'aria-live': 'polite' });
+  const idle = svg.closest('[data-responsive-chart]') === null ? '' : 'Inspect a point for exact coordinates.';
+  readout.textContent = idle;
+  const hintPrefix = figure.id === '' ? (svg.querySelector('title[id]')?.id ?? 'chart') : figure.id;
+  const hintId = `${hintPrefix}-keys`;
   const hint = h(
     'span',
     { class: 'cx-sr-only', id: hintId },
     'Arrow keys read data points; up and down switch series.',
   );
-  svg.after(hint, readout);
+  if (existingReadout === null) svg.after(hint, readout);
+  else svg.after(hint);
   ctl.defer(() => {
     marker.remove();
+    guide.remove();
     hint.remove();
-    readout.remove();
+    if (existingReadout === null) readout.remove();
   });
 
-  let isolated: string | null = null;
+  const savedIsolation = svg.dataset['chartIsolated'];
+  let isolated: string | null = savedIsolation !== undefined && labels.has(savedIsolation) ? savedIsolation : null;
   let current = -1;
   const visible = (): ReadonlySet<string> | null => (isolated === null ? null : new Set([isolated]));
 
@@ -166,17 +181,31 @@ function enhanceChart(ctl: Controller, figure: HTMLElement, svg: SVGSVGElement):
     marker.setAttribute('cx', String(point.px));
     marker.setAttribute('cy', String(point.py));
     marker.setAttribute('visibility', 'visible');
+    const [, plotY = 0, , plotHeight = 0] = (svg.dataset['plot'] ?? '').split(' ').map(Number);
+    guide.setAttribute('x1', String(point.px));
+    guide.setAttribute('x2', String(point.px));
+    guide.setAttribute('y1', String(plotY));
+    guide.setAttribute('y2', String(plotY + plotHeight));
+    guide.setAttribute('visibility', 'visible');
     readout.textContent = readoutText(labels.get(point.series) ?? point.series, point, axes);
+    if (existingReadout !== null) {
+      svg.dataset['chartSelectedSeries'] = point.series;
+      svg.dataset['chartSelectedX'] = String(point.x);
+    }
   };
   const clear = (): void => {
     pointEls[current]?.classList.remove(ACTIVE);
     current = -1;
     marker.setAttribute('visibility', 'hidden');
-    readout.textContent = '';
+    guide.setAttribute('visibility', 'hidden');
+    readout.textContent = idle;
+    delete svg.dataset['chartSelectedSeries'];
+    delete svg.dataset['chartSelectedX'];
   };
 
   // ── pointer ──────────────────────────────────────────────────────────────
   let lastPointer: { x: number; y: number } | null = null;
+  let pinned = false;
   const track = frameScheduler(ctl, () => {
     if (lastPointer === null) return;
     const inverse = svg.getScreenCTM()?.inverse();
@@ -185,6 +214,16 @@ function enhanceChart(ctl: Controller, figure: HTMLElement, svg: SVGSVGElement):
     const index = nearestPoint(measure(), user.x, user.y, mode, visible());
     if (index >= 0 && index !== current) select(index);
   });
+  svg.addEventListener(
+    'pointerdown',
+    (event) => {
+      if (existingReadout === null || (event.pointerType !== 'touch' && event.pointerType !== 'pen')) return;
+      pinned = true;
+      lastPointer = { x: event.clientX, y: event.clientY };
+      track();
+    },
+    { signal: ctl.signal, passive: true },
+  );
   svg.addEventListener(
     'pointermove',
     (event) => {
@@ -197,7 +236,7 @@ function enhanceChart(ctl: Controller, figure: HTMLElement, svg: SVGSVGElement):
     'pointerleave',
     () => {
       lastPointer = null;
-      if (document.activeElement !== svg) clear();
+      if (!pinned && document.activeElement !== svg) clear();
     },
     { signal: ctl.signal },
   );
@@ -234,6 +273,10 @@ function enhanceChart(ctl: Controller, figure: HTMLElement, svg: SVGSVGElement):
       if (current < 0) return;
       let next: number;
       switch (event.key) {
+        case 'Escape':
+          pinned = false;
+          clear();
+          return;
         case 'ArrowRight':
           next = stepInSeries(all, current, 1);
           break;
@@ -281,6 +324,10 @@ function enhanceChart(ctl: Controller, figure: HTMLElement, svg: SVGSVGElement):
     const id = toggleId(toggle);
     if (id === '') return;
     isolated = toggleIsolation(isolated, id);
+    if (existingReadout !== null) {
+      if (isolated === null) delete svg.dataset['chartIsolated'];
+      else svg.dataset['chartIsolated'] = isolated;
+    }
     paintIsolation();
   };
   for (const toggle of toggles) {
@@ -307,6 +354,15 @@ function enhanceChart(ctl: Controller, figure: HTMLElement, svg: SVGSVGElement):
     );
   }
   paintIsolation();
+  const savedSeries = svg.dataset['chartSelectedSeries'];
+  const savedX = parseNumber(svg.dataset['chartSelectedX'] ?? null);
+  if (existingReadout !== null && (savedSeries !== undefined || document.activeElement === svg)) {
+    const all = measure();
+    const saved = all.findIndex((point) => point.series === savedSeries && point.x === savedX);
+    const first = all.findIndex((point) => isolated === null || point.series === isolated);
+    if (saved >= 0) select(saved);
+    else if (first >= 0) select(first);
+  }
 
   // Layout changes (resize, depth) can move the points; re-measure on next use.
   window.addEventListener(

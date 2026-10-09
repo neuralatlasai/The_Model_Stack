@@ -17,6 +17,8 @@ import type { CompiledFigure, Depth } from '@atlas/core';
 import { Figure } from '@atlas/visual/svg';
 import Calculator from '../../islands/Calculator.tsx';
 import TensorVolume from '../../islands/TensorVolume.tsx';
+import ResearchChart from '../../islands/ResearchChart.tsx';
+import '../../styles/scientific-figures.css';
 import { depthAttrs } from './lib/dom.ts';
 import { figureCopy, figureLabel, isCalculator } from './lib/figure.ts';
 import { figureHostProps } from './lib/figure-host.ts';
@@ -31,12 +33,28 @@ const { figure, depth = 'overview' } = Astro.props;
 const rail = figure.placement === 'rail';
 const shown = rail ? figureCopy(figure, 'inline') : figure;
 const calculator = isCalculator(figure);
-const scalable = ['diagram', 'cycle', 'chart', 'matrix'].includes(figure.spec.kind);
+const researchPlate = /^fig-3[0-9]\./u.test(figure.spec.id);
+const explorationHint =
+  researchPlate && ['diagram', 'cycle', 'matrix'].includes(figure.spec.kind)
+    ? {
+        explorationHint:
+          figure.spec.kind === 'matrix'
+            ? 'Point or use arrow keys to inspect a cell.'
+            : 'Point or tap a node · arrows explore · Enter pins · Esc clears',
+      }
+    : {};
+const scalable =
+  ['diagram', 'cycle', 'chart', 'matrix'].includes(figure.spec.kind) &&
+  !(researchPlate && figure.spec.kind === 'chart');
 const { nodeHref, tex } = await figureHostProps(figure);
 ---
 
 <div
-  class:list={['rb-figure', `rb-figure--${figure.placement}`, { 'rb-wide': figure.placement === 'wide' }]}
+  class:list={[
+    'rb-figure',
+    `rb-figure--${figure.placement}`,
+    { 'rb-wide': figure.placement === 'wide', 'sc-plate': researchPlate },
+  ]}
   id={rail ? figure.anchor : undefined}
   style={figure.scene === null ? undefined : `--figure-readable-width: ${Math.round(figure.scene.width * 0.8)}px`}
   {...depthAttrs(depth)}
@@ -62,11 +80,25 @@ const { nodeHref, tex } = await figureHostProps(figure);
       <TensorVolume client:visible spec={figure.spec.spec} />
     )}
     {calculator ? (
+      <Figure figure={shown} nodeHref={nodeHref} {...tex}>
+        <Calculator client:visible figure={shown} explore={researchPlate} {...tex} />
+      </Figure>
+    ) : researchPlate && figure.spec.kind === 'chart' ? (
       <Figure figure={shown} nodeHref={nodeHref}>
-        <Calculator client:visible figure={shown} {...tex} />
+        <ResearchChart
+          client:visible
+          spec={figure.spec.spec}
+          title={figure.spec.title}
+          desc={figure.spec.alt}
+          idPrefix={shown.anchor}
+          figureId={figure.spec.id}
+          placement={shown.placement}
+          variables={figure.spec.states[0]?.variables ?? {}}
+          highlight={figure.spec.states[0]?.highlight ?? []}
+        />
       </Figure>
     ) : (
-      <Figure figure={shown} nodeHref={nodeHref} />
+      <Figure figure={shown} nodeHref={nodeHref} {...explorationHint} />
     )}
   </div>
 </div>

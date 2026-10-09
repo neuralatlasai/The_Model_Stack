@@ -513,6 +513,12 @@
 }
 
 /* ── index ─────────────────────────────────────────────────────────────── */
+.eqx-index {
+  /* Deferred row geometry can retain overflow across viewport changes.
+   * Keep it local; each formula retains its own native horizontal scroller. */
+  overflow-x: clip;
+}
+
 .eqx-group {
   margin-top: 1.6rem;
 }

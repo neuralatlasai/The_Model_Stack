@@ -197,7 +197,7 @@ const clientModel = {
     </PageHeader>
 
     <section class="pp-where" aria-labelledby="pp-where-title" data-pp-root>
-      <div class="pp-grid">
+      <div class:list={['pp-grid', { 'pp-grid--no-co': model.cocited.length === 0 }]}>
         <figure class="pp-map">
           <figcaption class="pp-head">
             <span class="pp-head__title" id="pp-where-title">
@@ -295,7 +295,7 @@ const clientModel = {
               <ol class="pp-ro__list" data-pp-list>
                 {model.otherPages.slice(0, LIST_ROWS).map((page) => (
                   <li class="pp-ro__item">
-                    <a href={page.url} tabindex="-1">
+                    <a href={page.url}>
                       <span class="pp-ro__num">{page.label}</span>
                       <span class="pp-ro__text2">{page.title}</span>
                     </a>
@@ -319,7 +319,7 @@ const clientModel = {
                   : `Used for: ${top.uses.map((use) => use.usedFor).join(' · ')}`}
               </p>
               <p class="pp-ro__listhead" data-pp-listhead>
-                <span>Citing pages</span>
+                <span>{top.pages.length === 0 ? 'Recorded use' : 'Citing pages'}</span>
                 <span>
                   {top.uses.length === 0
                     ? 'no use recorded'
@@ -331,7 +331,7 @@ const clientModel = {
               <ol class="pp-ro__list" data-pp-list>
                 {top.pages.slice(0, LIST_ROWS).map((page) => (
                   <li class="pp-ro__item">
-                    <a href={page.url} tabindex="-1">
+                    <a href={page.url}>
                       <span class="pp-ro__num">{page.label}</span>
                       <span class="pp-ro__text2">{page.title}</span>
                     </a>

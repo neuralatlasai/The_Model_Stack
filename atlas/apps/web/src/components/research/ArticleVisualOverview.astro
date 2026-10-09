@@ -6,8 +6,10 @@
  * remain in their original manuscript positions and receive the title links.
  */
 import { isCitationKey, type PerformanceContext, type ResearchDocument } from '@atlas/core';
-import { FigureBody } from '@atlas/visual/svg';
+import { CalculatorDescription, FigureBody } from '@atlas/visual/svg';
 import Calculator from '../../islands/Calculator.tsx';
+import ResearchChart from '../../islands/ResearchChart.tsx';
+import '../../styles/scientific-figures.css';
 import { articleOverviewCopy, articleOverviewFigures } from './lib/article-figures.ts';
 import { figureHostProps } from './lib/figure-host.ts';
 import { figureLabel, isCalculator } from './lib/figure.ts';
@@ -19,6 +21,7 @@ interface Props {
 
 const { doc } = Astro.props;
 const training = doc.meta.chapter !== null && doc.meta.chapter >= 19 && doc.meta.chapter <= 24;
+const researchPlate = doc.meta.chapter !== null && doc.meta.chapter >= 30 && doc.meta.chapter <= 39;
 const editorial = doc.meta.entityType === 'chapter' || doc.meta.entityType === 'section';
 const selectedFigures = articleOverviewFigures(doc.figures);
 const orderedFigures = training
@@ -71,6 +74,7 @@ const contextFields: readonly (readonly [keyof PerformanceContext, string])[] = 
           'vg-place--inline',
           `aw-visual--${figure.spec.kind}`,
           `vg-figure--${figure.spec.kind}`,
+          { 'sc-plate': researchPlate },
         ]}
         id={figure.anchor}
         data-figure={figure.id}
@@ -95,7 +99,18 @@ const contextFields: readonly (readonly [keyof PerformanceContext, string])[] = 
         )}
         <div class="aw-visual__body" role="region" aria-labelledby={`${figure.anchor}--heading`} tabindex={0}>
           {isCalculator(figure) ? (
-            <Calculator client:visible figure={figure} {...tex} />
+            <Calculator client:visible figure={figure} explore={researchPlate} {...tex} />
+          ) : researchPlate && figure.spec.kind === 'chart' ? (
+            <ResearchChart
+              client:visible
+              spec={figure.spec.spec}
+              title={figure.spec.title}
+              desc={figure.spec.alt}
+              idPrefix={figure.anchor}
+              figureId={figure.spec.id}
+              variables={figure.spec.states[0]?.variables ?? {}}
+              highlight={figure.spec.states[0]?.highlight ?? []}
+            />
           ) : (
             <FigureBody
               figure={figure}
@@ -105,6 +120,11 @@ const contextFields: readonly (readonly [keyof PerformanceContext, string])[] = 
             />
           )}
         </div>
+        {researchPlate && ['diagram', 'cycle', 'matrix'].includes(figure.spec.kind) && (
+          <p class="vg-explore" aria-live="polite">
+            Point or use arrow keys to inspect the connections.
+          </p>
+        )}
         <figcaption class="aw-visual__caption">
           {(training || editorial) && (
             <>
@@ -148,12 +168,14 @@ const contextFields: readonly (readonly [keyof PerformanceContext, string])[] = 
             )}
             {figure.spec.states[0]?.note !== undefined && <p>{figure.spec.states[0].note}</p>}
             <div class="aw-visual__description">
-              {figure.text
-                .split(/\n+/u)
-                .filter((line) => line.trim() !== '')
-                .map((paragraph) => (
-                  <p>{paragraph}</p>
-                ))}
+              {figure.spec.kind === 'calculator' ? (
+                <CalculatorDescription spec={figure.spec.spec} alt={figure.spec.alt} {...tex} />
+              ) : (
+                figure.text
+                  .split(/\n+/u)
+                  .filter((line) => line.trim() !== '')
+                  .map((paragraph) => <p>{paragraph}</p>)
+              )}
             </div>
           </details>
           <a class="aw-visual__open" href={`#${source.anchor}`}>

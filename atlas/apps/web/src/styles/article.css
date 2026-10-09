@@ -1,46 +1,21 @@
 /*
  * Complete research articles follow the supplied AI 2027 research-page visual
- * reference: ET Book, an open 700px text column, sentence-case headings, and a
+ * reference: an editorial serif, an open text column, sentence-case headings, and a
  * separate notes margin. The atlas indexes retain their existing design.
- * Source fonts: public/fonts/et-book/PROVENANCE.md (MIT, pinned upstream).
+ * Families are shared with the indexes through fonts.css and tokens.css.
  * All manuscript blocks stay in the server-rendered article, at every depth.
  */
-@font-face {
-  font-family: 'ET Book';
-  src: url('/fonts/et-book/regular.woff') format('woff');
-  font-style: normal;
-  font-weight: 400;
-  font-display: swap;
-}
-
 .rb-figure__scale {
   display: none;
 }
 
-@font-face {
-  font-family: 'ET Book';
-  src: url('/fonts/et-book/italic.woff') format('woff');
-  font-style: italic;
-  font-weight: 400;
-  font-display: swap;
-}
-
-@font-face {
-  font-family: 'ET Book';
-  src: url('/fonts/et-book/bold.woff') format('woff');
-  font-style: normal;
-  font-weight: 700;
-  font-display: swap;
-}
-
 :root[data-reading-mode='complete'] {
-  --font-serif: 'ET Book', Palatino, 'Palatino Linotype', 'Book Antiqua', Georgia, serif;
   --measure: 700px;
-  --fs-h1: 52px;
-  --fs-h2: 33px;
-  --fs-h3: 25.5px;
-  --fs-body: 21px;
-  --lh-body: 1.428571;
+  --fs-h1: clamp(2.5rem, 3.5vw, 3.25rem);
+  --fs-h2: clamp(1.875rem, 2.4vw, 2.25rem);
+  --fs-h3: 26px;
+  --fs-body: 22px;
+  --lh-body: 1.5;
   --article-width: 1160px;
   --article-gutter: 140px;
 }

@@ -1,0 +1,28 @@
+---
+import { CHAPTER_ICON } from '../../lib/chapter-icons.ts';
+
+interface Props {
+  chapter: number;
+}
+
+const body = CHAPTER_ICON[Astro.props.chapter];
+---
+
+<svg class="chapter-symbol" viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+  <Fragment set:html={body ?? '<path d="M4 5h16v14H4zM8 5v14" />'} />
+</svg>
+
+<style>
+  .chapter-symbol {
+    display: inline-block;
+    inline-size: 1.1em;
+    block-size: 1.1em;
+    flex: none;
+    vertical-align: -0.12em;
+    fill: none;
+    stroke: currentcolor;
+    stroke-width: 1.7;
+    stroke-linecap: round;
+    stroke-linejoin: round;
+  }
+</style>

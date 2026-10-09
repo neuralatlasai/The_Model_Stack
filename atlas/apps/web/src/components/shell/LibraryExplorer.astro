@@ -26,6 +26,7 @@ import { grouped } from '../../lib/format.ts';
 import { jsonForHtml } from '../../lib/json.ts';
 import { compactCount, WEAVE, weaveLayout, type LibraryModel } from '../../lib/library-model.ts';
 import { PART_ICON } from '../../lib/part-icons.ts';
+import ChapterSymbol from './ChapterSymbol.astro';
 
 interface Props {
   model: LibraryModel;
@@ -157,67 +158,74 @@ const LEGEND = [
             links.
           </span>
         </figcaption>
-        <div class="lib-weave__stage" aria-hidden="true" style={`--slots:${String(weave.slots)}`} data-lib-weave>
-          <svg
-            class="lib-weave__arcs"
-            viewBox={`0 0 ${String(WEAVE.width)} ${String(WEAVE.height)}`}
-            preserveAspectRatio="none"
-            focusable="false"
-          >
-            {weave.arcs.map((arc, index) => (
-              <path
-                d={arc.d}
-                pathLength="1"
-                class:list={['lib-arc', { 'is-live': written.has(arc.p) && written.has(arc.n) }]}
-                data-p={arc.p}
-                data-n={arc.n}
-                style={`--i:${String(index)}`}
-              />
-            ))}
-          </svg>
-          <ol class="lib-weave__cols">
-            {model.chapters.map((chapter) => (
-              <li
-                class:list={['lib-wc', stateClass(chapter)]}
-                data-lib-n={chapter.n}
-                data-num={chapter.number}
-                data-domain={chapter.domain}
-                data-zero={[
-                  chapter.words === 0 ? 'w' : '',
-                  chapter.figures === 0 ? 'f' : '',
-                  chapter.equations === 0 ? 'e' : '',
-                  chapter.works === 0 ? 'r' : '',
-                ]
-                  .join(' ')
-                  .trim()}
-                style={`--x:${at(weave.x.get(chapter.n) ?? 0)};${measures(chapter)}`}
-              >
-                <a href={chapter.url} tabindex="-1" class="lib-wc__hit">
-                  <i class="lib-wc__node" />
-                  <i class="lib-wc__dots" />
-                </a>
-              </li>
-            ))}
-          </ol>
-          <p class="lib-weave__scale" data-lib-scale>
-            {wordiest !== undefined && wordiest.words > 0 && (
-              <>
-                <b>words</b> per chapter · max {grouped(wordiest.words)} (ch {wordiest.number})
-              </>
-            )}
-          </p>
-          <ol class="lib-weave__parts">
-            {weave.parts.map((span) => {
-              const part = partByN.get(span.n);
-              return part === undefined ? null : (
-                <li class="lib-wp" data-domain={part.domain} style={`--x0:${at(span.from)};--x1:${at(span.to)}`}>
-                  <a href={`#lib-part-${String(part.n)}`} tabindex="-1" data-lib-partlink={part.n}>
-                    {part.numeral}
+        <div
+          class="lib-weave__pan"
+          role="region"
+          aria-label="Chapter prerequisites. Pan horizontally to inspect the map; chapter links follow below."
+          tabindex="0"
+        >
+          <div class="lib-weave__stage" aria-hidden="true" style={`--slots:${String(weave.slots)}`} data-lib-weave>
+            <svg
+              class="lib-weave__arcs"
+              viewBox={`0 0 ${String(WEAVE.width)} ${String(WEAVE.height)}`}
+              preserveAspectRatio="none"
+              focusable="false"
+            >
+              {weave.arcs.map((arc, index) => (
+                <path
+                  d={arc.d}
+                  pathLength="1"
+                  class:list={['lib-arc', { 'is-live': written.has(arc.p) && written.has(arc.n) }]}
+                  data-p={arc.p}
+                  data-n={arc.n}
+                  style={`--i:${String(index)}`}
+                />
+              ))}
+            </svg>
+            <ol class="lib-weave__cols">
+              {model.chapters.map((chapter) => (
+                <li
+                  class:list={['lib-wc', stateClass(chapter)]}
+                  data-lib-n={chapter.n}
+                  data-num={chapter.number}
+                  data-domain={chapter.domain}
+                  data-zero={[
+                    chapter.words === 0 ? 'w' : '',
+                    chapter.figures === 0 ? 'f' : '',
+                    chapter.equations === 0 ? 'e' : '',
+                    chapter.works === 0 ? 'r' : '',
+                  ]
+                    .join(' ')
+                    .trim()}
+                  style={`--x:${at(weave.x.get(chapter.n) ?? 0)};${measures(chapter)}`}
+                >
+                  <a href={chapter.url} tabindex="-1" class="lib-wc__hit">
+                    <i class="lib-wc__node" />
+                    <i class="lib-wc__dots" />
                   </a>
                 </li>
-              );
-            })}
-          </ol>
+              ))}
+            </ol>
+            <p class="lib-weave__scale" data-lib-scale>
+              {wordiest !== undefined && wordiest.words > 0 && (
+                <>
+                  <b>words</b> per chapter · max {grouped(wordiest.words)} (ch {wordiest.number})
+                </>
+              )}
+            </p>
+            <ol class="lib-weave__parts">
+              {weave.parts.map((span) => {
+                const part = partByN.get(span.n);
+                return part === undefined ? null : (
+                  <li class="lib-wp" data-domain={part.domain} style={`--x0:${at(span.from)};--x1:${at(span.to)}`}>
+                    <a href={`#lib-part-${String(part.n)}`} tabindex="-1" data-lib-partlink={part.n}>
+                      {part.numeral}
+                    </a>
+                  </li>
+                );
+              })}
+            </ol>
+          </div>
         </div>
       </figure>
 
@@ -303,7 +311,9 @@ const LEGEND = [
                         data-lib-tile={chapter.n}
                         aria-label={`${chapter.number} ${chapter.title}. ${chapter.state}; ${String(chapter.sectionsWritten)} of ${String(chapter.sections.length)} sections drafted; ${grouped(chapter.words)} words. Builds on ${String(chapter.prereqs.length)}, unlocks ${String(chapter.unlocks.length)}.`}
                       >
-                        <span class="lib-tile__n">{chapter.number}</span>{' '}
+                        <span class="lib-tile__n">
+                          <ChapterSymbol chapter={chapter.n} />
+                        </span>{' '}
                         <span class="lib-tile__t">{chapter.short}</span>
                       </a>
                       <span class="lib-tile__hop" aria-hidden="true" data-lib-hop />
@@ -392,7 +402,9 @@ const LEGEND = [
                 <ol class="lib-cat" aria-label={`Chapters of Part ${part.numeral}`}>
                   {chaptersOf(part.chapters).map((chapter) => (
                     <li class:list={['lib-ch', stateClass(chapter)]} data-lib-n={chapter.n}>
-                      <span class="lib-ch__n">{chapter.number}</span>
+                      <span class="lib-ch__n">
+                        <ChapterSymbol chapter={chapter.n} />
+                      </span>
                       <div class="lib-ch__body">
                         <a class="lib-ch__title" href={chapter.url} data-lib-row={chapter.n}>
                           {chapter.title}

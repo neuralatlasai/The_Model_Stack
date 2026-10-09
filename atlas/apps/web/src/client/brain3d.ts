@@ -1,12 +1,11 @@
 /**
  * The 3D brain hero (components/home/BrainHero.astro, lib/brain3d.ts).
  *
- * A transparent glass brain rendered with WebGL straight onto the page: two
- * folded hemispheres, cerebellum and brainstem, drawn with a Fresnel glass
- * shader so every gyrus and sulcus reads as a contour on clear glass (back
- * faces first, faintly, so the far hemisphere shows through). Inside it, the
- * book: chapters as glowing neurons, glossary concepts around them, declared
- * prerequisites as fibres carrying signals.
+ * A sculpted brain rendered with WebGL straight onto the page: two folded
+ * hemispheres, cerebellum and brainstem. Wrapped key and fill lighting reveal
+ * the cortical relief on ivory paper or a warm slate surface at night. The
+ * book overlays it: chapters as coloured neurons, glossary concepts around
+ * them, declared prerequisites as fibres carrying signals.
  *
  * - Follows the story (client story.ts, `hx:part` events): a part turns its
  *   region to the reader, lights its chapters and concepts, and draws its
@@ -77,7 +76,7 @@ export function initBrain3D(ctx: PageContext, fig: HTMLElement, reduced: boolean
   canvas.setAttribute('role', 'img');
   canvas.setAttribute(
     'aria-label',
-    'A three-dimensional glass brain: the chapters of the book as neurons. Drag to turn it; arrow keys step through chapters; Enter opens one.',
+    'A three-dimensional sculpted brain: the chapters of the book as neurons. Drag to turn it; arrow keys step through chapters; Enter opens one.',
   );
   host.prepend(canvas);
   fig.classList.add('is-3d');
@@ -101,6 +100,7 @@ export function initBrain3D(ctx: PageContext, fig: HTMLElement, reduced: boolean
         uOpacity: { value: opacity },
         uFill: { value: 0 },
         uPorcelain: { value: 0 },
+        uDark: { value: 0 },
         uCrease: { value: 1.15 },
         uFocus: { value: new THREE.Vector3() },
         uFocusK: { value: 0 },
@@ -311,25 +311,25 @@ export function initBrain3D(ctx: PageContext, fig: HTMLElement, reduced: boolean
   const paintFibres = (): void => {
     fibres.forEach((fibre, i) => {
       let c = tint(neurons[indexOf.get(fibre.from) ?? 0]?.domain ?? '');
-      let a = active === null && focusPart === null ? 0.2 : 0.035;
+      let a = active === null && focusPart === null ? (night ? 0.36 : 0.2) : 0.035;
       if (active === null && focusPart !== null) {
         const fromIn = partOf(fibre.from) === focusPart;
         const toIn = partOf(fibre.to) === focusPart;
         if (toIn && !fromIn) {
           c = IN;
-          a = 0.85;
+          a = night ? 0.7 : 0.85;
         } else if (fromIn && !toIn) {
           c = OUT;
-          a = 0.85;
+          a = night ? 0.7 : 0.85;
         } else if (fromIn && toIn) a = 0.7;
       }
       if (active !== null && fibre.to === active) {
         c = IN;
-        a = 0.95;
+        a = night ? 0.8 : 0.95;
       }
       if (active !== null && fibre.from === active) {
         c = OUT;
-        a = 0.95;
+        a = night ? 0.8 : 0.95;
       }
       for (let v = 0; v < SEGMENTS * 2; v += 1) lineCol.set([c.r, c.g, c.b, a], (i * SEGMENTS * 2 + v) * 4);
     });
@@ -339,26 +339,31 @@ export function initBrain3D(ctx: PageContext, fig: HTMLElement, reduced: boolean
     night = isNight(doc);
     palette = night ? GLOW : INK;
     for (const m of [glassBack, glassFront]) {
-      const u = m.uniforms as { uRim: { value: THREE.Color }; uBody: { value: THREE.Color } };
-      u.uRim.value.set(night ? 0x9caeaa : 0x52644e);
-      u.uBody.value.set(night ? 0x181f21 : 0xf3eee1);
+      const u = m.uniforms as {
+        uRim: { value: THREE.Color };
+        uBody: { value: THREE.Color };
+        uDark: { value: number };
+      };
+      u.uRim.value.set(night ? 0x969b90 : 0xbab7a8);
+      u.uBody.value.set(night ? 0x7b8478 : 0xe0d9c6);
+      u.uDark.value = night ? 1 : 0;
     }
     (glassFront.uniforms as { uFill: { value: number } }).uFill.value = night ? 0.72 : 0.9;
-    // paper: an opaque porcelain form, correctly occluded; night: see-through glass
-    (glassFront.uniforms as { uPorcelain: { value: number } }).uPorcelain.value = night ? 0 : 1;
-    glassFront.depthWrite = !night;
-    glassBack.visible = night;
+    // Both themes retain the same readable sculptural surface and occlusion.
+    (glassFront.uniforms as { uPorcelain: { value: number } }).uPorcelain.value = 1;
+    glassFront.depthWrite = true;
+    glassBack.visible = false;
     for (const m of glowMaterials) {
-      (m.uniforms as { uPaper: { value: number } }).uPaper.value = night ? 0 : 1;
-      m.blending = night ? THREE.AdditiveBlending : THREE.NormalBlending;
+      (m.uniforms as { uPaper: { value: number } }).uPaper.value = 1;
+      m.blending = THREE.NormalBlending;
       m.needsUpdate = true;
     }
-    lineMat.blending = night ? THREE.AdditiveBlending : THREE.NormalBlending;
+    lineMat.blending = THREE.NormalBlending;
     lineMat.needsUpdate = true;
-    shadowMat.color.set(night ? 0x7fb2ff : 0x1b1814);
-    shadowMat.opacity = night ? 0.14 : 0.19;
-    IN.set(night ? 0x9abdb8 : 0x3f6b63);
-    OUT.set(night ? 0xd2a58a : 0xa46542);
+    shadowMat.color.set(night ? 0x050605 : 0x1b1814);
+    shadowMat.opacity = night ? 0.28 : 0.19;
+    IN.set(night ? 0x82aaa2 : 0x3f6b63);
+    OUT.set(night ? 0xc49c7f : 0xa46542);
     neurons.forEach((neuron, i) => {
       const c = tint(neuron.domain);
       N.col.set([c.r, c.g, c.b], i * 3);

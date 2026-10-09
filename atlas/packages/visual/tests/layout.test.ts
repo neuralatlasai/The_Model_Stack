@@ -121,16 +121,19 @@ describe('layoutFigure — diagram (ELK layered)', () => {
       assert.equal(scene.nodes.length, spec.nodes.length);
       assert.equal(scene.edges.length, spec.edges.length);
       assert.equal(JSON.stringify(await layoutDiagram(spec)), JSON.stringify(scene));
-      // TB: upstream (back) edges are reported as feedback.
+      // Upstream edges are reported as feedback along the authored flow direction.
       const byId = new Map(scene.nodes.map((node) => [node.id, node]));
       for (const edge of scene.edges) {
         const from = byId.get(edge.from);
         const to = byId.get(edge.to);
         if (from === undefined || to === undefined) continue;
+        const upstream =
+          spec.direction === 'LR'
+            ? to.x + to.width / 2 < from.x + from.width / 2
+            : to.y + to.height / 2 < from.y + from.height / 2;
         if (edge.kind === 'feedback')
           assert.ok(
-            to.y + to.height / 2 < from.y + from.height / 2 ||
-              spec.edges.some((e) => e.kind === 'feedback' && e.from === edge.from && e.to === edge.to),
+            upstream || spec.edges.some((e) => e.kind === 'feedback' && e.from === edge.from && e.to === edge.to),
           );
       }
     });

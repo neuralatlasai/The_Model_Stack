@@ -17,6 +17,7 @@ export { SceneSvg, EdgePath, EdgeLabel, type SceneSvgProps } from './scene.tsx';
 export { EdgeSpecimen, NodeSpecimen, type NodeSpecimenProps } from './specimen.tsx';
 export { NodeGlyph, NodeShape, GlyphIcon, type Box, type NodeGlyphProps } from './glyphs.tsx';
 export { CalculatorView, type CalculatorViewProps } from './calculator.tsx';
+export { CalculatorDescription, type CalculatorDescriptionProps } from './calculator-description.tsx';
 export { TensorFlowView, TensorTraceView, ShapeText } from './tensor.tsx';
 export { SystemsTraceTable, SystemsTraceView } from './systems.tsx';
 export { MemoryStackView, Swatch } from './memory-stack.tsx';

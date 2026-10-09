@@ -29,6 +29,7 @@
 import type { TreeNode } from '@atlas/core';
 import type { TreeState } from '../../lib/nodes.ts';
 import { domIdFor } from '../../lib/urls.ts';
+import ChapterSymbol from './ChapterSymbol.astro';
 
 interface Props {
   readonly nodes: readonly TreeNode[];
@@ -82,10 +83,13 @@ const numberWidth = (list: readonly TreeNode[]): number => Math.max(0, ...list.m
           aria-expanded={renderChildren ? (expanded ? 'true' : 'false') : undefined}
           aria-owns={renderChildren ? groupId : undefined}
           aria-current={state.currentId === node.id ? 'page' : undefined}
+          aria-label={entity === 'chapter' ? `${node.number ?? ''} ${node.shortTitle}` : undefined}
           tabindex={node.id === focusId ? '0' : '-1'}
         >
           {node.number !== null ? (
-            <span class="sh-tree-num">{node.number}</span>
+            <span class="sh-tree-num">
+              {entity === 'chapter' ? <ChapterSymbol chapter={Number(node.number)} /> : node.number}
+            </span>
           ) : (
             numberWidth(nodes) > 0 && <span class="sh-tree-num" aria-hidden="true" />
           )}

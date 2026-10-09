@@ -4,7 +4,7 @@
  */
 html[data-reading-mode='complete'][data-article-layout='workspace']:has([data-chapter-content='true']) {
   --measure: 100%;
-  --fs-body: 21px;
+  --fs-body: 22px;
   --lh-body: 1.5;
 
   .sh-topbar-inner {
@@ -15,7 +15,8 @@ html[data-reading-mode='complete'][data-article-layout='workspace']:has([data-ch
   }
 
   .aw-masthead-title {
-    font: 400 clamp(28px, 3vw, 44px)/1.12 var(--font-serif);
+    font: 500 clamp(32px, 3vw, 46px)/1.08 var(--font-serif);
+    letter-spacing: -0.018em;
     text-wrap: balance;
   }
 
@@ -36,7 +37,7 @@ html[data-reading-mode='complete'][data-article-layout='workspace']:has([data-ch
   }
 
   .sh-topnav-link {
-    font: 18px/1.4 var(--font-serif);
+    font: 500 14px/1.4 var(--font-sans);
   }
 
   .sh-main {
@@ -63,7 +64,7 @@ html[data-reading-mode='complete'][data-article-layout='workspace']:has([data-ch
     }
 
     .aw-masthead-title {
-      font-size: 30px;
+      font-size: 32px;
     }
   }
 }
@@ -97,7 +98,7 @@ html[data-reading-mode='complete'][data-article-layout='workspace'] .sh-article[
   .aw-explanation .rb-region__title {
     margin-block-end: 20px;
     padding: 0;
-    font: 400 30px/1.2 var(--font-serif);
+    font: 500 32px/1.15 var(--font-serif);
   }
 
   .aw-explanation .rb-region__title::after {
@@ -105,7 +106,7 @@ html[data-reading-mode='complete'][data-article-layout='workspace'] .sh-article[
   }
 
   .aw-explanation :is(.rb-p, .rb-list, .rb-header__thesis) {
-    font: 400 22px/1.45 var(--font-serif);
+    font: 430 23px/1.45 var(--font-serif);
   }
 
   :is(.aw-explanation, .aw-manuscript) .rb-p {
@@ -117,7 +118,7 @@ html[data-reading-mode='complete'][data-article-layout='workspace'] .sh-article[
 
   .aw-document-meta .rb-header__meta {
     margin-block: 20px 0;
-    font: 12px/1.7 var(--font-sans);
+    font: 13px/1.65 var(--font-sans);
     color: var(--ink-2);
   }
 
@@ -231,7 +232,7 @@ html[data-reading-mode='complete'][data-article-layout='workspace'] .sh-article[
   .aw-manuscript {
     max-inline-size: var(--measure);
     margin: 48px 0 0;
-    font: 21px/1.5 var(--font-serif);
+    font: 430 22px/1.5 var(--font-serif);
   }
 
   &:not(:has(.aw-workspace)) .aw-manuscript {
@@ -239,7 +240,7 @@ html[data-reading-mode='complete'][data-article-layout='workspace'] .sh-article[
   }
 
   .aw-manuscript :is(.rb-p, .rb-list, .rb-def__text, .rb-note__text, .rb-obs__text, .rb-asm__sens) {
-    font: 21px/1.5 var(--font-serif);
+    font: 430 22px/1.5 var(--font-serif);
     overflow-wrap: break-word;
   }
 
@@ -257,7 +258,7 @@ html[data-reading-mode='complete'][data-article-layout='workspace'] .sh-article[
   }
 
   .aw-manuscript .rb-header__thesis {
-    font: 24px/1.4 var(--font-serif);
+    font: 430 26px/1.4 var(--font-serif);
     margin-block: 24px 16px;
   }
 
@@ -268,7 +269,8 @@ html[data-reading-mode='complete'][data-article-layout='workspace'] .sh-article[
   .aw-manuscript .rb-region__title {
     margin-block-end: 22px;
     padding: 0;
-    font: 400 33px/1.2 var(--font-serif);
+    font: 500 35px/1.15 var(--font-serif);
+    letter-spacing: -0.012em;
     text-wrap: balance;
   }
 
@@ -282,7 +284,7 @@ html[data-reading-mode='complete'][data-article-layout='workspace'] .sh-article[
 
   .aw-manuscript .rb-h3 {
     margin-block: 32px 16px;
-    font: 400 26px/1.25 var(--font-serif);
+    font: 500 28px/1.2 var(--font-serif);
   }
 
   .rb-list > li + li {
@@ -479,7 +481,8 @@ html[data-reading-mode='complete'][data-article-layout='workspace'] .sh-article[
 
     .aw-manuscript :is(.rb-p, .rb-list, .rb-def__text, .rb-note__text, .rb-obs__text, .rb-asm__sens),
     .aw-explanation :is(.rb-p, .rb-list, .rb-header__thesis) {
-      font-size: 19px;
+      font-size: 20.5px;
+      line-height: 1.5;
     }
 
     .aw-manuscript .rb-eq__math {
@@ -491,7 +494,7 @@ html[data-reading-mode='complete'][data-article-layout='workspace'] .sh-article[
     }
 
     .aw-manuscript .rb-region__title {
-      font-size: 29px;
+      font-size: 31px;
     }
 
     .aw-parameters__list {

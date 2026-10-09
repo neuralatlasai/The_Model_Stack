@@ -385,20 +385,20 @@ export function brainLayout(input: Brain3DInput): Brain3D {
   return { regions, neurons, concepts, fibres };
 }
 
-/** Domain colours for the neural glow (the bright palette the brain uses on its dark cortex). */
+/** Muted domain colours on the dark cortex; distinct without additive white highlights. */
 export const GLOW: Readonly<Record<string, string>> = {
-  foundations: '#e6ddcc',
-  data: '#ffae70',
-  architecture: '#7fc0ff',
-  training: '#d19cff',
-  hardware: '#ffcf4d',
-  'post-training': '#ff8db3',
-  inference: '#7fe6a4',
-  serving: '#68e0dd',
-  agents: '#9fb3ff',
-  embodied: '#f2c36b',
-  evaluation: '#d4d8df',
-  reference: '#e6ddcc',
+  foundations: '#bda78c',
+  data: '#c48a5f',
+  architecture: '#78a3c8',
+  training: '#a78db7',
+  hardware: '#c1a559',
+  'post-training': '#bf849c',
+  inference: '#7aaa8c',
+  serving: '#70a9a5',
+  agents: '#929dbc',
+  embodied: '#b7a16a',
+  evaluation: '#adb2b5',
+  reference: '#bda78c',
 };
 
 /** Domain colours on paper (deep, saturated inks for the light theme). */

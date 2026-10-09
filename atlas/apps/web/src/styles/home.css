@@ -4,7 +4,7 @@
  *
  * Type: the argument is set entirely in EB Garamond — old-style figures,
  * true small caps for labels, italic for the subtitle and outcomes; IBM Plex
- * Mono only for instrument labels; Inter only for the two actions. One
+ * Mono only for instrument labels; Geist for the two actions. One
  * vertical rhythm (0.5rem steps); one measure (34rem).
  */
 
@@ -68,14 +68,14 @@
 
 .bs-title {
   margin: 0;
-  font: 500 clamp(52px, 5.2vw, 80px) / 0.98 var(--font-serif);
-  letter-spacing: -0.022em;
+  font: 520 clamp(52px, 5.2vw, 80px) / 1 var(--font-serif);
+  letter-spacing: -0.025em;
   color: var(--ink);
 }
 
 .bs-sub {
   margin: 0.9rem 0 0;
-  font: italic 400 clamp(22px, 1.9vw, 28px) / 1.25 var(--font-serif);
+  font: italic 400 clamp(23px, 2vw, 30px) / 1.25 var(--font-serif);
   color: var(--ink-2);
 }
 
@@ -109,7 +109,7 @@
 
 .bs-thesis {
   margin: 0;
-  font: 400 clamp(19.5px, 1.4vw, 21.5px) / 1.6 var(--font-serif);
+  font: 430 clamp(20.5px, 1.5vw, 22px) / 1.55 var(--font-serif);
   color: var(--ink);
   text-wrap: pretty;
   hanging-punctuation: first;
@@ -117,7 +117,7 @@
 
 .bs-note {
   margin: 1.25rem 0 0;
-  font: italic 400 17px/1.55 var(--font-serif);
+  font: italic 400 18px/1.5 var(--font-serif);
   color: var(--ink-3);
   text-wrap: pretty;
 }
@@ -222,7 +222,7 @@
 
 .bs-h2 {
   margin: 0.75rem 0 1.25rem;
-  font: 500 clamp(32px, 2.9vw, 42px) / 1.1 var(--font-serif);
+  font: 500 clamp(34px, 3.1vw, 46px) / 1.1 var(--font-serif);
   letter-spacing: -0.016em;
   color: var(--ink);
   text-wrap: balance;
@@ -230,7 +230,7 @@
 
 .bs-body {
   margin: 0;
-  font: 400 clamp(18.5px, 1.35vw, 20.5px) / 1.66 var(--font-serif);
+  font: 430 clamp(20px, 1.45vw, 22px) / 1.55 var(--font-serif);
   color: var(--ink-2);
   text-wrap: pretty;
   hanging-punctuation: first;

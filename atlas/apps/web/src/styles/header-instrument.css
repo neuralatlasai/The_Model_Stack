@@ -1,0 +1,171 @@
+/* Topic illustrations share the manuscript's ink, paper and single accent. */
+.hi[data-instrument='atlas'] {
+  padding-block-end: 0;
+  color: var(--ink);
+  overflow: visible;
+}
+.hi[data-instrument='atlas'] .hi-stage {
+  touch-action: pan-y;
+  border-radius: 0;
+}
+.hi[data-instrument='atlas'] .hi-stage > svg {
+  overflow: visible;
+}
+.hi[data-instrument='atlas'] .hi-art {
+  transform: none;
+  transform-origin: 140px 90px;
+  transition: transform 240ms ease;
+}
+.hi[data-instrument='atlas'][data-expanded='true'] .hi-art {
+  transform: scale(1.04);
+}
+.hi[data-instrument='atlas'] .hi-art path,
+.hi[data-instrument='atlas'] .hi-art circle {
+  vector-effect: non-scaling-stroke;
+}
+.hi[data-instrument='atlas'] .hi-accent {
+  color: var(--accent);
+  stroke: var(--accent);
+}
+.hi[data-instrument='atlas'] .hi-solid {
+  fill: currentColor;
+  stroke: none;
+}
+.hi[data-instrument='atlas'] .hi-paper,
+.hi[data-instrument='atlas'] .hi-node-face {
+  fill: var(--paper);
+}
+.hi[data-instrument='atlas'] .hi-layer-face {
+  fill: var(--paper);
+  fill-opacity: 0.94;
+}
+.hi[data-instrument='atlas'] .hi-muted {
+  stroke-opacity: 0.6;
+}
+.hi[data-instrument='atlas'] .hi-rule {
+  stroke: var(--rule-strong);
+  stroke-width: 1;
+}
+.hi[data-instrument='atlas'] .hi-sheet {
+  stroke-opacity: 0.64;
+  animation: hi-sheet-ink 6s ease-in-out infinite alternate;
+  animation-delay: calc(var(--i) * -450ms);
+}
+.hi[data-instrument='atlas'] .hi-signal {
+  stroke-dasharray: 14 6;
+  animation: hi-signal-travel 9s linear infinite;
+}
+.hi[data-instrument='atlas'] .hi-fluid {
+  fill: var(--accent);
+  fill-opacity: 0.06;
+  stroke: var(--accent);
+}
+.hi[data-instrument='atlas'] .hi-lab-bubble {
+  animation: hi-lab-rise 4s ease-in-out infinite alternate;
+  animation-delay: calc(var(--i) * -800ms);
+}
+.hi[data-instrument='atlas'] .hi-controls {
+  display: flex;
+  justify-content: flex-end;
+  min-block-size: 44px;
+  gap: 2px;
+}
+.hi[data-instrument='atlas'] :is(.hi-reset, .hi-toggle, .hi-explore) {
+  position: static;
+  display: grid;
+  place-items: center;
+  inline-size: 44px;
+  block-size: 44px;
+  padding: 12px;
+  color: var(--ink-3);
+  background: none;
+  border: 0;
+  border-radius: 0;
+  opacity: 0.8;
+  cursor: pointer;
+}
+.hi[data-instrument='atlas'] :is(.hi-reset, .hi-toggle, .hi-explore):hover {
+  color: var(--accent);
+  opacity: 1;
+}
+.hi[data-instrument='atlas'] :is(.hi-reset, .hi-toggle, .hi-explore) > svg {
+  inline-size: 20px;
+  block-size: 20px;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 1.6;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+.hi[data-instrument='atlas'] :is(.hi-stage, .hi-reset, .hi-toggle, .hi-explore):focus-visible {
+  outline: 2px solid var(--focus);
+  outline-offset: -2px;
+}
+.hi[data-instrument='atlas'][data-playing='false'] * {
+  animation-play-state: paused;
+}
+@keyframes hi-signal-travel {
+  to {
+    stroke-dashoffset: -80;
+  }
+}
+@keyframes hi-sheet-ink {
+  to {
+    stroke-opacity: 0.9;
+  }
+}
+@keyframes hi-lab-rise {
+  to {
+    translate: 0 -7px;
+  }
+}
+@media (max-width: 640px) {
+  .sh-page-visual.hi[data-instrument='atlas'] {
+    inline-size: 100%;
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) 44px;
+    align-items: center;
+    justify-self: stretch;
+  }
+  .hi[data-instrument='atlas'] .hi-stage > svg {
+    max-inline-size: 244px;
+    margin-inline: auto;
+  }
+  .hi[data-instrument='atlas'] .hi-controls {
+    flex-direction: column;
+    gap: 0;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .hi[data-instrument='atlas'] .hi-art {
+    transition: none;
+  }
+  .hi[data-instrument='atlas'][data-playing='true'] * {
+    animation-duration: 12s !important;
+  }
+}
+
+.hi[data-instrument='atlas'] circle.hi-accent {
+  animation: hi-active-ink 4s ease-in-out infinite alternate;
+}
+@keyframes hi-active-ink {
+  from {
+    opacity: 0.62;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+/* Pause includes active-marker animation shorthands as well as moving paths. */
+.hi[data-instrument='atlas'][data-playing='false'] .hi-art * {
+  animation-play-state: paused;
+}
+
+.hi[data-instrument='atlas'] .hi-object-footprint > path[data-part] {
+  stroke-width: 3;
+}
+.hi[data-instrument='atlas'] .hi-identity-seal {
+  stroke-width: 1;
+  stroke-opacity: 0.65;
+}

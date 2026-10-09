@@ -4,25 +4,15 @@
  * unboxed scientific figures. Data and figures come from the manuscript.
  * Full arguments follow the opening surface; navigation uses native popovers.
  */
-@font-face {
-  font-family: 'Geist';
-  src: url('/fonts/geist/latin.woff2') format('woff2');
-  font-style: normal;
-  font-weight: 100 900;
-  font-display: swap;
-}
-
 :root[data-reading-mode='complete'][data-article-layout='workspace'] {
-  --font-sans: 'Geist', -apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif;
-  --font-mono: 'SFMono-Regular', Consolas, 'Liberation Mono', monospace;
-  --fs-body: 14px;
+  --fs-body: 14.5px;
   --lh-body: 1.5;
   --fs-h1: 30px;
   --fs-h2: 14px;
   --fs-h3: 18px;
   --fs-tech: 13px;
-  --fs-meta: 11px;
-  --fs-code: 12px;
+  --fs-meta: 12.5px;
+  --fs-code: 13px;
   --gap-related: 8px;
   --gap-argument: 16px;
   --gap-section: 32px;
@@ -79,7 +69,7 @@ html[data-reading-mode='complete'][data-article-layout='workspace'] {
     min-inline-size: 0;
     margin: 0;
     padding: 0;
-    font: 700 30px/1.2 var(--font-serif);
+    font: 500 34px/1.12 var(--font-serif);
     letter-spacing: 0;
     white-space: normal;
     text-wrap: pretty;
@@ -110,7 +100,7 @@ html[data-reading-mode='complete'][data-article-layout='workspace'] {
 
   .sh-topnav-link {
     padding: 4px 0;
-    font: 12px/20px var(--font-mono);
+    font: 500 13px/20px var(--font-sans);
   }
 
   .sh-tools {

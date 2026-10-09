@@ -27,7 +27,7 @@ const host = copy === null ? null : await figureHostProps(copy);
 {copy !== null && host !== null && (
   <div class={`rb-instrument rb-instrument--figure rb-instrument--${copy.spec.kind}`} {...instrumentAttrs('figure')}>
     {isCalculator(copy) ? (
-      <Figure figure={copy} nodeHref={host.nodeHref}>
+      <Figure figure={copy} nodeHref={host.nodeHref} {...host.tex}>
         <Calculator client:visible figure={copy} {...host.tex} />
       </Figure>
     ) : (

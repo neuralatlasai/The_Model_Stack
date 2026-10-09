@@ -1,0 +1,614 @@
+---
+id: "ms.section.36.1"
+entity_type: "section"
+title: "Agent trajectories"
+short_title: "Agent trajectories"
+volume: 2
+part: 6
+chapter: 36
+section: 36.1
+slug: "36-1-agent-trajectories"
+parent: "ms.chapter.36"
+prev_sibling: null
+next_sibling: "ms.section.36.2"
+children: []
+prerequisites: ["ms.chapter.11", "ms.chapter.29", "ms.chapter.30", "ms.chapter.34", "ms.chapter.35"]
+downstream: ["ms.chapter.38", "ms.chapter.39"]
+related: []
+relations: []
+axes: {"lifecycle": ["post_training"], "mechanism": ["agent_rl", "distributed_rollout"], "feedback_setting": ["environment_return", "verifiable_reward"], "modality": ["text", "image"]}
+papers: []
+implementations: ["impl.verl"]
+benchmarks: []
+datasets: []
+status: {"maturity": "active", "disputed": false}
+evidence_summary: {"labels_used": ["MATHEMATICALLY-DERIVED", "DERIVED", "ASSUMED", "PAPER-REPORTED", "OFFICIAL-DOCUMENTATION", "NOT-DISCLOSED", "UNVERIFIED"], "empirically_observed": false}
+word_count_target: 2000
+updated_at: "2026-10-09"
+editorial_status: manuscript_draft
+---
+
+# 36.1 — Agent trajectories
+
+## Scope
+
+[DERIVED] Specify the unit of agent experience that a learner can audit: an immutable occurrence of a task, its generated actions, observed tool results, behavior probabilities, world-version boundary and completion status. The baseline is a single prompt/completion rollout. Success requires extending its probability and masking contracts to multi-turn, partially observed, externally changing environments. This section owns trajectory representation; credit estimation is developed in §36.2, distributed execution in §§36.3–36.4, and correction/recovery in §§36.5–36.6.
+
+## Why this exists
+
+[DERIVED] A response can be regenerated from a prompt and a frozen checkpoint. An agent episode additionally depends on files, processes, remote services, tool schemas, elapsed time and previous effects. Treating its visible transcript as the complete simulator state removes variables that determine the next observation. Treating every transcript token as a sampled policy action adds likelihood factors for data the policy never generated. Both errors survive apparently successful optimization.
+
+[DERIVED] The bottleneck is an event boundary. A generated command, its validated invocation, a running process, a returned observation and a reward verdict are different events. A request timeout says that a caller stopped waiting; it does not establish whether the command executed. A policy version identifies parameters; it does not identify temperature, grammar processing or the context after truncation. The solution is a typed episode record whose probability contract and operational state can be independently inspected.
+
+## Intuition
+
+[MATHEMATICALLY-DERIVED] The policy acts on information it has received. The world transitions using information the policy may not have received. Writing the first as a history and the second as a latent state preserves that distinction. An interaction history can be a sufficient policy input without being a sufficient state for predicting the world. A rolling context window is a further observation map of that history, not a guarantee that discarded information became irrelevant.
+
+## Formulation
+
+| Symbol | Meaning | Unit |
+|---|---|---|
+| $x,e$ | Task identity and immutable episode occurrence | Identifiers |
+| $s_t,o_t$ | Hidden world state and returned observation | Structured objects |
+| $h_t$ | Complete recorded history before turn $t$ | Event sequence |
+| $c_t=C_v(h_t)$ | Versioned policy context construction | Token sequence |
+| $a_t=(a_{t,1},\ldots,a_{t,n_t})$ | Generated response including reasoning and command | Tokens |
+| $u_t=P_v(a_t)$ | Parsed, validated executable command | Typed tool invocation |
+| $b_{t,j}$ | Actual processed behavior probability of token $j$ | Probability |
+| $z_e$ | Completion classification | Enumerated status |
+
+> **Assumption.** [ASSUMED] The analytical model uses a finite turn horizon $H$, bounded token horizon $L$, a declared initial-state distribution and a versioned world kernel. The episode ledger records all observed events; it does not assert access to every latent variable. *Sensitivity:* an uncontrolled live service makes identical local seeds insufficient for identical future observations.
+
+$$
+h_t=(x,o_1,a_1,u_1,r_1,o_2,\ldots,o_t),\qquad c_t=C_v(h_t),\qquad
+(s_{t+1},o_{t+1},r_t)\sim K_{\xi,t}(\cdot\mid s_t,u_t).
+$$
+*(Eq. 36.1)*
+
+[MATHEMATICALLY-DERIVED] The index $t$ permits clock-dependent external behavior. A stationary augmented state may include time, service revision and other agents, but such augmentation does not make those variables observable or resettable. The tool parser can reject a response without making a world transition; distinguish that event from a valid command that failed inside the environment.
+
+$$
+\log b(a_t\mid c_t)=\sum_{j=1}^{n_t}\log b_{t,j}(a_{t,j}\mid c_t,a_{t,<j}),\qquad
+\mathcal A_e=\{(t,j):\text{token generated by the trainable role}\}.
+$$
+*(Eq. 36.2)*
+
+[MATHEMATICALLY-DERIVED] The action mask follows generation provenance. Observations, system instructions, padding and independent judge outputs are outside $\mathcal A_e$. Generated reasoning remains a policy action even when only the parsed command reaches the tool. A frozen subagent's tokens belong to its own behavior distribution, not automatically to the trainable orchestrator's gradient mask.
+
+$$
+N_{\rm policy}=\sum_t n_t,\quad N_{\rm observed}=\sum_t q_t,\quad
+N_{\rm visible}=N_{\rm policy}+N_{\rm observed}+N_{\rm fixed},\quad
+\text{policy fraction}=N_{\rm policy}/N_{\rm visible}.
+$$
+*(Eq. 36.3)*
+
+```figure
+{
+  "id": "fig-36.1",
+  "kind": "diagram",
+  "title": "A trajectory crosses two state boundaries",
+  "caption": "History constructs the policy context; validated commands change a world whose hidden state and external services may continue independently.",
+  "placement": "inline",
+  "evidence": "MATHEMATICALLY-DERIVED",
+  "source": "DERIVED:eq-36.1",
+  "alt": "History constructs the policy context; validated commands change a world whose hidden state and external services may continue independently.",
+  "spec": {
+    "direction": "LR",
+    "nodes": [
+      {
+        "id": "world",
+        "kind": "state",
+        "label": "Latent world and service revision"
+      },
+      {
+        "id": "obs",
+        "kind": "tensor",
+        "label": "Returned observation"
+      },
+      {
+        "id": "hist",
+        "kind": "dataset",
+        "label": "Immutable event history"
+      },
+      {
+        "id": "ctx",
+        "kind": "process",
+        "label": "Versioned context construction"
+      },
+      {
+        "id": "policy",
+        "kind": "process",
+        "label": "Processed behavior distribution"
+      },
+      {
+        "id": "act",
+        "kind": "tensor",
+        "label": "Generated response"
+      },
+      {
+        "id": "parse",
+        "kind": "process",
+        "label": "Schema and command validation"
+      }
+    ],
+    "edges": [
+      {
+        "from": "world",
+        "to": "obs"
+      },
+      {
+        "from": "obs",
+        "to": "hist"
+      },
+      {
+        "from": "hist",
+        "to": "ctx"
+      },
+      {
+        "from": "ctx",
+        "to": "policy"
+      },
+      {
+        "from": "policy",
+        "to": "act"
+      },
+      {
+        "from": "act",
+        "to": "hist"
+      },
+      {
+        "from": "act",
+        "to": "parse"
+      },
+      {
+        "from": "parse",
+        "to": "world"
+      }
+    ]
+  }
+}
+```
+
+```figure
+{
+  "id": "fig-36.2",
+  "kind": "calculator",
+  "title": "Visible tokens versus policy actions",
+  "caption": "Analytical episode with equal per-turn lengths. Tool observations occupy context but do not become policy-gradient actions.",
+  "placement": "rail",
+  "evidence": "MATHEMATICALLY-DERIVED",
+  "source": "DERIVED:eq-36.3",
+  "alt": "Analytical episode with equal per-turn lengths. Tool observations occupy context but do not become policy-gradient actions.",
+  "spec": {
+    "tex": "N_{\\rm policy}=Hn,\\quad N_{\\rm visible}=H(n+q)+f",
+    "equation": "36.3",
+    "inputs": [
+      {
+        "symbol": "H",
+        "label": "Interaction turns",
+        "default": 8,
+        "min": 1,
+        "max": 32,
+        "step": 1,
+        "format": "integer"
+      },
+      {
+        "symbol": "n",
+        "label": "Generated tokens per turn",
+        "default": 128,
+        "min": 16,
+        "max": 512,
+        "step": 16,
+        "format": "tokens"
+      },
+      {
+        "symbol": "q",
+        "label": "Observation tokens per turn",
+        "default": 512,
+        "min": 0,
+        "max": 2048,
+        "step": 64,
+        "format": "tokens"
+      },
+      {
+        "symbol": "f",
+        "label": "Fixed context tokens",
+        "default": 256,
+        "min": 0,
+        "max": 2048,
+        "step": 64,
+        "format": "tokens"
+      }
+    ],
+    "outputs": [
+      {
+        "symbol": "p",
+        "label": "Generated policy tokens",
+        "formula": "H*n",
+        "format": "tokens",
+        "emphasis": true
+      },
+      {
+        "symbol": "v",
+        "label": "Visible tokens",
+        "formula": "H*(n+q)+f",
+        "format": "tokens",
+        "emphasis": false
+      },
+      {
+        "symbol": "r",
+        "label": "Policy token fraction",
+        "formula": "H*n/(H*(n+q)+f)",
+        "format": "raw",
+        "emphasis": false
+      }
+    ]
+  },
+  "anchor": "formulation",
+  "states": [
+    {
+      "anchor": "formulation",
+      "label": "Declared boundary",
+      "variables": {
+        "H": 2
+      },
+      "note": "Only generated assistant tokens are actions."
+    },
+    {
+      "anchor": "mechanism",
+      "label": "Mechanism",
+      "variables": {
+        "H": 8
+      },
+      "note": "Observation tokens enlarge context without enlarging the policy-action mask."
+    },
+    {
+      "anchor": "failure-modes",
+      "label": "Stress boundary",
+      "variables": {
+        "H": 32,
+        "q": 2048
+      },
+      "note": "Large observations reduce the policy fraction; visible tokens are not all scored actions."
+    }
+  ]
+}
+```
+
+## Mechanism
+
+### Methodology
+
+[MATHEMATICALLY-DERIVED] Factor the joint law using the hidden-state initial law, generated-token behavior and environment kernel. For a fully specified latent path,
+
+$$
+p_b(\tau,s_{1:H+1})=p_0(s_1,o_1\mid x)\prod_{t=1}^{T}
+\left[\prod_{j=1}^{n_t}b_{t,j}(a_{t,j}\mid c_t,a_{t,<j})\right]
+K_{\xi,t}(s_{t+1},o_{t+1},r_t\mid s_t,P_v(a_t)).
+$$
+*(Eq. 36.4)*
+
+[MATHEMATICALLY-DERIVED] Integrating hidden states gives the visible-path law. If two policies use the same initial law, parser and environment kernel, their likelihood ratio can cancel the environment factors on a shared path. A changed tool implementation or external-world distribution invalidates that cancellation. Missing latent states do not alone prevent policy-gradient learning on histories; unrecorded changes to the environment measure do prevent an unqualified off-policy equality.
+
+[DERIVED] Represent the episode as ordered events rather than a mutable message array alone. Each generated span records exact input IDs, output IDs, masks, processed probabilities, model digest, processor configuration and time interval. Each invocation records schema digest, normalized arguments, occurrence identity, command-attempt identity, resource lease and effect classification. Each result records returned bytes or a content-addressed artifact, exit status and whether execution completion is known. The message view is a deterministic projection of these records.
+
+[DERIVED] Partial observability has three materially different forms. Hidden simulator variables require inference from observations. Context truncation deliberately removes recorded information from the model input. Live external mutation changes future observations even when the local simulator is restored. Preserve all three because adding a longer context solves only the second. A belief state is a distribution over latent states conditioned on the observation history; it is not a transcript summary merely named a belief.
+
+[MATHEMATICALLY-DERIVED] Under the explicit analytical premise that each of $H$ required tool transitions independently preserves validity with probability $p$, operational validity compounds as $p^H$. This is a sensitivity model, not a measured law: correlated outages, retries and task-dependent hazards require a different joint model.
+
+$$
+P(\text{all required transitions valid})=p^H\quad\text{under independent equal-hazard transitions}.
+$$
+*(Eq. 36.5)*
+
+```figure
+{
+  "id": "fig-36.3",
+  "kind": "hierarchy",
+  "title": "Information available at each boundary",
+  "caption": "The ordering makes post-action observations unavailable to pre-action decisions. A context projection may discard earlier recorded events.",
+  "placement": "inline",
+  "evidence": "MATHEMATICALLY-DERIVED",
+  "source": "DERIVED:eq-36.1",
+  "alt": "The ordering makes post-action observations unavailable to pre-action decisions. A context projection may discard earlier recorded events.",
+  "spec": {
+    "direction": "down",
+    "levels": [
+      {
+        "label": "Task and initial observation",
+        "kind": "state",
+        "note": "Observed before the first action"
+      },
+      {
+        "label": "Recorded interaction history",
+        "kind": "dataset",
+        "note": "Exact prior generated and returned events"
+      },
+      {
+        "label": "Rendered policy context",
+        "kind": "tensor",
+        "note": "A versioned projection of that history"
+      },
+      {
+        "label": "Generated response and parsed command",
+        "kind": "process",
+        "note": "Policy tokens then validated invocation"
+      },
+      {
+        "label": "World transition and verdict",
+        "kind": "state",
+        "note": "New evidence only after execution"
+      }
+    ]
+  }
+}
+```
+
+```figure
+{
+  "id": "fig-36.4",
+  "kind": "matrix",
+  "title": "Provenance determines the action mask",
+  "caption": "Rows: reasoning, command, tool observation, judge output. Columns: trainable-role output, world input, gradient mask. A judge may be trained elsewhere.",
+  "placement": "inline",
+  "evidence": "MATHEMATICALLY-DERIVED",
+  "source": "DERIVED:eq-36.2",
+  "alt": "Rows: reasoning, command, tool observation, judge output. Columns: trainable-role output, world input, gradient mask. A judge may be trained elsewhere.",
+  "spec": {
+    "rows": 4,
+    "cols": 3,
+    "pattern": "explicit",
+    "cells": [
+      [
+        1,
+        0,
+        1
+      ],
+      [
+        1,
+        1,
+        1
+      ],
+      [
+        0,
+        0,
+        0
+      ],
+      [
+        0,
+        0,
+        0
+      ]
+    ],
+    "rowLabel": "Reason / command / observation / judge",
+    "colLabel": "Role output / world input / loss mask",
+    "legend": "Filled = required; empty = not sufficient alone."
+  }
+}
+```
+
+## Algorithm
+
+[DERIVED] **Algorithm 36.1 — Bounded episode acquisition.** Inputs: task $x$, immutable episode occurrence $e$, model/context/parser/kernel digests, finite positive integer caps $H,L,L_t$, positive deadline $D$, finite retry cap $R$, and resource budgets. Output: immutable event/cost ledger plus status. Initialize $t=1,n=0$, ledger $\mathcal E=\varnothing$, and status running. Every attempt is recorded before a failure branch; incomplete generations never enter gradient admission as complete responses.
+
+$$
+\begin{aligned}
+1.&\quad \ell\leftarrow\operatorname{reserve}(e,\text{environment, tokens, calls});\ \operatorname{append}(\mathcal E,\text{admission attempt/result/cost});\quad\ell=\varnothing\Rightarrow\operatorname{return}(\mathcal E,\text{admission failure}).\\
+2.&\quad q_0\leftarrow\operatorname{reset}_{D}(\ell,x);\ \operatorname{append}(\mathcal E,q_0,\text{reset cost});\quad\text{invalid reset}\Rightarrow\operatorname{release}(\ell);\operatorname{return}(\mathcal E,\text{environment failure});\quad o_1\leftarrow q_0.o.\\
+3.&\quad\text{while }t\le H\text{ and }n<L:\ c_t\leftarrow C_v(\mathcal E,x,o_t);\quad\text{invalid context}\Rightarrow\text{status}\leftarrow\text{invalid};\operatorname{break}.\\
+4.&\quad(a_t,\log b_t,v_t,g_t)\leftarrow\operatorname{generate}_{D}(c_t,\min(L-n,L_t));\ \operatorname{append}(\mathcal E,c_t,a_t,\log b_t,v_t,g_t,\text{generation cost});\ n\leftarrow n+|a_t|;\\
+ &\quad g_t\ne\text{complete}\Rightarrow\text{status}\leftarrow\text{generation incomplete};\operatorname{break};\quad\text{missing identity/logps}\Rightarrow\text{status}\leftarrow\text{unscorable};\operatorname{break}.\\
+5.&\quad u_t\leftarrow P_v(a_t);\ \operatorname{append}(\mathcal E,\text{parser result});\quad\text{invalid }u_t\Rightarrow o_{t+1}\leftarrow o_t;\ t\leftarrow t+1;\operatorname{continue}.\\
+6.&\quad j\leftarrow\operatorname{reserve}(e,t,\text{effect and result capacity});\quad j=\varnothing\Rightarrow\text{status}\leftarrow\text{quota};\operatorname{break}.\\
+7.&\quad\operatorname{append}(\mathcal E,j,u_t,\text{tool start});\ q_t\leftarrow\operatorname{execute}_{D,R}(j,u_t);\ \operatorname{append}(\mathcal E,q_t,\text{tool cost/status});\quad\text{unknown effect or execution still running}\Rightarrow\operatorname{quarantine}(j);\text{status}\leftarrow\text{ambiguous};\operatorname{break}.\\
+8.&\quad\operatorname{release}(j);\quad\text{task terminal}\Rightarrow\text{status}\leftarrow\text{terminated};\operatorname{break};\quad\text{known failure without observation}\Rightarrow\text{status}\leftarrow\text{execution failure};\operatorname{break};\quad o_{t+1}\leftarrow q_t.o;\ t\leftarrow t+1.\\
+9.&\quad\text{running at cap}\Rightarrow\text{status}\leftarrow\text{budget stop};\quad\operatorname{seal}(e,\mathcal E,\text{status});\operatorname{release}(\ell);\operatorname{return}(\mathcal E,\text{status}).
+\end{aligned}
+$$
+*(Eq. 36.6)*
+
+[DERIVED] The invalid-action branch retains the previous observation, records the generated span and any declared invalid-action penalty, and constructs the next history from that event. `execute` retries only known pre-execution failures or commands with a verified idempotency contract; unknown effects return ambiguity. Missing probability records are included in the missing-identity guard. Every acquired sublease is released exactly once when completed or transferred to quarantine. Caps bound generation and calls; observation retention requires an additional artifact-byte quota.
+
+## Implementation
+
+[OFFICIAL-DOCUMENTATION] **verl — RL post-training layer** provides a release-pinned agent-loop/partial-rollout route [R36.6, V1 guide]. **AReaL**, outside the stack but explicitly anchored by the plan, supplies an asynchronous agent-training route [R36.7]. These releases do not identify the proprietary systems used in frontier reports. Use the exact pins in references.md before translating this representation to a trainer.
+
+[DERIVED] Batch tensors require input IDs, attention masks, generated-token masks, per-position behavior log probabilities, position-to-turn mapping and version IDs. Environment artifacts remain structured side records; injecting their text into a sequence does not change provenance. Packing must preserve causal turn boundaries, and truncation must record which fields the model received. For generated length $N$ and visible length $S$, token metadata is $O(S)$ while model activation and attention costs follow the selected architecture; environment residency is separate.
+
+[DERIVED] Costs include repeated prefill, decoded tokens, parser checks, tool CPU, sandbox RAM-time, artifact bytes, reward-service calls, network transfer and retries. A frozen subagent saves optimizer state but still generates tokens and uses KV memory. Money and energy require measured tariffs and power; they are not inferred from episode count. Long observations can dominate prefill even when commands are short.
+
+## Experimental design
+
+### Reported experiments
+
+| Source protocol | Actual disclosure | Missing boundary |
+|---|---|---|
+| Kimi Agent Swarm [R36.2, §5.2, Appendix E.6] | K2.5 MoE backbone, 1.04T total/32B active reported in §4.1; BrowseComp, WideSearch and internal swarm suite; default temperature1/top-p.95/context256K; web/Python/browser tools | PARL training seeds, exact swarm GPU allocation, complete task split and precision not disclosed |
+| Evaluation repetition | WideSearch/Seal-0 Avg@4; other agentic benchmarks single run unless stated; context-overflow cases fail; domain-specific context management separately disclosed | Evaluation repeats are not independent RL training replication |
+| Comparison | Table6 single-agent versus swarm; Fig8 latency at matched target WideSearch item-F1 | Full equal-FLOP, equal-token and service-state audit unavailable |
+
+## Observations
+
+**What the paper claims.** [PAPER-REPORTED] Kimi Table6 reports WideSearch item-F1 72.7→79.0 and BrowseComp 60.6→78.4 for single-agent→swarm; Fig8 reports 3–4.5× WideSearch execution-time gains at particular target scores [R36.2].
+
+**What the evidence shows.** [DERIVED] These are system outcomes under disclosed tool/context policies. They do not isolate parallelism from learned decomposition, additional work or context sharding. The introduction's WideSearch baseline72.8 differs from Table6's72.7; retain the table value rather than merging them.
+
+**What we infer.** [DERIVED] Hierarchical generation needs role-specific probability and cost records. A system score cannot reveal which actor learned or which branch consumed resources.
+
+**What remains unknown.** [NOT-DISCLOSED] Complete PARL artifacts, independent training variation and total accelerator/tool costs are unavailable in the inspected report.
+
+```figure
+{
+  "id": "fig-36.5",
+  "kind": "chart",
+  "title": "Operational validity compounds with horizon",
+  "caption": "Independent equal-hazard analytical sensitivity, not measured agent success. Recovery and task difficulty are excluded. Points are legal integer horizons; equal independent hazards are a declared sensitivity model.",
+  "placement": "wide",
+  "evidence": "MATHEMATICALLY-DERIVED",
+  "source": "DERIVED:eq-36.5",
+  "alt": "Independent equal-hazard analytical sensitivity, not measured agent success. Recovery and task difficulty are excluded.",
+  "spec": {
+    "type": "scatter",
+    "x": {
+      "label": "Interaction turns H",
+      "domain": [
+        1,
+        32
+      ],
+      "format": "integer"
+    },
+    "y": {
+      "label": "Probability all transitions valid",
+      "domain": [
+        0,
+        1
+      ],
+      "format": "raw"
+    },
+    "variables": {},
+    "series": [
+      {
+        "id": "a",
+        "label": "Per-transition validity 0.99",
+        "formula": "0.99^x",
+        "sample": {
+          "from": 1,
+          "to": 32,
+          "count": 32
+        },
+        "emphasis": true,
+        "dashed": false
+      },
+      {
+        "id": "b",
+        "label": "Per-transition validity 0.95",
+        "formula": "0.95^x",
+        "sample": {
+          "from": 1,
+          "to": 32,
+          "count": 32
+        },
+        "emphasis": false,
+        "dashed": true
+      },
+      {
+        "id": "c",
+        "label": "Per-transition validity 0.90",
+        "formula": "0.9^x",
+        "sample": {
+          "from": 1,
+          "to": 32,
+          "count": 32
+        },
+        "emphasis": false,
+        "dashed": true
+      }
+    ],
+    "annotations": [
+      {
+        "x": 32,
+        "y": 0.03433683820292515,
+        "label": "32 transitions: only0.0343 all-valid mass"
+      }
+    ]
+  }
+}
+```
+
+## Failure modes
+
+[DERIVED] An episode marked successful with a missing result digest cannot be replayed as the same evidence. Timeout followed by unconditional retry can duplicate purchases or file changes. Tool observations in the generated mask give credit for external text. A single model-version field for a mixed-version episode destroys the denominator needed in §36.5. Track invalid schema, execution error, unknown effect, task failure, budget stop and infrastructure collapse separately.
+
+```figure
+{
+  "id": "fig-36.6",
+  "kind": "memory-stack",
+  "title": "Context residency includes non-action observations",
+  "caption": "Eq.36.3 analytical H8,n128,q512,f256 yields1024 generated action tokens,4096 observation tokens and256 fixed-context tokens. This counts visible tokens, not unique KV bytes or policy-gradient actions; overlap/compaction is excluded.",
+  "placement": "rail",
+  "evidence": "MATHEMATICALLY-DERIVED",
+  "source": "DERIVED:eq-36.3",
+  "alt": "The visible-token stack separates assistant generation, tool observations and fixed context. At eight equal turns the components are1024,4096 and256 tokens. Only the generated component contributes policy actions.",
+  "spec": {
+    "format": "tokens",
+    "variables": {
+      "H": 8,
+      "n": 128,
+      "q": 512,
+      "f": 256
+    },
+    "bars": [
+      {
+        "label": "Visible-token accounting",
+        "segments": [
+          {
+            "label": "Generated policy actions",
+            "kind": "model",
+            "formula": "H*n"
+          },
+          {
+            "label": "Tool observations",
+            "kind": "memory",
+            "formula": "H*q"
+          },
+          {
+            "label": "Fixed context",
+            "kind": "dependency",
+            "formula": "f"
+          }
+        ]
+      }
+    ]
+  },
+  "anchor": "failure-modes",
+  "states": [
+    {
+      "anchor": "formulation",
+      "label": "Declared boundary",
+      "variables": {
+        "H": 2
+      },
+      "note": "Short-horizon context boundary."
+    },
+    {
+      "anchor": "mechanism",
+      "label": "Mechanism",
+      "variables": {
+        "H": 8
+      },
+      "note": "Observations dominate this declared eight-turn context."
+    },
+    {
+      "anchor": "failure-modes",
+      "label": "Stress boundary",
+      "variables": {
+        "H": 32,
+        "q": 2048
+      },
+      "note": "Long high-observation episodes enlarge context without making observation tokens actions."
+    }
+  ]
+}
+```
+
+## Siblings
+
+[DERIVED] A stateless tool call is a restricted environment with no persistent workspace requirement. A simulator can expose deterministic reset while a live browser cannot reset the public web. A multi-agent episode can treat fixed subagents as its environment or jointly train them; these choices produce different likelihood factorizations. Frozen-role PARL is developed as a credit boundary in §36.2 rather than generalized to every multi-agent system.
+
+## Extensions
+
+[PAPER-REPORTED] Kimi Appendix D describes pluggable Toolset/Judge components, managed sandbox acquisition and recursively triggered coroutine tasks [R36.2]. This is a disclosed modular architecture, not an independently measured guarantee that any custom tool preserves training semantics.
+
+[DERIVED] Typed events extend to images, audio and GUI observations: record content digests and preprocessing versions while keeping the trainable action explicit. A screenshot is an observation; a generated coordinate command is an action. Equal text after OCR does not establish equal multimodal inputs. Context compression is also a versioned transformation: a summary may preserve useful facts while removing the information required to reproduce the policy's original conditional distribution.
+
+## Limitations
+
+[DERIVED] The representation establishes auditability, not safety, reward correctness or convergence. A finite history can omit an influential external event. Deterministic reset can reproduce a flawed simulator. Probability records are usable only when they describe the actual processed sampler. A terminal outcome also cannot identify which earlier action caused success without a credit model or intervention; association between a command and a reward is not causal attribution.
+
+## Reproducibility
+
+[DERIVED] Preserve task/occurrence IDs, world/schema digests, initial seed, context construction, exact token spans, role/mask IDs, processed behavior probabilities, service timestamps, completion classification and artifact hashes. External state that cannot be reset is a limitation in the run manifest. The unexecuted identity and fault protocols live in [verification.md](verification.md); none is reported as an executed model experiment.
+
+## References
+
+[R36.2](references.md) §3,§5.2,Appendix D/E.6; [R36.4](references.md) v3 §4.1/B.2; [R36.6](references.md) V1 guide; [R36.7](references.md) asynchronous guide.

@@ -182,6 +182,127 @@ body:is([data-domain='foundations'], [data-domain='reference']) {
   color: var(--ink-2);
 }
 
+/* Calculator equivalents use the same authored model as the instrument.
+ * Keep math scroll local and defaults distinct from its live controls. */
+.vg-calc-description {
+  min-width: 0;
+  max-width: 100%;
+  margin-top: 0.6rem;
+  font-family: var(--font-sans);
+  font-size: 14px;
+  line-height: 1.5;
+  color: var(--ink-2);
+  overflow-wrap: anywhere;
+}
+.vg-calc-description .vg-calc-description__alt {
+  margin: 0 0 0.8rem;
+  font-family: var(--font-serif);
+  font-size: 18px;
+  line-height: 1.4;
+}
+.vg-calc-description__equation {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  min-width: 0;
+  max-width: 100%;
+  margin: 0.6rem 0 1rem;
+}
+.vg-calc-description__math {
+  min-width: 0;
+  max-width: 100%;
+  flex: 1;
+  padding: 0.4rem 0;
+  overflow-x: auto;
+  overscroll-behavior-x: contain;
+  font-size: 16px;
+  color: var(--ink);
+}
+.vg-calc-description__math .katex-display {
+  margin: 0;
+  overflow: visible;
+  text-align: left;
+}
+.vg-calc-description__math .katex-display > .katex {
+  text-align: left;
+}
+.vg-calc-description__math:focus-visible {
+  outline: 2px solid var(--focus);
+  outline-offset: 2px;
+}
+.vg-calc-description__eqno {
+  flex: none;
+  font-family: var(--font-mono);
+  font-size: 12px;
+  color: var(--ink-3);
+}
+.vg-calc-description .vg-calc-description__heading {
+  margin: 0.9rem 0 0.25rem;
+  font-family: var(--font-sans);
+  font-size: 12px;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  color: var(--ink-3);
+}
+.vg-calc-description__rows {
+  margin: 0;
+}
+.vg-calc-description__rows > div {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1.2fr);
+  align-items: baseline;
+  gap: 0.15rem 1rem;
+  padding: 0.4rem 0;
+  border-bottom: 1px solid var(--rule);
+}
+.vg-calc-description__rows dt,
+.vg-calc-description__rows dd {
+  min-width: 0;
+  margin: 0;
+}
+.vg-calc-description__rows dt {
+  font-size: 14px;
+  font-weight: 400;
+}
+.vg-calc-description__rows code {
+  margin-inline-start: 0.3rem;
+  padding: 0;
+  border: 0;
+  background: none;
+  font-family: var(--font-mono);
+  font-size: 11px;
+  color: var(--ink-3);
+}
+.vg-calc-description__rows dd {
+  text-align: right;
+}
+.vg-calc-description__value {
+  font-family: var(--font-mono);
+  font-size: 13px;
+  font-variant-numeric: tabular-nums;
+  color: var(--ink);
+}
+.vg-calc-description__range {
+  display: block;
+  font-size: 12px;
+  color: var(--ink-3);
+}
+.vg-calc-description__primary {
+  display: inline;
+  margin-inline-start: 0.4rem;
+  font-size: 11px;
+  color: var(--fig-emphasis);
+}
+.vg-calc-description .vg-calc-description__note {
+  margin: 0.25rem 0;
+  font-family: var(--font-sans);
+  font-size: 12px;
+  color: var(--ink-3);
+}
+.vg-calc-description__preset {
+  margin-top: 0.9rem;
+}
+
 .vg-fallback {
   font-family: var(--font-sans);
   font-size: var(--fs-tech);

@@ -24,6 +24,7 @@ import { EVIDENCE_CLASS, type CompiledFigure, type FigureSpec, type PerformanceC
 import { calculatorDefaults } from '../figure-math.ts';
 import { resolveFigureStates } from '../state.ts';
 import { CalculatorView } from './calculator.tsx';
+import { CalculatorDescription } from './calculator-description.tsx';
 import { ChartView, type ChartDimensions } from './chart.tsx';
 import { CompareView } from './compare.tsx';
 import { HierarchyView } from './hierarchy.tsx';
@@ -161,15 +162,17 @@ function ContextLine({ context }: { readonly context: PerformanceContext }): JSX
   );
 }
 
-function TextEquivalent({ text }: { readonly text: string }): JSX.Element {
-  const paragraphs = text.split(/\n+/u).filter((line) => line.trim() !== '');
+function TextEquivalent({ figure, texHtml }: Pick<FigureBodyProps, 'figure' | 'texHtml'>): JSX.Element {
+  const paragraphs = figure.text.split(/\n+/u).filter((line) => line.trim() !== '');
   return (
     <details class="vg-text">
       <summary>Text description</summary>
       <div class="vg-text__body">
-        {paragraphs.map((paragraph, index) => (
-          <p key={index}>{paragraph}</p>
-        ))}
+        {figure.spec.kind === 'calculator' ? (
+          <CalculatorDescription spec={figure.spec.spec} alt={figure.spec.alt} texHtml={texHtml} />
+        ) : (
+          paragraphs.map((paragraph, index) => <p key={index}>{paragraph}</p>)
+        )}
       </div>
     </details>
   );
@@ -177,12 +180,15 @@ function TextEquivalent({ text }: { readonly text: string }): JSX.Element {
 
 export interface FigureFrameProps {
   readonly figure: CompiledFigure;
+  readonly texHtml?: string | undefined;
   /** The visual; web-blocks passes a hydrated island here (e.g. the calculator). */
   readonly children?: ComponentChildren;
+  /** SSR-reserved readout for pointer/keyboard exploration; avoids a hydration insertion shift. */
+  readonly explorationHint?: string;
 }
 
 /** The figure chrome (number, title, caption, source, context, text equivalent) around `children`. */
-export function FigureFrame({ figure, children }: FigureFrameProps): JSX.Element {
+export function FigureFrame({ figure, children, explorationHint, texHtml }: FigureFrameProps): JSX.Element {
   const spec = figure.spec;
   // SVG figures scroll instead of shrinking past legibility (see util.widthClass); tables scroll inside their own region.
   const scroll = figure.placement !== 'rail' && SCROLLED_KINDS.has(spec.kind);
@@ -220,6 +226,11 @@ export function FigureFrame({ figure, children }: FigureFrameProps): JSX.Element
       ) : (
         <div class="vg-figure__body">{children}</div>
       )}
+      {explorationHint !== undefined && (
+        <p class="vg-explore" aria-live="polite">
+          {explorationHint}
+        </p>
+      )}
       {first !== undefined && (
         <p class="vg-state__note" data-vg-state-note aria-live="polite">
           {first.note ?? ''}
@@ -229,7 +240,7 @@ export function FigureFrame({ figure, children }: FigureFrameProps): JSX.Element
         <p class="vg-figure__captext">{spec.caption}</p>
         <SourceLine figure={figure} />
         {spec.context !== undefined && <ContextLine context={spec.context} />}
-        <TextEquivalent text={figure.text} />
+        <TextEquivalent figure={figure} texHtml={texHtml} />
       </figcaption>
     </figure>
   );
@@ -238,12 +249,20 @@ export function FigureFrame({ figure, children }: FigureFrameProps): JSX.Element
 export interface FigureProps extends FigureBodyProps {
   /** Replaces the default visual (e.g. `<Calculator client:visible figure={f} />`). */
   readonly children?: ComponentChildren;
+  readonly explorationHint?: string;
 }
 
 /** A complete figure: chrome plus the kind-specific visual. Zero client JS. */
-export function Figure({ figure, texHtml, nodeHref, chartDimensions, children }: FigureProps): JSX.Element {
+export function Figure({
+  figure,
+  texHtml,
+  nodeHref,
+  chartDimensions,
+  children,
+  explorationHint,
+}: FigureProps): JSX.Element {
   return (
-    <FigureFrame figure={figure}>
+    <FigureFrame figure={figure} texHtml={texHtml} {...(explorationHint === undefined ? {} : { explorationHint })}>
       {children ?? (
         <FigureBody figure={figure} texHtml={texHtml} nodeHref={nodeHref} chartDimensions={chartDimensions} />
       )}
