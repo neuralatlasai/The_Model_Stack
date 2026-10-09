@@ -7,14 +7,14 @@ const VISUAL_TOPICS = [
   '/ch06-experimental-design-and-evaluation-before-optimization/06-6-reproducible-evidence/',
 ] as const;
 
-test('authored topic pages share the compact explanation-and-figures composition', async ({ page }) => {
+test('authored topic pages fill the viewport with explanation followed by scientific figures', async ({ page }) => {
   await page.setViewportSize({ width: 1275, height: 623 });
   for (const route of VISUAL_TOPICS) {
     await page.goto(route);
     await expect(page.locator('html')).toHaveAttribute('data-article-layout', 'workspace');
     await expect(page.getByRole('heading', { level: 1 })).toHaveCount(1);
-    await expect(page.locator('.aw-explanation')).toHaveCSS('width', '300px');
-    await expect(page.locator('.aw-explanation .rb-p').first()).toHaveCSS('font-size', '14px');
+    await expect(page.locator('.aw-explanation')).toHaveCSS('width', '1227px');
+    await expect(page.locator('.aw-explanation .rb-p').first()).toHaveCSS('font-size', '22px');
     await expect(page.locator('.aw-visuals .aw-visual')).toHaveCount(2);
     await expect(page.locator('#context-rail')).not.toBeVisible();
     const previews = await page.locator('.aw-visual').evaluateAll((figures) =>
@@ -25,7 +25,8 @@ test('authored topic pages share the compact explanation-and-figures composition
       })),
     );
     for (const preview of previews) {
-      expect(preview.top).toBeLessThan(150);
+      const explanationBottom = await page.locator('.aw-explanation').evaluate((e) => e.getBoundingClientRect().bottom);
+      expect(preview.top).toBeGreaterThanOrEqual(explanationBottom);
       expect(preview.anchor).toBeTruthy();
       const canonical = page.locator(`.aw-manuscript ${preview.anchor ?? ''}`);
       await expect(canonical).toHaveCount(1);
@@ -91,11 +92,11 @@ test('evidence, citations, and inspection dimensions keep the shared reading rhy
   const derivation = page.locator('.rb-p').filter({ hasText: 'Each section makes those choices explicit' });
   await expect(derivation.locator('.rb-xref--derived')).toHaveCount(3);
   await expect(derivation).not.toContainText('DERIVED:eq-');
-  await expect(derivation).toHaveCSS('font-size', '14px');
-  await expect(derivation).toHaveCSS('line-height', '21px');
+  await expect(derivation).toHaveCSS('font-size', '21px');
+  await expect(derivation).toHaveCSS('line-height', '31.5px');
   const paper = page.locator('.rb-p').filter({ hasText: 'Source-reported protocols then establish' });
   await expect(paper.locator('.rb-cite').first()).toHaveCSS('top', '0px');
-  await expect(paper.locator('.rb-cite').first()).toHaveCSS('font-size', '14px');
+  await expect(paper.locator('.rb-cite').first()).toHaveCSS('font-size', '21px');
   await expect(paper).toContainText('§\u202f3.2');
   const dimensions = page.locator('.rb-dimensions');
   await expect(dimensions.locator('.rb-dimensions__item')).toHaveCount(6);
@@ -202,4 +203,16 @@ test('authored derivations are expanded on entry without JavaScript', async ({ b
   } finally {
     await context.close();
   }
+});
+
+test('chapter references use the full reading width and retain all source records on mobile', async ({ page }) => {
+  await page.setViewportSize({ width: 1440, height: 1000 });
+  await page.goto('/ch02-mathematical-and-statistical-foundations/references/');
+  await expect(page.locator('.aw-manuscript')).toHaveCSS('width', '1392px');
+  await expect(page.locator('.rb-records__item')).toHaveCount(25);
+  await expect(page.locator('.rb-records__title').first()).toHaveCSS('font-family', /ETBook|ET Book/u);
+  await page.setViewportSize({ width: 390, height: 844 });
+  await expect(page.locator('.aw-manuscript')).toHaveCSS('width', '358px');
+  await expect(page.locator('.rb-records__item')).toHaveCount(25);
+  expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
 });

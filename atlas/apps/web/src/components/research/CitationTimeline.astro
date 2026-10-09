@@ -50,9 +50,16 @@ const maxYear = years.length > 0 ? Math.max(...years) : 0;
 const span = Math.max(1, maxYear - minYear);
 const byYear = new Map<number, typeof dated>();
 for (const entry of dated) byYear.set(entry.year, [...(byYear.get(entry.year) ?? []), entry]);
-const tickYears = [...new Set([minYear, ...[...byYear.keys()].filter((year) => year % 5 === 0), maxYear])].sort(
+const candidates = [...new Set([minYear, ...[...byYear.keys()].filter((year) => year % 5 === 0), maxYear])].sort(
   (a, b) => a - b,
 );
+// Reserve enough space between labels even at the 358px mobile manuscript width.
+// Every source mark remains plotted; only redundant year labels are omitted.
+const tickYears = [minYear];
+for (const year of candidates) {
+  if ((year - (tickYears.at(-1) ?? minYear)) / span >= 0.15 && (maxYear - year) / span >= 0.15) tickYears.push(year);
+}
+if (maxYear !== minYear) tickYears.push(maxYear);
 const pct = (year: number): string => `${String(((year - minYear) / span) * 100)}%`;
 const marks = [...new Set(dated.map((entry) => entry.mark))];
 const undated = cited.length - dated.length;

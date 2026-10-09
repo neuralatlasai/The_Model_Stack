@@ -101,7 +101,7 @@ export function initBrain3D(ctx: PageContext, fig: HTMLElement, reduced: boolean
         uOpacity: { value: opacity },
         uFill: { value: 0 },
         uPorcelain: { value: 0 },
-        uCrease: { value: 2.4 },
+        uCrease: { value: 1.15 },
         uFocus: { value: new THREE.Vector3() },
         uFocusK: { value: 0 },
         uGlow: { value: new THREE.Color() },
@@ -340,8 +340,8 @@ export function initBrain3D(ctx: PageContext, fig: HTMLElement, reduced: boolean
     palette = night ? GLOW : INK;
     for (const m of [glassBack, glassFront]) {
       const u = m.uniforms as { uRim: { value: THREE.Color }; uBody: { value: THREE.Color } };
-      u.uRim.value.set(night ? 0x9cc8ff : 0x23466f);
-      u.uBody.value.set(night ? 0x141b26 : 0xf7f2e8);
+      u.uRim.value.set(night ? 0x9caeaa : 0x52644e);
+      u.uBody.value.set(night ? 0x181f21 : 0xf3eee1);
     }
     (glassFront.uniforms as { uFill: { value: number } }).uFill.value = night ? 0.72 : 0.9;
     // paper: an opaque porcelain form, correctly occluded; night: see-through glass
@@ -356,9 +356,9 @@ export function initBrain3D(ctx: PageContext, fig: HTMLElement, reduced: boolean
     lineMat.blending = night ? THREE.AdditiveBlending : THREE.NormalBlending;
     lineMat.needsUpdate = true;
     shadowMat.color.set(night ? 0x7fb2ff : 0x1b1814);
-    shadowMat.opacity = night ? 0.14 : 0.3;
-    IN.set(night ? 0x7fc0ff : 0x1f5fa8);
-    OUT.set(night ? 0xff9a7a : 0xc2412b);
+    shadowMat.opacity = night ? 0.14 : 0.19;
+    IN.set(night ? 0x9abdb8 : 0x3f6b63);
+    OUT.set(night ? 0xd2a58a : 0xa46542);
     neurons.forEach((neuron, i) => {
       const c = tint(neuron.domain);
       N.col.set([c.r, c.g, c.b], i * 3);

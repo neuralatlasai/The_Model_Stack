@@ -58,12 +58,12 @@ export const GLASS_FRAGMENT = /* glsl */ `
       float fill = max(dot(n, normalize(vec3(0.75, 0.15, 0.55))), 0.0);
       float sky = 0.5 + 0.5 * n.y;
       float crease = clamp(length(fwidth(n)) * uCrease, 0.0, 1.0);
-      vec3 shade = mix(vec3(0.8, 0.765, 0.715), vec3(1.0, 0.99, 0.97), wrap);
+      vec3 shade = mix(vec3(0.72, 0.735, 0.70), vec3(1.0, 0.995, 0.975), wrap);
       shade += vec3(0.04, 0.038, 0.034) * fill + vec3(0.03) * sky;
-      shade *= 1.0 - 0.3 * crease;
-      shade *= 1.0 - 0.18 * fres;
-      shade += vec3(0.07, 0.04, 0.012) * fres;
-      float sheen = pow(max(dot(reflect(-l, n), v), 0.0), 26.0) * 0.24;
+      shade *= 1.0 - 0.16 * crease;
+      shade *= 1.0 - 0.12 * fres;
+      shade += vec3(0.055, 0.055, 0.035) * fres;
+      float sheen = pow(max(dot(reflect(-l, n), v), 0.0), 18.0) * 0.10;
       col = uBody * shade + vec3(sheen);
       a = uOpacity;
     }
@@ -71,9 +71,9 @@ export const GLASS_FRAGMENT = /* glsl */ `
     float fd = length(vP - uFocus);
     float glow = uFocusK * exp(-fd * fd / 0.16);
     if (uPorcelain > 0.5) {
-      col = mix(col, uGlow, glow * 0.4);
+      col = mix(col, uGlow, glow * 0.16);
     } else {
-      col += uGlow * glow * 0.45;
+      col += uGlow * glow * 0.165;
       a = max(a, glow * 0.3 * uOpacity);
     }
     gl_FragColor = vec4(col, clamp(a, 0.0, 1.0));

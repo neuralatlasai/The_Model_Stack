@@ -10,6 +10,7 @@
  */
 import { z } from 'zod';
 import { PART_ICON } from '../lib/part-icons.ts';
+import { CHAPTER_ICON } from '../lib/chapter-icons.ts';
 import type { PageContext } from './page.ts';
 
 const Tile = z.object({ n: z.number(), icon: z.number(), label: z.string(), url: z.string(), fill: z.number() });
@@ -104,11 +105,16 @@ export function initDashboard(ctx: PageContext, root: HTMLElement, reduced: bool
   };
 
   // ── tiles: icon + label, filled by sections written ──────────────────────
-  const icon = (part: number): SVGSVGElement => {
+  const icon = (n: number, chapter = false): SVGSVGElement => {
     const svg = doc.createElementNS(SVG, 'svg');
     svg.setAttribute('viewBox', '0 0 24 24');
+    if (chapter) {
+      // Trusted vendored icon markup; no manuscript or user input enters SVG.
+      svg.innerHTML = CHAPTER_ICON[n] ?? '';
+      return svg;
+    }
     const path = doc.createElementNS(SVG, 'path');
-    path.setAttribute('d', PART_ICON[part] ?? '');
+    path.setAttribute('d', PART_ICON[n] ?? '');
     svg.append(path);
     return svg;
   };
@@ -122,11 +128,9 @@ export function initDashboard(ctx: PageContext, root: HTMLElement, reduced: bool
         a.title = tile.label;
         a.style.setProperty('--f', '0');
         const box = doc.createElement('span');
-        box.className = state.part === 0 ? 'dx-tile__i' : 'dx-tile__i is-num';
+        box.className = 'dx-tile__i';
         box.setAttribute('aria-hidden', 'true');
-        // parts carry their icon; a part's chapters carry their number
-        if (state.part === 0) box.append(icon(tile.icon));
-        else box.textContent = pad(tile.n);
+        box.append(state.part === 0 ? icon(tile.icon) : icon(tile.n, true));
         const bar = doc.createElement('span');
         bar.className = 'dx-tile__bar';
         const base = doc.createElement('span');

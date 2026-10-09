@@ -21,6 +21,7 @@ import VolumeMap from '../research/VolumeMap.astro';
 import { buildLibraryModel } from '../../lib/library-model.ts';
 import '../../styles/partmap.css';
 import '../../styles/training-reader.css';
+import '../../styles/chapter-reader.css';
 import { getStackModel } from '../../lib/stack.ts';
 import ChapterGlance from '../research/ChapterGlance.astro';
 import CitationTimeline from '../research/CitationTimeline.astro';
@@ -53,6 +54,8 @@ const [graph, registry, manifest, withCompare] = await Promise.all([
 const pageData = await buildPageData(doc);
 const presentation = presentDocument(doc);
 const topic = doc.meta.entityType === 'section';
+const chapterContent = doc.meta.chapter !== null;
+Astro.locals.chapterContent = chapterContent;
 const opening = topic ? (presentation.main.find((region) => region.role === 'scope') ?? null) : null;
 const manuscriptRegions =
   opening === null ? presentation.main : presentation.main.filter((region) => region !== opening);
@@ -132,7 +135,12 @@ const jsonLd = documentJsonLd({ doc, graph, registry, site: Astro.site, edition:
   articleTitle={doc.header.title}
   jsonLd={jsonLd}
 >
-  <article class="sh-article" data-node-id={doc.meta.id} data-chapter={doc.meta.chapter ?? undefined}>
+  <article
+    class="sh-article"
+    data-node-id={doc.meta.id}
+    data-chapter={doc.meta.chapter ?? undefined}
+    data-chapter-content={chapterContent ? 'true' : undefined}
+  >
     {topic && (
       <div class="aw-workspace">
         <div class="aw-explanation">

@@ -874,7 +874,7 @@ html[data-gl='1'] .hb:not(.is-2d) .hb-stage {
 
 /* ── the live dashboard (StackDashboard.astro, client dashboard.ts) ──────── */
 .dx {
-  --dx-dot: color-mix(in oklab, var(--accent) 82%, transparent);
+  --dx-dot: color-mix(in oklab, var(--ink-3) 24%, transparent);
   display: flex;
   flex-direction: column;
   gap: 0.7rem;
@@ -885,7 +885,7 @@ html[data-gl='1'] .hb:not(.is-2d) .hb-stage {
 }
 
 :root[data-theme='dark'] .dx {
-  --dx-dot: color-mix(in oklab, var(--accent) 60%, transparent);
+  --dx-dot: color-mix(in oklab, var(--ink-3) 28%, transparent);
 }
 
 /* the field: halftone dots behind the brain, fading out below */
@@ -906,8 +906,8 @@ html[data-gl='1'] .hb:not(.is-2d) .hb-stage {
 .dx-dots {
   position: absolute;
   inset: 0;
-  background-image: radial-gradient(circle, var(--dx-dot) 1.3px, transparent 1.65px);
-  background-size: 7px 7px;
+  background-image: radial-gradient(circle, var(--dx-dot) 0.75px, transparent 1.05px);
+  background-size: 9px 9px;
   background-position: center;
   /* a clean halo around the brain (its size follows the field height, like the
      brain's), the field fading out below */

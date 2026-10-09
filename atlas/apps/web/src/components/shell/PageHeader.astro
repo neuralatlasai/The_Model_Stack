@@ -5,6 +5,8 @@
  * title, optional one-sentence lede and metadata line. Same anatomy as a
  * chapter header (UI_UX §9) so every page opens the same way.
  */
+import PageHeaderVisual from './PageHeaderVisual.astro';
+
 interface Props {
   readonly identity: string;
   readonly title: string;
@@ -16,9 +18,12 @@ const { identity, title, lede, meta } = Astro.props;
 ---
 
 <header class="sh-page-header">
-  <p class="sh-identity">{identity}</p>
-  <h1 class="sh-page-title">{title}</h1>
-  {lede !== undefined && <p class="sh-lede">{lede}</p>}
-  {meta !== undefined && <p class="sh-meta-line">{meta}</p>}
-  <slot />
+  <div class="sh-page-header__copy">
+    <p class="sh-identity">{identity}</p>
+    <h1 class="sh-page-title">{title}</h1>
+    {lede !== undefined && <p class="sh-lede">{lede}</p>}
+    {meta !== undefined && <p class="sh-meta-line">{meta}</p>}
+    <slot />
+  </div>
+  <PageHeaderVisual />
 </header>

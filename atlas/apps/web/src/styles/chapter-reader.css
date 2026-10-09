@@ -1,0 +1,509 @@
+/* Full-width chapter manuscripts, per the requested edge-to-edge layout.
+ * Reference typography and open scientific figures are preserved. Small
+ * responsive gutters protect text at viewport edges; context stays collapsible.
+ */
+html[data-reading-mode='complete'][data-article-layout='workspace']:has([data-chapter-content='true']) {
+  --measure: 100%;
+  --fs-body: 21px;
+  --lh-body: 1.5;
+
+  .sh-topbar-inner {
+    max-inline-size: none;
+    margin-inline: 24px;
+    min-block-size: 112px;
+    padding: 24px 0;
+  }
+
+  .aw-masthead-title {
+    font: 400 clamp(28px, 3vw, 44px)/1.12 var(--font-serif);
+    text-wrap: balance;
+  }
+
+  .sh-frame {
+    inline-size: calc(100% - 48px);
+    max-inline-size: none;
+    margin-inline: 24px;
+    grid-template-columns: minmax(0, 1fr);
+    grid-template-areas: 'main';
+  }
+
+  .sh-tools {
+    margin-inline: 12px 0;
+  }
+
+  .sh-topnav-list {
+    gap: 24px;
+  }
+
+  .sh-topnav-link {
+    font: 18px/1.4 var(--font-serif);
+  }
+
+  .sh-main {
+    padding-block: 20px 80px;
+  }
+
+  @media (max-width: 1224px) {
+    .sh-topbar-inner {
+      margin-inline: 24px;
+    }
+  }
+
+  @media (max-width: 760px) {
+    .sh-topbar-inner {
+      margin-inline: 16px;
+      min-block-size: 88px;
+      padding-block: 20px;
+      flex-wrap: wrap;
+    }
+
+    .sh-frame {
+      inline-size: calc(100% - 32px);
+      margin-inline: 16px;
+    }
+
+    .aw-masthead-title {
+      font-size: 30px;
+    }
+  }
+}
+
+@media print {
+  html[data-reading-mode='complete'][data-article-layout='workspace']:has([data-chapter-content='true']) {
+    .sh-frame {
+      display: block;
+      max-inline-size: none;
+    }
+
+    .sh-rail {
+      display: none;
+    }
+  }
+}
+
+html[data-reading-mode='complete'][data-article-layout='workspace'] .sh-article[data-chapter-content='true'] {
+  --measure: 100%;
+
+  .aw-workspace {
+    display: block;
+    padding: 0;
+    border: 0;
+  }
+
+  .aw-explanation {
+    max-inline-size: var(--measure);
+  }
+
+  .aw-explanation .rb-region__title {
+    margin-block-end: 20px;
+    padding: 0;
+    font: 400 30px/1.2 var(--font-serif);
+  }
+
+  .aw-explanation .rb-region__title::after {
+    content: none;
+  }
+
+  .aw-explanation :is(.rb-p, .rb-list, .rb-header__thesis) {
+    font: 400 22px/1.45 var(--font-serif);
+  }
+
+  :is(.aw-explanation, .aw-manuscript) .rb-p {
+    text-align: justify;
+    text-align-last: start;
+    hyphens: auto;
+    overflow-wrap: break-word;
+  }
+
+  .aw-document-meta .rb-header__meta {
+    margin-block: 20px 0;
+    font: 12px/1.7 var(--font-sans);
+    color: var(--ink-2);
+  }
+
+  .aw-visual-surface {
+    margin-block-start: 40px;
+    gap: 28px;
+  }
+
+  .aw-visuals {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    max-inline-size: none;
+    gap: 32px;
+    align-items: start;
+  }
+
+  .aw-visuals:is([data-overview-figures='1'], [data-overview-mode='selected']) {
+    grid-template-columns: minmax(0, 1fr);
+    max-inline-size: none;
+  }
+
+  .aw-visual {
+    border-block-start: 1px solid var(--rule-strong);
+    padding-block-start: 14px;
+  }
+
+  .aw-visual__heading {
+    min-block-size: 44px;
+    font: 500 13px/1.5 var(--font-sans);
+  }
+
+  .aw-visual__number {
+    position: static;
+    inline-size: auto;
+    block-size: auto;
+    overflow: visible;
+    clip-path: none;
+    margin-inline-end: 8px;
+    color: var(--accent);
+    font: 12px/1.5 var(--font-mono);
+  }
+
+  .aw-visual__body,
+  .aw-visual--chart .aw-visual__body {
+    block-size: auto;
+    min-block-size: 0;
+    max-block-size: none;
+    padding-block: 16px;
+    justify-content: start;
+    overflow: auto;
+  }
+
+  .aw-visual--chart .vg-chart {
+    max-inline-size: none;
+  }
+
+  .aw-visual__caption {
+    padding-block: 12px;
+    border-block-start: 1px solid var(--rule);
+    font: 12px/1.6 var(--font-sans);
+  }
+
+  .aw-visual__caption-text {
+    grid-column: 1 / -1;
+    margin: 0;
+    font: 19px/1.45 var(--font-serif);
+  }
+
+  .aw-visual__source {
+    grid-column: 1 / -1;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 4px;
+    margin: 0;
+    color: var(--ink-2);
+  }
+
+  .aw-visual__scale {
+    display: flex;
+    justify-content: end;
+    gap: 6px;
+    font: 12px/1.6 var(--font-sans);
+  }
+
+  .aw-visual:has(.aw-visual__scale input:checked) .vg-svg {
+    width: max(100%, var(--diagram-readable-width, 100%));
+    min-inline-size: var(--diagram-readable-width, 0);
+    max-inline-size: none;
+    max-block-size: none;
+  }
+
+  .aw-parameters {
+    max-inline-size: none;
+    padding-block: 20px;
+    border-block: 1px solid var(--rule);
+  }
+
+  .aw-parameters__heading {
+    font: 500 12px/1.5 var(--font-mono);
+    color: var(--ink-2);
+  }
+
+  .aw-parameters__list {
+    gap: 20px 28px;
+  }
+
+  .aw-parameters__item {
+    font-size: 13px;
+    line-height: 1.6;
+  }
+
+  .aw-manuscript {
+    max-inline-size: var(--measure);
+    margin: 48px 0 0;
+    font: 21px/1.5 var(--font-serif);
+  }
+
+  &:not(:has(.aw-workspace)) .aw-manuscript {
+    margin-block-start: 0;
+  }
+
+  .aw-manuscript :is(.rb-p, .rb-list, .rb-def__text, .rb-note__text, .rb-obs__text, .rb-asm__sens) {
+    font: 21px/1.5 var(--font-serif);
+    overflow-wrap: break-word;
+  }
+
+  .aw-manuscript .rb-header__thesis {
+    font: 24px/1.4 var(--font-serif);
+    margin-block: 24px 16px;
+  }
+
+  .aw-manuscript .rb-region {
+    margin-block-start: 56px;
+  }
+
+  .aw-manuscript .rb-region__title {
+    margin-block-end: 22px;
+    padding: 0;
+    font: 400 33px/1.2 var(--font-serif);
+    text-wrap: balance;
+  }
+
+  .aw-manuscript .rb-region__title::after {
+    content: none;
+  }
+
+  .aw-manuscript :is(.rb-region, .rb-flow) > .rb-p + .rb-p {
+    margin-block-start: 22px;
+  }
+
+  .aw-manuscript .rb-h3 {
+    margin-block: 32px 16px;
+    font: 400 26px/1.25 var(--font-serif);
+  }
+
+  .rb-list > li + li {
+    margin-block-start: 10px;
+  }
+
+  .rb-figure {
+    margin-block: 36px;
+    max-inline-size: 100%;
+  }
+
+  .vg-figure__caption {
+    font: 18px/1.45 var(--font-serif);
+  }
+
+  .rb-figure__scale {
+    display: flex;
+    font: 12px/1.6 var(--font-sans);
+  }
+
+  .rb-figure:has(.rb-figure__scale input:checked) .vg-scroll .vg-svg {
+    min-width: var(--figure-readable-width, 700px);
+    max-width: none;
+  }
+
+  .rb-table :is(th, td) {
+    padding: 12px 14px;
+  }
+
+  .rb-table tbody tr:nth-child(even) {
+    background: var(--accent-wash);
+  }
+
+  .rb-math {
+    display: inline-block;
+    max-inline-size: 100%;
+    overflow-x: auto;
+    vertical-align: middle;
+  }
+
+  .rb-records__body {
+    overflow-wrap: anywhere;
+  }
+
+  .sh-article-end {
+    margin-block-start: 64px;
+    padding-block-start: 24px;
+    border-block-start: 1px solid var(--rule-strong);
+  }
+
+  .tv {
+    margin-block: 24px 36px;
+    border-block: 1px solid var(--rule-strong);
+    font: 13px/1.5 var(--font-sans);
+  }
+
+  .tv-head,
+  .tv-foot,
+  .tv-readout {
+    display: flex;
+    justify-content: space-between;
+    align-items: baseline;
+    flex-wrap: wrap;
+    gap: 12px;
+    padding-block: 16px;
+  }
+
+  .tv-head {
+    font: 12px/1.5 var(--font-mono);
+  }
+
+  .tv-head > :last-child,
+  .tv-foot {
+    color: var(--ink-2);
+  }
+
+  .tv-stages {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+  }
+
+  .tv button {
+    border: 1px solid var(--rule-strong);
+    border-radius: 3px;
+    background: transparent;
+    color: var(--ink);
+    padding: 8px 10px;
+    font: 12px/1.4 var(--font-sans);
+    cursor: pointer;
+  }
+
+  .tv button[aria-pressed='true'] {
+    border-color: var(--accent);
+    background: var(--accent-wash);
+    color: var(--accent);
+  }
+
+  .tv button:focus-visible,
+  .tv-canvas canvas:focus-visible {
+    outline: 2px solid var(--accent);
+    outline-offset: 3px;
+  }
+
+  .tv button:disabled {
+    opacity: 0.5;
+    cursor: default;
+  }
+
+  .tv-stages button > span {
+    color: var(--accent);
+    margin-inline-end: 4px;
+    font-family: var(--font-mono);
+  }
+
+  .tv-canvas {
+    position: relative;
+    block-size: clamp(280px, 50vw, 420px);
+    inline-size: 100%;
+  }
+
+  .tv-canvas canvas {
+    display: block;
+    max-inline-size: 100%;
+    cursor: grab;
+  }
+
+  .tv-canvas canvas:active {
+    cursor: grabbing;
+  }
+
+  .tv-status {
+    position: absolute;
+    inset: 45% 20px auto;
+    text-align: center;
+    color: var(--ink-2);
+  }
+
+  .tv-readout {
+    border-block: 1px solid var(--rule);
+  }
+
+  .tv-readout code {
+    color: var(--accent);
+    font-size: 16px;
+  }
+
+  .tv-axes {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+    gap: 16px;
+    margin-block: 20px;
+  }
+
+  .tv-axes dt {
+    font-family: var(--font-mono);
+    color: var(--accent);
+  }
+
+  .tv-axes dd {
+    margin: 4px 0 0;
+    color: var(--ink-2);
+  }
+
+  .tv-foot {
+    border-block-start: 1px solid var(--rule);
+    font-size: 11px;
+  }
+
+  .tv-foot > span {
+    flex: 1 1 220px;
+  }
+
+  @media (max-width: 900px) {
+    .aw-visuals {
+      grid-template-columns: minmax(0, 1fr);
+      max-inline-size: none;
+    }
+  }
+
+  @media (max-width: 760px) {
+    :is(.aw-explanation, .aw-manuscript) .rb-p {
+      text-align: start;
+    }
+    .aw-visual--chart .vg-chart {
+      min-inline-size: 600px;
+    }
+
+    .aw-manuscript :is(.rb-p, .rb-list, .rb-def__text, .rb-note__text, .rb-obs__text, .rb-asm__sens),
+    .aw-explanation :is(.rb-p, .rb-list, .rb-header__thesis) {
+      font-size: 19px;
+    }
+
+    .aw-manuscript .rb-region__title {
+      font-size: 29px;
+    }
+
+    .aw-parameters__list {
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+
+    .aw-manuscript .rb-region {
+      margin-block-start: 40px;
+    }
+  }
+}
+
+/* Bibliographies share the manuscript width and expose every source as an open record. */
+html[data-reading-mode='complete'][data-article-layout='workspace'] .sh-article[data-chapter-content='true'] {
+  .rb-records__item {
+    padding-block: 24px;
+  }
+  .rb-records__title {
+    font: 400 26px/1.25 var(--font-serif);
+    overflow-wrap: anywhere;
+  }
+  .rb-records__body {
+    font: 19px/1.5 var(--font-serif);
+  }
+  .rb-records__meta {
+    font: 13px/1.6 var(--font-sans);
+  }
+  .rb-records :is(a, dd) {
+    overflow-wrap: anywhere;
+  }
+  .rb-records {
+    max-inline-size: none;
+  }
+  @media (max-width: 760px) {
+    .rb-records__title {
+      font-size: 23px;
+    }
+    .rb-records__body {
+      font-size: 18px;
+    }
+  }
+}

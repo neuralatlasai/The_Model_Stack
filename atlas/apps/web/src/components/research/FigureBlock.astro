@@ -16,6 +16,7 @@
 import type { CompiledFigure, Depth } from '@atlas/core';
 import { Figure } from '@atlas/visual/svg';
 import Calculator from '../../islands/Calculator.tsx';
+import TensorVolume from '../../islands/TensorVolume.tsx';
 import { depthAttrs } from './lib/dom.ts';
 import { figureCopy, figureLabel, isCalculator } from './lib/figure.ts';
 import { figureHostProps } from './lib/figure-host.ts';
@@ -57,6 +58,9 @@ const { nodeHref, tex } = await figureHostProps(figure);
     </p>
   )}
   <div class="rb-figure__inline">
+    {Astro.locals.chapterContent === true && figure.spec.kind === 'tensor-flow' && (
+      <TensorVolume client:visible spec={figure.spec.spec} />
+    )}
     {calculator ? (
       <Figure figure={shown} nodeHref={nodeHref}>
         <Calculator client:visible figure={shown} {...tex} />

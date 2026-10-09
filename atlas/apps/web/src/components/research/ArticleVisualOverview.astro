@@ -19,6 +19,7 @@ interface Props {
 
 const { doc } = Astro.props;
 const training = doc.meta.chapter !== null && doc.meta.chapter >= 19 && doc.meta.chapter <= 24;
+const editorial = doc.meta.entityType === 'chapter' || doc.meta.entityType === 'section';
 const selectedFigures = articleOverviewFigures(doc.figures);
 const orderedFigures = training
   ? [...selectedFigures].sort((a, b) => Number(b.spec.kind === 'calculator') - Number(a.spec.kind === 'calculator'))
@@ -87,23 +88,25 @@ const contextFields: readonly (readonly [keyof PerformanceContext, string])[] = 
             {source.number !== null && <span class="aw-visual__title">{figure.spec.title}</span>}
           </a>
         </header>
-        {doc.meta.chapter !== null &&
-          doc.meta.chapter >= 19 &&
-          doc.meta.chapter <= 24 &&
-          figure.spec.kind === 'diagram' && (
-            <label class="aw-visual__scale">
-              <input type="checkbox" /> Expand diagram
-            </label>
-          )}
+        {(training || editorial) && (figure.spec.kind === 'diagram' || figure.spec.kind === 'cycle') && (
+          <label class="aw-visual__scale">
+            <input type="checkbox" /> Expand diagram
+          </label>
+        )}
         <div class="aw-visual__body" role="region" aria-labelledby={`${figure.anchor}--heading`} tabindex={0}>
           {isCalculator(figure) ? (
             <Calculator client:visible figure={figure} {...tex} />
           ) : (
-            <FigureBody figure={figure} nodeHref={nodeHref} chartDimensions={{ width: 440, height: 390 }} {...tex} />
+            <FigureBody
+              figure={figure}
+              nodeHref={nodeHref}
+              chartDimensions={editorial ? { width: 700, height: 440 } : { width: 440, height: 390 }}
+              {...tex}
+            />
           )}
         </div>
         <figcaption class="aw-visual__caption">
-          {training && (
+          {(training || editorial) && (
             <>
               <p class="aw-visual__caption-text">{figure.spec.caption}</p>
               <p class="aw-visual__source">
@@ -111,15 +114,15 @@ const contextFields: readonly (readonly [keyof PerformanceContext, string])[] = 
                 {figure.sources.map((sourceId) => (
                   <span>
                     <span aria-hidden="true"> · </span>
-                    {training && isCitationKey(sourceId) ? <CiteLink citeKey={sourceId} /> : sourceId}
+                    {isCitationKey(sourceId) ? <CiteLink citeKey={sourceId} /> : sourceId}
                   </span>
                 ))}
               </p>
             </>
           )}
           <details class="aw-visual__details">
-            <summary>{training ? 'Context and accessible description' : 'Caption and sources'}</summary>
-            {!training && (
+            <summary>{training || editorial ? 'Context and accessible description' : 'Caption and sources'}</summary>
+            {!training && !editorial && (
               <>
                 <p class="aw-visual__caption-text">{figure.spec.caption}</p>
                 <p class="aw-visual__source">
@@ -127,7 +130,7 @@ const contextFields: readonly (readonly [keyof PerformanceContext, string])[] = 
                   {figure.sources.map((sourceId) => (
                     <span>
                       <span aria-hidden="true"> · </span>
-                      {training && isCitationKey(sourceId) ? <CiteLink citeKey={sourceId} /> : sourceId}
+                      {isCitationKey(sourceId) ? <CiteLink citeKey={sourceId} /> : sourceId}
                     </span>
                   ))}
                 </p>

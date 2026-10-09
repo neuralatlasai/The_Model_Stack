@@ -829,3 +829,18 @@
     transition: none;
   }
 }
+/* Defer offscreen catalogue rows while retaining native find, links, and focus. */
+.eqx-row {
+  content-visibility: auto;
+  contain-intrinsic-block-size: auto 96px;
+}
+@media print {
+  .eqx-row {
+    content-visibility: visible;
+    contain-intrinsic-block-size: none;
+  }
+}
+
+.eqx-row:is(:hover, :focus-within, .is-focus) {
+  content-visibility: visible;
+}

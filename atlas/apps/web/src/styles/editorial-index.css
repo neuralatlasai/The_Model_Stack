@@ -1,0 +1,602 @@
+/* Open research notes and ruled indexes, in the editorial language of the
+ * supplied references. Scientific plots and their semantic marks stay intact. */
+:root body :is(.lib-readout, .eco-readout, .pfx-readout, .fx-readout, .en-readout) {
+  padding: 20px 0 24px;
+  border: 0;
+  border-block-start: 1px solid var(--ink);
+  border-radius: 0;
+  background: transparent;
+  box-shadow: none;
+  min-block-size: 0;
+  block-size: auto;
+  contain: none;
+  overflow: visible;
+}
+
+:root body .lib-readout[data-domain] {
+  border-block-start: 1px solid var(--d);
+  padding-block-start: 20px;
+}
+
+:root body .eco-readout.is-pinned {
+  box-shadow: none;
+  border-block-start-color: var(--accent);
+}
+
+:root body :is(.lib-ro__title, .eco-readout__title, .pfx-readout__title, .fx-readout__title, .en-ro__title) {
+  display: block;
+  block-size: auto;
+  min-block-size: 0;
+  margin-block: 12px 16px;
+  overflow: visible;
+  -webkit-line-clamp: unset;
+  line-clamp: unset;
+  font: 400 28px/1.15 var(--font-serif);
+  text-wrap: pretty;
+}
+
+:root body :is(.lib-ro__title[data-len], .eco-readout__title[data-len], .en-ro__title.is-long) {
+  font-size: 26px;
+  line-height: 1.2;
+}
+
+:root body :is(.lib-ro__thesis, .eco-readout__why, .en-ro__sub) {
+  display: block;
+  block-size: auto;
+  margin-block: 16px 24px;
+  overflow: visible;
+  -webkit-line-clamp: unset;
+  line-clamp: unset;
+  font: 18px/1.5 var(--font-serif);
+}
+
+:root body :is(.pfx-readout__used, .pfx-readout__meta, .eco-readout__meta, .eco-readout__links) {
+  display: block;
+  block-size: auto;
+  overflow: visible;
+  -webkit-line-clamp: unset;
+  line-clamp: unset;
+  line-height: 1.6;
+}
+
+:root body :is(.lib-ro__kicker, .eco-readout__kicker, .pfx-readout__kicker, .en-ro__kicker) {
+  block-size: auto;
+  padding-block-end: 0;
+  border: 0;
+  white-space: normal;
+  font-size: 10px;
+  letter-spacing: 0.08em;
+}
+
+:root body .lib-badge {
+  padding: 0;
+  margin-inline-end: 10px;
+  border-radius: 0;
+  background: transparent;
+  color: var(--d, var(--accent));
+}
+
+:root body .lib-readout[data-domain] .lib-badge {
+  background: transparent;
+}
+
+:root body .lib-ro__rows {
+  grid-template-rows: none;
+  gap: 8px;
+  padding-block: 16px;
+  border-block: 1px solid var(--rule);
+}
+
+:root body .lib-ro__rows dt::after {
+  border: 0;
+}
+
+:root body .lib-ro__list {
+  grid-template-rows: none;
+  gap: 0;
+}
+
+:root body .lib-ro__item {
+  min-block-size: 36px;
+  padding-block: 8px;
+  border-block-end: 1px solid var(--rule);
+  border-radius: 0;
+  align-items: baseline;
+  font-size: 12px;
+}
+
+:root body .lib-ro__itemtext {
+  display: block;
+  overflow: visible;
+  line-height: 1.45;
+  -webkit-line-clamp: unset;
+  line-clamp: unset;
+}
+
+:root body .en-readout {
+  grid-template-rows: none;
+  align-content: start;
+}
+
+:root body .en-ro__list {
+  margin-block-start: 16px;
+  /* The controller measures this region to budget visible chapter entries. */
+  min-block-size: 260px;
+}
+
+/* Systems become an annotated stack of open rows rather than raised slabs. */
+:root body .es-stack {
+  gap: 0;
+  padding-block: 0;
+}
+
+:root body .es-band {
+  padding: 22px 0;
+  border: 0;
+  border-block-end: 1px solid var(--rule-strong);
+  border-radius: 0;
+  background: transparent;
+  box-shadow: none;
+  align-items: start;
+  column-gap: 24px;
+}
+
+:root body .es-band[data-used='false'] {
+  border-style: solid;
+  background: transparent;
+}
+
+:root body .es-band.is-focus {
+  background: transparent;
+  border-block-end-color: var(--accent);
+}
+
+:root body .es-band__name {
+  font: 400 20px/1.25 var(--font-serif);
+}
+
+:root body .es-chip {
+  padding: 5px 0;
+  margin-inline-end: 12px;
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+  line-height: 1.5;
+  box-shadow: none;
+}
+
+:root body .es-chip:is(:hover, .is-focus, .is-peek) {
+  box-shadow: none;
+  text-decoration: underline;
+  text-decoration-color: var(--accent);
+  text-underline-offset: 5px;
+}
+
+:root body .es-chip:focus-visible {
+  outline: 2px solid var(--focus);
+  outline-offset: 3px;
+}
+
+:root body .eco-grid-wrap::before {
+  border: 0;
+  border-block-start: 1px solid var(--accent);
+  border-radius: 0;
+}
+
+:root body .eco-core {
+  border: 0;
+  border-radius: 0;
+  padding-inline: 0 12px;
+}
+
+@media (max-width: 760px) {
+  :root body :is(.lib-ro__title, .eco-readout__title, .pfx-readout__title, .fx-readout__title, .en-ro__title) {
+    font-size: 25px;
+  }
+
+  :root body .es-band {
+    padding-block: 18px;
+  }
+}
+
+/* Page fingerprints sit directly on the paper, without a panel or caption. */
+:root body .sh-page-header {
+  max-width: none;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) clamp(170px, 22vw, 280px);
+  align-items: center;
+  gap: clamp(20px, 4vw, 64px);
+}
+.sh-page-header__copy {
+  min-inline-size: 0;
+}
+.sh-page-visual {
+  inline-size: 100%;
+  block-size: auto;
+  color: var(--domain);
+}
+@media (max-width: 640px) {
+  :root body .sh-page-header {
+    grid-template-columns: minmax(0, 1fr);
+    gap: 12px;
+  }
+  .sh-page-visual {
+    inline-size: 150px;
+    justify-self: end;
+  }
+}
+
+/* Independent subject instruments, drawn on the paper and playable by keyboard. */
+.hi {
+  position: relative;
+  aspect-ratio: 28 / 19;
+}
+.hi-stage {
+  display: block;
+  width: 100%;
+  padding: 0;
+  border: 0;
+  background: none;
+  color: inherit;
+  cursor: pointer;
+}
+.hi-stage > svg:first-child {
+  display: block;
+  width: 100%;
+  overflow: visible;
+}
+.hi-toggle,
+.hi-explore {
+  position: absolute;
+  bottom: 0;
+  width: 28px;
+  height: 28px;
+  padding: 4px;
+  opacity: 0.55;
+}
+.hi-toggle {
+  right: 34px;
+}
+.hi-explore {
+  right: 0;
+  color: inherit;
+  background: none;
+  border: 0;
+  cursor: pointer;
+}
+.hi-stage:focus-visible,
+.hi-explore:focus-visible {
+  outline: 2px solid var(--focus);
+  outline-offset: 3px;
+}
+.hi:hover .hi-toggle,
+.hi:hover .hi-explore {
+  opacity: 1;
+}
+.hi-art {
+  transform-origin: 140px 95px;
+  transition: transform 0.6s ease;
+}
+.hi[data-expanded='true'] .hi-art {
+  transform: scale(0.84) rotate(-12deg);
+}
+.hi-leaf {
+  fill: var(--paper);
+  opacity: 0.75;
+  animation: hi-leaf 5s ease-in-out infinite alternate;
+  animation-delay: calc(var(--i) * -130ms);
+  transform-origin: 140px 157px;
+}
+.hi-orbit {
+  transform-origin: 140px 95px;
+  animation: hi-orbit 24s linear infinite;
+  animation-direction: alternate;
+  animation-delay: calc(var(--i) * -3s);
+}
+.hi-layer {
+  animation: hi-layer 4s ease-in-out infinite alternate;
+  animation-delay: calc(var(--i) * -400ms);
+}
+.hi-bubble {
+  animation: hi-bubble 3s ease-in-out infinite;
+  animation-delay: calc(var(--i) * -370ms);
+}
+.hi-trace {
+  stroke: var(--accent);
+  stroke-dasharray: 400;
+  animation: hi-trace 5s ease-in-out infinite alternate;
+}
+.hi-pendulum {
+  transform-origin: 140px 40px;
+  animation: hi-swing 3s ease-in-out infinite alternate;
+}
+.hi-sweep {
+  transform-origin: 140px 95px;
+  animation: hi-orbit 7s linear infinite;
+  stroke: var(--accent);
+}
+.hi-area {
+  fill: currentColor;
+  fill-opacity: 0.07;
+}
+.hi-future,
+.hi-node {
+  animation: hi-node 4s ease-in-out infinite alternate;
+  animation-delay: calc(var(--i) * -450ms);
+}
+.hi-pulse {
+  animation: hi-node 2s ease-in-out infinite alternate;
+  stroke: var(--accent);
+}
+.hi-petal {
+  animation: hi-node 5s ease-in-out infinite alternate;
+  animation-delay: calc(var(--i) * -600ms);
+}
+.hi-balance {
+  transform-origin: 140px 65px;
+  animation: hi-swing 5s ease-in-out infinite alternate;
+}
+.hi[data-playing='false'] * {
+  animation-play-state: paused;
+}
+@keyframes hi-leaf {
+  to {
+    transform: rotate(14deg) scaleX(0.9);
+  }
+}
+@keyframes hi-orbit {
+  to {
+    transform: rotate(360deg);
+  }
+}
+@keyframes hi-layer {
+  to {
+    opacity: 0.35;
+  }
+}
+@keyframes hi-bubble {
+  50% {
+    transform: translateY(-16px);
+    opacity: 0.25;
+  }
+}
+@keyframes hi-trace {
+  from {
+    stroke-dashoffset: 400;
+  }
+  to {
+    stroke-dashoffset: 0;
+  }
+}
+@keyframes hi-swing {
+  from {
+    transform: rotate(-18deg);
+  }
+  to {
+    transform: rotate(18deg);
+  }
+}
+@keyframes hi-node {
+  from {
+    opacity: 0.25;
+  }
+  to {
+    opacity: 1;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .hi-art {
+    transition: none;
+  }
+}
+
+/* Remaining atlas readouts flow into the surrounding instrument, including routes. */
+:root body :is(.gx-readout, .tmx-readout, .eqx-readout, .em-readout, .tlm__readout) {
+  padding: 18px 0 22px;
+  border: 0;
+  border-block-start: 1px solid var(--ink);
+  border-radius: 0;
+  background: transparent;
+  box-shadow: none;
+  min-block-size: 0;
+}
+:root body :is(.gx-ro__title, .tmx-readout__title, .eqx-readout__title, .em-readout__title, .tlm__readout-title) {
+  display: block;
+  block-size: auto;
+  overflow: visible;
+  -webkit-line-clamp: unset;
+  line-clamp: unset;
+  font: 400 26px/1.22 var(--font-serif);
+  margin-block: 12px;
+}
+:root body :is(.gx-ro__text, .tmx-readout__meta, .eqx-readout__meta, .em-readout__what, .em-readout__meta) {
+  display: block;
+  block-size: auto;
+  overflow: visible;
+  -webkit-line-clamp: unset;
+  line-clamp: unset;
+  margin-block: 12px;
+}
+:root body .gx-ro__text {
+  font-size: 17px;
+  line-height: 1.5;
+}
+:root body .sx-readout__links {
+  block-size: auto;
+  overflow: visible;
+  margin-block-start: 20px !important;
+}
+:root body .sx-readout__rows {
+  grid-template-rows: none;
+  grid-auto-rows: auto;
+  overflow: visible;
+  gap: 6px;
+}
+:root body .sx-links__group {
+  gap: 6px 10px;
+}
+:root body .sx-links__group a {
+  min-width: 0;
+  padding: 3px 0;
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+  text-decoration: underline;
+  text-decoration-color: var(--rule-strong);
+  text-underline-offset: 4px;
+}
+:root body .sx-links__group a:hover {
+  text-decoration-color: currentColor;
+}
+:root body .gmap__band {
+  border: 0;
+  border-block-start: 1px solid var(--rule);
+  border-radius: 0;
+  padding-inline: 0;
+}
+:root body .cmpt__table .cmpt__head {
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+}
+
+.hi-toggle {
+  color: inherit;
+  background: none;
+  border: 0;
+  cursor: pointer;
+}
+.hi-toggle svg,
+.hi-explore svg {
+  display: block;
+  width: 100%;
+  height: 100%;
+}
+.hi-toggle:focus-visible {
+  outline: 2px solid var(--focus);
+  outline-offset: 3px;
+}
+.hi-stage {
+  touch-action: pan-y;
+  cursor: grab;
+}
+.hi-stage:active {
+  cursor: grabbing;
+}
+.hi-art {
+  transform: rotate(var(--turn, 0deg));
+}
+.hi[data-expanded='true'] .hi-art {
+  transform: scale(0.84) rotate(var(--turn, 0deg));
+}
+.hi-book {
+  transform-origin: 140px 157px;
+  animation: hi-book 6s ease-in-out infinite alternate;
+}
+@keyframes hi-book {
+  from {
+    transform: scaleX(0.83);
+  }
+  to {
+    transform: scaleX(1.08);
+  }
+}
+.hi[data-topic='systems'] .hi-layer {
+  animation: hi-stack 4s ease-in-out infinite alternate;
+}
+@keyframes hi-stack {
+  from {
+    translate: 0 -4px;
+  }
+  to {
+    translate: 0 7px;
+  }
+}
+.hi[data-topic='timeline'] .hi-node {
+  animation: hi-travel 4s ease-in-out infinite alternate;
+}
+@keyframes hi-travel {
+  from {
+    translate: -4px 0;
+    opacity: 0.3;
+  }
+  to {
+    translate: 7px -4px;
+    opacity: 1;
+  }
+}
+.hi[data-topic='terms'] .hi-petal {
+  animation: hi-flower 5s ease-in-out infinite alternate;
+  transform-origin: 140px 95px;
+}
+@keyframes hi-flower {
+  from {
+    scale: 0.8;
+    opacity: 0.35;
+  }
+  to {
+    scale: 1.08;
+    opacity: 0.9;
+  }
+}
+
+/* Keep touch controls below the drawing instead of covering its endpoints. */
+.hi {
+  aspect-ratio: auto;
+  padding-block-end: 36px;
+}
+.hi-toggle,
+.hi-explore {
+  width: 40px;
+  height: 40px;
+  padding: 10px;
+}
+.hi-toggle {
+  right: 40px;
+}
+
+/* The equation catalogue tracks visible rows. Its readout must keep a stable
+   height so updating the current equation cannot move those same rows. */
+:root body .eqx-readout__title {
+  block-size: 3.75em;
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 3;
+  line-clamp: 3;
+  overflow: hidden;
+}
+:root body .eqx-readout__meta {
+  block-size: 4.35em;
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 3;
+  line-clamp: 3;
+  overflow: hidden;
+}
+/* Isolate the live illustration so each animation frame does not invalidate
+   the surrounding manuscript or large equation catalogue. */
+.hi {
+  contain: layout paint style;
+  isolation: isolate;
+}
+
+.hi-stage:focus-visible {
+  outline-offset: -3px;
+}
+.hi-toggle,
+.hi-explore {
+  bottom: 4px;
+}
+.hi-toggle {
+  right: 44px;
+}
+.hi-explore {
+  right: 4px;
+}
+/* Reduced motion starts paused. Explicit Play opts into gentle local motion. */
+@media (prefers-reduced-motion: reduce) {
+  .hi[data-playing='true'] * {
+    animation-duration: 6s !important;
+    animation-iteration-count: infinite !important;
+  }
+}

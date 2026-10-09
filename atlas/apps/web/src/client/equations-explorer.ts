@@ -456,6 +456,8 @@ export function initEquationsExplorer(ctx: PageContext): void {
     const results: [HTMLElement, number][] = [];
     for (const eq of eqs) {
       if (eq.row.hidden || eq.line === null || eq.meta === null) continue;
+      // Do not force offscreen KaTeX rows to render just to measure their labels.
+      if (!eq.row.checkVisibility({ contentVisibilityAuto: true })) continue;
       const width = eq.line.clientWidth;
       if (eq.line.scrollWidth <= width + 1) {
         results.push([eq.meta, 0]);
@@ -727,6 +729,7 @@ export function initEquationsExplorer(ctx: PageContext): void {
       here?.bar?.classList.add('is-here');
     }
     if (focus === null) idle();
+    measureMore();
   };
   const barHeight = bar?.offsetHeight ?? 0;
   const observer = ctl.observe(

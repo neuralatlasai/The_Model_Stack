@@ -37,6 +37,8 @@ export default defineConfig({
   devToolbar: { enabled: false },
   integrations: [preact({ compat: false }), rebaseLinks()],
   vite: {
+    // Search loads on demand; prebundle its dependency before the first palette request.
+    optimizeDeps: { include: ['minisearch'] },
     define: {
       __ATLAS_BUNDLE_DIR__: JSON.stringify(defaultBundleDir),
     },

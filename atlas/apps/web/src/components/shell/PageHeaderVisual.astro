@@ -1,0 +1,7 @@
+---
+import HeaderInstrument from '../../islands/HeaderInstrument.tsx';
+const page = Astro.url.pathname;
+const topic = page.split('/')[1] ?? 'library';
+---
+
+<HeaderInstrument topic={topic} page={page} client:visible />
