@@ -7,13 +7,18 @@ test.use({ reducedMotion: 'reduce', viewport: { width: 1440, height: 1000 }, tra
 test('equation catalogue stays within the viewport after search, scroll and mobile resize', async ({ page }) => {
   test.setTimeout(60_000);
   await page.goto('/equations/?depth=overview');
-  await expect(page.locator('[data-equations-explorer]')).toHaveClass(/is-enhanced/);
+  await page.waitForFunction(() => (window as Window & { __atlasClient?: boolean }).__atlasClient === true, undefined, {
+    timeout: 20_000,
+  });
+  await expect(page.locator('[data-equations-explorer]')).toHaveClass(/is-enhanced/u, { timeout: 20_000 });
   await page.evaluate(() => document.fonts.ready);
   const total = await page.locator('[data-eqx-row]').count();
   const all = `${String(total)} of ${String(total)}`;
 
   const visual = page.locator('.hi');
-  await expect(page.locator('astro-island').filter({ has: visual })).not.toHaveAttribute('ssr', '');
+  await expect(page.locator('astro-island').filter({ has: visual })).not.toHaveAttribute('ssr', '', {
+    timeout: 20_000,
+  });
   await visual.locator('.hi-stage').focus();
   await page.keyboard.press('ArrowRight');
   await expect(visual).toHaveAttribute('data-control', '0.25');
@@ -50,11 +55,14 @@ test('equation catalogue stays within the viewport after search, scroll and mobi
   await expect.poll(() => page.evaluate(() => document.documentElement.scrollWidth)).toBe(390);
 });
 
-test('equation catalogue retains complete semantic math and scrolling without JavaScript', async ({ browser }) => {
+test('equation catalogue retains complete semantic math and scrolling without JavaScript', async ({
+  browser,
+  baseURL,
+}) => {
   test.setTimeout(60_000);
   const context = await browser.newContext({ javaScriptEnabled: false, viewport: { width: 390, height: 844 } });
   const page = await context.newPage();
-  await page.goto('http://127.0.0.1:4321/equations/');
+  await page.goto(`${baseURL ?? 'http://127.0.0.1:4321'}/equations/`);
   const row = page.locator('[data-eqx-row="23.9"]');
   await row.scrollIntoViewIfNeeded();
   const formula = row.locator('.eqx-row__math');

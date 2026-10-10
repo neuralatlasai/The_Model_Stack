@@ -37,17 +37,27 @@ test('modified citation clicks remain unprevented and do not open the inspector'
 });
 
 test('middle-click citations open their paper in a native browser tab', async ({ page, context }) => {
+  test.setTimeout(60_000);
   await page.goto('/ch19-pretraining-objectives-and-the-full-training-loop/19-2-batch-semantics/');
   await page.waitForFunction(() => (window as Window & { __atlasClient?: boolean }).__atlasClient === true);
   const citation = page.locator('[data-cite="R19.22"]').first();
   await citation.scrollIntoViewIfNeeded();
   await page.bringToFront();
-  const popup = context.waitForEvent('page');
+  const popup = context.waitForEvent('page', { timeout: 20_000 });
   await citation.click({ button: 'middle' });
   const paper = await popup;
-  await expect(paper).toHaveURL(/\/papers\/r19-22\//u);
-  await expect(page.locator('[data-rail-inspector]')).toBeHidden();
-  await paper.close();
+  try {
+    // The native background tab can still be compiling its first development
+    // request when it is created. Verify the loaded document, not its initial URL.
+    await paper.waitForURL(/\/papers\/r19-22\//u, { waitUntil: 'domcontentloaded', timeout: 20_000 });
+    await expect(paper.locator('[data-paper-page]')).toBeVisible();
+    await expect(paper.locator('[data-paper-page] .sh-identity')).toContainText(/\bR19\.22\b/u);
+    await expect(paper.getByRole('heading', { level: 1 })).toHaveText('Automatic Mixed Precision examples');
+    await expect(page).toHaveURL(/19-2-batch-semantics\//u);
+    await expect(page.locator('[data-rail-inspector]')).toBeHidden();
+  } finally {
+    await paper.close();
+  }
 });
 
 test('keyboard activation opens the citation inspector', async ({ page }) => {
