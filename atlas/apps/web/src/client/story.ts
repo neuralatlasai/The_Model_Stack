@@ -41,7 +41,7 @@ export function initStory(ctx: PageContext): void {
   if (dash !== null) {
     void import('./dashboard.ts').then((module) => {
       if (ctl.disposed) return;
-      module.initDashboard(ctx, dash, reduced);
+      module.initDashboard(ctx, dash);
       send();
     });
   }

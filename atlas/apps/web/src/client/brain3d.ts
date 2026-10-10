@@ -9,12 +9,13 @@
  *
  * - Follows the story (client story.ts, `hx:part` events): a part turns its
  *   region to the reader, lights its chapters and concepts, and draws its
- *   prerequisites in (blue) and out (coral) to the other regions; the
+ *   prerequisites in (warm ink) and out (red) to the other regions; the
  *   readout names the regions it draws on and feeds. Part 0 is the whole
  *   brain, rocking slowly.
  * - Drag to orbit (with inertia). Point at a neuron (or arrow keys on the
  *   focused canvas): its fibres light, its concepts glow, a tag names it in
- *   place; click or Enter opens the chapter.
+ *   place; click or Enter opens the chapter. Touch selects first, then opens
+ *   the same chapter on a second tap.
  * - Light and dark themes (ink on paper / light on night), switching live.
  * - Renders only while on screen; disposed on page change. Reduced motion:
  *   no auto-rotation or signals; dragging still works. No WebGL: returns
@@ -54,6 +55,44 @@ const pad = (n: number): string => String(n).padStart(2, '0');
 export function initBrain3D(ctx: PageContext, fig: HTMLElement, reduced: boolean): boolean {
   const { doc, ctl } = ctx;
   const signal = ctl.signal;
+  let contextLost = false;
+  let redrawUntil = performance.now() + 2000;
+  const invalidate = (): void => {
+    redrawUntil = performance.now() + 2000;
+  };
+  for (const type of ['pointermove', 'pointerdown', 'pointerleave', 'keydown', 'hx:part', 'hx:chapter']) {
+    fig.addEventListener(type, invalidate, { signal, passive: true });
+  }
+  const motionPreference = window.matchMedia('(prefers-reduced-motion: reduce)');
+  let paused = reduced;
+  const motionButton = fig.querySelector<HTMLButtonElement>('[data-brain-motion]');
+  const paintMotion = (): void => {
+    if (motionButton === null) return;
+    const label = paused ? 'Play motion' : 'Pause motion';
+    motionButton.setAttribute('aria-label', label);
+    motionButton.title = label;
+    motionButton.setAttribute('aria-pressed', String(!paused));
+  };
+  paintMotion();
+  motionButton?.addEventListener(
+    'click',
+    () => {
+      paused = !paused;
+      invalidate();
+      paintMotion();
+    },
+    { signal },
+  );
+  motionPreference.addEventListener(
+    'change',
+    (event) => {
+      reduced = event.matches;
+      paused = reduced;
+      invalidate();
+      paintMotion();
+    },
+    { signal },
+  );
   const host = fig.querySelector<HTMLElement>('[data-brain3d-host]');
   const labelsLayer = fig.querySelector<HTMLElement>('[data-brain3d-labels]');
   const parsed = IslandSchema.safeParse(JSON.parse(fig.querySelector('[data-brain3d]')?.textContent ?? 'null'));
@@ -76,7 +115,7 @@ export function initBrain3D(ctx: PageContext, fig: HTMLElement, reduced: boolean
   canvas.setAttribute('role', 'img');
   canvas.setAttribute(
     'aria-label',
-    'A three-dimensional sculpted brain: the chapters of the book as neurons. Drag to turn it; arrow keys step through chapters; Enter opens one.',
+    'A three-dimensional sculpted brain: the chapters of the book as neurons. Drag to turn it; arrow keys step through chapters; Enter opens one. On touch, tap to preview a chapter, then tap it again to open.',
   );
   host.prepend(canvas);
   fig.classList.add('is-3d');
@@ -87,7 +126,7 @@ export function initBrain3D(ctx: PageContext, fig: HTMLElement, reduced: boolean
   camera.position.set(0, 0.3, 4.45);
   camera.lookAt(0, -0.08, 0);
   const brain = new THREE.Group();
-  brain.rotation.set(0.12, -0.3, 0);
+  brain.rotation.set(0.18, -0.48, 0);
   scene.add(brain);
 
   // ── glass cortex ──────────────────────────────────────────────────────────
@@ -146,6 +185,8 @@ export function initBrain3D(ctx: PageContext, fig: HTMLElement, reduced: boolean
       addGlass(geo);
     }
     cortexAt = performance.now();
+    invalidate();
+    fig.dataset['brainReady'] = 'true';
   };
   const buildHere = (): void => {
     addCortex(brainMeshes(small));
@@ -169,7 +210,18 @@ export function initBrain3D(ctx: PageContext, fig: HTMLElement, reduced: boolean
     buildHere();
   }
   // brainstem: wide under the brain (the pons), tapering downward
-  const stemGeo = new THREE.CylinderGeometry(0.115, 0.055, 0.46, 48, 6, true);
+  const stemGeo = new THREE.LatheGeometry(
+    [
+      new THREE.Vector2(0, -0.23),
+      new THREE.Vector2(0.045, -0.225),
+      new THREE.Vector2(0.06, -0.18),
+      new THREE.Vector2(0.075, -0.05),
+      new THREE.Vector2(0.12, 0.1),
+      new THREE.Vector2(0.115, 0.2),
+      new THREE.Vector2(0, 0.23),
+    ],
+    64,
+  );
   disposables.push(stemGeo);
   addGlass(stemGeo, (mesh) => {
     mesh.position.set(0.2, -0.6, 0);
@@ -240,7 +292,7 @@ export function initBrain3D(ctx: PageContext, fig: HTMLElement, reduced: boolean
   const neurons = data.neurons;
   const indexOf = new Map(neurons.map((neuron, i) => [neuron.n, i]));
   const N = pointsOf(neurons.length, 4);
-  const baseSize = neurons.map((neuron) => (neuron.written ? 30 : 15));
+  const baseSize = neurons.map((neuron) => (neuron.written ? 25 : 12));
   const baseAlpha = neurons.map((neuron) => (neuron.written ? 1 : 0.6));
   neurons.forEach((neuron, i) => {
     N.pos.set(neuron.p, i * 3);
@@ -250,7 +302,7 @@ export function initBrain3D(ctx: PageContext, fig: HTMLElement, reduced: boolean
   const C = pointsOf(data.concepts.length, 3);
   data.concepts.forEach((concept, i) => {
     C.pos.set(concept.p, i * 3);
-    C.size[i] = 8;
+    C.size[i] = 5.5;
     C.alpha[i] = 0.85;
   });
 
@@ -292,11 +344,14 @@ export function initBrain3D(ctx: PageContext, fig: HTMLElement, reduced: boolean
   const P = pointsOf(MAX_PULSES, 5);
   const pulses: { fibre: number; reverse: boolean; start: number; dur: number }[] = [];
   const spawn = (fibre: number, reverse = false, delay = 0): void => {
-    if (reduced || pulses.length >= MAX_PULSES) return;
-    pulses.push({ fibre, reverse, start: performance.now() + delay, dur: 1100 + Math.random() * 700 });
+    if (paused || pulses.length >= MAX_PULSES) return;
+    const duration = 1100 + Math.random() * 700;
+    pulses.push({ fibre, reverse, start: performance.now() + delay, dur: duration });
     const edge = fibres[fibre];
     if (edge !== undefined)
-      fig.dispatchEvent(new CustomEvent('hx:signal', { detail: { from: edge.from, to: edge.to }, bubbles: true }));
+      fig.dispatchEvent(
+        new CustomEvent('hx:signal', { detail: { from: edge.from, to: edge.to, delay, duration }, bubbles: true }),
+      );
   };
 
   // ── theme: ink on paper, or light on night ────────────────────────────────
@@ -311,7 +366,7 @@ export function initBrain3D(ctx: PageContext, fig: HTMLElement, reduced: boolean
   const paintFibres = (): void => {
     fibres.forEach((fibre, i) => {
       let c = tint(neurons[indexOf.get(fibre.from) ?? 0]?.domain ?? '');
-      let a = active === null && focusPart === null ? (night ? 0.36 : 0.2) : 0.035;
+      let a = active === null && focusPart === null ? (night ? 0.17 : 0.14) : 0.035;
       if (active === null && focusPart !== null) {
         const fromIn = partOf(fibre.from) === focusPart;
         const toIn = partOf(fibre.to) === focusPart;
@@ -336,6 +391,7 @@ export function initBrain3D(ctx: PageContext, fig: HTMLElement, reduced: boolean
     lineGeo.getAttribute('color').needsUpdate = true;
   };
   const applyTheme = (): void => {
+    invalidate();
     night = isNight(doc);
     palette = night ? GLOW : INK;
     for (const m of [glassBack, glassFront]) {
@@ -344,8 +400,8 @@ export function initBrain3D(ctx: PageContext, fig: HTMLElement, reduced: boolean
         uBody: { value: THREE.Color };
         uDark: { value: number };
       };
-      u.uRim.value.set(night ? 0x969b90 : 0xbab7a8);
-      u.uBody.value.set(night ? 0x7b8478 : 0xe0d9c6);
+      u.uRim.value.set(night ? 0xb8a38b : 0xbab7a8);
+      u.uBody.value.set(night ? 0x62594f : 0xe8dfcc);
       u.uDark.value = night ? 1 : 0;
     }
     (glassFront.uniforms as { uFill: { value: number } }).uFill.value = night ? 0.72 : 0.9;
@@ -354,7 +410,7 @@ export function initBrain3D(ctx: PageContext, fig: HTMLElement, reduced: boolean
     glassFront.depthWrite = true;
     glassBack.visible = false;
     for (const m of glowMaterials) {
-      (m.uniforms as { uPaper: { value: number } }).uPaper.value = 1;
+      (m.uniforms as { uPaper: { value: number } }).uPaper.value = night ? 0.15 : 1;
       m.blending = THREE.NormalBlending;
       m.needsUpdate = true;
     }
@@ -362,8 +418,8 @@ export function initBrain3D(ctx: PageContext, fig: HTMLElement, reduced: boolean
     lineMat.needsUpdate = true;
     shadowMat.color.set(night ? 0x050605 : 0x1b1814);
     shadowMat.opacity = night ? 0.28 : 0.19;
-    IN.set(night ? 0x82aaa2 : 0x3f6b63);
-    OUT.set(night ? 0xc49c7f : 0xa46542);
+    IN.set(night ? 0xcbbda8 : 0x716658);
+    OUT.set(night ? 0xe0806f : 0x8b0000);
     neurons.forEach((neuron, i) => {
       const c = tint(neuron.domain);
       N.col.set([c.r, c.g, c.b], i * 3);
@@ -404,6 +460,7 @@ export function initBrain3D(ctx: PageContext, fig: HTMLElement, reduced: boolean
     m: readout?.querySelector('[data-m]') ?? null,
   };
   let idle = { k: slots.k?.textContent ?? '', t: slots.t?.textContent ?? '', m: slots.m?.textContent ?? '' };
+  let touchSelection: { chapter: number; at: number } | null = null;
 
   const activate = (n: number | null, fire: boolean): void => {
     active = n;
@@ -468,6 +525,17 @@ export function initBrain3D(ctx: PageContext, fig: HTMLElement, reduced: boolean
       });
     }
   };
+  // Only direct brain interaction publishes selection. Inbound hx:chapter
+  // updates remain silent so the connected map can synchronize without loops.
+  const selectChapter = (chapter: number | null, fire: boolean): void => {
+    if (chapter !== null) {
+      const part = partOf(chapter);
+      const region = regionAt.get(part);
+      if (region !== undefined && part !== focusPart) focus(part, 'Part', region.label, false);
+    }
+    activate(chapter, fire);
+    fig.dispatchEvent(new CustomEvent('hx:selection', { detail: { chapter }, bubbles: true }));
+  };
 
   // ── the story: focus one part (region) at a time ──────────────────────────
   const regionAt = new Map(data.regions.map((region) => [region.n, region]));
@@ -498,13 +566,13 @@ export function initBrain3D(ctx: PageContext, fig: HTMLElement, reduced: boolean
   let focusK = 0;
   const focusView = new THREE.Vector3();
   const ROSE = new THREE.Color(0xcb8c8c);
-  const focus = (part: number | null, k: string, t: string): void => {
+  const focus = (part: number | null, k: string, t: string, reframe = true): void => {
     focusPart = part;
     const region = part === null ? undefined : regionAt.get(part);
     focusRegion = region;
-    if (region !== undefined) {
-      targetYaw = Math.atan2(-region.p[0], region.p[2]) * 0.85;
-      targetPitch = 0.1 + region.p[1] * 0.35;
+    if (region !== undefined && reframe) {
+      targetYaw = baseYaw + Math.max(-0.26, Math.min(0.26, Math.atan2(-region.p[0], region.p[2]) * 0.14));
+      targetPitch = 0.18 + region.p[1] * 0.12;
     }
     idle = { k, t, m: part === null ? '' : correlations(part) };
     if (active === null) activate(null, false);
@@ -519,6 +587,7 @@ export function initBrain3D(ctx: PageContext, fig: HTMLElement, reduced: boolean
   fig.addEventListener(
     'hx:chapter',
     (event) => {
+      touchSelection = null;
       const n = (event as CustomEvent<number | null>).detail;
       activate(typeof n === 'number' ? n : null, typeof n === 'number');
     },
@@ -527,7 +596,9 @@ export function initBrain3D(ctx: PageContext, fig: HTMLElement, reduced: boolean
   fig.addEventListener(
     'hx:part',
     (event) => {
+      touchSelection = null;
       const detail = (event as CustomEvent<{ part: number; k: string; t: string }>).detail;
+      activate(null, false);
       focus(detail.part > 0 ? detail.part : null, detail.k, detail.t);
     },
     { signal },
@@ -540,6 +611,7 @@ export function initBrain3D(ctx: PageContext, fig: HTMLElement, reduced: boolean
   let phase = 0;
   let velocity = 0;
   let dragging = false;
+  let dragPointer: number | null = null;
   let moved = 0;
   let last: { x: number; y: number } | null = null;
   let engagedUntil = 0;
@@ -574,9 +646,24 @@ export function initBrain3D(ctx: PageContext, fig: HTMLElement, reduced: boolean
     const url = n === null ? undefined : neurons[indexOf.get(n) ?? -1]?.url;
     if (url !== undefined) window.location.assign(url);
   };
+  const endPointer = (pointerId: number, cancelled: boolean): void => {
+    if (pointerId !== dragPointer) return;
+    dragPointer = null;
+    dragging = false;
+    last = null;
+    if (cancelled) {
+      moved = 0;
+      velocity = 0;
+      touchSelection = null;
+    }
+    if (canvas.hasPointerCapture(pointerId)) canvas.releasePointerCapture(pointerId);
+    invalidate();
+  };
   canvas.addEventListener(
     'pointerdown',
     (event) => {
+      if (!event.isPrimary || event.button !== 0 || dragPointer !== null) return;
+      dragPointer = event.pointerId;
       dragging = true;
       moved = 0;
       last = { x: event.clientX, y: event.clientY };
@@ -588,36 +675,76 @@ export function initBrain3D(ctx: PageContext, fig: HTMLElement, reduced: boolean
   canvas.addEventListener(
     'pointermove',
     (event) => {
+      if (!event.isPrimary || (dragPointer !== null && event.pointerId !== dragPointer)) return;
       engagedUntil = performance.now() + 4000;
       if (dragging && last !== null) {
         const dx = event.clientX - last.x;
         const dy = event.clientY - last.y;
         moved += Math.abs(dx) + Math.abs(dy);
+        if (moved >= 6) touchSelection = null;
         offset += dx * 0.007;
         pitch = Math.max(-0.45, Math.min(0.6, pitch + dy * 0.004));
         velocity = dx * 0.007;
         last = { x: event.clientX, y: event.clientY };
         return;
       }
+      // A touch has no hover phase: pointermove must not arm or erase its
+      // explicit first-tap preview.
+      if (event.pointerType === 'touch') return;
       const n = pick(event.clientX, event.clientY);
       canvas.style.cursor = n === null ? 'grab' : 'pointer';
-      if (n !== active && n !== null) activate(n, true);
+      if (n !== active && n !== null) {
+        touchSelection = null;
+        selectChapter(n, true);
+      }
     },
     { signal },
   );
   canvas.addEventListener(
     'pointerup',
     (event) => {
-      dragging = false;
-      last = null;
-      if (moved < 6) open(pick(event.clientX, event.clientY));
+      if (event.pointerId !== dragPointer) return;
+      const tapped = moved < 6;
+      endPointer(event.pointerId, false);
+      if (!tapped) return;
+      const chapter = pick(event.clientX, event.clientY);
+      if (event.pointerType !== 'touch') {
+        touchSelection = null;
+        selectChapter(chapter, chapter !== null);
+        open(chapter);
+        return;
+      }
+      const now = performance.now();
+      const confirmed =
+        chapter !== null && chapter === active && chapter === touchSelection?.chapter && now - touchSelection.at < 4000;
+      if (confirmed) {
+        touchSelection = null;
+        open(chapter);
+        return;
+      }
+      selectChapter(chapter, chapter !== null);
+      touchSelection = chapter === null ? null : { chapter, at: now };
+      const title = chapter === null ? undefined : neurons[indexOf.get(chapter) ?? -1]?.title;
+      if (title !== undefined) ctx.announce(`${title}. Tap the same chapter again to open.`);
     },
     { signal },
   );
+  for (const type of ['pointercancel', 'lostpointercapture'] as const) {
+    canvas.addEventListener(
+      type,
+      (event) => {
+        endPointer(event.pointerId, true);
+      },
+      { signal },
+    );
+  }
   canvas.addEventListener(
     'pointerleave',
-    () => {
-      if (!dragging) activate(null, false);
+    (event) => {
+      if (!dragging && event.pointerType !== 'touch') {
+        touchSelection = null;
+        selectChapter(null, false);
+      }
     },
     { signal },
   );
@@ -625,7 +752,9 @@ export function initBrain3D(ctx: PageContext, fig: HTMLElement, reduced: boolean
   canvas.addEventListener(
     'keydown',
     (event) => {
+      touchSelection = null;
       if (event.key === 'Enter') {
+        event.preventDefault();
         open(active);
         return;
       }
@@ -639,7 +768,10 @@ export function initBrain3D(ctx: PageContext, fig: HTMLElement, reduced: boolean
       event.preventDefault();
       engagedUntil = performance.now() + 8000;
       const at = active === null ? -1 : order.indexOf(active);
-      activate(order[(at + step + order.length) % order.length] ?? null, true);
+      const chapter = order[(at + step + order.length) % order.length] ?? null;
+      selectChapter(chapter, true);
+      const title = chapter === null ? undefined : neurons[indexOf.get(chapter) ?? -1]?.title;
+      if (title !== undefined) ctx.announce(`${title}. Press Enter to open.`);
     },
     { signal },
   );
@@ -649,11 +781,38 @@ export function initBrain3D(ctx: PageContext, fig: HTMLElement, reduced: boolean
   let raf = 0;
   let then = performance.now();
   const kick = (): void => {
-    if (raf === 0 && !ctl.disposed) {
+    if (raf === 0 && !ctl.disposed && !contextLost) {
       then = performance.now();
       raf = requestAnimationFrame(frame);
     }
   };
+  fig.querySelector('[data-brain-reset]')?.addEventListener(
+    'click',
+    () => {
+      offset = 0;
+      velocity = 0;
+      phase = 0;
+      aim = baseYaw;
+      aimPitch = pitch;
+      invalidate();
+      activate(null, false);
+      kick();
+    },
+    { signal },
+  );
+  canvas.addEventListener(
+    'webglcontextlost',
+    (event) => {
+      event.preventDefault();
+      visible = false;
+      contextLost = true;
+      cancelAnimationFrame(raf);
+      raf = 0;
+      fig.classList.remove('is-3d');
+      fig.classList.add('is-2d');
+    },
+    { signal },
+  );
   ctl
     .observe(
       new IntersectionObserver((entries) => {
@@ -670,9 +829,12 @@ export function initBrain3D(ctx: PageContext, fig: HTMLElement, reduced: boolean
     { signal },
   );
   const resize = (): void => {
+    invalidate();
     const rect = host.getBoundingClientRect();
     renderer.setSize(Math.max(1, rect.width), Math.max(1, rect.height), false);
     camera.aspect = rect.width / Math.max(1, rect.height);
+    // Fit the complete silhouette instead of cropping it in portrait fields.
+    camera.position.z = Math.max(1.05, 1.42 / Math.max(0.4, camera.aspect)) / Math.tan(Math.PI / 12);
     camera.updateProjectionMatrix();
     // the brain's size on screen follows the canvas height (fixed vertical
     // field of view); the beads follow it too, so they stay small beside it
@@ -710,9 +872,16 @@ export function initBrain3D(ctx: PageContext, fig: HTMLElement, reduced: boolean
   let aim = baseYaw;
   let aimPitch = pitch;
   let nextAmbient = 0;
+  let nextRegionProjection = 0;
   function frame(now: number): void {
     raf = 0;
     if (!visible || doc.visibilityState !== 'visible') return;
+    // A paused brain keeps its last frame. Only interactions, resizing, theme
+    // changes and mesh completion need fresh GPU work after settling.
+    if (paused && now > redrawUntil && intro >= 1 && cortexAt > 0 && now - cortexAt > 450) {
+      kick();
+      return;
+    }
     const dt = Math.min(0.05, (now - then) / 1000);
     then = now;
     const engaged = now < engagedUntil;
@@ -728,13 +897,13 @@ export function initBrain3D(ctx: PageContext, fig: HTMLElement, reduced: boolean
       // ease a dragged brain back toward the three-quarter view it rocks around
       if (!engaged) offset *= 1 - Math.min(1, dt * 0.6);
     }
-    if (!reduced) phase += dt * (engaged ? 0.08 : 0.3);
-    const desired = focusPart === null ? baseYaw + Math.sin(phase) * 0.5 : targetYaw + Math.sin(phase) * 0.07;
+    if (!paused) phase += dt * (engaged ? 0.08 : 0.16);
+    const desired = focusPart === null ? baseYaw + Math.sin(phase) * 0.22 : targetYaw + Math.sin(phase) * 0.05;
     const turn = Math.atan2(Math.sin(desired - aim), Math.cos(desired - aim));
     aim += turn * (reduced ? 1 : Math.min(1, dt * 2.2));
     aimPitch += ((focusPart === null ? pitch : targetPitch) - aimPitch) * (reduced ? 1 : Math.min(1, dt * 2.2));
     brain.rotation.y = aim + offset;
-    brain.rotation.x = aimPitch + (reduced ? 0 : Math.sin(now / 2600) * 0.025);
+    brain.rotation.x = aimPitch + (paused ? 0 : Math.sin(now / 3600) * 0.012);
     setGlass(cortexAt < 0 ? 0 : reduced ? 1 : Math.min(1, (now - cortexAt) / 450));
     focusK += ((focusRegion === undefined ? 0 : 1) - focusK) * (reduced ? 1 : Math.min(1, dt * 2));
     if (focusRegion !== undefined) {
@@ -754,14 +923,14 @@ export function initBrain3D(ctx: PageContext, fig: HTMLElement, reduced: boolean
       if (focusRegion !== undefined) u.uGlow.value.copy(night ? tint(focusRegion.domain) : ROSE);
     }
 
-    if (!reduced && now > nextAmbient && live.length > 0) {
+    if (!paused && now > nextAmbient && live.length > 0) {
       const focused =
         focusPart === null
           ? []
           : everyFibre.filter(({ fibre }) => partOf(fibre.from) === focusPart || partOf(fibre.to) === focusPart);
       const pool = focused.length > 0 && Math.random() < 0.75 ? focused : live;
       const chosen = pool[Math.floor(Math.random() * pool.length)];
-      if (chosen !== undefined) spawn(chosen.i, Math.random() < 0.2);
+      if (chosen !== undefined) spawn(chosen.i);
       nextAmbient = now + 260;
     }
 
@@ -794,6 +963,22 @@ export function initBrain3D(ctx: PageContext, fig: HTMLElement, reduced: boolean
       const on = focusPart !== null && label.n === focusPart;
       label.el.classList.toggle('is-on', on);
       label.el.style.opacity = String(on ? 1 : focusPart === null ? depth : depth * 0.35);
+      // Reuse the label projection to tether the focused brain region to the
+      // connected atlas. This shares the visible frame lifecycle and is capped
+      // at 30 Hz; consumers receive canvas-relative coordinates in either theme.
+      if (on && now >= nextRegionProjection) {
+        nextRegionProjection = now + 1000 / 30;
+        fig.dispatchEvent(
+          new CustomEvent('hx:region', {
+            detail: {
+              part: label.n,
+              x: Math.max(0, Math.min(1, s.x / Math.max(1, canvas.clientWidth))),
+              y: Math.max(0, Math.min(1, s.y / Math.max(1, canvas.clientHeight))),
+            },
+            bubbles: true,
+          }),
+        );
+      }
     }
     const current = active === null ? undefined : neurons[indexOf.get(active) ?? -1];
     if (current !== undefined) {

@@ -13,6 +13,7 @@ import type { BrainModel } from '../../lib/brain-map.ts';
 import { STORY_AUTHOR, STORY_BRAIN, STORY_CLOSE, STORY_PARTS, STORY_THESIS, runs } from '../../lib/home-story.ts';
 import type { Dashboard } from '../../lib/stack-dashboard.ts';
 import StackDashboard from './StackDashboard.astro';
+import ChapterSymbol from '../shell/ChapterSymbol.astro';
 
 interface Props {
   brain: BrainModel;
@@ -110,7 +111,9 @@ const steps = STORY_PARTS.map((story) => {
           {step.chapters.map((chapter) => (
             <li>
               <a class:list={['bs-ch', { 'is-written': chapter.written }]} href={chapter.url} data-ch={chapter.n}>
-                <span class="bs-ch__n">{chapter.number}</span>
+                <span class="bs-ch__n">
+                  <ChapterSymbol chapter={chapter.n} />
+                </span>
                 <span class="bs-ch__t">{chapter.title}</span>
               </a>
             </li>

@@ -351,7 +351,7 @@
 /* Parts as bands under the axis, each named by a boxed numeral on its line. */
 .lib-weave__parts {
   position: relative;
-  block-size: 24px;
+  block-size: 32px;
   max-width: none;
   margin: 0;
   padding: 0;
@@ -360,6 +360,8 @@
 
 .lib-wp {
   position: absolute;
+  display: flex;
+  justify-content: center;
   inset-block-start: 8px;
   inset-inline-start: calc(var(--x0) * 1%);
   inline-size: calc((var(--x1) - var(--x0)) * 1%);

@@ -21,7 +21,6 @@
  * from lib/library-model.ts, so the numbers match the Library page.
  */
 import type { LibraryModel } from '../../lib/library-model.ts';
-import { compactCount } from '../../lib/library-model.ts';
 import { jsonForHtml } from '../../lib/json.ts';
 import FlowSide from './FlowSide.astro';
 import { crossingLinks, flowSentence, pad2 as pad } from './lib/flow.ts';
@@ -43,12 +42,7 @@ const sum = (pick: (chapter: (typeof own)[number]) => number): number =>
   own.reduce((total, chapter) => total + pick(chapter), 0);
 const sectionsWritten = sum((chapter) => chapter.sectionsWritten);
 const sectionsTotal = sum((chapter) => chapter.sections.length);
-const totals = [
-  `${String(sectionsWritten)} of ${String(sectionsTotal)} sections`,
-  `${compactCount(sum((chapter) => chapter.words))} words`,
-  `${String(sum((chapter) => chapter.figures))} figures`,
-  `${String(sum((chapter) => chapter.equations))} equations`,
-].join(' · ');
+const totals = [`${String(sectionsWritten)} of ${String(sectionsTotal)} sections`].join(' · ');
 ---
 
 {part !== undefined && own.length > 0 && (
@@ -106,12 +100,7 @@ const totals = [
                   </a>
                 ))}
               </span>
-              <span class="pm-tile__m">
-                <span>{chapter.words > 0 ? `${compactCount(chapter.words)} words` : 'no words yet'}</span>
-                {chapter.figures + chapter.equations > 0 && (
-                  <span>{`${String(chapter.figures)} fig · ${String(chapter.equations)} eq`}</span>
-                )}
-              </span>
+              <span class="pm-tile__m"></span>
               <span class="pm-tile__in">
                 {inPart.length === 0 ? (
                   <span class="pm-tile__root">entry point</span>

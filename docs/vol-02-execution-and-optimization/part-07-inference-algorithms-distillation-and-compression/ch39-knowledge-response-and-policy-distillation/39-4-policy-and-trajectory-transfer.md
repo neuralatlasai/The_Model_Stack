@@ -736,4 +736,4 @@ $$
 
 ## References
 
-[R39.4](references.md#r394), [R39.5](references.md#r395), [R39.6](references.md#r396), [R39.7](references.md#r397), [R39.8](references.md#r398).
+[R39.4](references.md#r39-4), [R39.5](references.md#r39-5), [R39.6](references.md#r39-6), [R39.7](references.md#r39-7), [R39.8](references.md#r39-8).

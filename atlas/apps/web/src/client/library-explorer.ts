@@ -76,7 +76,7 @@ type Part = z.output<typeof PartSchema>;
 
 const SVG_NS = 'http://www.w3.org/2000/svg';
 const MAX_CHIPS = 6;
-const LENSES = new Set(['chapters', 'sections', 'words', 'figures', 'equations', 'works']);
+const LENSES = new Set(['chapters', 'sections', 'works']);
 
 const reducedMotion = (): boolean => matchMedia('(prefers-reduced-motion: reduce)').matches;
 const grouped = (n: number): string =>
@@ -276,7 +276,7 @@ export function initLibraryExplorer(ctx: PageContext): void {
     text(out.title, chapter.title);
     const drafted = chapter.sections.filter((section) => section.written).length;
     const status = chapter.written ? 'draft' : drafted > 0 ? 'in progress' : 'planned';
-    text(out.state, `${status} · ${chapter.words > 0 ? `${grouped(chapter.words)} words` : 'no words yet'}`);
+    text(out.state, status);
     const planned = chapter.plan === '' ? '' : ` It is planned to produce ${chapter.plan}.`;
     out.thesis?.replaceChildren(
       ...(chapter.evidence === null || chapter.summary === ''
@@ -289,7 +289,6 @@ export function initLibraryExplorer(ctx: PageContext): void {
           : `Planned: ${String(chapter.sections.length)} sections outlined, no manuscript yet.${planned}`,
     );
     setRows([
-      ['figures · equations', `${String(chapter.figures)} · ${String(chapter.equations)}`],
       ['works cited', String(chapter.works)],
       ['builds on', `${String(chapter.prereqs.length)} direct · ${String(up.size)} in all`],
       ['unlocks', `${String(chapter.unlocks.length)} direct · ${String(down.size)} in all`],
@@ -304,10 +303,7 @@ export function initLibraryExplorer(ctx: PageContext): void {
     const members = part.chapters.map((n) => chapterOf.get(n)).filter((c): c is Chapter => c !== undefined);
     kicker(`Part ${part.numeral}`, `${String(part.chapters.length)} chapters`);
     text(out.title, part.title);
-    text(
-      out.state,
-      `${String(part.written)} of ${String(part.chapters.length)} written · ${grouped(part.words)} words`,
-    );
+    text(out.state, `${String(part.written)} of ${String(part.chapters.length)} written`);
     const inside = new Set(part.chapters);
     const outside = (list: (c: Chapter) => readonly number[]): number[] => [
       ...new Set(members.flatMap(list).filter((n) => !inside.has(n))),
@@ -346,10 +342,6 @@ export function initLibraryExplorer(ctx: PageContext): void {
       `${part.outcome === '' ? 'No outcome is recorded for this part.' : `Outcome: ${part.outcome}.`} ${reach}`.trim(),
     );
     setRows([
-      [
-        'figures · equations',
-        `${String(members.reduce((s, c) => s + c.figures, 0))} · ${String(members.reduce((s, c) => s + c.equations, 0))}`,
-      ],
       [
         'chapters with a thesis',
         `${String(members.filter((c) => c.summary !== '').length)} / ${String(members.length)}`,
@@ -559,12 +551,7 @@ export function initLibraryExplorer(ctx: PageContext): void {
     for (const scope of [tiles.get(n), rows.get(n)])
       scope?.querySelector(`.lib-cell[data-lib-s="${String(index)}"]`)?.classList.add('is-on');
     out.list?.querySelector(`[data-lib-item="${String(index)}"]`)?.classList.add('is-on');
-    setListHead(
-      `§ ${section.number}`,
-      section.written
-        ? `drafted · ${grouped(section.words)} words · ${String(section.figures)} fig`
-        : 'planned — not yet drafted',
-    );
+    setListHead(`§ ${section.number}`, section.written ? 'drafted' : 'planned — not yet drafted');
   };
 
   const focusPart = (n: number): void => {

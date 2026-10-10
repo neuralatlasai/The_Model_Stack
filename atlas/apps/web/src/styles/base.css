@@ -411,10 +411,9 @@ summary {
 }
 
 /*
- * Book prose meets one right edge on every page: justified and hyphenated,
- * the last line ragged. Running serif paragraphs only — never titles, labels,
- * list rows or narrow readouts — and ragged again on phones, where a short
- * line would open rivers.
+ * Prose shares a consistent starting edge and natural word spacing across
+ * screen sizes. Hyphenation handles long technical terms without stretching
+ * the spaces between ordinary words.
  */
 :where(
   .bs-thesis,
@@ -431,7 +430,7 @@ summary {
   .tmx-def,
   .sh-section > p
 ) {
-  text-align: justify;
+  text-align: start;
   hyphens: auto;
   hyphenate-limit-chars: 6 3 3;
 }

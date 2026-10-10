@@ -33,8 +33,6 @@ const model = buildSystemsModel(graph, registry, stack);
 const systemByKey = new Map(model.systems.map((system) => [system.key, system]));
 const chapterList = Object.values(model.chapters).sort((a, b) => a.n - b.n);
 const writtenChapters = chapterList.filter((chapter) => chapter.written);
-const analysed = model.systems.filter((system) => system.chapters.length > 0);
-const idle = model.systems.length - analysed.length;
 const chapterNo = (n: number): string => model.chapters[String(n)]?.number ?? String(n).padStart(2, '0');
 
 // Stack bands, top (serving) to bottom (accelerator); an unstated layer, if any, sits below the floor.
@@ -79,7 +77,6 @@ for (const system of model.systems) {
 const mostUsed = [...model.systems].sort(
   (a, b) => b.chapters.length - a.chapters.length || (a.rank ?? 99) - (b.rank ?? 99),
 )[0];
-const stackLayers = bands.filter((band) => band.index !== -1).length;
 
 // Chapter grid geometry (SVG user units): 11 part lanes × 6 chapter dots, volumes separated by a gap.
 const GW = 360;
@@ -137,22 +134,7 @@ const layerName = (index: number): string =>
     identity="Research Atlas / Systems"
     title="Systems"
     lede="The reference stack, bottom-up: every implementation it lists, on the layer it occupies, wired to the chapters that analyse it."
-  >
-    <p class="en-meta">
-      <span>
-        <b>{model.systems.length}</b> systems
-      </span>
-      <span>
-        <b>{stackLayers}</b> layers
-      </span>
-      <span>
-        <b>{analysed.length}</b> analysed by a written chapter
-      </span>
-      <span>
-        <b>{idle}</b> not yet
-      </span>
-    </p>
-  </PageHeader>
+  />
 
   <section
     class="en en--systems"

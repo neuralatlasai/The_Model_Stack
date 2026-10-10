@@ -128,9 +128,9 @@ export function gyri(noise: Noise, x: number, y: number, z: number): number {
   const wx = x + 0.28 * noise(x * 1.6 + 5, y * 1.6, z * 1.6);
   const wy = y + 0.28 * noise(x * 1.6, y * 1.6 + 9, z * 1.6);
   const wz = z + 0.28 * noise(x * 1.6, y * 1.6, z * 1.6 + 13);
-  const primary = 1 - Math.exp(-Math.abs(noise(wx * 4.6, wy * 4.6, wz * 4.6)) * 5.5);
+  const primary = 1 - Math.exp(-Math.abs(noise(wx * 3.8, wy * 3.8, wz * 3.8)) * 5.5);
   const secondary = 1 - Math.exp(-Math.abs(noise(wx * 9.5 + 3, wy * 9.5 + 1, wz * 9.5 + 7)) * 5);
-  return 0.84 * primary + 0.16 * secondary * primary;
+  return 0.9 * primary + 0.1 * secondary * primary;
 }
 
 /** Distance from (x, y) to the polyline, for carving fissures. */
@@ -386,33 +386,33 @@ export function brainLayout(input: Brain3DInput): Brain3D {
 }
 
 /** Muted domain colours on the dark cortex; distinct without additive white highlights. */
+/** Neural accents share the site's vermilion / oxblood family rather than a rainbow. */
 export const GLOW: Readonly<Record<string, string>> = {
-  foundations: '#bda78c',
-  data: '#c48a5f',
-  architecture: '#78a3c8',
-  training: '#a78db7',
-  hardware: '#c1a559',
-  'post-training': '#bf849c',
-  inference: '#7aaa8c',
-  serving: '#70a9a5',
-  agents: '#929dbc',
-  embodied: '#b7a16a',
-  evaluation: '#adb2b5',
-  reference: '#bda78c',
+  foundations: '#e0806f',
+  data: '#ef9b83',
+  architecture: '#d9695c',
+  training: '#f1b39c',
+  hardware: '#db8f77',
+  'post-training': '#ed776b',
+  inference: '#c86c60',
+  serving: '#e7a28d',
+  agents: '#f29b91',
+  embodied: '#c88875',
+  evaluation: '#ecd0bc',
+  reference: '#e0806f',
 };
-
 /** Domain colours on paper (deep, saturated inks for the light theme). */
 export const INK: Readonly<Record<string, string>> = {
-  foundations: '#a48558',
-  data: '#b5541f',
-  architecture: '#1f5fa8',
-  training: '#7a45b5',
-  hardware: '#a87a00',
-  'post-training': '#b33a66',
-  inference: '#23864a',
-  serving: '#16807f',
-  agents: '#4a5fc4',
-  embodied: '#8a6a1c',
-  evaluation: '#5c636d',
-  reference: '#4a4740',
+  foundations: '#8b0000',
+  data: '#a3342b',
+  architecture: '#9b2725',
+  training: '#b85b48',
+  hardware: '#924338',
+  'post-training': '#b33230',
+  inference: '#7e302a',
+  serving: '#ac5544',
+  agents: '#c34539',
+  embodied: '#995443',
+  evaluation: '#755c50',
+  reference: '#8b0000',
 };

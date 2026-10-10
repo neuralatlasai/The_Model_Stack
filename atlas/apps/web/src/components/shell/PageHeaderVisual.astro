@@ -11,20 +11,20 @@ const page = pathname.startsWith(base) ? `/${pathname.slice(base.length)}` : pat
 const segments = page.split('/').filter(Boolean);
 const topic = segments[0] ?? 'library';
 let context: HeaderVisualContext | undefined;
+const [graph, registry] = await Promise.all([getGraph(), getRegistry()]);
+const footprint = (ids: readonly NodeId[]): readonly number[] => {
+  const chapters = new Set<number>();
+  for (const id of ids) {
+    const chapter = enclosing(graph, id, 'chapter');
+    const number = chapter === null ? undefined : /^ms\.chapter\.(\d+)$/u.exec(chapter.id)?.[1];
+    if (number !== undefined) chapters.add(Number(number));
+  }
+  return Array.from(
+    { length: 11 },
+    (_, part) => [...chapters].filter((number) => Math.floor((number - 1) / 6) === part).length,
+  );
+};
 if (segments.length > 1 && ['papers', 'systems', 'labs', 'graph', 'compare'].includes(topic)) {
-  const [graph, registry] = await Promise.all([getGraph(), getRegistry()]);
-  const footprint = (ids: readonly NodeId[]): readonly number[] => {
-    const chapters = new Set<number>();
-    for (const id of ids) {
-      const chapter = enclosing(graph, id, 'chapter');
-      const number = chapter === null ? undefined : /^ms\.chapter\.(\d+)$/u.exec(chapter.id)?.[1];
-      if (number !== undefined) chapters.add(Number(number));
-    }
-    return Array.from(
-      { length: 11 },
-      (_, part) => [...chapters].filter((number) => Math.floor((number - 1) / 6) === part).length,
-    );
-  };
   if (topic === 'papers') {
     const record = registry.references.find((entry) => entry.atlasUrl === page);
     if (record !== undefined)
@@ -64,6 +64,23 @@ if (segments.length > 1 && ['papers', 'systems', 'labs', 'graph', 'compare'].inc
         };
     }
   }
+}
+if (context === undefined) {
+  const ids: NodeId[] =
+    topic === 'papers'
+      ? registry.references.flatMap((reference) => reference.citedBy)
+      : topic === 'systems'
+        ? registry.systems.flatMap((system) => system.uses.map((use) => use.nodeId))
+        : topic === 'labs'
+          ? registry.labs.flatMap((lab) => lab.uses.map((use) => use.nodeId))
+          : Object.values(graph.nodes)
+              .filter((node) => node.hasManuscript === true)
+              .map((node) => node.id);
+  context = {
+    id: page,
+    summary: `Recorded chapter coverage across book Parts I–XI${['papers', 'systems', 'labs'].includes(topic) ? ` for ${topic}` : ' for the authored manuscript'}. These are coverage counts, not performance scores.`,
+    footprint: footprint(ids),
+  };
 }
 ---
 

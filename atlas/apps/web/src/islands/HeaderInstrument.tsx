@@ -27,7 +27,7 @@ export default function HeaderInstrument({
     const preference = window.matchMedia('(prefers-reduced-motion: reduce)');
     setPlaying(!preference.matches);
     const changed = (): void => {
-      if (preference.matches) setPlaying(false);
+      setPlaying(!preference.matches);
     };
     preference.addEventListener('change', changed);
     return () => {
@@ -357,18 +357,13 @@ export default function HeaderInstrument({
       );
   }
   const title = topic.replaceAll('-', ' ');
-  const identityBits =
-    context === undefined
-      ? []
-      : Array.from(new TextEncoder().encode(context.id)).flatMap((byte) =>
-          Array.from({ length: 8 }, (_, bit) => (byte >> (7 - bit)) & 1),
-        );
-  const identityPath = identityBits
-    .map(
-      (bit, i) =>
-        `${i === 0 ? 'M' : 'H'}${28 + (i * 224) / identityBits.length}${i === 0 ? ' ' : 'V'}${174 + bit * 4}H${28 + ((i + 1) * 224) / identityBits.length}`,
-    )
-    .join('');
+  let covered = 0;
+  const coveragePath = (context?.footprint ?? [])
+    .map((count, i) => {
+      covered += count;
+      return `${i === 0 ? 'M' : 'L'}${35 + i * 21} ${178 - (14 * covered) / 66}`;
+    })
+    .join(' ');
   return (
     <div
       class="sh-page-visual hi"
@@ -383,7 +378,7 @@ export default function HeaderInstrument({
       <button
         type="button"
         class="hi-stage"
-        aria-label={`Explore ${title} illustration. ${description[topic] ?? description['evidence']} ${context === undefined ? '' : `Object ${context.id}. ${context.summary} Chapter counts from Part I through Part XI: ${context.footprint.join(', ')}. The lower seal directly encodes its canonical identifier, not a metric.`} Drag or use arrow keys; Home resets.`}
+        aria-label={`Explore ${title} illustration. ${description[topic] ?? description['evidence']} ${context === undefined ? '' : `Object ${context.id}. ${context.summary} Chapter counts from Part I through Part XI: ${context.footprint.join(', ')}. The lower curve accumulates recorded chapter coverage across the book parts.`} Drag or use arrow keys; Home resets.`}
         onPointerDown={(event) => {
           dragging.current = true;
           moved.current = false;
@@ -413,7 +408,10 @@ export default function HeaderInstrument({
           }
         }}
         onClick={() => {
-          if (!moved.current) setControl((v) => (v >= 1 ? -1 : v + 0.5));
+          if (!moved.current) {
+            setControl((v) => (v >= 1 ? -1 : v + 0.5));
+            setExpanded((v) => !v);
+          }
           moved.current = false;
         }}
       >
@@ -439,55 +437,14 @@ export default function HeaderInstrument({
                     d={`M${35 + i * 21} 158V${158 - Math.max(0.5, count * 2.5)}`}
                   />
                 ))}
-                <path class="hi-identity-seal" data-identity-seal={context.id} d={identityPath}>
-                  <title>{`Canonical identifier ${context.id}, encoded directly as UTF-8 bits; not a performance metric.`}</title>
+                <path class="hi-identity-seal" data-identity-seal={context.id} d={coveragePath}>
+                  <title>{`Cumulative recorded chapter coverage for ${context.id}; not a performance metric.`}</title>
                 </path>
               </g>
             )}
           </g>
         </svg>
       </button>
-      <div class="hi-controls">
-        <button
-          type="button"
-          class="hi-reset"
-          aria-label={`Reset ${title} illustration`}
-          onClick={() => {
-            setControl(0);
-            setExpanded(false);
-          }}
-        >
-          <svg viewBox="0 0 24 24" aria-hidden="true">
-            <path d="M5 11A7 7 0 1 1 7 17M5 5V11H11" />
-          </svg>
-        </button>
-        <button
-          type="button"
-          class="hi-toggle"
-          aria-label={`${playing ? 'Pause' : 'Play'} ${title} illustration`}
-          aria-pressed={playing}
-          onClick={() => {
-            setPlaying((v) => !v);
-          }}
-        >
-          <svg viewBox="0 0 24 24" aria-hidden="true">
-            {playing ? <path d="M9 6V18M15 6V18" /> : <path d="M8 5L19 12L8 19Z" />}
-          </svg>
-        </button>
-        <button
-          type="button"
-          class="hi-explore"
-          aria-label={`Change ${title} illustration view`}
-          aria-pressed={expanded}
-          onClick={() => {
-            setExpanded((v) => !v);
-          }}
-        >
-          <svg viewBox="0 0 24 24" aria-hidden="true">
-            <path d="M5 9V5H9M15 5H19V9M19 15V19H15M9 19H5V15" />
-          </svg>
-        </button>
-      </div>
     </div>
   );
 }

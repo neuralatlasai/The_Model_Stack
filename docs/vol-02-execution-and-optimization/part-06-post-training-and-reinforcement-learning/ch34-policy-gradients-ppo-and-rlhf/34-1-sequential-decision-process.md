@@ -354,7 +354,7 @@ spec:
 
 [DERIVED] Implementation route: **verl** (reference-stack §4 #37, **RL post-training**; §4.1 **Post-training / RL**), pinned at v0.9.1. The role-specific mechanism and its evidence boundary are stated below.
 
-[OFFICIAL-DOCUMENTATION] The inspected verl release separates configured rollout temperature/top-p from temperature scaling in its FSDP scoring path. Its GAE helper skips observation positions and initializes the final continuation value to zero; that function's interface does not independently establish a censored-continuation contract. The release pin, functions and caveats are recorded in R34.1. Reading code establishes these disclosed operations, not successful execution on a particular deployment. [R34.1](references.md#r341)
+[OFFICIAL-DOCUMENTATION] The inspected verl release separates configured rollout temperature/top-p from temperature scaling in its FSDP scoring path. Its GAE helper skips observation positions and initializes the final continuation value to zero; that function's interface does not independently establish a censored-continuation contract. The release pin, functions and caveats are recorded in R34.1. Reading code establishes these disclosed operations, not successful execution on a particular deployment. [R34.1](references.md#r34-1)
 
 [DERIVED] Store per-action log probabilities with the token identifiers before detokenization or stop-string removal. Preserve EOS when it was sampled, even when presentation strips it. Use separate masks for valid storage positions, actor actions and reward-bearing events. Packing must preserve episode boundaries and attention visibility; a zero actor mask does not prevent attention leakage across adjacent episodes. The trajectory key joins environment state, reward version and behavior version; matching only prompt text is insufficient for counterfactual replay.
 
@@ -404,7 +404,7 @@ spec:
 
 ## Experimental design
 
-[PAPER-REPORTED] OpenAgent tests tool-semantic shifts in a controlled point-of-interest sandbox. Its anonymized train/test separation and explicit schema/return transformations make environment identity experimentally consequential. [R34.10, §§3–5, Appendix A–D](references.md#r3410)
+[PAPER-REPORTED] OpenAgent tests tool-semantic shifts in a controlled point-of-interest sandbox. Its anonymized train/test separation and explicit schema/return transformations make environment identity experimentally consequential. [R34.10, §§3–5, Appendix A–D](references.md#r34-10)
 
 | Disclosed protocol | Source setting |
 |---|---|
@@ -417,9 +417,9 @@ spec:
 
 ## Observations
 
-**What the paper claims.** [PAPER-REPORTED] OpenAgent attributes important tool-agent generalization failures to dependence on surface conventions rather than stable interaction semantics. Its interventions include changed argument keys and observation formats. [R34.10, §§4–5](references.md#r3410)
+**What the paper claims.** [PAPER-REPORTED] OpenAgent attributes important tool-agent generalization failures to dependence on surface conventions rather than stable interaction semantics. Its interventions include changed argument keys and observation formats. [R34.10, §§4–5](references.md#r34-10)
 
-**What the evidence shows.** [PAPER-REPORTED] The disclosed sandbox exposes fragility under those shifts. SFT and RL arms have different training budgets; the comparison cannot isolate optimization algorithm as the sole cause. It does not establish failure rates for unrestricted production agents. [R34.10, Appendix D](references.md#r3410)
+**What the evidence shows.** [PAPER-REPORTED] The disclosed sandbox exposes fragility under those shifts. SFT and RL arms have different training budgets; the comparison cannot isolate optimization algorithm as the sole cause. It does not establish failure rates for unrestricted production agents. [R34.10, Appendix D](references.md#r34-10)
 
 **What we infer.** [DERIVED] Environment and processor versions belong in the training artifact. A policy-gradient theorem about a fixed process cannot justify combining trajectories whose tool semantics changed unnoticed. This is a probability-model requirement, independently of which algorithm performed better in the sandbox.
 
@@ -519,4 +519,4 @@ spec:
 
 ## References
 
-[R34.1](references.md#r341) pins the inspected implementation. [R34.10](references.md#r3410) supplies the source-located environment study. Equations and all six native figures are explanatory derivations; the empirical table is paper-reported and incomplete where marked.
+[R34.1](references.md#r34-1) pins the inspected implementation. [R34.10](references.md#r34-10) supplies the source-located environment study. Equations and all six native figures are explanatory derivations; the empirical table is paper-reported and incomplete where marked.

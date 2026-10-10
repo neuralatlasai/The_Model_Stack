@@ -9,7 +9,6 @@
  * volume and on either side, and fills the fixed-size readout.
  */
 import type { LibraryModel } from '../../lib/library-model.ts';
-import { compactCount } from '../../lib/library-model.ts';
 import { jsonForHtml } from '../../lib/json.ts';
 import FlowSide from './FlowSide.astro';
 import { crossingLinks, flowSentence } from './lib/flow.ts';
@@ -29,9 +28,6 @@ const sum = (pick: (chapter: (typeof own)[number]) => number): number =>
   own.reduce((total, chapter) => total + pick(chapter), 0);
 const totals = [
   `${String(sum((chapter) => chapter.sectionsWritten))} of ${String(sum((chapter) => chapter.sections.length))} sections`,
-  `${compactCount(sum((chapter) => chapter.words))} words`,
-  `${String(sum((chapter) => chapter.figures))} figures`,
-  `${String(sum((chapter) => chapter.equations))} equations`,
 ].join(' · ');
 ---
 
@@ -98,9 +94,7 @@ const totals = [
                         </a>
                       ))}
                     </span>
-                    <span class="pm-tile__m">
-                      {chapter.words > 0 ? `${compactCount(chapter.words)} words` : 'planned'}
-                    </span>
+                    <span class="pm-tile__m">{chapter.state}</span>
                   </li>
                 );
               })}

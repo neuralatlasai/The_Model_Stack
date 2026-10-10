@@ -16,18 +16,16 @@ for (const route of [
   'visual-grammar',
 ]) {
   test.describe(`${route} header`, () => {
-    test(`${route} illustration supports motion controls and keyboard exploration`, async ({ page }) => {
+    test(`${route} illustration autoplays without a toolbar and supports keyboard exploration`, async ({ page }) => {
       await page.goto(`/${route}/`);
       const visual = page.locator('.hi');
       await expect(visual).toBeVisible();
       await expect(page.locator('astro-island').filter({ has: visual })).not.toHaveAttribute('ssr', '');
       await expect(visual).toHaveAttribute('data-playing', 'false');
-      const play = await visual.locator('.hi-toggle').boundingBox();
-      const explore = await visual.locator('.hi-explore').boundingBox();
-      if (play === null || explore === null) throw new Error('Illustration controls are missing');
-      await page.mouse.click(play.x + play.width / 2, play.y + play.height / 2);
+      await expect(visual.locator('.hi-controls')).toHaveCount(0);
+      await page.emulateMedia({ reducedMotion: 'no-preference' });
       await expect(visual).toHaveAttribute('data-playing', 'true');
-      await page.mouse.click(play.x + play.width / 2, play.y + play.height / 2);
+      await page.emulateMedia({ reducedMotion: 'reduce' });
       await expect(visual).toHaveAttribute('data-playing', 'false');
       await expect
         .poll(() =>
@@ -41,7 +39,7 @@ for (const route of [
       await visual.locator('.hi-stage').focus();
       await page.keyboard.press('ArrowRight');
       await expect(visual).toHaveAttribute('data-control', '0.25');
-      await page.mouse.click(explore.x + explore.width / 2, explore.y + explore.height / 2);
+      await visual.locator('.hi-stage').click();
       await expect(visual).toHaveAttribute('data-expanded', 'true');
       await page.setViewportSize({ width: 390, height: 844 });
       expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
@@ -103,7 +101,7 @@ test('visual grammar keyboard exploration changes drawn geometry and resets it',
   await visual.locator('.hi-stage').focus();
   await page.keyboard.press('ArrowRight');
   await expect.poll(() => artwork.innerHTML()).not.toBe(before);
-  await visual.getByRole('button', { name: /^Reset / }).click();
+  await page.keyboard.press('Home');
   await expect.poll(() => artwork.innerHTML()).toBe(before);
 });
 
@@ -140,14 +138,14 @@ for (const [family, routes] of [
       await visual.locator('.hi-stage').focus();
       await page.keyboard.press('ArrowRight');
       await page.keyboard.press('ArrowRight');
-      await visual.getByRole('button', { name: /^Reset / }).click();
+      await page.keyboard.press('Home');
       await expect.poll(drawing).toBe(before);
       const footprint = visual.locator('[data-chapter-count]');
       await expect(footprint).toHaveCount(11);
       drawings.push(
         await art.locator('path').evaluateAll((nodes) => nodes.map((node) => node.getAttribute('d')).join('|')),
       );
-      seals.push((await seal.getAttribute('d')) ?? '');
+      seals.push((await visual.getAttribute('data-object-id')) ?? '');
     }
     expect(drawings[0]).not.toBe(drawings[1]);
     expect(seals[0]).not.toBe(seals[1]);

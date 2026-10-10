@@ -3,11 +3,12 @@
  * Compact, research-oriented header (UI_UX §9, CONTENT_CONTRACT §3 items 1–4):
  * identity line, number + title, one-sentence thesis, meta line. No hero; the
  * first viewport goes to content. Sections derive the identity line from
- * breadcrumbs and the meta line from document stats.
+ * breadcrumbs; the metadata preserves authored scope and the revision date.
  */
 import type { ResearchDocument } from '@atlas/core';
+import { inlineToText } from '@atlas/core';
 import Inline from './Inline.astro';
-import { derivedMetaLine, identityLine, sentenceCase } from './lib/header.ts';
+import { identityLine, sentenceCase } from './lib/header.ts';
 
 interface Props {
   doc: ResearchDocument;
@@ -19,6 +20,12 @@ const { doc, compact = false, showThesis = true } = Astro.props;
 const { header } = doc;
 const identity = identityLine(doc);
 const thesis = header.thesis === null ? null : sentenceCase(header.thesis);
+// Preserve useful authored context rather than replacing it with object totals.
+const context = inlineToText(header.metaLine ?? [])
+  .split('·')
+  .map((part) => part.trim())
+  .filter((part) => /^(?:artifact|prerequisites|scope|deliverable|assumptions):/iu.test(part))
+  .join(' · ');
 ---
 
 <header class:list={['rb-header', { 'aw-document-meta': compact }]}>
@@ -34,5 +41,8 @@ const thesis = header.thesis === null ? null : sentenceCase(header.thesis);
       <Inline nodes={thesis} />
     </p>
   )}
-  <p class="rb-header__meta">{header.metaLine !== null ? <Inline nodes={header.metaLine} /> : derivedMetaLine(doc)}</p>
+  <p class="rb-header__meta">
+    {context !== '' && <>{context} · </>}
+    <time datetime={doc.meta.updatedAt}>Updated {doc.meta.updatedAt}</time>
+  </p>
 </header>

@@ -105,19 +105,7 @@ const clientModel = {
     identity="Research Atlas / Labs"
     title="Labs"
     lede="Where the book draws on each lab: the organisations the reference stack lists, against the chapters that use their papers, reports, and code. List position is the reference stack’s, not a ranking."
-  >
-    <p class="en-meta">
-      <span>
-        <b>{model.labs.length}</b> labs
-      </span>
-      <span>
-        <b>{active.length}</b> drawn on by a written chapter
-      </span>
-      <span>
-        <b>{written.length}</b> of {allChapters.length} chapters written
-      </span>
-    </p>
-  </PageHeader>
+  />
 
   <section class="en en--labs" data-entity-explorer="labs" data-en-rest={broadest?.key} aria-labelledby="el-title">
     <div class="en-bar">

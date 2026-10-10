@@ -22,6 +22,7 @@
 import type { AtlasGraph, Registry } from '@atlas/core';
 import { citationField, type FieldGeometry } from '../../lib/citation-field.ts';
 import { enclosing, nodesOfType } from '../../lib/nodes.ts';
+import ChapterSymbol from './ChapterSymbol.astro';
 
 interface Props {
   registry: Registry;
@@ -285,7 +286,9 @@ const usedText = (work: (typeof works)[number]): string =>
                   aria-label={`Chapter ${pad(n)}, ${title}: ${String(count)} works. Click to filter the ledger.`}
                   title={node?.title}
                 >
-                  <span class="pfx-ch__n">{pad(n)}</span>
+                  <span class="pfx-ch__n" aria-hidden="true">
+                    <ChapterSymbol chapter={n} />
+                  </span>
                   <span class="pfx-ch__bar" aria-hidden="true">
                     <span class="pfx-ch__t">{title}</span>
                     <span class="pfx-ch__fill">

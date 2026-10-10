@@ -1006,4 +1006,4 @@ $$
 
 ## References
 
-[R39.1](references.md#r391), [R39.4](references.md#r394), [R39.6](references.md#r396), [R39.8](references.md#r398).
+[R39.1](references.md#r39-1), [R39.4](references.md#r39-4), [R39.6](references.md#r39-6), [R39.8](references.md#r39-8).

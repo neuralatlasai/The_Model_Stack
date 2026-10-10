@@ -110,10 +110,19 @@ html[data-reading-mode='complete'][data-article-layout='workspace'] .sh-article[
   }
 
   :is(.aw-explanation, .aw-manuscript) .rb-p {
-    text-align: justify;
+    text-align: start;
     text-align-last: start;
     hyphens: auto;
     overflow-wrap: break-word;
+  }
+
+  /* Wide manuscript paragraphs meet the same right edge. Short labels,
+   * captions and narrow-screen prose keep natural word spacing. */
+  @media (min-width: 900px) {
+    :is(.aw-explanation, .aw-manuscript) .rb-p {
+      text-align: justify;
+      text-justify: inter-word;
+    }
   }
 
   .aw-document-meta .rb-header__meta {

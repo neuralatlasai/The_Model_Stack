@@ -23,6 +23,20 @@ const GLYPH_SELECTOR = '.katex-html .mord';
 
 export function initEquations(ctx: PageContext): void {
   const { doc, ctl } = ctx;
+  // Only genuinely overflowing inline formulas enter the tab sequence.
+  // Short expressions keep the reading flow free of unnecessary tab stops.
+  const inlineMath = [...doc.querySelectorAll<HTMLElement>('.rb-math')];
+  const updateMathFocus = (): void => {
+    if (ctl.disposed) return;
+    for (const math of inlineMath) {
+      if (math.scrollWidth > math.clientWidth || math.scrollHeight > math.clientHeight) math.tabIndex = 0;
+      else math.removeAttribute('tabindex');
+    }
+  };
+  const mathResize = ctl.observe(new ResizeObserver(updateMathFocus));
+  for (const math of inlineMath) mathResize.observe(math);
+  void doc.fonts.ready.then(updateMathFocus);
+  updateMathFocus();
   let lit: Element[] = [];
 
   const clear = (): void => {

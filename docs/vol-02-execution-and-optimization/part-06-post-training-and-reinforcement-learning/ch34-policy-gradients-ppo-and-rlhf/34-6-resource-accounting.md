@@ -442,7 +442,7 @@ spec:
 
 ## Experimental design
 
-[PAPER-REPORTED] A recent post-training evaluation study holds decoding fixed while comparing GRPO and shortest-correct rejection fine-tuning. [R34.8, §§2–5, reproducibility appendix](references.md#r348)
+[PAPER-REPORTED] A recent post-training evaluation study holds decoding fixed while comparing GRPO and shortest-correct rejection fine-tuning. [R34.8, §§2–5, reproducibility appendix](references.md#r34-8)
 
 | Protocol | Disclosure |
 |---|---|
@@ -455,9 +455,9 @@ spec:
 
 ## Observations
 
-**What the paper claims.** [PAPER-REPORTED] The study argues that pass@k does not measure output diversity or certify retention of baseline capability. [R34.8, §§3–4](references.md#r348)
+**What the paper claims.** [PAPER-REPORTED] The study argues that pass@k does not measure output diversity or certify retention of baseline capability. [R34.8, §§3–4](references.md#r34-8)
 
-**What the evidence shows.** [PAPER-REPORTED] Its main arms move diversity in opposite directions despite overlapping high-k success estimates; no trained arm significantly improves the hard MATH subset over baseline. Missing per-sample token entropy prevents a correct-only entropy analysis. These are workload-specific findings. [R34.8, §§3–5](references.md#r348)
+**What the evidence shows.** [PAPER-REPORTED] Its main arms move diversity in opposite directions despite overlapping high-k success estimates; no trained arm significantly improves the hard MATH subset over baseline. Missing per-sample token entropy prevents a correct-only entropy analysis. These are workload-specific findings. [R34.8, §§3–5](references.md#r34-8)
 
 **What we infer.** [MATHEMATICALLY-DERIVED] A resource comparison must use a quality vector rather than one selected success statistic. Matching rollout counts without matching response lengths or evaluator work does not match compute. Matching compute without matching independent quality does not establish efficiency dominance.
 
@@ -547,4 +547,4 @@ spec:
 
 ## References
 
-[R34.8](references.md#r348) provides the inspected evaluation study and missing-data limits. [R34.1](references.md#r341) pins the implementation surface. All resource equations and native figures are analytical models; no runtime experiment was executed.
+[R34.8](references.md#r34-8) provides the inspected evaluation study and missing-data limits. [R34.1](references.md#r34-1) pins the implementation surface. All resource equations and native figures are analytical models; no runtime experiment was executed.

@@ -417,7 +417,7 @@ spec:
 
 ## Experimental design
 
-[PAPER-REPORTED] The categorical-critic math experiment changes the critic head/target while retaining scalar expected values for actor advantages. [R34.4, §§3–4, Appendix A/D](references.md#r344)
+[PAPER-REPORTED] The categorical-critic math experiment changes the critic head/target while retaining scalar expected values for actor advantages. [R34.4, §§3–4, Appendix A/D](references.md#r34-4)
 
 | Critic protocol | Disclosed setting |
 |---|---|
@@ -430,9 +430,9 @@ spec:
 
 ## Observations
 
-**What the paper claims.** [PAPER-REPORTED] Categorical targets improve critic learning and downstream reasoning in the reported setup. [R34.4, §§3–4](references.md#r344)
+**What the paper claims.** [PAPER-REPORTED] Categorical targets improve critic learning and downstream reasoning in the reported setup. [R34.4, §§3–4](references.md#r34-4)
 
-**What the evidence shows.** [PAPER-REPORTED] Reported mean accuracy rises from 15.88 to 18.74; a two-bin variant gives 15.50 and one-hot targets 14.86. Classification alone is therefore insufficient. The contradictory tool-reward formula is excluded from this chapter's evidence. [R34.4, Table 1, Appendix A/B](references.md#r344)
+**What the evidence shows.** [PAPER-REPORTED] Reported mean accuracy rises from 15.88 to 18.74; a two-bin variant gives 15.50 and one-hot targets 14.86. Classification alone is therefore insufficient. The contradictory tool-reward formula is excluded from this chapter's evidence. [R34.4, Table 1, Appendix A/B](references.md#r34-4)
 
 **What we infer.** [MATHEMATICALLY-DERIVED] Scalar mean prediction and distributional target fitting are different optimization choices. Neither critic is a truth oracle. Extra head outputs add nonzero storage and arithmetic even if measured overhead is small on one workload; the system budget must account for them.
 
@@ -522,4 +522,4 @@ spec:
 
 ## References
 
-[R34.4](references.md#r344) supplies the inspected critic experiment and protocol caveats. [R34.9](references.md#r349) supplies a contemporary proxy/judge failure study examined in §34.5. Foundation equations are independently derived, without admitting excluded historical evidence through a recent citation.
+[R34.4](references.md#r34-4) supplies the inspected critic experiment and protocol caveats. [R34.9](references.md#r34-9) supplies a contemporary proxy/judge failure study examined in §34.5. Foundation equations are independently derived, without admitting excluded historical evidence through a recent citation.

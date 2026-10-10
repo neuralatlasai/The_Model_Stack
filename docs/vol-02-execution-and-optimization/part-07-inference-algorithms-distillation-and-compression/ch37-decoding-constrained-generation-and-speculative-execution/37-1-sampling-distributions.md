@@ -70,7 +70,7 @@ editorial_status: manuscript_draft
 
 [DERIVED] A checkpoint does not uniquely specify a generator. The prompt template, token history, logit processors, precision, random-number algorithm and stopping policy jointly define the delivered response. Two services can load identical weights and return different distributions without either changing the model. A request described only as “temperature 0.7” is therefore incomplete. It can still include nucleus truncation, a minimum-length EOS mask, a frequency penalty or a grammar, each of which changes support or relative odds.
 
-[OFFICIAL-DOCUMENTATION] The pinned vLLM release exposes raw and processed log-probability modes, multiple sampling implementations, per-request seed handling and separate legacy/V2 sampler paths. Its native top-k implementation retains tokens tied at the kth logit threshold. A fused sampler is described as statistically equivalent, without promising the same realized draw as native sampling. These distinctions are implementation facts at this release pin, not a cross-engine reproducibility guarantee. [R37.1, sampler.py and topk_topp_sampler.py](references.md#r371)
+[OFFICIAL-DOCUMENTATION] The pinned vLLM release exposes raw and processed log-probability modes, multiple sampling implementations, per-request seed handling and separate legacy/V2 sampler paths. Its native top-k implementation retains tokens tied at the kth logit threshold. A fused sampler is described as statistically equivalent, without promising the same realized draw as native sampling. These distinctions are implementation facts at this release pin, not a cross-engine reproducibility guarantee. [R37.1, sampler.py and topk_topp_sampler.py](references.md#r37-1)
 
 ## Intuition
 
@@ -393,9 +393,9 @@ $$
 
 [DERIVED] Implementation route: **vLLM** (reference-stack §4 #41, **LLM inference engine**; §4.1 **INFERENCE ENGINE**), v0.31.0 at full commit db9527a46873454610df6dbedf79a36d6bf1a7f6. Source inspection establishes disclosed behavior, not an executed deployment.
 
-[OFFICIAL-DOCUMENTATION] The V2 sampler constructs bias, penalties, bad-words and custom processors in list order, applies its thinking-budget forcing, then temperature, min-p and top-k/top-p. Its seeded native route uses a request seed, token position and token event to construct Gumbel draws, with a separate drafting noise domain. Explicit seeds, greedy rows and processed-logprob requests constrain fused-sampler eligibility. The older V1 sampler has a separately documented pipeline; the release identifier alone is insufficient to identify the selected path. [R37.1, worker/gpu/sample/{sampler,states,gumbel}.py](references.md#r371)
+[OFFICIAL-DOCUMENTATION] The V2 sampler constructs bias, penalties, bad-words and custom processors in list order, applies its thinking-budget forcing, then temperature, min-p and top-k/top-p. Its seeded native route uses a request seed, token position and token event to construct Gumbel draws, with a separate drafting noise domain. Explicit seeds, greedy rows and processed-logprob requests constrain fused-sampler eligibility. The older V1 sampler has a separately documented pipeline; the release identifier alone is insufficient to identify the selected path. [R37.1, worker/gpu/sample/{sampler,states,gumbel}.py](references.md#r37-1)
 
-[OFFICIAL-DOCUMENTATION] The inspected PyTorch top-k fallback masks values strictly below the kth threshold, so ties can retain more than $k$ events. Its top-p path sorts ascending, accumulates mass after top-k masking and retains at least the largest-logit event. Accelerator kernels are separate source paths; this chapter does not infer bitwise equality from the fallback implementation. [R37.1, apply_top_k_top_p_pytorch and flashinfer_sample](references.md#r371)
+[OFFICIAL-DOCUMENTATION] The inspected PyTorch top-k fallback masks values strictly below the kth threshold, so ties can retain more than $k$ events. Its top-p path sorts ascending, accumulates mass after top-k masking and retains at least the largest-logit event. Accelerator kernels are separate source paths; this chapter does not infer bitwise equality from the fallback implementation. [R37.1, apply_top_k_top_p_pytorch and flashinfer_sample](references.md#r37-1)
 
 ```figure
 {
@@ -448,7 +448,7 @@ $$
 
 ### Reported experiments
 
-[PAPER-REPORTED] Two inspected 2026 studies explicitly distinguish greedy and stochastic workloads. PSC uses greedy pass@1 but temperature 1, unrestricted top-k/top-p for pass@k with $k>1$. The beam/sample+vote study instead uses temperature 0.7 and top-p 0.9 for sampling. Comparing their pass@1 figures without those policies would compare different estimands. [R37.3, §4.5](references.md#r373) [R37.5, §§3–4](references.md#r375)
+[PAPER-REPORTED] Two inspected 2026 studies explicitly distinguish greedy and stochastic workloads. PSC uses greedy pass@1 but temperature 1, unrestricted top-k/top-p for pass@k with $k>1$. The beam/sample+vote study instead uses temperature 0.7 and top-p 0.9 for sampling. Comparing their pass@1 figures without those policies would compare different estimands. [R37.3, §4.5](references.md#r37-3) [R37.5, §§3–4](references.md#r37-5)
 
 | Protocol field | PSC downstream study | Beam/sample+vote study |
 |---|---|---|
@@ -461,9 +461,9 @@ $$
 
 ## Observations
 
-**What the paper claims.** [PAPER-REPORTED] PSC attributes its mask computation gains to offline parser analysis rather than a new sampling objective. The SQL study investigates candidate-budget allocation under one fixed stochastic policy. [R37.3, §§3–4](references.md#r373) [R37.5, §§3–5](references.md#r375)
+**What the paper claims.** [PAPER-REPORTED] PSC attributes its mask computation gains to offline parser analysis rather than a new sampling objective. The SQL study investigates candidate-budget allocation under one fixed stochastic policy. [R37.3, §§3–4](references.md#r37-3) [R37.5, §§3–5](references.md#r37-5)
 
-**What the evidence shows.** [PAPER-REPORTED] PSC's Go greedy pass@1 can equal unconstrained decoding even when stochastic pass@k improves; for Llama3.2-1B HumanEval-Go, both greedy values are5.6%. The reported higher-k values use a different stochastic policy and are not a monotone extension of that greedy point. [R37.3, Table 4](references.md#r373)
+**What the evidence shows.** [PAPER-REPORTED] PSC's Go greedy pass@1 can equal unconstrained decoding even when stochastic pass@k improves; for Llama3.2-1B HumanEval-Go, both greedy values are5.6%. The reported higher-k values use a different stochastic policy and are not a monotone extension of that greedy point. [R37.3, Table 4](references.md#r37-3)
 
 **What we infer.** [DERIVED] Store the processed-law identity alongside a metric. An equal seed is not evidence of equal sampling laws, and equal laws do not imply the same individual draw across different kernels. A claim about quality must specify which of these properties was controlled.
 
@@ -519,7 +519,7 @@ spec:
 
 ### Improvements
 
-[OFFICIAL-DOCUMENTATION] The current V2 route separates drafting noise and supports a chunked verification path discussed in §37.6. Fused sampling changes materialization and launch costs. These are implementation changes documented at the release pin; no isolated end-to-end speedup is inferred from their existence. [R37.1, release notes; gpu/sample/gumbel.py](references.md#r371)
+[OFFICIAL-DOCUMENTATION] The current V2 route separates drafting noise and supports a chunked verification path discussed in §37.6. Fused sampling changes materialization and launch costs. These are implementation changes documented at the release pin; no isolated end-to-end speedup is inferred from their existence. [R37.1, release notes; gpu/sample/gumbel.py](references.md#r37-1)
 
 ## Limitations
 

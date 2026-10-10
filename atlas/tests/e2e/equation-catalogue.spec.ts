@@ -13,11 +13,14 @@ test('equation catalogue stays within the viewport after search, scroll and mobi
   const all = `${String(total)} of ${String(total)}`;
 
   const visual = page.locator('.hi');
+  await expect(page.locator('astro-island').filter({ has: visual })).not.toHaveAttribute('ssr', '');
   await visual.locator('.hi-stage').focus();
   await page.keyboard.press('ArrowRight');
-  await visual.getByRole('button', { name: /^Reset / }).click();
-  await visual.locator('.hi-toggle').click();
-  await visual.locator('.hi-explore').click();
+  await expect(visual).toHaveAttribute('data-control', '0.25');
+  await page.keyboard.press('Home');
+  await expect(visual).toHaveAttribute('data-control', '0');
+  await visual.locator('.hi-stage').click();
+  await expect(visual).toHaveAttribute('data-expanded', 'true');
 
   await page.setViewportSize({ width: 390, height: 844 });
   const search = page.locator('[data-eqx-search]');

@@ -15,6 +15,9 @@ interface Props {
 }
 
 const { identity, title, lede, meta } = Astro.props;
+// Catalogue totals remain in the underlying indexes, rather than competing
+// with the page's purpose. Authorship, venue and edition information stays.
+const readerMeta = meta !== undefined && !/^\d[\d,.]*\s/u.test(meta) ? meta : undefined;
 ---
 
 <header class="sh-page-header">
@@ -22,7 +25,7 @@ const { identity, title, lede, meta } = Astro.props;
     <p class="sh-identity">{identity}</p>
     <h1 class="sh-page-title">{title}</h1>
     {lede !== undefined && <p class="sh-lede">{lede}</p>}
-    {meta !== undefined && <p class="sh-meta-line">{meta}</p>}
+    {readerMeta !== undefined && <p class="sh-meta-line">{readerMeta}</p>}
     <slot />
   </div>
   <PageHeaderVisual />

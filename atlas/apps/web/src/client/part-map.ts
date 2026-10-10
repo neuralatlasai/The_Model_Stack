@@ -85,14 +85,7 @@ export function initPartMap(ctx: PageContext): void {
     }
     const info = data[n];
     if (isTileData(info)) {
-      const measures = [
-        `${info.sections} sections`,
-        info.words > 0 ? `${info.words.toLocaleString('en')} words` : null,
-        `${String(info.figures)} figures`,
-        `${String(info.equations)} equations`,
-      ]
-        .filter((part) => part !== null)
-        .join(' · ');
+      const measures = `${info.sections} sections`;
       set(
         `ch ${pad(n)} · ${info.state} · builds on ${String(ins.size)} · unlocks ${String(outs.size)}`,
         info.title,

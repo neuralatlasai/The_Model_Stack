@@ -486,4 +486,4 @@ $$
 
 ## References
 
-[R39.3](references.md#r393), [R39.6](references.md#r396), [R39.7](references.md#r397).
+[R39.3](references.md#r39-3), [R39.6](references.md#r39-6), [R39.7](references.md#r39-7).

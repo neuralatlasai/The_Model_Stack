@@ -70,7 +70,7 @@ editorial_status: manuscript_draft
 
 [DERIVED] Output stripping is often treated as harmless cleanup. It becomes a statistical error when stripped EOS probabilities disappear from sequence scores, when cap-truncated responses are scored as successful completion, or when a stop string is leaked to a client before the server recognizes it across chunk boundaries. A model can predict a legitimate next token while a transport layer cancels the request. The cancellation supplies no evidence that the language-model process naturally ended there.
 
-[PAPER-REPORTED] The 2026 SQL study supplies a concrete length-sensitive setting: its grammar always permits further query continuation, its model/beam procedure must decide when to finish, and generation is capped at 160 new tokens. The paper reports different truncation rates across beam widths and sampling. Those rates are outcomes of that policy and cap, not universal properties of SQL grammars. [R37.5, §§3–4,6](references.md#r375)
+[PAPER-REPORTED] The 2026 SQL study supplies a concrete length-sensitive setting: its grammar always permits further query continuation, its model/beam procedure must decide when to finish, and generation is capped at 160 new tokens. The paper reports different truncation rates across beam widths and sampling. Those rates are outcomes of that policy and cap, not universal properties of SQL grammars. [R37.5, §§3–4,6](references.md#r37-5)
 
 ## Intuition
 
@@ -249,7 +249,7 @@ spec:
 
 [DERIVED] An EOS token is not the same event as its human-readable spelling appearing in ordinary text. A stop-token set is matched on token identifiers. A stop-string list is matched after the declared decoding/normalization procedure. A JSON field can legitimately contain the characters used by an application stop marker; a string-based stop then changes the output language unless the delimiter is designed and escaped consistently. Minimum-token rules can suppress early token stops while string matching has its own threshold implementation.
 
-[OFFICIAL-DOCUMENTATION] In the pinned detokenizer, excluded stop strings reserve `max(len(s))-1` characters. When a block contains multiple completed markers, `check_stop_strings` chooses the one with the earliest completion offset, breaking equal-end ties by list order. That explicitly supports speculative multi-token updates. The inclusion flag changes truncation to the marker's beginning or end. This is a character-level decoded-text contract, not a guarantee that every tokenizer emits one complete Unicode character per token. [R37.1, BaseIncrementalDetokenizer and check_stop_strings](references.md#r371)
+[OFFICIAL-DOCUMENTATION] In the pinned detokenizer, excluded stop strings reserve `max(len(s))-1` characters. When a block contains multiple completed markers, `check_stop_strings` chooses the one with the earliest completion offset, breaking equal-end ties by list order. That explicitly supports speculative multi-token updates. The inclusion flag changes truncation to the marker's beginning or end. This is a character-level decoded-text contract, not a guarantee that every tokenizer emits one complete Unicode character per token. [R37.1, BaseIncrementalDetokenizer and check_stop_strings](references.md#r37-1)
 
 ```figure
 {
@@ -423,9 +423,9 @@ spec:
 
 [DERIVED] Implementation route: **vLLM** (reference-stack §4 #41, **LLM inference engine**; §4.1 **INFERENCE ENGINE**), v0.31.0 at full commit db9527a46873454610df6dbedf79a36d6bf1a7f6. Source inspection establishes disclosed behavior, not an executed deployment.
 
-[OFFICIAL-DOCUMENTATION] Scheduler `check_stop` examines EOS, explicit stop-token identifiers, model-context/response caps and then repetition detection. Thus EOS encountered exactly at a cap is classified by the earlier stop check. A minimum-length condition appears later in that function; processor-level EOS suppression and scheduler classification must be read together. `ignore_eos` handling is configured through sampling parameters, not inferred from a finish string. [R37.1, sampling_params.py; v1/core/sched/utils.py](references.md#r371)
+[OFFICIAL-DOCUMENTATION] Scheduler `check_stop` examines EOS, explicit stop-token identifiers, model-context/response caps and then repetition detection. Thus EOS encountered exactly at a cap is classified by the earlier stop check. A minimum-length condition appears later in that function; processor-level EOS suppression and scheduler classification must be read together. `ignore_eos` handling is configured through sampling parameters, not inferred from a finish string. [R37.1, sampling_params.py; v1/core/sched/utils.py](references.md#r37-1)
 
-[OFFICIAL-DOCUMENTATION] The fast detokenizer includes recovery for invalid-prefix/non-monotonic UTF-8 decoding behavior. That code acknowledges tokenizer edge cases; it does not prove that a reset yields identical text for every malformed input. The slow path maintains prompt and read offsets separately. A deployment's tokenizer-library version selects the fast/slow path, so reproducibility must pin it. [R37.1, FastIncrementalDetokenizer and SlowIncrementalDetokenizer](references.md#r371)
+[OFFICIAL-DOCUMENTATION] The fast detokenizer includes recovery for invalid-prefix/non-monotonic UTF-8 decoding behavior. That code acknowledges tokenizer edge cases; it does not prove that a reset yields identical text for every malformed input. The slow path maintains prompt and read offsets separately. A deployment's tokenizer-library version selects the fast/slow path, so reproducibility must pin it. [R37.1, FastIncrementalDetokenizer and SlowIncrementalDetokenizer](references.md#r37-1)
 
 ```figure
 {
@@ -488,7 +488,7 @@ spec:
 
 ### Reported experiments
 
-[PAPER-REPORTED] The beam/sample+vote study's actual stopping experiment uses the full Spider development workload and reports truncation after comparing model sizes and candidate budgets. [R37.5, §§4,6](references.md#r375)
+[PAPER-REPORTED] The beam/sample+vote study's actual stopping experiment uses the full Spider development workload and reports truncation after comparing model sizes and candidate budgets. [R37.5, §§4,6](references.md#r37-5)
 
 | Protocol dimension | Disclosed setting |
 |---|---|
@@ -501,9 +501,9 @@ spec:
 
 ## Observations
 
-**What the paper claims.** [PAPER-REPORTED] The study tests whether over-generation explains beam's advantage over sample+vote and reports that the truncation data do not support that explanation in this workload. [R37.5, §6](references.md#r375)
+**What the paper claims.** [PAPER-REPORTED] The study tests whether over-generation explains beam's advantage over sample+vote and reports that the truncation data do not support that explanation in this workload. [R37.5, §6](references.md#r37-5)
 
-**What the evidence shows.** [PAPER-REPORTED] Across sizes, beam truncation is reported as0.8–2.4% at width 1 and0.0–1.1% at width 8, reaching zero at 3B/7B. Sample+vote truncation remains1.0–2.7%. These ranges describe model/budget configurations under one cap, not confidence intervals or universal monotonicity of arbitrary length penalties. [R37.5, §6](references.md#r375)
+**What the evidence shows.** [PAPER-REPORTED] Across sizes, beam truncation is reported as0.8–2.4% at width 1 and0.0–1.1% at width 8, reaching zero at 3B/7B. Sample+vote truncation remains1.0–2.7%. These ranges describe model/budget configurations under one cap, not confidence intervals or universal monotonicity of arbitrary length penalties. [R37.5, §6](references.md#r37-5)
 
 **What we infer.** [DERIVED] A stopping intervention can change the observed quality/latency frontier without changing weights. Natural completion and truncation should accompany accuracy; completed-only metrics can conceal which examples were removed. The paper's use of a negative length exponent is one scoring convention, not a portable setting across APIs.
 
@@ -521,7 +521,7 @@ spec:
 
 ### Improvements
 
-[OFFICIAL-DOCUMENTATION] The pinned earliest-completion stop matcher explicitly handles multiple newly generated tokens, avoiding dependence on how a speculative block is chunked. Its tie rule is part of that improvement's behavior. The source does not provide an isolated throughput or correctness benchmark for this function; the manuscript claims only the disclosed operation. [R37.1, check_stop_strings](references.md#r371)
+[OFFICIAL-DOCUMENTATION] The pinned earliest-completion stop matcher explicitly handles multiple newly generated tokens, avoiding dependence on how a speculative block is chunked. Its tie rule is part of that improvement's behavior. The source does not provide an isolated throughput or correctness benchmark for this function; the manuscript claims only the disclosed operation. [R37.1, check_stop_strings](references.md#r37-1)
 
 ## Limitations
 

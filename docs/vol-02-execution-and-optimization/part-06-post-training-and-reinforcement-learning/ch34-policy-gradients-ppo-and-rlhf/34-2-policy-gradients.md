@@ -403,7 +403,7 @@ spec:
 
 ## Experimental design
 
-[PAPER-REPORTED] CTPO evaluates cumulative-token surrogates on mathematical tool use. The source's prefix identity and its implemented clipped, group-normalized terminal-outcome surrogate must be assessed separately. [R34.3, §3, Appendix A](references.md#r343)
+[PAPER-REPORTED] CTPO evaluates cumulative-token surrogates on mathematical tool use. The source's prefix identity and its implemented clipped, group-normalized terminal-outcome surrogate must be assessed separately. [R34.3, §3, Appendix A](references.md#r34-3)
 
 | Protocol | Disclosed setting |
 |---|---|
@@ -416,9 +416,9 @@ spec:
 
 ## Observations
 
-**What the paper claims.** [PAPER-REPORTED] CTPO motivates cumulative prefix correction as a less variable alternative to full-sequence weighting and uses position-adaptive clipping in its practical method. [R34.3, §3](references.md#r343)
+**What the paper claims.** [PAPER-REPORTED] CTPO motivates cumulative prefix correction as a less variable alternative to full-sequence weighting and uses position-adaptive clipping in its practical method. [R34.3, §3](references.md#r34-3)
 
-**What the evidence shows.** [PAPER-REPORTED] Its 4B average is 51.4 versus GSPO 47.7; the 14B BRUMO result is 63.0 versus GSPO 63.3. These results support task-specific utility, not universal dominance or unbiasedness of the implemented surrogate. [R34.3, Tables 2–3](references.md#r343)
+**What the evidence shows.** [PAPER-REPORTED] Its 4B average is 51.4 versus GSPO 47.7; the 14B BRUMO result is 63.0 versus GSPO 63.3. These results support task-specific utility, not universal dominance or unbiasedness of the implemented surrogate. [R34.3, Tables 2–3](references.md#r34-3)
 
 **What we infer.** [MATHEMATICALLY-DERIVED] The finite counterexample shows why an outcome-level behavior reward cannot inherit a prefix-measurability theorem. Empirical success can coexist with a biased surrogate. The correct scientific account states both without treating one as a refutation of the other.
 
@@ -503,4 +503,4 @@ spec:
 
 ## References
 
-[R34.3](references.md#r343) provides the inspected contemporary method and experiments. [R34.1](references.md#r341) records version-specific correction code. The estimator identities, counterexample and analytical figures are independently derived here.
+[R34.3](references.md#r34-3) provides the inspected contemporary method and experiments. [R34.1](references.md#r34-1) records version-specific correction code. The estimator identities, counterexample and analytical figures are independently derived here.

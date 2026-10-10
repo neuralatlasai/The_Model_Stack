@@ -492,4 +492,4 @@ where teacher storage, communication and caches are additional. In the rank diag
 
 ## References
 
-[R39.1](references.md#r391), [R39.3](references.md#r393), [R39.9](references.md#r399).
+[R39.1](references.md#r39-1), [R39.3](references.md#r39-3), [R39.9](references.md#r39-9).

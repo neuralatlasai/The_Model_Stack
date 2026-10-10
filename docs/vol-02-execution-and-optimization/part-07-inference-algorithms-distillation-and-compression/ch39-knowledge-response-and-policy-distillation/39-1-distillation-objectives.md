@@ -587,4 +587,4 @@ $$
 
 ## References
 
-[R39.1](references.md#r391), [R39.2](references.md#r392), [R39.9](references.md#r399). Exact versions, first dates and claim locators are in the chapter ledger.
+[R39.1](references.md#r39-1), [R39.2](references.md#r39-2), [R39.9](references.md#r39-9). Exact versions, first dates and claim locators are in the chapter ledger.

@@ -55,18 +55,23 @@ export const GLASS_FRAGMENT = /* glsl */ `
     // light, soft fill, sky/ground ambient, creases darkened where the normal
     // turns fastest on screen, a warm translucent edge instead of an ink rim
     if (uPorcelain > 0.5) {
-      float wrap = clamp((dot(n, l) + 0.45) / 1.45, 0.0, 1.0);
+      float wrap = clamp((dot(n, l) + 0.24) / 1.24, 0.0, 1.0);
       float fill = max(dot(n, normalize(vec3(0.75, 0.15, 0.55))), 0.0);
       float sky = 0.5 + 0.5 * n.y;
       float crease = clamp(length(fwidth(n)) * uCrease, 0.0, 1.0);
-      vec3 shadow = mix(vec3(0.72, 0.735, 0.70), vec3(0.45, 0.50, 0.48), uDark);
+      vec3 shadow = mix(vec3(0.51, 0.49, 0.45), vec3(0.29, 0.34, 0.37), uDark);
       vec3 shade = mix(shadow, vec3(1.0, 0.995, 0.975), wrap);
       shade += vec3(0.04, 0.038, 0.034) * fill + vec3(0.03) * sky;
-      shade *= 1.0 - mix(0.16, 0.24, uDark) * crease;
+      shade *= 1.0 - mix(0.28, 0.30, uDark) * crease;
       shade *= 1.0 - 0.12 * fres;
       shade += vec3(0.055, 0.055, 0.035) * fres;
-      float sheen = pow(max(dot(reflect(-l, n), v), 0.0), 18.0) * mix(0.045, 0.025, uDark);
+      float sheen = pow(max(dot(reflect(-l, n), v), 0.0), 28.0) * mix(0.07, 0.05, uDark);
       col = uBody * shade + vec3(sheen);
+      // Grazing light defines the warm charcoal silhouette at night while
+      // leaving the neural atlas as the focal layer.
+      vec3 nightBody = uBody * (0.28 + 0.65 * wrap + 0.16 * fill) * (1.0 - 0.30 * crease);
+      vec3 edgeLight = uRim * pow(1.0 - facing, 3.8) * (0.22 + 0.20 * sky);
+      col = mix(col, nightBody + edgeLight + vec3(sheen * 0.25), uDark);
       a = uOpacity;
     }
     // the part in view: its region glows softly in the part's colour

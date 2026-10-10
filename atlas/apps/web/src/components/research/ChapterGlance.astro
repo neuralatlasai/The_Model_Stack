@@ -122,16 +122,6 @@ const hasAny = totals.some((total) => total > 0);
           </tr>
         ))}
       </tbody>
-      <tfoot>
-        <tr>
-          <th scope="row" class="rb-glance__sec">
-            Chapter
-          </th>
-          {totals.map((total) => (
-            <td class="rb-glance__total">{total}</td>
-          ))}
-        </tr>
-      </tfoot>
     </table>
   </figure>
 )}

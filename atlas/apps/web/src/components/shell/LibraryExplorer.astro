@@ -4,8 +4,7 @@
  *
  *   weave    the 66 chapters on one axis in book order; every prerequisite
  *            edge an arch above it (oxblood where both chapters are written),
- *            a halftone column below each chapter for its words (or the
- *            measure the lens selects), the parts as bands beneath
+ *            with the parts as bands beneath
  *   map      the book as one table: 3 volumes → 11 part rows × 6 chapter
  *            tiles; every tile carries its 6 sections as cells, filled when
  *            drafted. Written = solid part colour; planned = hatched
@@ -13,7 +12,7 @@
  *            measures, degree, sections, and links; or a part's chapters; or
  *            a lens ranking; at rest, where the writing stands and the key
  *   ledger   every chapter, part by part, as a two-column catalogue: title,
- *            thesis, section strip, words, figures, equations, state
+ *            thesis, section strip, state
  *
  * Connected (client library-explorer.ts): a weave column, a tile, a cell, or
  * a catalogue entry focuses its chapter everywhere — what it builds on
@@ -24,7 +23,7 @@
  */
 import { grouped } from '../../lib/format.ts';
 import { jsonForHtml } from '../../lib/json.ts';
-import { compactCount, WEAVE, weaveLayout, type LibraryModel } from '../../lib/library-model.ts';
+import { WEAVE, weaveLayout, type LibraryModel } from '../../lib/library-model.ts';
 import { PART_ICON } from '../../lib/part-icons.ts';
 import ChapterSymbol from './ChapterSymbol.astro';
 
@@ -54,40 +53,9 @@ const written = new Set(model.chapters.filter((chapter) => chapter.written).map(
 const at = (s: number): string => String(Math.round((s / weave.slots) * 100000) / 1000);
 const inDraft = model.chapters.filter((chapter) => !chapter.written && chapter.sectionsWritten > 0);
 const liveArcs = weave.arcs.filter((arc) => written.has(arc.p) && written.has(arc.n)).length;
-const wordiest = model.chapters.reduce<(typeof model.chapters)[number] | undefined>(
-  (best, chapter) => (best === undefined || chapter.words > best.words ? chapter : best),
-  undefined,
-);
 
 // At rest, the readout says where the writing stands — computed, part by part.
 const begun = model.parts.filter((part) => part.sectionsWritten > 0);
-const quiet = model.parts.filter((part) => part.sectionsWritten === 0);
-const quietRange =
-  quiet.length === 0
-    ? ''
-    : quiet.length === 1
-      ? `Part ${quiet[0]?.numeral ?? ''} is planned.`
-      : quiet.every((part, index) => index === 0 || part.n === (quiet[index - 1]?.n ?? 0) + 1)
-        ? `Parts ${quiet[0]?.numeral ?? ''}–${quiet.at(-1)?.numeral ?? ''} are planned.`
-        : `${String(quiet.length)} parts are planned.`;
-const standing = `${begun
-  .map((part) =>
-    part.written === part.chapters.length
-      ? `Part ${part.numeral} is complete`
-      : part.written > 0
-        ? `Part ${part.numeral} has ${String(part.written)} of ${String(part.chapters.length)} chapters written and ${String(part.sectionsWritten)} of ${String(part.sectionsTotal)} sections drafted`
-        : `Part ${part.numeral} has ${String(part.sectionsWritten)} of ${String(part.sectionsTotal)} sections drafted`,
-  )
-  .join('; ')}. ${quietRange}`;
-
-// …and where the weave is densest: the chapters most built upon, and the most dependent.
-const byUnlocks = [...model.chapters].sort((a, b) => b.unlocks.length - a.unlocks.length || a.n - b.n).slice(0, 3);
-const mostPrereqs = Math.max(0, ...model.chapters.map((chapter) => chapter.prereqs.length));
-const dependent = model.chapters.filter((chapter) => chapter.prereqs.length === mostPrereqs && mostPrereqs > 0);
-const listed = (items: readonly string[]): string =>
-  items.length <= 1 ? (items[0] ?? '') : `${items.slice(0, -1).join(', ')} and ${items.at(-1) ?? ''}`;
-const weaveNote = `Most built upon: ${listed(byUnlocks.map((chapter) => `${chapter.number} ${chapter.short} (${String(chapter.unlocks.length)} direct)`))}. Most dependent: ${dependent.length > 1 ? 'chapters' : 'chapter'} ${listed(dependent.map((chapter) => chapter.number))}, with ${String(mostPrereqs)} prerequisites${dependent.length > 1 ? ' each' : ''}.`;
-
 const clientModel = {
   parts: model.parts.map((part) => ({
     n: part.n,
@@ -126,9 +94,6 @@ const clientModel = {
 const LENS_CHOICES = [
   ['none', 'state'],
   ['sections', 'sections'],
-  ['words', 'words'],
-  ['figures', 'figures'],
-  ['equations', 'equations'],
   ['works', 'works cited'],
 ] as const;
 
@@ -137,7 +102,6 @@ const LEGEND = [
   ['draft', 'in progress · sections drafted'],
   ['planned', 'planned chapter'],
   ['cell', 'drafted section'],
-  ['dots', 'words, as halftone'],
   ['arc', 'prerequisite · oxblood if both written'],
 ] as const;
 ---
@@ -206,13 +170,6 @@ const LEGEND = [
                 </li>
               ))}
             </ol>
-            <p class="lib-weave__scale" data-lib-scale>
-              {wordiest !== undefined && wordiest.words > 0 && (
-                <>
-                  <b>words</b> per chapter · max {grouped(wordiest.words)} (ch {wordiest.number})
-                </>
-              )}
-            </p>
             <ol class="lib-weave__parts">
               {weave.parts.map((span) => {
                 const part = partByN.get(span.n);
@@ -309,7 +266,7 @@ const LEGEND = [
                         href={chapter.url}
                         tabindex={chapter.n === 1 ? 0 : -1}
                         data-lib-tile={chapter.n}
-                        aria-label={`${chapter.number} ${chapter.title}. ${chapter.state}; ${String(chapter.sectionsWritten)} of ${String(chapter.sections.length)} sections drafted; ${grouped(chapter.words)} words. Builds on ${String(chapter.prereqs.length)}, unlocks ${String(chapter.unlocks.length)}.`}
+                        aria-label={`${chapter.number} ${chapter.title}. ${chapter.state}; ${String(chapter.sectionsWritten)} of ${String(chapter.sections.length)} sections drafted. Builds on ${String(chapter.prereqs.length)}, unlocks ${String(chapter.unlocks.length)}.`}
                       >
                         <span class="lib-tile__n">
                           <ChapterSymbol chapter={chapter.n} />
@@ -337,9 +294,6 @@ const LEGEND = [
                           <i />
                         </span>
                         <span class="lib-tile__m">
-                          <span data-m="words">{compactCount(chapter.words)}</span>
-                          <span data-m="figures">{chapter.figures > 0 ? chapter.figures : '—'}</span>
-                          <span data-m="equations">{chapter.equations > 0 ? chapter.equations : '—'}</span>
                           <span data-m="works">{chapter.works > 0 ? chapter.works : '—'}</span>
                         </span>
                       </span>
@@ -390,7 +344,7 @@ const LEGEND = [
                     </span>
                     <span>
                       {part.written}/{part.chapters.length} chapters · {part.sectionsWritten}/{part.sectionsTotal}{' '}
-                      sections · {grouped(part.words)} words
+                      sections
                     </span>
                   </p>
                   {part.outcome !== null && (
@@ -435,15 +389,6 @@ const LEGEND = [
                               />
                             ))}
                           </span>
-                          <span class="lib-ch__stat">
-                            {[
-                              chapter.words > 0 ? `${grouped(chapter.words)} words` : 'no words yet',
-                              chapter.figures > 0 ? `${String(chapter.figures)} fig` : null,
-                              chapter.equations > 0 ? `${String(chapter.equations)} eq` : null,
-                            ]
-                              .filter((part) => part !== null)
-                              .join(' · ')}
-                          </span>
                           <span class="lib-ch__state">
                             {chapter.written ? 'draft' : chapter.sectionsWritten > 0 ? 'in progress' : 'planned'}
                           </span>
@@ -465,21 +410,16 @@ const LEGEND = [
           <span class="lib-badge">Readout</span>
         </p>
         <p class="lib-ro__title" data-lib-title>
-          The manuscript, today
+          Find your next chapter
         </p>
         <p class="lib-ro__state" data-lib-state>
-          Point at any chapter or part
+          Explore a chapter or part
         </p>
         <p class="lib-ro__thesis" data-lib-thesis>
-          {standing} {weaveNote}
+          Follow the prerequisite arches to see how ideas connect. Select a chapter to inspect its argument, sections,
+          and the work it builds on.
         </p>
         <dl class="lib-ro__rows" data-lib-rows>
-          <div>
-            <dt>figures · equations</dt>
-            <dd>
-              <a href="/figures/">{grouped(totals.figures)}</a> · <a href="/equations/">{grouped(totals.equations)}</a>
-            </dd>
-          </div>
           <div>
             <dt>works cited</dt>
             <dd>
@@ -535,7 +475,7 @@ const LEGEND = [
           <li class:list={['lib-shelf__item', item.written ? 'is-written' : 'is-planned']}>
             <span class="lib-shelf__num">{item.number ?? '·'}</span>
             <a href={item.url}>{item.title}</a>
-            <span class="lib-shelf__meta">{item.written ? `${grouped(item.words)} words` : item.state}</span>
+            <span class="lib-shelf__meta">{item.state}</span>
           </li>
         ))}
       </ol>

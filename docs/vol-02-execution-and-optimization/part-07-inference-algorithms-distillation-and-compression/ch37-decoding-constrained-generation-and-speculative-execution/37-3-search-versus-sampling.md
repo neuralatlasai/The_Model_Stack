@@ -70,7 +70,7 @@ editorial_status: manuscript_draft
 
 [DERIVED] Locally choosing the largest next-token probability need not maximize complete-sequence probability. A promising prefix can lead to a low-probability continuation; a slightly weaker prefix can terminate confidently. Beam search keeps several prefixes to reduce that local commitment. Its finite width still discards alternatives irrevocably, and its scoring rule may optimize length-adjusted likelihood rather than likelihood itself. The meaning of “best beam” is therefore determined by the score and stopping rule, not by beam width alone.
 
-[PAPER-REPORTED] A 2026 grammar-constrained text-to-SQL study compares beam widths and execution-vote sample counts on the same1034 examples. The result is informative precisely because it reports model size, quantization, candidate budgets, single-run uncertainty and grammar incompleteness. It does not establish a task-independent ordering between beam search and sampling. [R37.5, §§3–7](references.md#r375)
+[PAPER-REPORTED] A 2026 grammar-constrained text-to-SQL study compares beam widths and execution-vote sample counts on the same1034 examples. The result is informative precisely because it reports model size, quantization, candidate budgets, single-run uncertainty and grammar incompleteness. It does not establish a task-independent ordering between beam search and sampling. [R37.5, §§3–7](references.md#r37-5)
 
 ## Intuition
 
@@ -415,9 +415,9 @@ $$
 
 [DERIVED] Implementation route: **vLLM** (reference-stack §4 #41, **LLM inference engine**; §4.1 **INFERENCE ENGINE**), v0.31.0 at full commit db9527a46873454610df6dbedf79a36d6bf1a7f6. Source inspection establishes disclosed behavior, not an executed deployment.
 
-[OFFICIAL-DOCUMENTATION] Pinned vLLM offline beam search performs one-token requests, gathers a top-logprob candidate list, splits EOS completions from continuing beams and sorts by its own beam-score helper. That helper uses `len(tokens)` including prompt tokens and removes a final EOS from its denominator; this differs from Eq 37.7's response/EOS convention. The score sums returned raw log probabilities. Grammar masks are reconstructed per beam by replaying generated tokens because that backend interface does not clone matcher state. [R37.1, beam_search/offline.py and utils.py](references.md#r371)
+[OFFICIAL-DOCUMENTATION] Pinned vLLM offline beam search performs one-token requests, gathers a top-logprob candidate list, splits EOS completions from continuing beams and sorts by its own beam-score helper. That helper uses `len(tokens)` including prompt tokens and removes a final EOS from its denominator; this differs from Eq 37.7's response/EOS convention. The score sums returned raw log probabilities. Grammar masks are reconstructed per beam by replaying generated tokens because that backend interface does not clone matcher state. [R37.1, beam_search/offline.py and utils.py](references.md#r37-1)
 
-[OFFICIAL-DOCUMENTATION] When a legal-token set exceeds the engine whitelist cap, this implementation skips engine-side whitelist enforcement and filters its returned candidate list afterward. Its code requests roughly twice the beam width in top log probabilities. Therefore it must not be described as exhaustive expansion of every legal event. Its loop stops on empty active beams or the token iteration limit rather than the SQL paper's first-arriving-completed-set rule. The two implementations are not silently equated. [R37.1, _build_beam_sampling_params and _beam_search_step](references.md#r371)
+[OFFICIAL-DOCUMENTATION] When a legal-token set exceeds the engine whitelist cap, this implementation skips engine-side whitelist enforcement and filters its returned candidate list afterward. Its code requests roughly twice the beam width in top log probabilities. Therefore it must not be described as exhaustive expansion of every legal event. Its loop stops on empty active beams or the token iteration limit rather than the SQL paper's first-arriving-completed-set rule. The two implementations are not silently equated. [R37.1, _build_beam_sampling_params and _beam_search_step](references.md#r37-1)
 
 ```figure
 {
@@ -495,7 +495,7 @@ $$
 
 ### Reported experiments
 
-[PAPER-REPORTED] The SQL study compares four model sizes and budgets1/2/4/8 on every Spider development example. The matched budget is beam width versus number of samples, not measured FLOPs or elapsed time. [R37.5, §§3–4](references.md#r375)
+[PAPER-REPORTED] The SQL study compares four model sizes and budgets1/2/4/8 on every Spider development example. The matched budget is beam width versus number of samples, not measured FLOPs or elapsed time. [R37.5, §§3–4](references.md#r37-5)
 
 | Field | Actual disclosed protocol |
 |---|---|
@@ -508,9 +508,9 @@ $$
 
 ## Observations
 
-**What the paper claims.** [PAPER-REPORTED] The source argues that beam is not significantly worse than sample+vote at its matched candidate counts, and that extra small-model inference generally fails to substitute for the next larger model. [R37.5, §5](references.md#r375)
+**What the paper claims.** [PAPER-REPORTED] The source argues that beam is not significantly worse than sample+vote at its matched candidate counts, and that extra small-model inference generally fails to substitute for the next larger model. [R37.5, §5](references.md#r37-5)
 
-**What the evidence shows.** [PAPER-REPORTED] At1.5B, beam accuracy rises.351→.505 from width 1→8, versus sample+vote.299→.450. Beam is significantly ahead in11of16paired cells and behind in none, but at 0.5B/budget 8 sampling is numerically.248 versus beam.245 with p=.89. The paper's “never beats” wording must therefore be read as its significance statement, not numerical dominance. At7B, width 4 scores.662 and width 8.654: larger width is not monotonically better in that table. [R37.5, Tables1–2](references.md#r375)
+**What the evidence shows.** [PAPER-REPORTED] At1.5B, beam accuracy rises.351→.505 from width 1→8, versus sample+vote.299→.450. Beam is significantly ahead in11of16paired cells and behind in none, but at 0.5B/budget 8 sampling is numerically.248 versus beam.245 with p=.89. The paper's “never beats” wording must therefore be read as its significance statement, not numerical dominance. At7B, width 4 scores.662 and width 8.654: larger width is not monotonically better in that table. [R37.5, Tables1–2](references.md#r37-5)
 
 **What we infer.** [DERIVED] Beam width and candidate count are useful experimental controls but incomplete cost measures. A single-seed result cannot establish sampling variance. Grammar incompleteness and score/stopping conventions can drive the apparent comparison as much as the search family.
 
@@ -518,7 +518,7 @@ $$
 
 ## Failure modes
 
-[PAPER-REPORTED] The paper diagnoses correct SQLite queries rejected by its incomplete grammar, including value-list IN, IS NOT NULL, outer joins and aliases. At3B the constraint corrects25predictions and breaks58; at 7B it corrects28 and breaks73. This is empirical grammar coverage failure, not evidence that normalization reorders still-legal greedy tokens. [R37.5, §5](references.md#r375)
+[PAPER-REPORTED] The paper diagnoses correct SQLite queries rejected by its incomplete grammar, including value-list IN, IS NOT NULL, outer joins and aliases. At3B the constraint corrects25predictions and breaks58; at 7B it corrects28 and breaks73. This is empirical grammar coverage failure, not evidence that normalization reorders still-legal greedy tokens. [R37.5, §5](references.md#r37-5)
 
 [DERIVED] Other failures are length-score sign errors, prompt-inclusive denominators compared with response-only scores, early completed-set stopping misrepresented as optimal, lost cache ownership after pruning and legal events omitted by pre-mask top-list retrieval. Diverse group beams can optimize an overlap proxy at the expense of likelihood. Execution voting can reward a spurious query that matches gold on one finite database while implementing the wrong general relation.
 
@@ -568,7 +568,7 @@ spec:
 
 ### Improvements
 
-[PAPER-REPORTED] The 2026 SQL study provides paired grammar-failure diagnosis beyond a coarse beam/sampling ranking. That diagnosis isolates missing grammar constructs among correct-but-rejected predictions. It does not establish a repaired-grammar result or a new diversity mechanism; those improvements are not fabricated here. [R37.5, §5](references.md#r375)
+[PAPER-REPORTED] The 2026 SQL study provides paired grammar-failure diagnosis beyond a coarse beam/sampling ranking. That diagnosis isolates missing grammar constructs among correct-but-rejected predictions. It does not establish a repaired-grammar result or a new diversity mechanism; those improvements are not fabricated here. [R37.5, §5](references.md#r37-5)
 
 ## Limitations
 
