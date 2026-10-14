@@ -182,9 +182,7 @@ export function sliderModel(input: CalculatorInput): SliderModel {
     };
   }
   const integerFormat = input.format === 'integer' || input.format === 'tokens' || input.format === 'params';
-  const step =
-    input.step ??
-    (integerFormat ? Math.max(1, Math.round((input.max - input.min) / 200)) : (input.max - input.min) / 200 || 1);
+  const step = input.step ?? (integerFormat ? 1 : (input.max - input.min) / 200 || 1);
   return {
     min: input.min,
     max: input.max,

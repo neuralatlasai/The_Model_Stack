@@ -103,9 +103,14 @@ test('series isolation and mobile touch retain exact-value readouts', async ({ b
   }
 });
 
-test('previous chapters keep their existing figure presentation', async ({ page }) => {
+test('authored figures in earlier chapters use the same readable scientific presentation', async ({ page }) => {
   await page.goto('/ch08-cleaning-deduplication-privacy-filtering-and-contamination/08-2-quality-estimation/');
-  await expect(page.locator('.sc-plate, [data-responsive-chart], .sc-sensitivity')).toHaveCount(0);
+  const plate = page.locator('.aw-manuscript .sc-plate').first();
+  await plate.scrollIntoViewIfNeeded();
+  await expect(plate).toBeVisible();
+  await expect(plate.locator('.vg-figure__title')).toHaveCSS('font-family', /EB Garamond/u);
+  await page.setViewportSize({ width: 390, height: 844 });
+  await expect.poll(() => page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
 });
 
 test('long evidence captions wrap and long equations scroll inside the mobile reading width', async ({ page }) => {

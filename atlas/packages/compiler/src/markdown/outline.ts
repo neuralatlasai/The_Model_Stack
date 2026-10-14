@@ -27,6 +27,11 @@ function clip(text: string): string {
 }
 
 function markerFor(block: Block): OutlineMarker | null {
+  // Mathematical procedures retain their heading/paragraph and display math.
+  if ((block.kind === 'heading' || block.kind === 'paragraph') && block.anchor?.startsWith('alg-') === true) {
+    const number = block.anchor.slice(4).replace('-', '.');
+    return { type: 'algorithm', anchor: block.anchor, label: `Alg. ${number}` };
+  }
   switch (block.kind) {
     case 'equation':
       return block.number !== null && block.anchor !== null

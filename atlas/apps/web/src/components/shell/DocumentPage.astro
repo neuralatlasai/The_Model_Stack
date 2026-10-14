@@ -121,7 +121,14 @@ const thesisCovered = thesis !== '' && squash(openingText).toLowerCase().include
 Astro.locals.completeReading = true;
 const pageTitle = doc.header.number === null ? doc.header.title : `${doc.header.number} ${doc.header.title}`;
 const description = thesis !== '' ? thesis : (node?.summary ?? doc.header.title);
-const jsonLd = documentJsonLd({ doc, graph, registry, site: Astro.site, edition: manifest.edition });
+const jsonLd = documentJsonLd({
+  doc,
+  graph,
+  registry,
+  site: Astro.site,
+  edition: manifest.edition,
+  base: import.meta.env.BASE_URL,
+});
 ---
 
 <ReaderLayout

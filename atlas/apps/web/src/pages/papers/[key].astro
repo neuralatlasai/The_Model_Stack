@@ -138,7 +138,7 @@ const clientModel = {
   canonicalPath={record.atlasUrl}
   currentId={null}
   navKey="papers"
-  jsonLd={paperJsonLd(record, Astro.site)}
+  jsonLd={paperJsonLd(record, Astro.site, import.meta.env.BASE_URL)}
 >
   <Breadcrumbs crumbs={[{ title: 'Papers', number: null, url: '/papers/' }]} current={record.key} />
   <article class="sh-article pp" data-paper-page>

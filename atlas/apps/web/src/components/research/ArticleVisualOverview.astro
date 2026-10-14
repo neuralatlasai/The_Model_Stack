@@ -21,8 +21,8 @@ interface Props {
 
 const { doc } = Astro.props;
 const training = doc.meta.chapter !== null && doc.meta.chapter >= 19 && doc.meta.chapter <= 24;
-const researchPlate = doc.meta.chapter !== null && doc.meta.chapter >= 30 && doc.meta.chapter <= 39;
 const editorial = doc.meta.entityType === 'chapter' || doc.meta.entityType === 'section';
+const researchPlate = editorial;
 const selectedFigures = articleOverviewFigures(doc.figures);
 const orderedFigures = training
   ? [...selectedFigures].sort((a, b) => Number(b.spec.kind === 'calculator') - Number(a.spec.kind === 'calculator'))
@@ -99,7 +99,14 @@ const contextFields: readonly (readonly [keyof PerformanceContext, string])[] = 
         )}
         <div class="aw-visual__body" role="region" aria-labelledby={`${figure.anchor}--heading`} tabindex={0}>
           {isCalculator(figure) ? (
-            <Calculator client:visible figure={figure} explore={researchPlate} {...tex} />
+            <>
+              <Calculator client:visible figure={figure} explore={researchPlate} {...tex} />
+              <noscript>
+                <p class="cx-calc__note">
+                  Authored default values are shown. Enable JavaScript to adjust this equation.
+                </p>
+              </noscript>
+            </>
           ) : researchPlate && figure.spec.kind === 'chart' ? (
             <ResearchChart
               client:visible

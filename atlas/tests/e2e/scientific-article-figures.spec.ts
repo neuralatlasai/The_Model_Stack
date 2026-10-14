@@ -1,0 +1,119 @@
+﻿import { AxeBuilder } from '@axe-core/playwright';
+import { expect, test } from '@playwright/test';
+
+const PHASES = '/ch42-prefill-decode-kv-state-and-inference-resource-models/42-1-phase-decomposition/';
+const POLICIES = '/ch54-multi-agent-coordination-and-system-level-evaluation/54-4-coordination-policies/';
+
+test.use({ reducedMotion: 'reduce' });
+
+test('new article calculators support exact values, native keys, validation and reset at both widths', async ({
+  page,
+}, testInfo) => {
+  const errors: string[] = [];
+  page.on('pageerror', (error) => errors.push(error.message));
+  await page.goto(PHASES);
+  const overview = page.locator('.aw-visual[data-source-figure="fig-42.3"]');
+  const canonical = page.locator('#fig-42-3--inline');
+  for (const width of [1440, 390]) {
+    await page.setViewportSize({ width, height: 1000 });
+    await expect(overview).toHaveClass(/sc-plate/u);
+    await expect(canonical.locator('.sc-sensitivity')).toHaveCount(1);
+    await overview.scrollIntoViewIfNeeded();
+    await expect(overview.locator('.sc-sensitivity')).toBeVisible();
+    const exact = overview.getByRole('spinbutton', { name: 'Exact value: Prompt tokens', exact: true });
+    const field = overview.locator('.vg-calc__field[data-vg-key="Sp"]');
+    const range = field.getByRole('slider');
+    await exact.fill('12345');
+    await exact.press('Tab');
+    await expect(exact).toHaveValue('12345');
+    await expect(range).toHaveValue('12345');
+    await expect(field.locator('[data-vg-value="Sp"]')).toHaveText('12,345');
+    await range.focus();
+    await range.press('ArrowRight');
+    await expect(exact).toHaveValue('12346');
+    await expect(range).toHaveAttribute('aria-valuetext', '12,346');
+    await overview.getByRole('button', { name: /Reset .* to its default values/u }).click();
+    await expect(exact).toHaveValue('2048');
+    await expect(range).toHaveValue('2048');
+    for (const invalid of ['0', '131073', '2.5', '']) {
+      await exact.fill(invalid);
+      await exact.press('Tab');
+      expect(await exact.evaluate((element) => (element as HTMLInputElement).validity.valid)).toBe(false);
+      await expect(field.locator('.vg-calc__exact-help')).toBeVisible();
+      await expect(field.locator('[data-vg-value="Sp"]')).toHaveText('2,048');
+    }
+    const reset = overview.getByRole('button', { name: /Reset .* to its default values/u });
+    await expect(reset).toBeEnabled();
+    await reset.click();
+    await expect(exact).toHaveValue('2048');
+    await expect(field.locator('.vg-calc__exact-help')).toBeHidden();
+    await exact.fill('0');
+    const heads = overview.getByRole('spinbutton', { name: 'Exact value: Query heads', exact: true });
+    await heads.fill('64');
+    await heads.press('Tab');
+    await expect(exact).toHaveValue('0');
+    await reset.click();
+    await expect(exact).toHaveValue('2048');
+    await expect(heads).toHaveValue('32');
+    await exact.fill('');
+    await exact.press('Escape');
+    await expect(exact).toHaveValue('2048');
+    await exact.fill('2048');
+    await exact.press('Tab');
+    expect(await exact.evaluate((element) => (element as HTMLInputElement).validity.valid)).toBe(true);
+    expect(await range.evaluate((element) => element.getBoundingClientRect().height)).toBeGreaterThanOrEqual(
+      width === 390 ? 44 : 32,
+    );
+    expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
+    await overview.screenshot({ path: testInfo.outputPath(`calculator-${String(width)}.png`) });
+  }
+  expect(errors).toEqual([]);
+  const accessibility = await new AxeBuilder({ page }).include('.aw-visual[data-source-figure="fig-42.3"]').analyze();
+  expect(accessibility.violations).toEqual([]);
+});
+
+test('coordination calculator retains decimals and selectable response dimensions', async ({ page }) => {
+  await page.goto(POLICIES);
+  const figure = page.locator('.aw-visual[data-source-figure="fig-54.12"]');
+  await figure.scrollIntoViewIfNeeded();
+  const exact = figure.getByRole('spinbutton', { name: 'Exact value: Initial correctness probability', exact: true });
+  await exact.fill('0.6');
+  await exact.press('Enter');
+  await expect(exact).toHaveValue('0.6');
+  await expect(figure.locator('[data-vg-value="delta"]')).toContainText('14');
+  await figure.getByRole('combobox', { name: 'Vary', exact: true }).selectOption('corr');
+  await figure.getByRole('combobox', { name: 'Observe', exact: true }).selectOption('after');
+  await expect(figure.getByRole('img', { name: /Sensitivity of after to corr/u })).toBeVisible();
+  await expect(figure.locator('.sc-sensitivity__note')).toContainText('remaining controls held fixed');
+  await page.goto('/ch51-tool-use-protocol-interfaces-and-reliable-execution/51-4-execution-correctness/');
+  const percent = page.locator('.aw-visual[data-source-figure="fig-51.12"]');
+  await percent.scrollIntoViewIfNeeded();
+  const probability = percent.getByRole('spinbutton', { name: 'Exact value: One-task iid trial success', exact: true });
+  await expect(percent.locator('.vg-calc__exact-help--units')).toContainText('0.5 represents 50%');
+  await expect(percent.locator('.vg-calc__exact-help--units')).toBeVisible();
+  await probability.fill('0.5');
+  await probability.press('Enter');
+  await expect(probability).toHaveValue('0.5');
+  await expect(percent.locator('[data-vg-value="p"]')).toContainText('50');
+});
+
+test('new article figures preserve rendered defaults and accessible math without JavaScript', async ({ browser }) => {
+  const context = await browser.newContext({ javaScriptEnabled: false, viewport: { width: 390, height: 844 } });
+  try {
+    const page = await context.newPage();
+    await page.goto(PHASES);
+    const figure = page.locator('.aw-visual[data-source-figure="fig-42.3"]');
+    await expect(figure.locator('.vg-calc__tex .katex-mathml math')).toHaveCount(1);
+    for (const control of await figure.locator('input, select, button').all()) await expect(control).toBeDisabled();
+    const staticNote = figure.locator('noscript .cx-calc__note');
+    await expect(staticNote).toBeVisible();
+    await expect(staticNote).toContainText('Authored default values are shown. Enable JavaScript');
+
+    await figure.locator('.aw-visual__details > summary').click();
+    await expect(figure.locator('.vg-calc-description')).toContainText('authored defaults');
+    await expect(figure.locator('[data-description-input="Sp"] .vg-calc-description__value')).toHaveText('2,048');
+    expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
+  } finally {
+    await context.close();
+  }
+});

@@ -29,6 +29,9 @@ const host = copy === null ? null : await figureHostProps(copy);
     {isCalculator(copy) ? (
       <Figure figure={copy} nodeHref={host.nodeHref} {...host.tex}>
         <Calculator client:visible figure={copy} {...host.tex} />
+        <noscript>
+          <p class="cx-calc__note">Authored default values are shown. Enable JavaScript to adjust this equation.</p>
+        </noscript>
       </Figure>
     ) : (
       <Figure figure={copy} nodeHref={host.nodeHref} />

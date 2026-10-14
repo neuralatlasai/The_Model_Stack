@@ -2,7 +2,7 @@ import assert from 'node:assert/strict';
 import { describe, it } from 'node:test';
 import type { Inline, ResearchDocument } from '@atlas/core';
 import { jsonForHtml } from '../json.ts';
-import { documentJsonLd, paperJsonLd, referenceSchemaType, siteJsonLd } from '../jsonld.ts';
+import { absoluteUrl, documentJsonLd, paperJsonLd, referenceSchemaType, siteJsonLd } from '../jsonld.ts';
 import { routeTables, tokenizeRoute } from '../reading-routes.ts';
 import { sectionDoc, smallGraph, smallRegistry, text } from './fixtures.ts';
 
@@ -89,6 +89,47 @@ describe('routeTables', () => {
 describe('structured data', () => {
   const graph = smallGraph();
   const registry = smallRegistry();
+
+  it('preserves the deploy prefix in canonical routes without applying it twice', () => {
+    const site = new URL('https://neuralatlasai.github.io/');
+    assert.equal(
+      absoluteUrl('/ch05/', site, '/The_Model_Stack/'),
+      'https://neuralatlasai.github.io/The_Model_Stack/ch05/',
+    );
+    assert.equal(
+      absoluteUrl('/The_Model_Stack/ch05/', site, '/The_Model_Stack/'),
+      'https://neuralatlasai.github.io/The_Model_Stack/ch05/',
+    );
+    assert.equal(absoluteUrl('/', site, '/The_Model_Stack'), 'https://neuralatlasai.github.io/The_Model_Stack/');
+    assert.equal(absoluteUrl('/ch05/', undefined, '/The_Model_Stack/'), '/The_Model_Stack/ch05/');
+  });
+
+  it('uses the same deploy prefix for structured page, ancestor, paper and site identities', () => {
+    const site = new URL('https://neuralatlasai.github.io/');
+    const base = '/The_Model_Stack/';
+    const prefix = site.origin + base;
+    const ld = documentJsonLd({ doc: sectionDoc(), graph, registry, site, edition: '1.0', base });
+    assert.equal(ld['url'], `${prefix}ch05/05-2/`);
+    let cursor: unknown = ld['isPartOf'];
+    while (typeof cursor === 'object' && cursor !== null) {
+      const record = cursor as Record<string, unknown>;
+      if (record['url'] !== undefined) {
+        assert.ok(typeof record['url'] === 'string');
+        assert.ok(record['url'].startsWith(prefix));
+      }
+      cursor = record['isPartOf'];
+    }
+    const record = registry.references[0];
+    assert.ok(record !== undefined);
+    const paper = paperJsonLd(record, site, base);
+    assert.ok(String(paper['mainEntityOfPage']).startsWith(prefix));
+    assert.equal(paper['url'], record.url);
+    const home = siteJsonLd(graph, site, '1.0', base);
+    assert.equal(home['url'], prefix);
+    const about = home['about'] as Record<string, unknown>;
+    for (const volume of about['hasPart'] as Record<string, unknown>[])
+      assert.ok(String(volume['url']).startsWith(prefix));
+  });
 
   it('places a section inside its chapter, part, volume, and the book', () => {
     const ld = documentJsonLd({ doc: sectionDoc(), graph, registry, site: undefined, edition: '1.0' });

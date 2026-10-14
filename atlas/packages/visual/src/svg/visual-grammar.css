@@ -2898,3 +2898,43 @@ svg[data-mx-grid] {
     transition: none;
   }
 }
+
+/* Exact values complement coarse exploration on large token/byte ranges. */
+.vg-calc__exact {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(8ch, 14ch);
+  align-items: center;
+  gap: 4px 12px;
+  margin-block-start: 6px;
+  color: var(--ink-2);
+  font: 12px/1.5 var(--font-mono);
+}
+.vg-calc__exact-input {
+  min-inline-size: 0;
+  inline-size: 100%;
+  min-block-size: 36px;
+  padding: 4px 6px;
+  border: 1px solid var(--rule-strong);
+  border-radius: 0;
+  background: var(--paper);
+  color: var(--ink);
+  font: inherit;
+  font-variant-numeric: tabular-nums;
+  text-align: end;
+}
+.vg-calc__exact-input:focus-visible {
+  outline: 2px solid var(--focus);
+  outline-offset: 2px;
+}
+.vg-calc__exact-help {
+  grid-column: 1 / -1;
+  display: none;
+  overflow-wrap: anywhere;
+}
+.vg-calc__exact-help--units,
+.vg-calc__exact:has(input:invalid) .vg-calc__exact-help {
+  display: block;
+}
+.vg-calc__exact-input:invalid {
+  border-color: var(--accent);
+}

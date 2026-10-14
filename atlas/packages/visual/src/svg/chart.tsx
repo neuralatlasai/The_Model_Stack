@@ -486,7 +486,14 @@ export function ChartView({
       </svg>
       <div class="vg-legend" role="group" aria-label="Series">
         {resolved.series.map((series, index) => (
-          <button type="button" class="vg-legend__item" data-series={series.id} aria-pressed="true" key={series.id}>
+          <button
+            type="button"
+            class="vg-legend__item"
+            data-series={series.id}
+            aria-pressed="true"
+            disabled
+            key={series.id}
+          >
             <svg
               class="vg-legend__swatch"
               viewBox="0 0 24 8"

@@ -33,7 +33,7 @@ const { figure, depth = 'overview' } = Astro.props;
 const rail = figure.placement === 'rail';
 const shown = rail ? figureCopy(figure, 'inline') : figure;
 const calculator = isCalculator(figure);
-const researchPlate = /^fig-3[0-9]\./u.test(figure.spec.id);
+const researchPlate = Astro.locals.chapterContent === true && figure.origin === 'authored';
 const explorationHint =
   researchPlate && ['diagram', 'cycle', 'matrix'].includes(figure.spec.kind)
     ? {
@@ -82,6 +82,9 @@ const { nodeHref, tex } = await figureHostProps(figure);
     {calculator ? (
       <Figure figure={shown} nodeHref={nodeHref} {...tex}>
         <Calculator client:visible figure={shown} explore={researchPlate} {...tex} />
+        <noscript>
+          <p class="cx-calc__note">Authored default values are shown. Enable JavaScript to adjust this equation.</p>
+        </noscript>
       </Figure>
     ) : researchPlate && figure.spec.kind === 'chart' ? (
       <Figure figure={shown} nodeHref={nodeHref}>

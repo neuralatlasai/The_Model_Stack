@@ -18,6 +18,7 @@
  * is `data-vg-value="<symbol>"` holding the formatted text.
  */
 import type { JSX, TargetedEvent } from 'preact';
+import { useEffect, useState } from 'preact/hooks';
 import { formatValue, type CalculatorSpec } from '@atlas/core';
 import { evaluateCalculator, formatInputValue, sliderModel } from '../figure-math.ts';
 import { cls, fracStyle, litClass, NO_STATE, safeId, type StateView } from './util.ts';
@@ -28,6 +29,12 @@ export interface CalculatorViewProps {
   readonly values: Readonly<Record<string, number>>;
   /** Called with the new value when a control changes. Absent → static render (controls disabled). */
   readonly onInput?: (symbol: string, value: number) => void;
+  /** Optional precise-value control. Returns the accepted value after domain normalization. */
+  readonly onExactInput?: (symbol: string, value: number) => number | null;
+  /** Explicit reset also discards unfinished edits whose accepted value did not change. */
+  readonly resetEpoch?: number;
+  /** Reserve precise-control geometry even before client callbacks are ready. */
+  readonly precise?: boolean;
   /** Unique per page (the figure anchor); prefixes control ids and radio-group names. */
   readonly idPrefix: string;
   /** Pre-rendered KaTeX HTML for `spec.tex` (trusted compiler output). Falls back to the TeX source. */
@@ -36,10 +43,90 @@ export interface CalculatorViewProps {
   readonly state?: StateView;
 }
 
+interface ExactValueInputProps {
+  readonly input: CalculatorSpec['inputs'][number];
+  readonly value: number;
+  readonly id: string;
+  readonly disabled: boolean;
+  readonly resetEpoch: number;
+  readonly onCommit?: (symbol: string, value: number) => number | null;
+}
+
+/** An unfinished edit is distinct from the accepted calculator state. */
+function ExactValueInput({ input, value, id, disabled, resetEpoch, onCommit }: ExactValueInputProps): JSX.Element {
+  const [draft, setDraft] = useState(String(value));
+  useEffect(() => {
+    setDraft(String(value));
+  }, [value, resetEpoch]);
+  const commit = (control: HTMLInputElement): void => {
+    if (!control.validity.valid || !Number.isFinite(control.valueAsNumber)) return;
+    const accepted = onCommit?.(input.symbol, control.valueAsNumber);
+    setDraft(String(accepted ?? value));
+  };
+  return (
+    <div class="vg-calc__exact">
+      <label for={id}>Exact value</label>
+      <input
+        class="vg-calc__exact-input"
+        id={id}
+        type="number"
+        aria-label={'Exact value: ' + input.label}
+        aria-describedby={id + '-help'}
+        min={input.min}
+        max={input.max}
+        step={
+          input.scale === 'log2' || input.scale === 'log10'
+            ? 'any'
+            : (input.step ?? (['integer', 'tokens', 'params'].includes(input.format) ? 1 : 'any'))
+        }
+        required
+        value={draft}
+        disabled={disabled}
+        onInput={(event) => {
+          setDraft(event.currentTarget.value);
+        }}
+        onChange={(event) => {
+          commit(event.currentTarget);
+        }}
+        onKeyDown={(event) => {
+          if (event.key === 'Escape') {
+            event.preventDefault();
+            setDraft(String(value));
+          } else if (event.key === 'Enter') {
+            event.preventDefault();
+            commit(event.currentTarget);
+          }
+        }}
+      />
+      <span
+        class={cls('vg-calc__exact-help', input.format === 'percent' && 'vg-calc__exact-help--units')}
+        id={id + '-help'}
+      >
+        {input.format === 'percent' ? (
+          <>
+            Enter a fraction from {input.min} to {input.max}; 0.5 represents 50%.
+          </>
+        ) : (
+          <>
+            Enter {['integer', 'tokens', 'params'].includes(input.format) ? 'a whole number' : 'a number'} from{' '}
+            {input.min} to {input.max} in the labeled units.
+          </>
+        )}
+        {input.scale === 'log2' && ' Values snap to powers of two.'}
+        {input.step !== undefined && ' Use increments of ' + String(input.step) + '.'}
+        {' Press Escape to restore the applied value.'}
+      </span>
+    </div>
+  );
+}
+
 export function CalculatorView({
   spec,
   values,
   onInput,
+  onExactInput,
+  resetEpoch = 0,
+  precise = false,
   idPrefix,
   texHtml,
   state = NO_STATE,
@@ -165,6 +252,16 @@ export function CalculatorView({
                 <span>{formatInputValue(model.toValue(model.min), input.format)}</span>
                 <span>{formatInputValue(model.toValue(model.max), input.format)}</span>
               </div>
+              {precise && (
+                <ExactValueInput
+                  input={input}
+                  value={value}
+                  id={id + '-exact'}
+                  disabled={!interactive}
+                  resetEpoch={resetEpoch}
+                  {...(onExactInput === undefined ? {} : { onCommit: onExactInput })}
+                />
+              )}
             </div>
           );
         })}

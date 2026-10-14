@@ -14,15 +14,18 @@ import {
 } from '@atlas/core';
 import { clip, squash } from './format.ts';
 import { ancestorsOf } from './nodes.ts';
+import { withBase } from '../client/urls.ts';
 
 export const BOOK_TITLE = 'The Model Stack — From Data and Silicon to Intelligence';
 export const SITE_TITLE = 'The Model Stack · Research Atlas';
 
 type JsonLd = Record<string, unknown>;
 
-/** Resolves a site-relative path against the configured site, or keeps it relative when no site is configured. */
-export function absoluteUrl(path: string, site: URL | undefined): string {
-  return site === undefined ? path : new URL(path, site).href;
+/** Resolves an atlas route beneath its deploy base, retaining relative URLs without a configured site. */
+export function absoluteUrl(path: string, site: URL | undefined, base = '/'): string {
+  const normalizedBase = base.endsWith('/') ? base : `${base}/`;
+  const route = path.startsWith('/') ? withBase(normalizedBase, path) : path;
+  return site === undefined ? route : new URL(route, site).href;
 }
 
 function book(edition: string): JsonLd {
@@ -42,13 +45,13 @@ function schemaTypeForNode(node: Pick<GraphNode, 'entityType'>): string {
   }
 }
 
-function partOfChain(graph: AtlasGraph, node: GraphNode, site: URL | undefined, edition: string): JsonLd {
+function partOfChain(graph: AtlasGraph, node: GraphNode, site: URL | undefined, edition: string, base: string): JsonLd {
   let outer: JsonLd = book(edition);
   for (const ancestor of ancestorsOf(graph, node.id)) {
     outer = {
       '@type': schemaTypeForNode(ancestor),
       name: ancestor.title,
-      url: absoluteUrl(ancestor.url, site),
+      url: absoluteUrl(ancestor.url, site, base),
       isPartOf: outer,
     };
   }
@@ -84,9 +87,10 @@ export interface DocumentJsonLdInput {
   readonly registry: Registry;
   readonly site: URL | undefined;
   readonly edition: string;
+  readonly base?: string;
 }
 
-export function documentJsonLd({ doc, graph, registry, site, edition }: DocumentJsonLdInput): JsonLd {
+export function documentJsonLd({ doc, graph, registry, site, edition, base = '/' }: DocumentJsonLdInput): JsonLd {
   const node = graph.nodes[doc.meta.id];
   const description = doc.header.thesis === null ? null : squash(inlineToText(doc.header.thesis));
   const references = new Map(registry.references.map((record) => [record.key, record]));
@@ -100,12 +104,12 @@ export function documentJsonLd({ doc, graph, registry, site, edition }: Document
     '@type': doc.meta.entityType === 'section' || doc.meta.entityType === 'chapter' ? 'TechArticle' : 'CreativeWork',
     headline: clip(doc.header.title, 110),
     name: doc.header.title,
-    url: absoluteUrl(doc.route.url, site),
+    url: absoluteUrl(doc.route.url, site, base),
     inLanguage: 'en',
     dateModified: doc.meta.updatedAt,
     creativeWorkStatus: doc.meta.editorialStatus.replaceAll('_', ' '),
     wordCount: doc.stats.words,
-    isPartOf: node === undefined ? book(edition) : partOfChain(graph, node, site, edition),
+    isPartOf: node === undefined ? book(edition) : partOfChain(graph, node, site, edition, base),
   };
   if (description !== null && description !== '') out['description'] = clip(description, 300);
   if (cited.length > 0) out['citation'] = cited.map(citation);
@@ -120,18 +124,18 @@ export function documentJsonLd({ doc, graph, registry, site, edition }: Document
   return out;
 }
 
-export function paperJsonLd(record: ReferenceRecord, site: URL | undefined): JsonLd {
+export function paperJsonLd(record: ReferenceRecord, site: URL | undefined, base = '/'): JsonLd {
   const out: JsonLd = {
     '@context': 'https://schema.org',
     ...citation(record),
     identifier: record.key,
-    mainEntityOfPage: absoluteUrl(record.atlasUrl, site),
+    mainEntityOfPage: absoluteUrl(record.atlasUrl, site, base),
   };
   if (record.code !== null) out['sameAs'] = record.code;
   return out;
 }
 
-export function siteJsonLd(graph: AtlasGraph, site: URL | undefined, edition: string): JsonLd {
+export function siteJsonLd(graph: AtlasGraph, site: URL | undefined, edition: string, base = '/'): JsonLd {
   const volumes = graph.tree
     .map((root) => graph.nodes[root.id])
     .filter((node): node is GraphNode => node?.entityType === 'volume');
@@ -139,14 +143,14 @@ export function siteJsonLd(graph: AtlasGraph, site: URL | undefined, edition: st
     '@context': 'https://schema.org',
     '@type': 'WebSite',
     name: SITE_TITLE,
-    url: absoluteUrl('/', site),
+    url: absoluteUrl('/', site, base),
     inLanguage: 'en',
     about: {
       ...book(edition),
       hasPart: volumes.map((volume) => ({
         '@type': 'CreativeWorkSeries',
         name: volume.title,
-        url: absoluteUrl(volume.url, site),
+        url: absoluteUrl(volume.url, site, base),
       })),
     },
   };

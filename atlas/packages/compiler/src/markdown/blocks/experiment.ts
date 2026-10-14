@@ -39,9 +39,19 @@ export function canonicalField(label: string): string {
 const FIELD_PATTERN = EXPERIMENT_FIELDS.map((field) => field.replace('/', String.raw`\s*/\s*`)).join('|');
 const PARAGRAPH_MARKERS: readonly InlineMarker<string>[] = EXPERIMENT_FIELDS.map((field) => ({
   key: field,
+  styled: new RegExp(String.raw`^${field.replace('/', String.raw`\s*/\s*`)}(?:\s*\([^)]*\))?[.:]?$`, 'u'),
   text: new RegExp(String.raw`(?<=^|\n|[.;]\s+)${field.replace('/', String.raw`\s*/\s*`)}(?:\s*\([^)]*\))?\s*:`, 'u'),
 }));
 const STARTS_WITH_FIELD = new RegExp(String.raw`^\s*(?:${FIELD_PATTERN})(?:\s*\([^)]*\))?\s*:`, 'u');
+
+function isFieldParagraph(node: RootContent): node is Paragraph {
+  if (node.type !== 'paragraph') return false;
+  const lead = node.children[0];
+  return (
+    (lead?.type === 'strong' && EXPERIMENT_FIELDS.some((field) => field === canonicalField(toString(lead)))) ||
+    STARTS_WITH_FIELD.test(toString(node))
+  );
+}
 
 interface Field {
   name: string;
@@ -110,7 +120,7 @@ export function convertExperiment(
   } else {
     const paragraphs: Paragraph[] = [];
     for (const node of following) {
-      if (node.type !== 'paragraph' || !STARTS_WITH_FIELD.test(toString(node))) break;
+      if (!isFieldParagraph(node)) break;
       paragraphs.push(node);
     }
     if (paragraphs.length > 0) {

@@ -1159,6 +1159,15 @@
     grid-row: auto;
     grid-column: 2;
     justify-self: start;
+    min-inline-size: 0;
+    max-inline-size: 100%;
+    white-space: normal;
+  }
+
+  .tlc-owner__t {
+    min-inline-size: 0;
+    white-space: normal;
+    overflow-wrap: anywhere;
   }
 
   .tlc-meta {

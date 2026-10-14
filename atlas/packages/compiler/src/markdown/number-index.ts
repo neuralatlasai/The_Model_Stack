@@ -27,8 +27,13 @@ const MATH_ALGORITHM = new RegExp(
 
 /** Explicit definition titles only; a prose mention never defines an object. */
 export function mathematicalAlgorithmNumber(line: string): string | null {
-  const match = MATH_ALGORITHM.exec(line);
+  const match = MATH_ALGORITHM.exec(unquoteLine(line));
   return match?.[1] ?? match?.[2] ?? null;
+}
+
+/** One optional space after each quote marker; preserve indented code. */
+function unquoteLine(line: string): string {
+  return line.replace(/^\s{0,3}(?:>[ \t]?)+/u, '');
 }
 const FIGURE_ID = /^\s*id\s*:\s*["']?fig-(\d+\.\d+)["']?\s*(?:#.*)?$/u;
 const EXPERIMENT_HEADING = new RegExp(String.raw`^\s{0,3}#{3,6}\s+Experiments?\s+(${NUMBER})(?![\d.])`, 'u');
@@ -55,8 +60,9 @@ export function indexNumberedObjects(source: string | MarkdownInput): NumberedOb
 
   let fence: { readonly marker: string; readonly lang: string; firstLine: boolean } | null = null;
   for (const line of body.replace(/\r\n?/gu, '\n').split('\n')) {
+    const unquoted = unquoteLine(line);
     if (fence !== null) {
-      const close = FENCE.exec(line);
+      const close = FENCE.exec(unquoted);
       const marker = close?.[1];
       if (
         marker?.startsWith(fence.marker.charAt(0)) &&
@@ -66,14 +72,14 @@ export function indexNumberedObjects(source: string | MarkdownInput): NumberedOb
         fence = null;
         continue;
       }
-      if (fence.lang === 'figure') pushUnique(figures, FIGURE_ID.exec(line)?.[1]);
-      else if (fence.firstLine && PLAIN_LANGS.has(fence.lang) && line.trim() !== '') {
-        pushUnique(algorithms, ALGORITHM_TITLE.exec(line)?.[1]);
+      if (fence.lang === 'figure') pushUnique(figures, FIGURE_ID.exec(unquoted)?.[1]);
+      else if (fence.firstLine && PLAIN_LANGS.has(fence.lang) && unquoted.trim() !== '') {
+        pushUnique(algorithms, ALGORITHM_TITLE.exec(unquoted)?.[1]);
       }
-      if (line.trim() !== '') fence.firstLine = false;
+      if (unquoted.trim() !== '') fence.firstLine = false;
       continue;
     }
-    const open = FENCE.exec(line);
+    const open = FENCE.exec(unquoted);
     if (open !== null) {
       fence = { marker: open[1] ?? '```', lang: (open[2] ?? '').toLowerCase(), firstLine: true };
       continue;

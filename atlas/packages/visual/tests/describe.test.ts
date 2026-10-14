@@ -146,3 +146,18 @@ describe('numeric helpers', () => {
     assert.deepEqual(allocateCells([4, 8], 12), [4, 8]);
   });
 });
+
+it('wide integer ranges retain exact authored and typed settings', () => {
+  const model = sliderModel({
+    symbol: 'tokens',
+    label: 'tokens',
+    default: 8192,
+    min: 1,
+    max: 131072,
+    scale: 'linear',
+    format: 'tokens',
+  });
+  assert.equal(model.step, 1);
+  assert.equal((8192 - model.min) % model.step, 0);
+  assert.equal((12345 - model.min) % model.step, 0);
+});

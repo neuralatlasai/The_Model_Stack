@@ -22,7 +22,7 @@ export interface CalculatorProps {
   readonly figure: CompiledFigure;
   /** Server-rendered KaTeX for the calculator's TeX (trusted compiler/build output), if the host has it. */
   readonly texHtml?: string;
-  /** Chapter30–39 instruments include a formula-derived sensitivity plot. */
+  /** Full article instruments include a formula-derived sensitivity plot. */
   readonly explore?: boolean;
 }
 
@@ -35,6 +35,11 @@ export default function Calculator({ figure, texHtml, explore = false }: Calcula
     () => spec?.outputs.find((output) => output.emphasis)?.symbol ?? spec?.outputs[0]?.symbol ?? '',
   );
   const [interaction, setInteraction] = useState(0);
+  const [resetEpoch, setResetEpoch] = useState(0);
+  const [interactive, setInteractive] = useState(false);
+  useEffect(() => {
+    setInteractive(true);
+  }, []);
   const [settled, setSettled] = useState(0);
   useEffect(() => {
     if (interaction === 0) return undefined;
@@ -54,17 +59,19 @@ export default function Calculator({ figure, texHtml, explore = false }: Calcula
   );
 
   const onInput = useCallback(
-    (symbol: string, value: number): void => {
-      if (model === null) return;
+    (symbol: string, value: number): number | null => {
+      if (model === null) return null;
       const next = model.normalise(symbol, value);
-      if (next === null) return;
+      if (next === null) return null;
       setValues((previous) => (previous[symbol] === next ? previous : { ...previous, [symbol]: next }));
       if (explore) setInteraction((previous) => previous + 1);
+      return next;
     },
     [model, explore],
   );
   const reset = useCallback((): void => {
     if (model !== null) setValues({ ...model.defaults });
+    setResetEpoch((previous) => previous + 1);
     if (explore) setInteraction((previous) => previous + 1);
   }, [model, explore]);
   const results = useMemo(() => (model === null ? [] : model.evaluate(values)), [model, values]);
@@ -113,7 +120,9 @@ export default function Calculator({ figure, texHtml, explore = false }: Calcula
         <CalculatorView
           spec={spec}
           values={values}
-          onInput={onInput}
+          resetEpoch={resetEpoch}
+          precise={explore}
+          {...(interactive ? { onInput, ...(explore ? { onExactInput: onInput } : {}) } : {})}
           idPrefix={figure.anchor}
           state={{ lit: new Set(explore ? [inputSymbol, outputSymbol] : []), overrides: null }}
           {...(texHtml === undefined ? {} : { texHtml })}
@@ -123,7 +132,7 @@ export default function Calculator({ figure, texHtml, explore = false }: Calcula
             type="button"
             class="cx-calc__reset"
             onClick={reset}
-            disabled={atDefaults}
+            disabled={!interactive || (atDefaults && !explore)}
             aria-label={`Reset ${figure.spec.title} to its default values`}
           >
             Reset to defaults
@@ -145,6 +154,7 @@ export default function Calculator({ figure, texHtml, explore = false }: Calcula
                 <select
                   id={`${figure.anchor}-sweep-input`}
                   value={inputSymbol}
+                  disabled={!interactive}
                   onChange={(event) => {
                     setInputSymbol(event.currentTarget.value);
                     setInteraction((previous) => previous + 1);
@@ -162,6 +172,7 @@ export default function Calculator({ figure, texHtml, explore = false }: Calcula
                 <select
                   id={`${figure.anchor}-sweep-output`}
                   value={outputSymbol}
+                  disabled={!interactive}
                   onChange={(event) => {
                     setOutputSymbol(event.currentTarget.value);
                     setInteraction((previous) => previous + 1);

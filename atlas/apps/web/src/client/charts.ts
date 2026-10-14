@@ -332,6 +332,8 @@ export function enhanceChart(ctl: Controller, figure: HTMLElement, svg: SVGSVGEl
   };
   for (const toggle of toggles) {
     const native = toggle instanceof HTMLButtonElement;
+    // The server-rendered legend is descriptive until its click handler exists.
+    if (native) toggle.disabled = false;
     if (!native) {
       toggle.setAttribute('role', 'button');
       if (!toggle.hasAttribute('tabindex')) toggle.setAttribute('tabindex', '0');

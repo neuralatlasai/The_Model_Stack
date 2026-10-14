@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import { describe, it } from 'node:test';
-import { inlineToText } from '@atlas/core';
+import { EXPERIMENT_FIELDS, inlineToText } from '@atlas/core';
 import { parseWhereClause } from '../../src/markdown/blocks/equation.ts';
 import { blocksOf, codes, compile, fakeContext, onlyBlock, section } from './helpers.ts';
 
@@ -337,6 +337,37 @@ describe('algorithms, traces, and code', () => {
 });
 
 describe('experiments', () => {
+  it('reads standalone bold field paragraphs without losing evidence, math or citations', async () => {
+    const paragraphs = EXPERIMENT_FIELDS.map((field) => {
+      const label = field === 'Dataset/workload' ? 'Dataset / workload' : field;
+      const suffix = field === 'Expected result' ? ' (as a proposal):' : '.';
+      return `**${label}${suffix}** [ASSUMED] Compare $x$ with P01.`;
+    });
+    const body = await compile(
+      section(
+        'Experimental design',
+        ['### Experiment 40.1 — Proposed paired comparison', ...paragraphs, 'Unexecuted protocol.'].join('\n\n'),
+      ),
+    );
+    const experiment = onlyBlock(body, 'experiment');
+    assert.deepEqual(
+      experiment.fields.map((field) => field.name),
+      [...EXPERIMENT_FIELDS],
+    );
+    const hypothesis = experiment.fields[0]?.blocks[0];
+    assert.equal(hypothesis?.kind, 'paragraph');
+    if (hypothesis?.kind !== 'paragraph') throw new Error('expected hypothesis paragraph');
+    assert.equal(text(hypothesis.content), '[ASSUMED] Compare x with P01.');
+    assert.ok(hypothesis.content.some((inline) => inline.kind === 'label'));
+    assert.ok(hypothesis.content.some((inline) => inline.kind === 'math'));
+    assert.ok(hypothesis.content.some((inline) => inline.kind === 'cite'));
+    assert.equal(
+      blocksOf(body, 'paragraph').filter((block) => text(block.content) === 'Unexecuted protocol.').length,
+      1,
+    );
+    assert.deepEqual(codes(body), []);
+  });
+
   it('reads the field list with bold labels (dot and colon forms)', async () => {
     const body = await compile(
       section(
