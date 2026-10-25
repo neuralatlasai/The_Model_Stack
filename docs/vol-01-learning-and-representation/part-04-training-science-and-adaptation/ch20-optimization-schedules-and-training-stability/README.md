@@ -2,7 +2,7 @@
 id: ms.chapter.20
 entity_type: chapter
 title: Optimization, schedules, and training stability
-short_title: Chapter 20
+short_title: Optimization and stability
 volume: 1
 part: 4
 chapter: 20

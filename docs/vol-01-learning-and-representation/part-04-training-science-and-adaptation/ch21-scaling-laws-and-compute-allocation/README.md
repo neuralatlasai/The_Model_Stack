@@ -2,7 +2,7 @@
 id: ms.chapter.21
 entity_type: chapter
 title: Scaling laws and compute allocation
-short_title: Chapter 21
+short_title: Scaling laws and compute
 volume: 1
 part: 4
 chapter: 21
