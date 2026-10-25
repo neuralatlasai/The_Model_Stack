@@ -92,7 +92,19 @@ test.describe('native citation tabs', () => {
         expect(response.frame().page()).toBe(paper);
         expect(response.ok()).toBe(true);
         expect(await response.finished()).toBeNull();
-        await paper.waitForURL(/\/papers\/r19-22\//u, { waitUntil: 'domcontentloaded', timeout: 20_000 });
+        // Observe the committed document's URL and actual DCL completion; the
+        // native-tab driver's lifecycle bookkeeping can retain an older loader.
+        await paper.waitForFunction(
+          (expectedUrl) => {
+            const timing = performance.getEntriesByType('navigation')[0] as PerformanceNavigationTiming | undefined;
+            return (
+              document.URL === expectedUrl &&
+              (document.readyState === 'complete' || (timing?.domContentLoadedEventEnd ?? 0) > 0)
+            );
+          },
+          response.url(),
+          { timeout: 20_000 },
+        );
         // Native background tabs can retain a stale pending-navigation guard in
         // the driver after the document has committed. Read the actual document
         // in its main world, retaining the same visibility and identity checks.
