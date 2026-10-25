@@ -355,11 +355,13 @@ P08 §6 provides the earlier allocation comparison. Its data/training/accounting
 
 ## Observations
 
-Balancing the two reducible-loss terms gives the allocation rule only for the positive additive fitted family, its feasible domain, and the chosen compute constraint. Those are premises of the optimization, rather than consequences of KKT. P09's approach-dependent exponent estimates record empirical methodological sensitivity within its studied regime [MATHEMATICALLY-DERIVED · DERIVED:eq-2.31; PAPER-REPORTED · P09, Table 2].
+**What the paper claims.** P09's approach-dependent exponent estimates show methodological sensitivity within its studied training regime [PAPER-REPORTED · P09, Table 2].
 
-Uncertainty in an allocation depends jointly on coefficients, exponents, their covariance, reference units, and any active domain constraints. Increasing the compute budget does not universally increase that uncertainty. A point frontier likewise describes the supplied point estimates; simultaneous interval dominance requires a separate joint uncertainty statement [MATHEMATICALLY-DERIVED · DERIVED:eq-2.27].
+**What the evidence shows.** Balancing the reducible-loss terms gives the allocation rule only within the positive additive fitted family, its feasible domain and the chosen compute constraint. These are premises of the optimization rather than consequences of KKT [MATHEMATICALLY-DERIVED · DERIVED:eq-2.31].
 
-The full joint parameter covariance needed for numerical propagation is NOT-DISCLOSED in the inspected P09 fitting account. No fit or allocation experiment was executed by the book [NOT-DISCLOSED · P09, §3.3 and Appendix D.2].
+**What we infer.** Allocation uncertainty depends jointly on coefficients, exponents, their covariance, reference units and active constraints. More compute does not universally increase that uncertainty. A point frontier describes point estimates; simultaneous interval dominance needs a joint uncertainty statement [MATHEMATICALLY-DERIVED · DERIVED:eq-2.27].
+
+**What remains unknown.** The full joint parameter covariance required for numerical propagation is NOT-DISCLOSED in the inspected P09 fitting account. No fit or allocation experiment was executed by the book [NOT-DISCLOSED · P09, §3.3 and Appendix D.2].
 
 ## Failure modes
 

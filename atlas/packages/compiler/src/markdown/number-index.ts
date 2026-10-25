@@ -1,7 +1,8 @@
 /**
  * First pass (UI_UX §61 deep links, two-pass cross-references): the numbered
- * objects a document defines, found by a line scan without parsing Markdown,
- * resolving links, or rendering math. The patterns mirror the full compile:
+ * objects a document defines, found without parsing Markdown, resolving links,
+ * or rendering math. JSON figure envelopes are decoded so quoted, reordered,
+ * or minified IDs have the same identity as their YAML counterparts:
  *
  *   *(Eq. 5.4)* …                      equation tag line
  *   Algorithm 5.2 — …                  first line of a fenced block
@@ -35,7 +36,7 @@ export function mathematicalAlgorithmNumber(line: string): string | null {
 function unquoteLine(line: string): string {
   return line.replace(/^\s{0,3}(?:>[ \t]?)+/u, '');
 }
-const FIGURE_ID = /^\s*id\s*:\s*["']?fig-(\d+\.\d+)["']?\s*(?:#.*)?$/u;
+const FIGURE_ID = /^\s*(?:id|["']id["'])\s*:\s*["']?fig-(\d+\.\d+)["']?\s*,?\s*(?:#.*)?$/u;
 const EXPERIMENT_HEADING = new RegExp(String.raw`^\s{0,3}#{3,6}\s+Experiments?\s+(${NUMBER})(?![\d.])`, 'u');
 const PROPOSITION = new RegExp(
   String.raw`^\s*(?:>\s*)+\*\*(?:Proposition|Theorem|Lemma|Corollary)\s+(${NUMBER})\.?\*\*`,
@@ -49,6 +50,22 @@ function pushUnique(list: string[], value: string | undefined): void {
   if (value !== undefined && !list.includes(value)) list.push(value);
 }
 
+function indexFigure(lines: readonly string[], figures: string[]): void {
+  const source = lines.join('\n').trim();
+  if (source.startsWith('{')) {
+    try {
+      const parsed: unknown = JSON.parse(source);
+      if (parsed !== null && typeof parsed === 'object' && 'id' in parsed && typeof parsed.id === 'string') {
+        pushUnique(figures, /^fig-(\d+\.\d+)$/u.exec(parsed.id)?.[1]);
+      }
+      return;
+    } catch {
+      // Non-JSON flow mappings may still be YAML; the full pass diagnoses syntax.
+    }
+  }
+  for (const line of lines) pushUnique(figures, FIGURE_ID.exec(line)?.[1]);
+}
+
 /** Accepts the body string, or the MarkdownInput whose body is scanned (the project pipeline passes the input). */
 export function indexNumberedObjects(source: string | MarkdownInput): NumberedObjectIndex {
   const body = typeof source === 'string' ? source : source.body;
@@ -58,7 +75,12 @@ export function indexNumberedObjects(source: string | MarkdownInput): NumberedOb
   const experiments: string[] = [];
   const propositions: string[] = [];
 
-  let fence: { readonly marker: string; readonly lang: string; firstLine: boolean } | null = null;
+  let fence: {
+    readonly marker: string;
+    readonly lang: string;
+    readonly figureLines: string[];
+    firstLine: boolean;
+  } | null = null;
   for (const line of body.replace(/\r\n?/gu, '\n').split('\n')) {
     const unquoted = unquoteLine(line);
     if (fence !== null) {
@@ -69,10 +91,11 @@ export function indexNumberedObjects(source: string | MarkdownInput): NumberedOb
         marker.length >= fence.marker.length &&
         (close?.[2] ?? '') === ''
       ) {
+        if (fence.lang === 'figure') indexFigure(fence.figureLines, figures);
         fence = null;
         continue;
       }
-      if (fence.lang === 'figure') pushUnique(figures, FIGURE_ID.exec(unquoted)?.[1]);
+      if (fence.lang === 'figure') fence.figureLines.push(unquoted);
       else if (fence.firstLine && PLAIN_LANGS.has(fence.lang) && unquoted.trim() !== '') {
         pushUnique(algorithms, ALGORITHM_TITLE.exec(unquoted)?.[1]);
       }
@@ -81,7 +104,12 @@ export function indexNumberedObjects(source: string | MarkdownInput): NumberedOb
     }
     const open = FENCE.exec(unquoted);
     if (open !== null) {
-      fence = { marker: open[1] ?? '```', lang: (open[2] ?? '').toLowerCase(), firstLine: true };
+      fence = {
+        marker: open[1] ?? '```',
+        lang: (open[2] ?? '').toLowerCase(),
+        figureLines: [],
+        firstLine: true,
+      };
       continue;
     }
     pushUnique(equations, EQUATION_TAG.exec(line)?.[1]);
@@ -89,5 +117,6 @@ export function indexNumberedObjects(source: string | MarkdownInput): NumberedOb
     pushUnique(experiments, EXPERIMENT_HEADING.exec(line)?.[1]);
     pushUnique(propositions, PROPOSITION.exec(line)?.[1]);
   }
+  if (fence?.lang === 'figure') indexFigure(fence.figureLines, figures);
   return { equations, algorithms, figures, experiments, propositions };
 }

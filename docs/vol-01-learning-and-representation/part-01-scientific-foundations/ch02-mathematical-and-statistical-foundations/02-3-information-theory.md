@@ -367,11 +367,13 @@ Entropy, the chain rule, Gibbs' inequality, and the ideal coding bounds are math
 
 ## Observations
 
-Equation 2.10 separates irreducible source uncertainty from model mismatch for a fixed event distribution. Changing context, target masks, or document weights changes that distribution or its risk functional. Equation 2.13 converts units for a recorded score, but it cannot recover information missing from the scoring manifest. The Pile comparison illustrates a reported byte-normalized protocol; it does not establish one universally correct context policy.
+**What the paper claims.** The Pile supplies a reported byte-normalized comparison protocol; DeepSeekMath reports a sampled-KL construction inside an end-to-end training comparison. Neither establishes a universally correct context policy or isolates every statistical property of the estimator [PAPER-REPORTED · P03; P25, §§4.1–4.2].
 
-For a deterministic tokenizer, losslessness establishes recovery of the input bytes. It does not establish unique token paths, canonical-path/marginal equality, or negligible noncanonical mass. The gap is bounded in direction by the construction above, while its numerical size is NOT-DISCLOSED by the sources inspected. Two models with identical marginal byte distributions can therefore have different canonical-path BPB if their token-path allocations differ. Such a difference need not indicate an implementation error [MATHEMATICALLY-DERIVED · DERIVED:eq-2.13].
+**What the evidence shows.** Equation 2.10 separates source uncertainty from model mismatch for a fixed event distribution. Changing context, masks or document weights changes that distribution or its risk functional. Equation 2.13 converts units for a recorded score but cannot recover missing scoring-manifest information. For sampled KL, pointwise nonnegativity, unbiased expectation, finite variance and optimization correctness have different conditions [MATHEMATICALLY-DERIVED · DERIVED:eq-2.10; DERIVED:eq-2.13; DERIVED:eq-2.18].
 
-For sampled KL, nonnegativity is a pointwise property of r−log r−1; unbiasedness is an expectation property with support conditions; finite variance is a moment property; optimization correctness additionally concerns the sampling-law derivative. None substitutes for the others. DeepSeekMath's end-to-end score comparison does not isolate these statistical properties [MATHEMATICALLY-DERIVED · DERIVED:eq-2.10; DERIVED:eq-2.18; PAPER-REPORTED · P25, §§4.1–4.2].
+**What we infer.** Lossless deterministic tokenization establishes byte recovery, not unique token paths or equality of canonical-path and marginal scores. Models with identical marginal byte distributions can have different canonical-path BPB because token-path allocations differ; that difference alone need not be an implementation error [MATHEMATICALLY-DERIVED · DERIVED:eq-2.13].
+
+**What remains unknown.** The numerical noncanonical-path mass and resulting gap are NOT-DISCLOSED by the inspected sources. No source-level scoring-manifest omission is repaired by a unit conversion.
 
 ## Failure modes
 

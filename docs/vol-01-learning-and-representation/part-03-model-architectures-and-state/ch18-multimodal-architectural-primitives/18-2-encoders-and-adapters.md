@@ -13,7 +13,16 @@ prev_sibling: ms.section.18.1
 next_sibling: ms.section.18.3
 children: []
 prerequisites: [ms.section.18.1, ms.chapter.13]
-downstream: [ms.chapter.19, ms.chapter.55, ms.chapter.56, ms.chapter.57, ms.chapter.58, ms.chapter.59, ms.chapter.60]
+downstream:
+  [
+    ms.chapter.19,
+    ms.chapter.55,
+    ms.chapter.56,
+    ms.chapter.57,
+    ms.chapter.58,
+    ms.chapter.59,
+    ms.chapter.60,
+  ]
 related: [ms.chapter.10, ms.chapter.13]
 siblings_by_mechanism: []
 relations: []
@@ -30,10 +39,11 @@ status:
   maturity: active
   disputed: false
 evidence_summary:
-  labels_used: [PAPER-REPORTED, DERIVED, MATHEMATICALLY-DERIVED, UNVERIFIED, NOT-DISCLOSED]
+  labels_used:
+    [PAPER-REPORTED, DERIVED, MATHEMATICALLY-DERIVED, UNVERIFIED, NOT-DISCLOSED]
   empirically_observed: false
 word_count_target: 2000
-updated_at: 2026-10-08
+updated_at: 2026-10-25
 editorial_status: manuscript_draft
 ---
 
@@ -122,9 +132,13 @@ PAPER-REPORTED · BLIP-2 compares encoder/language-model combinations and COCO r
 
 ## Observations
 
-PAPER-REPORTED · BLIP-2's ViT-g/FlanT5-XXL configuration reaches 65.0 VQAv2 test-dev accuracy, while its OK-VQA result does not exceed Flamingo-80B's reported value (P45, §4.1, Table 2). DERIVED: this supports a task-specific comparison of the reported configurations, not a universal connector ranking.
+**What the paper claims.** [PAPER-REPORTED] BLIP-2 reports strong zero-shot vision-language performance with a learned connector and frozen pretrained components, under model/task-specific configurations [P45, Sec.4.1, Table2].
 
-DERIVED: fixed-query length, width projection and weight freezing address distinct costs. The first limits downstream sequence size; the second reconciles dimensions; the third limits update state and constrains representational change. Their effects interact through the objective and data. A connector evaluated only through generated answers can conceal whether failures originate in visual encoding, compression, language interpretation or decoding. The verification page specifies a controlled component study to distinguish these effects without representing it as a published result.
+**What the evidence shows.** PAPER-REPORTED · BLIP-2's ViT-g/FlanT5-XXL configuration reaches 65.0 VQAv2 test-dev accuracy, while its OK-VQA result does not exceed Flamingo-80B's reported value (P45, §4.1, Table 2). [DERIVED] this supports a task-specific comparison of the reported configurations, not a universal connector ranking.
+
+**What we infer.** [DERIVED] fixed-query length, width projection and weight freezing address distinct costs. The first limits downstream sequence size; the second reconciles dimensions; the third limits update state and constrains representational change. Their effects interact through the objective and data. A connector evaluated only through generated answers can conceal whether failures originate in visual encoding, compression, language interpretation or decoding. The verification page specifies a controlled component study to distinguish these effects without representing it as a published result.
+
+**What remains unknown.** [UNVERIFIED] A universal connector ranking, matched inherited pretraining exposure, complete end-to-end cost and robustness to independently shifted components remain unestablished. No connector/checkpoint execution was performed by the book.
 
 ## Failure modes
 

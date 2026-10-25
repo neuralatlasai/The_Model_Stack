@@ -334,11 +334,13 @@ Conditional factorization, Bayes' rule, and Monte Carlo expectation/variance ide
 
 ## Observations
 
-The probability chain rule is an identity; a reduced graphical conditioning set is an additional model assumption. Total variance separates conditional noise from variation in conditional means. The number of independent prompts and the number of outputs per prompt therefore cannot be exchanged without specifying the corresponding variance components and costs [MATHEMATICALLY-DERIVED · DERIVED:eq-2.5; DERIVED:eq-2.7].
+**What the paper claims.** DeepSeekMath reports its sampled KL construction within a larger RL procedure [PAPER-REPORTED · P25, §4.1]. Its end-to-end comparison does not isolate estimator variance.
 
-Plain importance sampling is unbiased when the required support and integrability conditions hold. Self-normalization generally introduces finite-sample bias and a function-specific asymptotic variance. Weight concentration alone does not specify that variance, because the weights and centered scores arise from the same samples [MATHEMATICALLY-DERIVED · DERIVED:eq-2.29].
+**What the evidence shows.** The probability chain rule is an identity; a reduced graphical conditioning set is an additional model assumption. Total variance separates conditional noise from variation in conditional means [MATHEMATICALLY-DERIVED · DERIVED:eq-2.5; DERIVED:eq-2.7].
 
-DeepSeekMath reports its sampled KL construction within a larger RL procedure. Its isolated estimator variance at a named production batch is not disclosed by that comparison; the support, value, and gradient conditions are developed in [§02.3](02-3-information-theory.md#kl-support-estimation-and-differentiation) [PAPER-REPORTED · P25, §4.1].
+**What we infer.** The number of independent prompts and the number of outputs per prompt cannot be exchanged without specifying variance components and costs. Plain importance sampling is unbiased under its support and integrability conditions; self-normalization generally introduces finite-sample bias and a function-specific asymptotic variance. Weight concentration alone does not specify that variance [MATHEMATICALLY-DERIVED · DERIVED:eq-2.29].
+
+**What remains unknown.** The isolated estimator variance at a named production batch is NOT-DISCLOSED by the cited comparison. Support, value and gradient conditions require separate checks, developed in §2.3; no such production variance measurement was made here.
 
 ## Failure modes
 

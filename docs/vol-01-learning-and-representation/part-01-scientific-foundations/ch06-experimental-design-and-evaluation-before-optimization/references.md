@@ -84,7 +84,7 @@ The `preprint` status records the inspected arXiv surface; it is not a claim tha
 | R6.35 | documentation | Deterministic Inference | SGLang | living documentation | [Documentation](https://docs.sglang.io/docs/advanced_features/deterministic_inference) | null | official documentation | 2026-09-20 | Batch/reduction-order sensitivity, deterministic-inference option and backend restrictions |
 | R6.36 | documentation | Chat templates | Hugging Face Transformers | living documentation; release pin UNVERIFIED | [Documentation](https://huggingface.co/docs/transformers/chat_templating) | null | official documentation | 2026-09-20 | Control tokens, template application, duplicated special-token warning |
 
-Keys R6.23 and R6.27 are intentionally unassigned; no text depends on them. Existing keys remain stable during continuation.
+Keys `R6.23` and `R6.27` are intentionally unassigned; no text depends on them. Existing keys remain stable during continuation.
 
 ## Inspection boundaries
 

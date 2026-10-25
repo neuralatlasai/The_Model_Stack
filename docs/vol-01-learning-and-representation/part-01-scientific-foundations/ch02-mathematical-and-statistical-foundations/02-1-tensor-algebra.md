@@ -366,11 +366,13 @@ Tensor identities and the low-rank and perturbation bounds are mathematical resu
 
 ## Observations
 
-Equation 2.2 counts the declared arithmetic and ideal operand/output traffic. Low intensity for a single-row product follows algebraically; memory-bound execution additionally needs a hardware ridge point, a placement, and a cache/traffic boundary. Framework allocation and elapsed time are distinct observations and are not measured by the shape calculation [MATHEMATICALLY-DERIVED · DERIVED:eq-2.2].
+**What the paper claims.** PyTorch documents broadcast compatibility and zero-stride expansion [OFFICIAL-DOCUMENTATION · R2.8]. That source account does not establish which library algorithm executes every contraction.
 
-The condition-number result pertains to a specified linear solve. Directional alignment can make the actual perturbation smaller than the worst-case bound; matrix changes and solver roundoff require their own terms. The singular spectrum also fixes the optimal approximation error at each retained rank, independently of any later training adaptation [MATHEMATICALLY-DERIVED · DERIVED:eq-2.3; DERIVED:eq-2.28].
+**What the evidence shows.** Equation 2.2 counts the declared arithmetic and ideal operand/output traffic. Low intensity for a single-row product follows algebraically; memory-bound execution additionally needs a hardware ridge point, a placement, and a cache/traffic boundary. Framework allocation and elapsed time are distinct observations, not measurements made by the shape calculation [MATHEMATICALLY-DERIVED · DERIVED:eq-2.2].
 
-PyTorch documents broadcast compatibility and zero-stride expansion; it does not establish which library algorithm executes every contraction. Kernel routing, measured traffic, and latency for a named shape/device/version remain UNVERIFIED [OFFICIAL-DOCUMENTATION · R2.8].
+**What we infer.** The condition-number result pertains to a specified linear solve. Directional alignment can make the actual perturbation smaller than the worst-case bound; matrix changes and solver roundoff require their own terms. The singular spectrum fixes the optimal approximation error at each retained rank independently of later training adaptation [MATHEMATICALLY-DERIVED · DERIVED:eq-2.3; DERIVED:eq-2.28].
+
+**What remains unknown.** Kernel routing, measured traffic and latency for a named shape/device/version remain UNVERIFIED. No allocation or runtime claim is inferred from shape arithmetic.
 
 ## Failure modes
 

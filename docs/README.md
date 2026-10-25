@@ -43,9 +43,9 @@ The book develops one central relationship: a learning objective induces a repre
 ## How this tree is organised
 
 - The editorial hierarchy is **Volume → Part → Chapter → Section**. Every folder has a `README.md` that is the page for that node; every section is one file.
-- Every file starts with a YAML frontmatter block that records `parent`, `prev_sibling`, `next_sibling`, `prerequisites`, `downstream`, `papers`, `implementations`, `status`, and `evidence_summary`. The schema is normative in [CONTENT_CONTRACT.md](CONTENT_CONTRACT.md).
+- Every file starts with a YAML frontmatter block that records `parent`, `prev_sibling`, `next_sibling`, `prerequisites`, `downstream`, `papers`, `implementations`, `status`, and `evidence_summary`. The schema is normative in [CONTENT_CONTRACT.md](https://github.com/neuralatlasai/The_Model_Stack/blob/main/docs/CONTENT_CONTRACT.md).
 - Concept-level relations are a graph, not a tree. Labs, papers, and libraries are provenance indexes (Appendices A–H); they are never parents of the methods they discuss.
-- A machine-readable list of every node with its id, slug, path, title, prerequisites, and artifact is in [atlas-manifest.json](atlas-manifest.json).
+- A machine-readable list of every node with its id, slug, path, title, prerequisites, and artifact is in [atlas-manifest.json](https://github.com/neuralatlasai/The_Model_Stack/blob/main/docs/atlas-manifest.json).
 - Source inputs are read-only: `../book_plan.md` (the editorial specification) and `../Instruction/` (reference stack, engineering standards, UI/UX brief).
 
 ## Front matter

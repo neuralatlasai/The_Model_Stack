@@ -42,6 +42,8 @@ editorial_status: manuscript_draft
 
 # Verification — Chapter 10
 
+[DERIVED] For the expansion-KL gate, count every newly added unmasked softmax row, including padding rows, in the new-row count k. Compare the original distribution zero-extended to the new vocabulary against the full expanded distribution on the identical old-ID prefix. Assert the analytical bound only for exact noiseless mean rows with unchanged old logits; covariance-noise and retokenized-prefix branches require an empirical report without that guarantee.
+
 ## 1. Artifact specification
 
 The chapter artifact is *a tokenizer and serialization compatibility suite*: a set of test families, each with exact assertions, that runs against a pinned artifact (Eq. 10.22) and every serving path that will consume it. It consists of five files.

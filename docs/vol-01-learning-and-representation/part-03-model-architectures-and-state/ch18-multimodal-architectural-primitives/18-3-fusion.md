@@ -13,7 +13,16 @@ prev_sibling: ms.section.18.2
 next_sibling: ms.section.18.4
 children: []
 prerequisites: [ms.section.18.2, ms.chapter.13]
-downstream: [ms.chapter.19, ms.chapter.55, ms.chapter.56, ms.chapter.57, ms.chapter.58, ms.chapter.59, ms.chapter.60]
+downstream:
+  [
+    ms.chapter.19,
+    ms.chapter.55,
+    ms.chapter.56,
+    ms.chapter.57,
+    ms.chapter.58,
+    ms.chapter.59,
+    ms.chapter.60,
+  ]
 related: [ms.chapter.10, ms.chapter.13]
 siblings_by_mechanism: []
 relations: []
@@ -30,10 +39,11 @@ status:
   maturity: active
   disputed: false
 evidence_summary:
-  labels_used: [PAPER-REPORTED, DERIVED, MATHEMATICALLY-DERIVED, UNVERIFIED, NOT-DISCLOSED]
+  labels_used:
+    [PAPER-REPORTED, DERIVED, MATHEMATICALLY-DERIVED, UNVERIFIED, NOT-DISCLOSED]
   empirically_observed: false
 word_count_target: 2000
-updated_at: 2026-10-08
+updated_at: 2026-10-25
 editorial_status: manuscript_draft
 ---
 
@@ -123,9 +133,13 @@ PAPER-REPORTED · Flamingo compares gating, conditioning architectures, resample
 
 ## Observations
 
-PAPER-REPORTED · Removing zero-initialized gating reduces Flamingo's aggregate development score and produces training-instability episodes in its reported ablation (R18.2, §4.4.2, Table 7). DERIVED: the initialization identity has both an exact algebraic meaning and source-reported optimization evidence; neither establishes stability for every backbone or training mixture.
+**What the paper claims.** [PAPER-REPORTED] Flamingo reports that zero-initialized cross-attention gating helps optimization in its architecture and training mixture [R18.2, Sec.4.4.2, Table7].
 
-DERIVED: early fusion increases the opportunity for joint representation building and the sequence state the backbone must process. Cross-attention specifies a directional interface and can constrain the visual state supplied to each text position. Late fusion supports independent candidate encoding but cannot reproduce arbitrary cross-token computation through a single pooled score. Shared backbones and specialized branches are additional axes rather than mutually exclusive fusion categories.
+**What the evidence shows.** PAPER-REPORTED · Removing zero-initialized gating reduces Flamingo's aggregate development score and produces training-instability episodes in its reported ablation (R18.2, §4.4.2, Table 7). [DERIVED] the initialization identity has both an exact algebraic meaning and source-reported optimization evidence; neither establishes stability for every backbone or training mixture.
+
+**What we infer.** [DERIVED] early fusion increases the opportunity for joint representation building and the sequence state the backbone must process. Cross-attention specifies a directional interface and can constrain the visual state supplied to each text position. Late fusion supports independent candidate encoding but cannot reproduce arbitrary cross-token computation through a single pooled score. Shared backbones and specialized branches are additional axes rather than mutually exclusive fusion categories.
+
+**What remains unknown.** [UNVERIFIED] The reported ablation does not establish stability across other backbones, optimizers or mixtures, nor identify a universal fusion ordering. No new training or runtime compatibility test was performed.
 
 ## Failure modes
 

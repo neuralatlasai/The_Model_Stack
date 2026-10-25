@@ -13,7 +13,16 @@ prev_sibling: ms.section.18.3
 next_sibling: ms.section.18.5
 children: []
 prerequisites: [ms.section.18.3, ms.chapter.13]
-downstream: [ms.chapter.19, ms.chapter.55, ms.chapter.56, ms.chapter.57, ms.chapter.58, ms.chapter.59, ms.chapter.60]
+downstream:
+  [
+    ms.chapter.19,
+    ms.chapter.55,
+    ms.chapter.56,
+    ms.chapter.57,
+    ms.chapter.58,
+    ms.chapter.59,
+    ms.chapter.60,
+  ]
 related: [ms.chapter.10, ms.chapter.13]
 siblings_by_mechanism: []
 relations: []
@@ -30,10 +39,11 @@ status:
   maturity: active
   disputed: false
 evidence_summary:
-  labels_used: [PAPER-REPORTED, DERIVED, MATHEMATICALLY-DERIVED, UNVERIFIED, NOT-DISCLOSED]
+  labels_used:
+    [PAPER-REPORTED, DERIVED, MATHEMATICALLY-DERIVED, UNVERIFIED, NOT-DISCLOSED]
   empirically_observed: false
 word_count_target: 2000
-updated_at: 2026-10-08
+updated_at: 2026-10-25
 editorial_status: manuscript_draft
 ---
 
@@ -133,9 +143,13 @@ PAPER-REPORTED · MAE's ImageNet study separates full fine-tuning, partial fine-
 
 ## Observations
 
-PAPER-REPORTED · MAE's grid-sampling ablation produces sharper reconstructions and lower reconstruction loss but weaker downstream representation quality than its random-sampling configuration (R18.8, §4.1, Figure 6). DERIVED: optimizing or inspecting the reconstruction endpoint cannot substitute for the intended representation evaluation.
+**What the paper claims.** [PAPER-REPORTED] MAE reports that masking strategy changes the pretext-task difficulty and downstream representation quality, rather than making reconstruction quality an interchangeable endpoint [R18.8, Sec.4.1, Figure6].
 
-DERIVED: each loss imposes a partial requirement. Contrastive pairing distinguishes sampled alternatives; generation models conditional token distributions; reconstruction predicts chosen source coordinates; latent prediction matches a learned target space. Combining them adds gradient paths and weights, not an automatic proof that the representation satisfies every downstream task. Loss normalization and available context are part of the mechanism.
+**What the evidence shows.** PAPER-REPORTED · MAE's grid-sampling ablation produces sharper reconstructions and lower reconstruction loss but weaker downstream representation quality than its random-sampling configuration (R18.8, §4.1, Figure 6). [DERIVED] optimizing or inspecting the reconstruction endpoint cannot substitute for the intended representation evaluation.
+
+**What we infer.** [DERIVED] each loss imposes a partial requirement. Contrastive pairing distinguishes sampled alternatives; generation models conditional token distributions; reconstruction predicts chosen source coordinates; latent prediction matches a learned target space. Combining them adds gradient paths and weights, not an automatic proof that the representation satisfies every downstream task. Loss normalization and available context are part of the mechanism.
+
+**What remains unknown.** [UNVERIFIED] The source does not prove that its reconstruction objective preserves every downstream distinction or that a mixture of objectives is universally superior. Independent task-specific representation and full-cost comparisons remain unexecuted.
 
 ## Failure modes
 

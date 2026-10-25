@@ -13,7 +13,16 @@ prev_sibling: null
 next_sibling: ms.section.18.2
 children: []
 prerequisites: [ms.chapter.4, ms.chapter.10, ms.chapter.13]
-downstream: [ms.chapter.19, ms.chapter.55, ms.chapter.56, ms.chapter.57, ms.chapter.58, ms.chapter.59, ms.chapter.60]
+downstream:
+  [
+    ms.chapter.19,
+    ms.chapter.55,
+    ms.chapter.56,
+    ms.chapter.57,
+    ms.chapter.58,
+    ms.chapter.59,
+    ms.chapter.60,
+  ]
 related: [ms.chapter.10, ms.chapter.13]
 siblings_by_mechanism: []
 relations: []
@@ -30,10 +39,11 @@ status:
   maturity: active
   disputed: false
 evidence_summary:
-  labels_used: [PAPER-REPORTED, DERIVED, MATHEMATICALLY-DERIVED, UNVERIFIED, NOT-DISCLOSED]
+  labels_used:
+    [PAPER-REPORTED, DERIVED, MATHEMATICALLY-DERIVED, UNVERIFIED, NOT-DISCLOSED]
   empirically_observed: false
 word_count_target: 2000
-updated_at: 2026-10-08
+updated_at: 2026-10-25
 editorial_status: manuscript_draft
 ---
 
@@ -69,15 +79,15 @@ $$
 
 The patch partition itself retains every pixel under these conditions. The linear projection is injective on all patch vectors only if $\operatorname{rank}(A)=P^2C$, requiring $d\geq P^2C$. When this condition fails, a nonzero vector in the left nullspace yields indistinguishable patches. This algebraic condition says nothing about invariance or usefulness on a restricted image distribution. A convolution with kernel and stride $P$, no overlap, and matching weights implements the same projection. Cropping, resizing, padding, and color transforms are additional maps whose effects belong in $E_m$.
 
-| Representation | Sequence element | Coordinates that must remain interpretable | Distinction preserved in the contract |
-|---|---|---|---|
-| Image patch embedding | projected pixel block | row/column, crop/scale, valid area | patch width and embedding width are separate |
-| Continuous latent feature | encoder output vector | receptive field or latent-slot convention | no finite codebook is implied |
-| Audio analysis frame | spectral/learned feature | sample rate, window support, hop | hop is not temporal resolution or latency by itself |
-| Codec index | selected codeword at one residual level | frame time, codebook level, codec revision | index values have no ordered acoustic distance |
-| Video token | frame patch or space-time tubelet | presentation timestamp, spatial cell, temporal support | frame order alone does not specify elapsed time |
-| Spatial measurement | state/object/sensor vector | coordinate frame, units, calibration, uncertainty | normalization cannot replace a coordinate definition |
-| Action symbol | command component or action-code index | actuator convention, scale, execution time | language subgoal and actuator command are different outputs |
+| Representation            | Sequence element                        | Coordinates that must remain interpretable             | Distinction preserved in the contract                       |
+| ------------------------- | --------------------------------------- | ------------------------------------------------------ | ----------------------------------------------------------- |
+| Image patch embedding     | projected pixel block                   | row/column, crop/scale, valid area                     | patch width and embedding width are separate                |
+| Continuous latent feature | encoder output vector                   | receptive field or latent-slot convention              | no finite codebook is implied                               |
+| Audio analysis frame      | spectral/learned feature                | sample rate, window support, hop                       | hop is not temporal resolution or latency by itself         |
+| Codec index               | selected codeword at one residual level | frame time, codebook level, codec revision             | index values have no ordered acoustic distance              |
+| Video token               | frame patch or space-time tubelet       | presentation timestamp, spatial cell, temporal support | frame order alone does not specify elapsed time             |
+| Spatial measurement       | state/object/sensor vector              | coordinate frame, units, calibration, uncertainty      | normalization cannot replace a coordinate definition        |
+| Action symbol             | command component or action-code index  | actuator convention, scale, execution time             | language subgoal and actuator command are different outputs |
 
 ## Mechanism
 
@@ -121,9 +131,13 @@ PAPER-REPORTED · ViT studies supervised pretraining and downstream classificati
 
 ## Observations
 
-PAPER-REPORTED · ViT's data-scale experiments show that large patch-based models underperform the compared BiT ResNets with smaller pretraining datasets, while larger-data pretraining changes that relationship (R18.1, §4.3, Figures 3–4). DERIVED: the patch interface alone therefore does not identify the observed transfer result; training exposure and adaptation remain part of the explanation.
+**What the paper claims.** [PAPER-REPORTED] ViT attributes its transfer behavior to patch-based transformer training at sufficient pretraining scale; its comparison is not an isolated patch-interface intervention [R18.1, Sec.4.3, Figures3-4].
 
-DERIVED: representation is both a scientific and a systems choice. Increasing patch density may preserve smaller spatial distinctions but adds sequence work; increasing codec levels reduces residual quantization error only to the extent that trained codebooks and the decoder use them, while increasing payload and possibly autoregressive steps. A continuous latent is neither inherently lossless nor inherently more semantic than a discrete code. Those properties require the map, objective and evaluation evidence.
+**What the evidence shows.** PAPER-REPORTED · ViT's data-scale experiments show that large patch-based models underperform the compared BiT ResNets with smaller pretraining datasets, while larger-data pretraining changes that relationship (R18.1, §4.3, Figures 3–4). [DERIVED] the patch interface alone therefore does not identify the observed transfer result; training exposure and adaptation remain part of the explanation.
+
+**What we infer.** [DERIVED] representation is both a scientific and a systems choice. Increasing patch density may preserve smaller spatial distinctions but adds sequence work; increasing codec levels reduces residual quantization error only to the extent that trained codebooks and the decoder use them, while increasing payload and possibly autoregressive steps. A continuous latent is neither inherently lossless nor inherently more semantic than a discrete code. Those properties require the map, objective and evaluation evidence.
+
+**What remains unknown.** [UNVERIFIED] These comparisons do not establish a common codec/patch-rate optimum, lossless semantic preservation, missing-modality robustness or equal total training/inference cost. No independent component-factorial experiment was executed by the book.
 
 ## Failure modes
 

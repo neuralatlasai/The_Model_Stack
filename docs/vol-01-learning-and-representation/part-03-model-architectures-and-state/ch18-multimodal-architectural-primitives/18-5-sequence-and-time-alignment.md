@@ -13,7 +13,16 @@ prev_sibling: ms.section.18.4
 next_sibling: ms.section.18.6
 children: []
 prerequisites: [ms.section.18.4, ms.chapter.13]
-downstream: [ms.chapter.19, ms.chapter.55, ms.chapter.56, ms.chapter.57, ms.chapter.58, ms.chapter.59, ms.chapter.60]
+downstream:
+  [
+    ms.chapter.19,
+    ms.chapter.55,
+    ms.chapter.56,
+    ms.chapter.57,
+    ms.chapter.58,
+    ms.chapter.59,
+    ms.chapter.60,
+  ]
 related: [ms.chapter.10, ms.chapter.13]
 siblings_by_mechanism: []
 relations: []
@@ -30,10 +39,11 @@ status:
   maturity: active
   disputed: false
 evidence_summary:
-  labels_used: [PAPER-REPORTED, DERIVED, MATHEMATICALLY-DERIVED, UNVERIFIED, NOT-DISCLOSED]
+  labels_used:
+    [PAPER-REPORTED, DERIVED, MATHEMATICALLY-DERIVED, UNVERIFIED, NOT-DISCLOSED]
   empirically_observed: false
 word_count_target: 2000
-updated_at: 2026-10-08
+updated_at: 2026-10-25
 editorial_status: manuscript_draft
 ---
 
@@ -122,9 +132,13 @@ PAPER-REPORTED · Whisper evaluates long-form transcription with concrete decodi
 
 ## Observations
 
-PAPER-REPORTED · ImageBind's audio ablation reports better ESC zero-shot classification for temporally aligned audio/video pairing than for its unaligned variant (R18.9, §5, Table 5g). DERIVED: this is task-performance evidence for the pairing intervention, not a measurement of timestamp error or a guarantee of clock synchronization.
+**What the paper claims.** [PAPER-REPORTED] ImageBind reports that aligned audio/video training pairs improve its emergent zero-shot audio classification under the disclosed ablation [R18.9, Sec.5, Table5g].
 
-DERIVED: sequence ordering, timestamp quantization and synchronization accuracy are three separate properties. A model can receive temporally meaningful coordinates in a nonchronological block serialization. A fine timestamp grid can coexist with large prediction error. A streaming system can use lookahead inside bounded blocks. These distinctions determine whether an evaluation is offline, block-online or subject to a strict prediction deadline.
+**What the evidence shows.** PAPER-REPORTED · ImageBind's audio ablation reports better ESC zero-shot classification for temporally aligned audio/video pairing than for its unaligned variant (R18.9, §5, Table 5g). [DERIVED] this is task-performance evidence for the pairing intervention, not a measurement of timestamp error or a guarantee of clock synchronization.
+
+**What we infer.** [DERIVED] sequence ordering, timestamp quantization and synchronization accuracy are three separate properties. A model can receive temporally meaningful coordinates in a nonchronological block serialization. A fine timestamp grid can coexist with large prediction error. A streaming system can use lookahead inside bounded blocks. These distinctions determine whether an evaluation is offline, block-online or subject to a strict prediction deadline.
+
+**What remains unknown.** [UNVERIFIED] Capture-clock calibration, timestamp-error distributions, strict online causality and long-duration synchronization are not measured by that classification ablation. No book timing/streaming experiment was run.
 
 ## Failure modes
 

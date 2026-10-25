@@ -177,14 +177,14 @@ The plan requires a cross-entropy gradient derivation and a paired bootstrap ove
 ## Lineage
 
 - 1948 · Shannon, *A Mathematical Theory of Communication* [R2.1] · conceptual ancestor (entropy, coding length)
-- 1979 · Efron, *Bootstrap Methods: Another Look at the Jackknife* [R2.2] · historical attribution pending full-text inspection (resampling inference)
-- 1992 · Williams, REINFORCE [R2.3] · historical attribution pending full-text inspection (score-function gradient estimator)
+- 1979 · Efron, *Bootstrap Methods: Another Look at the Jackknife* [R2.2] · conceptual ancestor — historical attribution pending full-text inspection (resampling inference)
+- 1992 · Williams, REINFORCE [R2.3] · conceptual ancestor — historical attribution pending full-text inspection (score-function gradient estimator)
 - 2013 · Kingma and Welling, *Auto-Encoding Variational Bayes* [R2.4] · alternative branch (reparameterisation estimator)
 - 2015 · Martens and Grosse, K-FAC [R2.5] · engineering optimization (factored curvature)
 - 2018 · Baydin et al., autodiff survey [R2.6] · conceptual ancestor (forward vs reverse mode accounting)
 - 2020 · Kaplan et al. [P08] · engineering optimization (power-law fits to loss)
-- 2022 · Hoffmann et al. [P09] · documented allocation revision (three estimation approaches under specified training protocols)
-- 2024 · Miller, *Adding Error Bars to Evals* [R2.7] · documented uncertainty treatment (clustered and paired standard errors for evaluation items)
+- 2022 · Hoffmann et al. [P09] · conceptual ancestor — documented allocation revision (three estimation approaches under specified training protocols)
+- 2024 · Miller, *Adding Error Bars to Evals* [R2.7] · conceptual ancestor — documented uncertainty treatment (clustered and paired standard errors for evaluation items)
 
 ```figure
 id: fig-2.2

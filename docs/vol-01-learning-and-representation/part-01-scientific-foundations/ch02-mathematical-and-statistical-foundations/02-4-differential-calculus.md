@@ -426,11 +426,13 @@ R2.4 §5 and Appendices C–E evaluate SGVB/AEVB on MNIST and Frey Face, reporti
 
 ## Observations
 
-For finite logits and a fixed normalized target, the softmax-cross-entropy gradient is p−y and its logit Hessian is diag(p)−ppᵀ. The latter is a covariance matrix, so it is positive semidefinite with a constant-shift null direction. The parameter Hessian includes an additional network-curvature term and need not inherit that sign [MATHEMATICALLY-DERIVED · DERIVED:eq-2.16; DERIVED:eq-2.17].
+**What the paper claims.** K-FAC reports block approximations, inversion/damping choices and autoencoder experiments. Those experiments do not rank every curvature approximation for modern language models [PAPER-REPORTED · R2.12, §§8–11; R2.5, §13].
 
-Model-target Fisher and GGN coincide only under the specified output-family/parameterization conditions. An empirical Fisher formed from observed-label gradients is a different expectation. K-FAC further approximates the relevant blocks and changes their inversion and damping; the reported autoencoder experiments do not rank all such choices on modern language models [PAPER-REPORTED · R2.12, §§8–11; R2.5, §13].
+**What the evidence shows.** For finite logits and a fixed normalized target, the softmax-cross-entropy gradient is p−y and its logit Hessian is diag(p)−ppᵀ, a positive-semidefinite covariance with a constant-shift null direction. The parameter Hessian adds network curvature and need not retain that sign [MATHEMATICALLY-DERIVED · DERIVED:eq-2.16; DERIVED:eq-2.17].
 
-Matrix-free derivatives avoid a dense N² object but may require multiple model passes inside a solver. Factor refresh, damping, solver iterations, layout, and retained state enter the execution cost. No release-specific fused-loss allocation or language-model backward/forward latency ratio is measured here [OFFICIAL-DOCUMENTATION · R2.10; R2.11].
+**What we infer.** Model-target Fisher and GGN coincide only under the specified output family and parameterization. Observed-label empirical Fisher is a different expectation. Matrix-free derivatives avoid dense N² storage but can require multiple passes; refresh, damping, solver iterations, layout and retained state affect execution cost [DERIVED; OFFICIAL-DOCUMENTATION · R2.10; R2.11].
+
+**What remains unknown.** No release-specific fused-loss allocation or language-model backward/forward latency ratio was measured here. Algebraic storage savings do not establish an elapsed-time speedup.
 
 ## Failure modes
 

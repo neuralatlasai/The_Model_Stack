@@ -209,7 +209,7 @@ Why it exists: trajectories as the unit of RL. What assumption changed: this sec
 **Human demonstration of multi-turn dialogue** — [§31.3](../../../vol-02-execution-and-optimization/part-06-post-training-and-reinforcement-learning/ch31-supervised-fine-tuning-and-behavior-acquisition/31-3-conversation-semantics.md)
 Why it exists: dialogues without an environment. What assumption changed: no state, no evaluator; the "outcome" is a rater's judgement. New failure mode: none of censoring's; all of preference labelling's. Changed primitive: environment state → rater.
 
-**Embodied interaction records** — [Chapter 60](../../../vol-03-grounded-and-interactive-intelligence/part-10-multimodal-world-and-embodied-models/ch60-vision-language-action-policies-and-embodied-foundation-models/README.md)
+**Embodied interaction records** — [Chapter 60](../../../vol-03-grounded-and-interactive-intelligence/part-10-multimodal-world-and-embodied-models/ch60-vision-language-action-policies-and-embodied-learning/README.md)
 Why it exists: continuous actions at a control rate. What assumption changed: units, coordinate frames, resets, and intervention records (Appendix C). Changed primitive: discrete tool call → continuous control.
 
 **Interactive benchmarks as evaluation** — [§63.1](../../../vol-03-grounded-and-interactive-intelligence/part-11-evaluation-interpretability-and-deployment-assurance/ch63-agent-retrieval-multimodal-and-system-reliability-evaluation/63-1-interactive-benchmarks.md)

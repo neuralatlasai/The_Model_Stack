@@ -319,11 +319,13 @@ R2.17 examines data, initialization, and hyperparameter variation in supervised-
 
 ## Observations
 
-The covariance identity for paired differences and the random-effects design effect identify different sources of precision. Pairing can remove a shared difficulty component; clustering restores covariance omitted by an iid-row calculation. Neither formula assigns a universal correlation or minimum detectable difference to every benchmark [MATHEMATICALLY-DERIVED · DERIVED:eq-2.21; DERIVED:eq-2.22].
+**What the paper claims.** Miller's same-score comparison changes standard errors rather than model capability. Agarwal et al. change aggregation and examine repeated-run/subsampling behavior [PAPER-REPORTED · R2.7, Table 4; R2.16, §§3–4].
 
-Miller's same-score comparison changes standard errors rather than model capability. Agarwal et al. additionally change aggregation and examine repeated-run/subsampling behavior. Their reported coverage and aggregate comparisons apply to the named tasks, run budgets, and statistics, rather than establishing finite-sample coverage for every resampling scheme [PAPER-REPORTED · R2.7, Table 4; R2.16, §§3–4].
+**What the evidence shows.** The covariance identity for paired differences and the random-effects design effect identify different sources of precision. Pairing can remove shared difficulty; clustering restores covariance omitted by an iid-row calculation. Neither formula supplies a universal correlation or minimum detectable difference [MATHEMATICALLY-DERIVED · DERIVED:eq-2.21; DERIVED:eq-2.22].
 
-Paired scores, dependency labels, estimand weights, and independent-unit counts determine which uncertainty calculation can be reconstructed. Model identities and runtime details absent from R2.7 Table 4 remain NOT-DISCLOSED; no coverage simulation or independent reproduction was executed for this chapter.
+**What we infer.** Paired scores, dependency labels, estimand weights and independent-unit counts determine which uncertainty calculation is reconstructible. Reported coverage applies to the studied tasks, run budgets and statistics, rather than guaranteeing finite-sample coverage for every resampling scheme.
+
+**What remains unknown.** Model identities and runtime details absent from R2.7 Table 4 remain NOT-DISCLOSED. No coverage simulation or independent reproduction was executed for this chapter.
 
 ## Failure modes
 

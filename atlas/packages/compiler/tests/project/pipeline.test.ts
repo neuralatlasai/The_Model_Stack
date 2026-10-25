@@ -44,7 +44,7 @@ describe('pipeline on real docs (stub Markdown engine)', () => {
     assert.ok(!codes.has('frontmatter-id-mismatch'));
   });
 
-  it('puts every manifest chapter and section in the graph, planned ones flagged', () => {
+  it('requires a complete manuscript for all 66 chapters and 396 sections', () => {
     for (let chapter = 1; chapter <= 66; chapter += 1) {
       const node = atlas.graph.nodes[`ms.chapter.${String(chapter)}`];
       assert.ok(node !== undefined, `ms.chapter.${String(chapter)}`);
@@ -55,14 +55,20 @@ describe('pipeline on real docs (stub Markdown engine)', () => {
     assert.equal(ch42.state, 'manuscript_draft');
     assert.equal(ch42.domain, 'inference');
     assert.ok((ch42.plan?.artifact ?? '').length > 0);
-    for (const chapter of [55, 56, 57]) {
-      const written = must(atlas.graph.nodes[`ms.chapter.${String(chapter)}`]);
-      assert.equal(written.hasManuscript, true);
-      assert.equal(written.state, 'manuscript_draft');
+    for (let chapter = 1; chapter <= 66; chapter += 1) {
+      const suffix = String(chapter);
+      for (const id of [
+        'ms.chapter.' + suffix,
+        ...Array.from({ length: 6 }, (_, i) => 'ms.section.' + suffix + '.' + String(i + 1)),
+        'ms.verification.' + suffix,
+        'ms.references.' + suffix,
+      ]) {
+        const written = must(atlas.graph.nodes[id]);
+        assert.equal(written.hasManuscript, true, id);
+        assert.notEqual(written.state, 'planned', id);
+      }
     }
-    const ch58 = must(atlas.graph.nodes['ms.chapter.58']);
-    assert.equal(ch58.hasManuscript, false);
-    assert.equal(ch58.state, 'planned');
+    assert.equal(atlas.documents.filter((doc) => doc.meta.chapter !== null).length, 66 * 9);
     const ch05 = must(atlas.graph.nodes['ms.chapter.5']);
     assert.equal(ch05.hasManuscript, true);
     assert.equal(ch05.number, '05');
@@ -97,7 +103,7 @@ describe('pipeline on real docs (stub Markdown engine)', () => {
     const ch58 = atlas.graph.tree[2]?.children
       .flatMap((part) => part.children)
       .find((node) => node.id === 'ms.chapter.58');
-    assert.equal(ch58?.children.length, 6, 'planned satellites are not listed in the tree');
+    assert.equal(ch58?.children.length, 8, 'the six sections and both authored satellites are listed');
   });
 
   it('derives typed edges from frontmatter and keeps the neighbourhood local', () => {
@@ -144,12 +150,12 @@ describe('pipeline on real docs (stub Markdown engine)', () => {
     );
   });
 
-  it('diagnoses links: planned targets as info, broken ones as warnings, attached to the linking document', () => {
+  it('retains typed planned-link diagnostics and has no broken manuscript links', () => {
     const planned = atlas.diagnostics.filter((item) => item.code === 'link-planned');
-    assert.ok(planned.length > 0);
+    assert.equal(atlas.diagnostics.filter((item) => item.code === 'link-unresolved').length, 0);
     assert.ok(planned.every((item) => item.severity === 'info' && item.file !== null));
     const withPlanned = atlas.documents.find((doc) => doc.diagnostics.some((item) => item.code === 'link-planned'));
-    assert.ok(withPlanned !== undefined);
+    if (planned.length > 0) assert.ok(withPlanned !== undefined);
   });
 
   it('indexes typed search documents with unique ids and bounded bodies', () => {
@@ -160,9 +166,9 @@ describe('pipeline on real docs (stub Markdown engine)', () => {
     const section = must(atlas.searchDocs.find((doc) => doc.id === 'node:ms.section.5.2'));
     assert.equal(section.kind, 'section');
     assert.equal(section.context, 'Foundations / Minimal Transformer');
-    const planned = must(atlas.searchDocs.find((doc) => doc.id === 'node:ms.chapter.58'));
-    assert.equal(planned.kind, 'chapter');
-    assert.ok(planned.body.length > 0, 'planned chapters are searchable by their plan artifact');
+    const latest = must(atlas.searchDocs.find((doc) => doc.id === 'node:ms.chapter.66'));
+    assert.equal(latest.kind, 'chapter');
+    assert.ok(latest.body.length > 0, 'the closing chapter is searchable by its authored manuscript');
     assert.equal(atlas.searchDocs.find((doc) => doc.id === 'system:impl.vllm')?.context, 'Inference engine');
     assert.ok(atlas.searchDocs.some((doc) => doc.id === 'paper:P19'));
     assert.ok(atlas.searchDocs.some((doc) => doc.id === 'lab:lab.deepseek'));

@@ -59,11 +59,22 @@ describe('compileAtlas on the real docs', () => {
     assert.equal(atlas.diagnostics.filter((item) => item.code === 'frontmatter-invalid').length, 0);
   });
 
-  it('preserves all required fields of the new multimodal verification proposals', () => {
+  it('preserves all 12 required fields of the completed chapter verification proposals', () => {
     for (const [chapter, minimum] of [
+      [8, 2],
+      [11, 3],
       [55, 6],
       [56, 3],
       [57, 2],
+      [58, 4],
+      [59, 4],
+      [60, 5],
+      [61, 3],
+      [62, 3],
+      [63, 3],
+      [64, 2],
+      [65, 5],
+      [66, 3],
     ] as const) {
       const doc = atlas.documents.find((item) => item.meta.id === `ms.verification.${String(chapter)}`);
       assert.ok(doc !== undefined, `verification chapter ${String(chapter)}`);

@@ -13,7 +13,16 @@ prev_sibling: ms.section.18.5
 next_sibling: ms.verification.18
 children: []
 prerequisites: [ms.section.18.5, ms.chapter.13]
-downstream: [ms.chapter.19, ms.chapter.55, ms.chapter.56, ms.chapter.57, ms.chapter.58, ms.chapter.59, ms.chapter.60]
+downstream:
+  [
+    ms.chapter.19,
+    ms.chapter.55,
+    ms.chapter.56,
+    ms.chapter.57,
+    ms.chapter.58,
+    ms.chapter.59,
+    ms.chapter.60,
+  ]
 related: [ms.chapter.10, ms.chapter.13]
 siblings_by_mechanism: []
 relations: []
@@ -30,10 +39,11 @@ status:
   maturity: active
   disputed: false
 evidence_summary:
-  labels_used: [PAPER-REPORTED, DERIVED, MATHEMATICALLY-DERIVED, UNVERIFIED, NOT-DISCLOSED]
+  labels_used:
+    [PAPER-REPORTED, DERIVED, MATHEMATICALLY-DERIVED, UNVERIFIED, NOT-DISCLOSED]
   empirically_observed: false
 word_count_target: 2000
-updated_at: 2026-10-08
+updated_at: 2026-10-25
 editorial_status: manuscript_draft
 ---
 
@@ -95,7 +105,7 @@ DERIVED: a bottleneck test should distinguish encoder information, connector ret
 
 PAPER-REPORTED · ImageBind aligns audio, depth, thermal and IMU representations with images while retaining pretrained image/text encoders. It evaluates zero-shot recognition and retrieval involving modality pairs not directly trained together, and ablates alignment, augmentations and encoder scale (R18.9, §§3–5). DERIVED: independent encoders permit computing an available modality's embedding without every other input. This does not establish that an arbitrary joint generator or controller remains calibrated when an input disappears.
 
-MATHEMATICALLY-DERIVED: for unit vectors, cosine similarity determines Euclidean distance by $\|u-v\|^2=2-2u^{\mathsf T}v$. If $u$ and $v$ are each close to the *same* image embedding $w$, the triangle inequality bounds $\|u-v\|\leq\|u-w\|+\|v-w\|$. This is a local geometric statement. Training audio against one collection of images and depth against another does not guarantee that corresponding semantic events meet its premises. Pairwise training through images therefore supplies an empirical route to transfer, not a universal transitivity theorem.
+MATHEMATICALLY-DERIVED: for unit vectors, cosine similarity determines Euclidean distance by $\|u-v\|^2=2-2u^{\mathsf T}v$. If $u$ and $v$ are each close to the _same_ image embedding $w$, the triangle inequality bounds $\|u-v\|\leq\|u-w\|+\|v-w\|$. This is a local geometric statement. Training audio against one collection of images and depth against another does not guarantee that corresponding semantic events meet its premises. Pairwise training through images therefore supplies an empirical route to transfer, not a universal transitivity theorem.
 
 DERIVED: a missing modality needs an explicit availability indicator or a defined missing-input path. An all-zero tensor can also be a legitimate normalized feature or silent segment; substituting zeros without a trained convention changes the conditional input ambiguously. Modality dropout is a possible training intervention, but no efficacy claim for a particular dropout policy is established by the inspected studies here. Missingness can also correlate with labels or environments; evaluating random removal alone need not cover that pattern.
 
@@ -115,9 +125,13 @@ PAPER-REPORTED · PaLM-E's TAMP study compares input representations and mixture
 
 ## Observations
 
-PAPER-REPORTED · PaLM-E's TAMP comparison improves planning success when the ViT-4B configuration uses its full mixture rather than single-robot training, with the language model frozen in those arms (R18.7, §6.2, Table 1). DERIVED: this demonstrates the source's directional mixture-transfer result; its separately reported language-retention losses show why transfer and forgetting require separate endpoints.
+**What the paper claims.** [PAPER-REPORTED] PaLM-E reports positive cross-task/embodiment mixture transfer alongside separate language-retention measurements [R18.7, Secs.6.2/6.6, Table1 and appendix Table8].
 
-DERIVED: transfer can be directional: training on one task can improve another without the reverse intervention having the same effect. Gains on joint tasks can coexist with losses on text-only tasks. Shared embeddings can support unseen-pair retrieval while failing a generation task that needs fine spatial or temporal distinctions. A source's aggregate result should therefore be decomposed by the required information, modality availability and evaluation adaptation.
+**What the evidence shows.** PAPER-REPORTED · PaLM-E's TAMP comparison improves planning success when the ViT-4B configuration uses its full mixture rather than single-robot training, with the language model frozen in those arms (R18.7, §6.2, Table 1). [DERIVED] this demonstrates the source's directional mixture-transfer result; its separately reported language-retention losses show why transfer and forgetting require separate endpoints.
+
+**What we infer.** [DERIVED] transfer can be directional: training on one task can improve another without the reverse intervention having the same effect. Gains on joint tasks can coexist with losses on text-only tasks. Shared embeddings can support unseen-pair retrieval while failing a generation task that needs fine spatial or temporal distinctions. A source's aggregate result should therefore be decomposed by the required information, modality availability and evaluation adaptation.
+
+**What remains unknown.** [UNVERIFIED] The reported transfer direction does not identify reverse transfer, universal compositional generalization or preservation of every text capability. Mixture-cost matching, cross-release retention and independent replications remain unresolved.
 
 ## Failure modes
 
