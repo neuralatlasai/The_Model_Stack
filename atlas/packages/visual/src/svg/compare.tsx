@@ -8,25 +8,29 @@
  */
 import type { JSX } from 'preact';
 import type { CompareSpec } from '@atlas/core';
-import { cls, litClass, NO_STATE, type StateView } from './util.ts';
+import { cls, figureInstanceName, litClass, NO_STATE, safeId, type StateView } from './util.ts';
 
 export interface CompareViewProps {
   readonly spec: CompareSpec;
+  readonly idPrefix: string;
+  readonly title?: string | undefined;
   readonly nodeHref?: ((id: string) => string | null) | undefined;
   readonly state?: StateView;
 }
 
-export function CompareView({ spec, nodeHref, state = NO_STATE }: CompareViewProps): JSX.Element {
+export function CompareView({ spec, idPrefix, title, nodeHref, state = NO_STATE }: CompareViewProps): JSX.Element {
+  const axisId = `${safeId(idPrefix)}-comparison-axis`;
   const differing = spec.rows.filter((row) => {
     const cells = spec.columns.map((column) => row.values[column.id] ?? '—');
     return !cells.every((cell) => cell === cells[0]);
   }).length;
   return (
     <div class="vg-compare-wrap">
-      <p class="vg-compare__axis">
+      <p class="vg-compare__axis" id={axisId}>
         <span class="vg-compare__axis-label">Axis</span> {spec.axis}
+        <span class="vg-visually-hidden"> for {figureInstanceName(idPrefix, title)}</span>
       </p>
-      <div class="vg-table-scroll" role="region" aria-label={`Comparison: ${spec.axis}`} tabIndex={0}>
+      <div class="vg-table-scroll" role="region" aria-labelledby={axisId} tabIndex={0}>
         <table class="vg-compare">
           <caption class="vg-visually-hidden">
             Comparison on the axis: {spec.axis}. {differing} of {spec.rows.length} rows differ across{' '}

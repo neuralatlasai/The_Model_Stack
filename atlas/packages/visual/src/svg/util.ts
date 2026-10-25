@@ -1,7 +1,7 @@
 /**
  * Small helpers shared by the renderers. Pure; safe on server and client.
  */
-import type { Point } from '@atlas/core';
+import type { Point, FigureSpec, FigureState } from '@atlas/core';
 
 /** Joins class names, skipping falsy parts. */
 export function cls(...parts: readonly (string | false | null | undefined)[]): string {
@@ -22,6 +22,30 @@ export function hashId(text: string): string {
 export function safeId(text: string): string {
   const cleaned = text.replace(/[^A-Za-z0-9_-]+/gu, '-').replace(/^-+|-+$/gu, '');
   return /^[A-Za-z]/u.test(cleaned) ? cleaned : `vg-${cleaned}`;
+}
+
+/** Calculator chrome must describe its actual authored-default initial values. */
+export function initialFigureAnnotation(spec: FigureSpec): FigureState | undefined {
+  const first = spec.states[0];
+  if (spec.kind !== 'calculator' || first === undefined) return first;
+  const defaults = new Map(spec.spec.inputs.map((input) => [input.symbol, input.default]));
+  return Object.entries(first.variables ?? {}).every(([symbol, value]) => defaults.get(symbol) === value)
+    ? first
+    : undefined;
+}
+
+/** Reader-facing identity for canonical figures and their page-local copies. */
+export function figureInstanceName(idPrefix: string, title?: string): string {
+  const [anchor = idPrefix, copy = ''] = idPrefix.split('--');
+  const number = /^fig-(\d+)-(\d+[a-z]?)(?:$|-)/u.exec(anchor);
+  const identity =
+    number === null ? `Figure ${anchor.replace(/^fig-/u, '').replace(/-/gu, ' ')}` : `Figure ${number[1]}.${number[2]}`;
+  const context = copy.startsWith('overview')
+    ? 'visual overview'
+    : copy.startsWith('rail')
+      ? 'context rail'
+      : 'main figure';
+  return `${identity}${title === undefined ? '' : `: ${title}`}, ${context}`;
 }
 
 /** Minimum rendered scale of an SVG figure inside a scroll region (CSS `.vg-scroll .vg-w{k}`). */

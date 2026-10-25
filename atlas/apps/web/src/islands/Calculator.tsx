@@ -11,8 +11,8 @@
  */
 import type { JSX } from 'preact';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'preact/hooks';
-import type { CalculatorSpec, CompiledFigure } from '@atlas/core';
-import { CalculatorView } from '@atlas/visual/svg';
+import type { CalculatorSpec, CompiledFigure, FigureState } from '@atlas/core';
+import { CalculatorView, figureInstanceName } from '@atlas/visual/svg';
 import { createCalculatorModel } from '../client/calculator-model.ts';
 import { FIGURE_STATE_EVENT, type FigureStateDetail } from '../client/live-instruments.ts';
 import { calculatorSweep } from '../client/calculator-sweep.ts';
@@ -30,6 +30,8 @@ export default function Calculator({ figure, texHtml, explore = false }: Calcula
   const spec: CalculatorSpec | null = figure.spec.kind === 'calculator' ? figure.spec.spec : null;
   const model = useMemo(() => (spec === null ? null : createCalculatorModel(spec)), [spec]);
   const [values, setValues] = useState<Record<string, number>>(() => ({ ...(model?.defaults ?? {}) }));
+  const [narrativeState, setNarrativeState] = useState<FigureState | undefined>(figure.spec.states[0]);
+  const [annotationMode, setAnnotationMode] = useState<'narrative' | 'manual' | 'defaults'>('narrative');
   const [inputSymbol, setInputSymbol] = useState(() => spec?.inputs[0]?.symbol ?? '');
   const [outputSymbol, setOutputSymbol] = useState(
     () => spec?.outputs.find((output) => output.emphasis)?.symbol ?? spec?.outputs[0]?.symbol ?? '',
@@ -64,6 +66,7 @@ export default function Calculator({ figure, texHtml, explore = false }: Calcula
       const next = model.normalise(symbol, value);
       if (next === null) return null;
       setValues((previous) => (previous[symbol] === next ? previous : { ...previous, [symbol]: next }));
+      setAnnotationMode('manual');
       if (explore) setInteraction((previous) => previous + 1);
       return next;
     },
@@ -71,6 +74,7 @@ export default function Calculator({ figure, texHtml, explore = false }: Calcula
   );
   const reset = useCallback((): void => {
     if (model !== null) setValues({ ...model.defaults });
+    setAnnotationMode('defaults');
     setResetEpoch((previous) => previous + 1);
     if (explore) setInteraction((previous) => previous + 1);
   }, [model, explore]);
@@ -84,6 +88,15 @@ export default function Calculator({ figure, texHtml, explore = false }: Calcula
     const onState = (event: Event): void => {
       const detail = (event as CustomEvent<FigureStateDetail>).detail;
       if (detail.figureId !== figure.spec.id) return;
+      setNarrativeState(
+        detail.state ??
+          figure.spec.states.find(
+            (state) =>
+              Object.keys(state.variables ?? {}).length > 0 &&
+              Object.entries(state.variables ?? {}).every(([symbol, raw]) => detail.variables[symbol] === raw),
+          ),
+      );
+      setAnnotationMode('narrative');
       setValues((previous) => {
         const next = { ...previous };
         for (const [symbol, raw] of Object.entries(detail.variables)) {
@@ -98,6 +111,26 @@ export default function Calculator({ figure, texHtml, explore = false }: Calcula
       host.removeEventListener(FIGURE_STATE_EVENT, onState);
     };
   }, [model, figure.spec.id]);
+
+  useEffect(() => {
+    const host = rootRef.current?.closest('[data-figure]');
+    if (host === null || host === undefined || model === null) return;
+    const bindings = Object.entries(narrativeState?.variables ?? {});
+    const matches =
+      annotationMode !== 'defaults' &&
+      narrativeState !== undefined &&
+      (annotationMode === 'narrative' || bindings.length > 0) &&
+      bindings.every(([symbol, raw]) => values[symbol] === model.normalise(symbol, raw));
+    const label = host.querySelector('[data-vg-state-label]');
+    const note = host.querySelector('[data-vg-state-note]');
+    if (label !== null)
+      label.textContent = matches
+        ? (narrativeState.label ?? '')
+        : model.isAtDefaults(values)
+          ? 'Authored defaults'
+          : 'Custom settings';
+    if (note !== null) note.textContent = matches ? (narrativeState.note ?? '') : '';
+  }, [values, narrativeState, annotationMode, model]);
 
   if (spec === null || model === null) return null;
   const undefinedOutputs = results.filter((result) => result.value === null);
@@ -124,6 +157,7 @@ export default function Calculator({ figure, texHtml, explore = false }: Calcula
           precise={explore}
           {...(interactive ? { onInput, ...(explore ? { onExactInput: onInput } : {}) } : {})}
           idPrefix={figure.anchor}
+          title={figure.spec.title}
           state={{ lit: new Set(explore ? [inputSymbol, outputSymbol] : []), overrides: null }}
           {...(texHtml === undefined ? {} : { texHtml })}
         />
@@ -145,9 +179,12 @@ export default function Calculator({ figure, texHtml, explore = false }: Calcula
         </div>
       </div>
       {explore && sweep !== null && (
-        <section class="sc-sensitivity" aria-label="Calculator sensitivity exploration">
+        <section class="sc-sensitivity" aria-labelledby={`${figure.anchor}-sensitivity-title`}>
           <header class="sc-sensitivity__head">
-            <h3>Explore the response</h3>
+            <h3 id={`${figure.anchor}-sensitivity-title`}>
+              Explore the response
+              <span class="vg-visually-hidden"> for {figureInstanceName(figure.anchor, figure.spec.title)}</span>
+            </h3>
             <div class="sc-sensitivity__choices">
               <label for={`${figure.anchor}-sweep-input`}>
                 Vary

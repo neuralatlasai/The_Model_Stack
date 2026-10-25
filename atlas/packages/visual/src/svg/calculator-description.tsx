@@ -1,5 +1,6 @@
 /** Structured, server-rendered equivalent of a calculator's authored defaults. */
 import type { JSX } from 'preact';
+import { figureInstanceName } from './util.ts';
 import { formatValue, type CalculatorSpec } from '@atlas/core';
 import {
   calculatorDefaults,
@@ -11,6 +12,8 @@ import {
 export interface CalculatorDescriptionProps {
   readonly spec: CalculatorSpec;
   readonly alt: string;
+  readonly idPrefix: string;
+  readonly title?: string | undefined;
   /** HTML+MathML from the host's trusted, server-side equation renderer. */
   readonly texHtml?: string | undefined;
 }
@@ -36,7 +39,13 @@ function OutputRows({ outputs }: { readonly outputs: readonly CalculatorOutputVa
   );
 }
 
-export function CalculatorDescription({ spec, alt, texHtml }: CalculatorDescriptionProps): JSX.Element {
+export function CalculatorDescription({
+  spec,
+  alt,
+  idPrefix,
+  title,
+  texHtml,
+}: CalculatorDescriptionProps): JSX.Element {
   const defaults = calculatorDefaults(spec);
   return (
     <div class="vg-calc-description">
@@ -46,7 +55,7 @@ export function CalculatorDescription({ spec, alt, texHtml }: CalculatorDescript
           <div
             class="vg-calc-description__math"
             role="region"
-            aria-label={spec.equation === undefined ? 'Calculator equation' : `Equation ${spec.equation}`}
+            aria-label={`Authored defaults, ${spec.equation === undefined ? 'calculator equation' : `equation ${spec.equation}`} for ${figureInstanceName(idPrefix, title)}`}
             tabIndex={0}
             dangerouslySetInnerHTML={{ __html: texHtml }}
           />

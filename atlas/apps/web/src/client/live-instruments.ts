@@ -26,6 +26,7 @@ export const FIGURE_STATE_EVENT = 'atlas:figure-state';
 export interface FigureStateDetail {
   readonly figureId: string;
   readonly variables: Readonly<Record<string, number>>;
+  readonly state?: FigureState;
 }
 
 /** Recomputed values for formula-driven kinds: key → value, format, and optional width fraction. */
@@ -100,10 +101,12 @@ function applyState(live: Live, state: FigureState | undefined, valueHook: Value
 
   const variables = state?.variables ?? null;
   if (spec.kind === 'calculator') {
-    if (variables !== null) {
-      const detail: FigureStateDetail = { figureId: spec.id, variables };
-      root.dispatchEvent(new CustomEvent<FigureStateDetail>(FIGURE_STATE_EVENT, { detail, bubbles: true }));
-    }
+    const detail: FigureStateDetail = {
+      figureId: spec.id,
+      variables: variables ?? {},
+      ...(state === undefined ? {} : { state }),
+    };
+    root.dispatchEvent(new CustomEvent<FigureStateDetail>(FIGURE_STATE_EVENT, { detail, bubbles: true }));
     return;
   }
   if (valueHook === null) return;

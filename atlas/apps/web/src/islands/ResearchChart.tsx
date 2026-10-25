@@ -2,7 +2,7 @@
 import type { JSX } from 'preact';
 import { useEffect, useRef, useState } from 'preact/hooks';
 import type { ChartSpec, FigurePlacement } from '@atlas/core';
-import { ChartView } from '@atlas/visual/svg';
+import { ChartView, figureInstanceName } from '@atlas/visual/svg';
 import { enhanceChart } from '../client/charts.ts';
 import { Controller } from '../client/lifecycle.ts';
 import { FIGURE_STATE_EVENT, type FigureStateDetail } from '../client/live-instruments.ts';
@@ -33,6 +33,7 @@ export default function ResearchChart({
   const root = useRef<HTMLDivElement>(null);
   const [width, setWidth] = useState(700);
   const [ready, setReady] = useState(false);
+  const [overflowing, setOverflowing] = useState(false);
   const [liveVariables, setLiveVariables] = useState<Readonly<Record<string, number>> | null>(null);
   const [liveHighlight, setLiveHighlight] = useState<readonly string[] | null>(null);
   const effectiveVariables = liveVariables ?? variables;
@@ -63,9 +64,14 @@ export default function ResearchChart({
       setReady(true);
     };
     resize();
-    const observer = new ResizeObserver(resize);
+    let frame = 0;
+    const observer = new ResizeObserver(() => {
+      cancelAnimationFrame(frame);
+      frame = requestAnimationFrame(resize);
+    });
     observer.observe(element);
     return () => {
+      cancelAnimationFrame(frame);
       observer.disconnect();
     };
   }, []);
@@ -79,6 +85,28 @@ export default function ResearchChart({
       ctl.dispose();
     };
   }, [spec, width, effectiveVariables]);
+  useEffect(() => {
+    const element = root.current;
+    if (element === null) return undefined;
+    const measure = (): void => {
+      setOverflowing(element.scrollWidth > element.clientWidth + 1);
+    };
+    measure();
+    let frame = 0;
+    const observer = new ResizeObserver(() => {
+      cancelAnimationFrame(frame);
+      frame = requestAnimationFrame(measure);
+    });
+    observer.observe(element);
+    const svg = element.querySelector('svg');
+    if (svg !== null) observer.observe(svg);
+    return () => {
+      cancelAnimationFrame(frame);
+      observer.disconnect();
+    };
+  }, [spec, width, compact, effectiveVariables]);
+  // Before hydration (including no-JS reading), retain keyboard access to the SSR-width plot.
+  const scrollable = !ready || overflowing;
   const height = compact
     ? Math.max(280, Math.min(360, Math.round(width * 0.62)))
     : Math.max(320, Math.min(480, Math.round(width * 0.56)));
@@ -88,6 +116,9 @@ export default function ResearchChart({
       ref={root}
       data-responsive-chart={idPrefix}
       data-chart-ready={ready ? 'true' : undefined}
+      tabIndex={scrollable ? 0 : undefined}
+      role={scrollable ? 'region' : undefined}
+      aria-label={scrollable ? `Scrollable chart for ${figureInstanceName(idPrefix, title)}` : undefined}
     >
       <ChartView
         spec={spec}

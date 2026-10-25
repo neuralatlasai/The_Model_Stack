@@ -13,7 +13,10 @@ async function schedulingDescription(description: Locator): Promise<void> {
   await expect(description.locator('.katex-error')).toHaveCount(0);
   await expect(description.locator('.vg-calc-description__eqno')).toHaveText('(12.4)');
   await expect(
-    description.getByRole('region', { name: 'Equation 12.4', exact: true, includeHidden: true }),
+    description.getByRole('region', {
+      name: /^Authored defaults, equation 12\.4 for Figure 12\.6: .+, (?:main figure|visual overview|context rail)$/u,
+      includeHidden: true,
+    }),
   ).toHaveAttribute('tabindex', '0');
   for (const [symbol, label, value, upper] of [
     ['work', 'total work', '109.000', '10000.000'],
@@ -70,7 +73,9 @@ for (const javaScriptEnabled of [true, false]) {
         const inlineDescription = canonicalDetails.locator('.vg-calc-description');
         await expect(inlineDescription).toBeVisible();
         await schedulingDescription(inlineDescription);
-        const formula = inlineDescription.getByRole('region', { name: 'Equation 12.4', exact: true });
+        const formula = inlineDescription.getByRole('region', {
+          name: /^Authored defaults, equation 12\.4 for Figure 12\.6: .+, (?:main figure|visual overview|context rail)$/u,
+        });
         await formula.focus();
         await expect(formula).toBeFocused();
         if (width === 390) {

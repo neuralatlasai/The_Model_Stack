@@ -21,7 +21,7 @@ import type { JSX, TargetedEvent } from 'preact';
 import { useEffect, useState } from 'preact/hooks';
 import { formatValue, type CalculatorSpec } from '@atlas/core';
 import { evaluateCalculator, formatInputValue, sliderModel } from '../figure-math.ts';
-import { cls, fracStyle, litClass, NO_STATE, safeId, type StateView } from './util.ts';
+import { cls, figureInstanceName, fracStyle, litClass, NO_STATE, safeId, type StateView } from './util.ts';
 
 export interface CalculatorViewProps {
   readonly spec: CalculatorSpec;
@@ -37,6 +37,7 @@ export interface CalculatorViewProps {
   readonly precise?: boolean;
   /** Unique per page (the figure anchor); prefixes control ids and radio-group names. */
   readonly idPrefix: string;
+  readonly title?: string | undefined;
   /** Pre-rendered KaTeX HTML for `spec.tex` (trusted compiler output). Falls back to the TeX source. */
   readonly texHtml?: string;
   /** Live-instrument state (lit rows). */
@@ -128,6 +129,7 @@ export function CalculatorView({
   resetEpoch = 0,
   precise = false,
   idPrefix,
+  title,
   texHtml,
   state = NO_STATE,
 }: CalculatorViewProps): JSX.Element {
@@ -148,7 +150,7 @@ export function CalculatorView({
           <div
             class="vg-calc__tex"
             role="region"
-            aria-label="Calculator equation"
+            aria-label={`${spec.equation === undefined ? 'Calculator equation' : `Equation ${spec.equation}`} for ${figureInstanceName(idPrefix, title)}`}
             tabIndex={0}
             dangerouslySetInnerHTML={{ __html: texHtml }}
           />

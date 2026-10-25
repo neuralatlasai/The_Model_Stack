@@ -14,8 +14,8 @@
  * as JSON with their values precomputed (`resolveFigureStates`), the header
  * holds `<span class="vg-state__label" data-vg-state-label>`, and a
  * `<p class="vg-state__note" data-vg-state-note aria-live="polite">` follows
- * the body. The server render applies states[0], so the no-JS view is the
- * first state.
+ * the body. Calculators start at authored defaults and show a narrative
+ * annotation only when its bindings match; other views apply states[0].
  *
  * Figures are separated by hairline rules, never boxed.
  */
@@ -35,7 +35,7 @@ import { SceneSvg } from './scene.tsx';
 import { StatPanelView } from './stat-panel.tsx';
 import { SystemsTraceTable } from './systems.tsx';
 import { TensorFlowView } from './tensor.tsx';
-import { cls, NO_STATE, safeId, type StateView } from './util.ts';
+import { cls, figureInstanceName, initialFigureAnnotation, NO_STATE, safeId, type StateView } from './util.ts';
 
 export interface FigureBodyProps {
   readonly figure: CompiledFigure;
@@ -102,8 +102,9 @@ export function FigureBody({ figure, texHtml, nodeHref, chartDimensions }: Figur
       return (
         <CalculatorView
           spec={spec.spec}
-          values={{ ...calculatorDefaults(spec.spec), ...(state.overrides ?? {}) }}
+          values={calculatorDefaults(spec.spec)}
           idPrefix={prefix}
+          title={spec.title}
           state={state}
           {...(texHtml === undefined ? {} : { texHtml })}
         />
@@ -129,7 +130,7 @@ export function FigureBody({ figure, texHtml, nodeHref, chartDimensions }: Figur
     case 'hierarchy':
       return <HierarchyView spec={spec.spec} caption={spec.title} state={state} />;
     case 'compare':
-      return <CompareView spec={spec.spec} nodeHref={nodeHref} state={state} />;
+      return <CompareView spec={spec.spec} idPrefix={prefix} title={spec.title} nodeHref={nodeHref} state={state} />;
   }
 }
 
@@ -169,7 +170,13 @@ function TextEquivalent({ figure, texHtml }: Pick<FigureBodyProps, 'figure' | 't
       <summary>Text description</summary>
       <div class="vg-text__body">
         {figure.spec.kind === 'calculator' ? (
-          <CalculatorDescription spec={figure.spec.spec} alt={figure.spec.alt} texHtml={texHtml} />
+          <CalculatorDescription
+            spec={figure.spec.spec}
+            alt={figure.spec.alt}
+            idPrefix={figure.anchor}
+            title={figure.spec.title}
+            texHtml={texHtml}
+          />
         ) : (
           paragraphs.map((paragraph, index) => <p key={index}>{paragraph}</p>)
         )}
@@ -194,6 +201,7 @@ export function FigureFrame({ figure, children, explorationHint, texHtml }: Figu
   const scroll = figure.placement !== 'rail' && SCROLLED_KINDS.has(spec.kind);
   const states = spec.states.length > 0 ? resolveFigureStates(spec) : [];
   const first = states[0];
+  const annotation = initialFigureAnnotation(spec);
   const lit = first !== undefined && first.highlight.length > 0;
   return (
     <figure
@@ -215,12 +223,17 @@ export function FigureFrame({ figure, children, explorationHint, texHtml }: Figu
         <span class="vg-figure__title">{spec.title}</span>
         {first !== undefined && (
           <span class="vg-state__label" data-vg-state-label>
-            {first.label ?? ''}
+            {annotation?.label ?? (spec.kind === 'calculator' ? 'Authored defaults' : '')}
           </span>
         )}
       </header>
       {scroll ? (
-        <div class="vg-figure__body vg-scroll" role="region" aria-label={spec.title} tabIndex={0}>
+        <div
+          class="vg-figure__body vg-scroll"
+          role="region"
+          aria-label={figureInstanceName(figure.anchor, spec.title)}
+          tabIndex={0}
+        >
           {children}
         </div>
       ) : (
@@ -233,7 +246,7 @@ export function FigureFrame({ figure, children, explorationHint, texHtml }: Figu
       )}
       {first !== undefined && (
         <p class="vg-state__note" data-vg-state-note aria-live="polite">
-          {first.note ?? ''}
+          {annotation?.note ?? ''}
         </p>
       )}
       <figcaption class="vg-figure__caption">

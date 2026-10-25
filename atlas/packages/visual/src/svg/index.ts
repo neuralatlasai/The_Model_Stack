@@ -29,3 +29,4 @@ export { HierarchyView } from './hierarchy.tsx';
 export { CompareView, type CompareViewProps } from './compare.tsx';
 export { NeighbourhoodGraph, type NeighbourhoodGraphProps } from './neighbourhood.tsx';
 export { calculatorDefaults, evaluateCalculator, sliderModel } from '../figure-math.ts';
+export { figureInstanceName, initialFigureAnnotation } from './util.ts';

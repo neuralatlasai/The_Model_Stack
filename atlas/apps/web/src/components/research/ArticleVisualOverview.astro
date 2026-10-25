@@ -6,7 +6,7 @@
  * remain in their original manuscript positions and receive the title links.
  */
 import { isCitationKey, type PerformanceContext, type ResearchDocument } from '@atlas/core';
-import { CalculatorDescription, FigureBody } from '@atlas/visual/svg';
+import { CalculatorDescription, FigureBody, initialFigureAnnotation } from '@atlas/visual/svg';
 import Calculator from '../../islands/Calculator.tsx';
 import ResearchChart from '../../islands/ResearchChart.tsx';
 import '../../styles/scientific-figures.css';
@@ -173,10 +173,18 @@ const contextFields: readonly (readonly [keyof PerformanceContext, string])[] = 
                 ))}
               </dl>
             )}
-            {figure.spec.states[0]?.note !== undefined && <p>{figure.spec.states[0].note}</p>}
+            {initialFigureAnnotation(figure.spec)?.note !== undefined && (
+              <p>{initialFigureAnnotation(figure.spec)?.note}</p>
+            )}
             <div class="aw-visual__description">
               {figure.spec.kind === 'calculator' ? (
-                <CalculatorDescription spec={figure.spec.spec} alt={figure.spec.alt} {...tex} />
+                <CalculatorDescription
+                  spec={figure.spec.spec}
+                  alt={figure.spec.alt}
+                  idPrefix={figure.anchor}
+                  title={figure.spec.title}
+                  {...tex}
+                />
               ) : (
                 figure.text
                   .split(/\n+/u)
