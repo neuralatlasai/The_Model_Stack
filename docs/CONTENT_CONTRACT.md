@@ -2,6 +2,7 @@
 
 **Status:** normative for every file under `docs/`. Edition 1.0, 20 September 2026.
 **Editorial revision:** 8 October 2026 — complete topic treatment, primary-source evidence, mathematical procedures, and scientific visual presentation.
+**Continuation instruction:** 24 October 2026 — newly authored research coverage uses the evidence window **1 March–24 October 2026**, and method selection follows the scientific decision obligations in §14.1. This instruction takes precedence over older preferences for 2025–2026 coverage when writing the remaining chapters. Existing chapters are not certified as compliant by this change.
 **Authority:** this contract implements `book_plan.md` (chapter ownership, matrices, shared mathematical contract, Appendix H) and the content-object model in `Instruction/UI_UX.md`. Explicit user instructions control the current scope, audience, evidence standard, completeness, and editorial style. Preserve the plan's hierarchy and identifiers and the application's content grammar; do not modify read-only inputs to reconcile a writing preference.
 
 Requirements use **MUST**, **MUST NOT**, **SHOULD**, and **MAY** as normative terms.
@@ -398,6 +399,29 @@ Frontmatter with `entity_type: references`. A table of every work cited in the c
 - Type ∈ paper · technical report · documentation · repository · dataset card · model card · course · measurement source.
 - Status ∈ peer-reviewed · preprint · official documentation · archived · UNVERIFIED. A preprint's presence is not a claim of peer review.
 - URLs MUST be ones the author can attribute with confidence (arXiv abs pages, official documentation roots from `AI_REFERENCE_STACK.md`, official GitHub organisations). Otherwise Status = UNVERIFIED and the URL cell is `null`.
+
+---
+
+### 14.1 Current research window and scientific decisions
+
+**User instruction, 24 October 2026.** Interpret “March 2026 onward” as an inclusive lower bound of **2026-03-01**. For this continuation, the upper bound is **2026-10-24**. Update the upper bound only when a later authoring session actually inspects later evidence.
+
+- Newly introduced research papers, technical reports, and release-specific evidence MUST fall in that window. Record the first public release date and inspected revision separately. A pre-cutoff paper does not become eligible merely because its web page was accessed or its bibliography revised after the cutoff. A substantive new contribution requires its own dated evidence and a precise account of what changed.
+- Old source anchors in `book_plan.md` remain retrieval/context leads; they do not override this window. Do not introduce older papers as current evidence. Link to canonical earlier chapters for already-owned foundations. Explain necessary mathematical consequences as original, conditional derivations with explicit premises, rather than attributing them to an invented recent source.
+- An undated, mutable documentation page is not proof of a post-cutoff release. Use a dated first-party release, version, commit, or report to establish eligibility and identify any unpinned surface. Source code not executed by the book does not establish runtime compatibility.
+- Search for current alternatives through the prescribed primary-source routes. Recency alone does not establish superiority. A state-of-the-art claim requires a dated comparison with the task distribution, candidate set, information access, resource budget, metric, evaluator, uncertainty, and implementation conditions stated. Otherwise use a bounded description of the documented method and leave the preference unresolved.
+
+Every substantive methodology or strategy choice MUST develop an inspectable argument connecting:
+
+1. **Required result and acceptance rule:** what must be established, on which distribution and under which resource and operational constraints.
+2. **Decision-relevant uncertainty:** what must be known to choose; which uncertainties can remain without changing an acceptable choice; which missing observations prevent justification.
+3. **Controlling obstruction and admissibility:** the bottleneck or failure being addressed, required assumptions, necessary versus sufficient properties, information requirements, evaluation validity, and feasibility.
+4. **Construction and transfer:** why the proposed mechanism addresses the obstruction. For transformations, approximations, and decompositions, identify the produced property, mapping to the original objective, validity assumptions, and introduced error or cost.
+5. **Comparable alternatives and reversal conditions:** compare candidates under the same target, information regime, resources, and acceptance rule; state the decisive supported property and what evidence or operating change would reverse the preference.
+6. **Consequential next evidence:** connect possible investigation outcomes to explicit decision updates. Distinguish a counterexample, failed assumption, implementation defect, evaluator failure, stronger comparator, and inconclusive result.
+7. **Bounded conclusion and stopping:** state exactly what the evidence establishes, unresolved obligations, why investigation stops, and what evidence would reopen it. Exhausting a budget establishes termination, not solution quality.
+
+When claiming a contribution, identify the changed applicability, assumption, guarantee, explanation, or resource behavior. Test equivalence at that claimed level. Originality, scientific value, and investigation priority require separate arguments. Chapter verification protocols remain unexecuted proposals; none of these obligations authorizes inventing measurements or silently completing missing disclosures.
 
 ---
 

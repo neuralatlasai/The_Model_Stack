@@ -149,6 +149,7 @@ export async function writeBundle(
     } catch (error: unknown) {
       if (!isSwapRefusal(error)) throw error;
       // Directory locked: write in place, manifest last, then drop stale documents.
+      options.signal?.throwIfAborted();
       await writeAll(target, files, concurrency, options.signal);
       await removeStaleDocs(target, files);
       return { outDir: target, files: files.length, bytes, mode: 'in-place' };
@@ -156,8 +157,14 @@ export async function writeBundle(
     try {
       await rename(staging, target);
     } catch (error: unknown) {
+      // A staging-directory lock can refuse the second rename independently.
+      // Restore first: fallback must never create a new target over a displaced bundle.
       await rename(retired, target);
-      throw error;
+      if (!isSwapRefusal(error)) throw error;
+      options.signal?.throwIfAborted();
+      await writeAll(target, files, concurrency, options.signal);
+      await removeStaleDocs(target, files);
+      return { outDir: target, files: files.length, bytes, mode: 'in-place' };
     }
     await rm(retired, { recursive: true, force: true });
     return { outDir: target, files: files.length, bytes, mode: 'atomic' };

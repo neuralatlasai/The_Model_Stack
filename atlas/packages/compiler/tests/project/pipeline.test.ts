@@ -55,9 +55,14 @@ describe('pipeline on real docs (stub Markdown engine)', () => {
     assert.equal(ch42.state, 'manuscript_draft');
     assert.equal(ch42.domain, 'inference');
     assert.ok((ch42.plan?.artifact ?? '').length > 0);
-    const ch55 = must(atlas.graph.nodes['ms.chapter.55']);
-    assert.equal(ch55.hasManuscript, false);
-    assert.equal(ch55.state, 'planned');
+    for (const chapter of [55, 56, 57]) {
+      const written = must(atlas.graph.nodes[`ms.chapter.${String(chapter)}`]);
+      assert.equal(written.hasManuscript, true);
+      assert.equal(written.state, 'manuscript_draft');
+    }
+    const ch58 = must(atlas.graph.nodes['ms.chapter.58']);
+    assert.equal(ch58.hasManuscript, false);
+    assert.equal(ch58.state, 'planned');
     const ch05 = must(atlas.graph.nodes['ms.chapter.5']);
     assert.equal(ch05.hasManuscript, true);
     assert.equal(ch05.number, '05');
@@ -89,10 +94,10 @@ describe('pipeline on real docs (stub Markdown engine)', () => {
       .flatMap((part) => part.children)
       .find((node) => node.id === 'ms.chapter.42');
     assert.equal(ch42?.children.length, 8, 'authored verification and reference satellites are included');
-    const ch55 = atlas.graph.tree[2]?.children
+    const ch58 = atlas.graph.tree[2]?.children
       .flatMap((part) => part.children)
-      .find((node) => node.id === 'ms.chapter.55');
-    assert.equal(ch55?.children.length, 6, 'planned satellites are not listed in the tree');
+      .find((node) => node.id === 'ms.chapter.58');
+    assert.equal(ch58?.children.length, 6, 'planned satellites are not listed in the tree');
   });
 
   it('derives typed edges from frontmatter and keeps the neighbourhood local', () => {
@@ -155,7 +160,7 @@ describe('pipeline on real docs (stub Markdown engine)', () => {
     const section = must(atlas.searchDocs.find((doc) => doc.id === 'node:ms.section.5.2'));
     assert.equal(section.kind, 'section');
     assert.equal(section.context, 'Foundations / Minimal Transformer');
-    const planned = must(atlas.searchDocs.find((doc) => doc.id === 'node:ms.chapter.55'));
+    const planned = must(atlas.searchDocs.find((doc) => doc.id === 'node:ms.chapter.58'));
     assert.equal(planned.kind, 'chapter');
     assert.ok(planned.body.length > 0, 'planned chapters are searchable by their plan artifact');
     assert.equal(atlas.searchDocs.find((doc) => doc.id === 'system:impl.vllm')?.context, 'Inference engine');

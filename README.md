@@ -16,7 +16,7 @@ Written for research engineers, AI systems architects, model researchers, and ad
 
 ## Coverage
 
-The planned series spans **3 volumes, 11 parts, 66 chapters, and 8 reference appendices**.
+The planned series spans **3 volumes, 11 parts, 66 chapters, and 8 core reference appendices**. The current index also includes two supplemental source indexes (Appendices I–J).
 
 | Volume | Focus |
 | --- | --- |

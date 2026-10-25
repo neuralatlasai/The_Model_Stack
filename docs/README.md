@@ -36,7 +36,7 @@ editorial_status: manuscript_draft
 
 **Audience:** principal scientists, research engineers, AI systems architects, and advanced graduate researchers.
 
-**Scope:** 3 volumes · 11 parts · 66 chapters · 396 numbered sections · 8 reference appendices.
+**Scope:** 3 volumes · 11 parts · 66 chapters · 396 numbered sections · 8 core reference appendices + 2 supplemental source indexes (I–J).
 
 The book develops one central relationship: a learning objective induces a representation and an algorithm; those choices determine execution, memory, communication, and deployment behaviour; deployment evidence then informs the next learning intervention. Architecture, data, optimisation, hardware, and evaluation are therefore studied jointly.
 
@@ -228,4 +228,4 @@ The book develops one central relationship: a learning objective induces a repre
 
 ## Editorial status
 
-Edition 1.0 contains chapter manuscripts written against the architecture in `book_plan.md`. Every experiment in the manuscripts is a proposal. No result is EMPIRICALLY-OBSERVED in this edition. Publicly undocumented model details remain NOT-DISCLOSED.
+Edition 1.0 contains chapter manuscripts written against the architecture in `book_plan.md`. Source-reported experiments and results carry PAPER-REPORTED labels. Book-authored verification studies are unexecuted proposals; this edition reports no book-executed model benchmarks. No result is EMPIRICALLY-OBSERVED in this edition. Publicly undocumented model details remain NOT-DISCLOSED.

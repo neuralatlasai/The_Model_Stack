@@ -7,8 +7,9 @@ import { mkdtemp, readFile, rm } from 'node:fs/promises';
 import os from 'node:os';
 import path from 'node:path';
 import { after, before, describe, it } from 'node:test';
-import { BundleManifestSchema, countBySeverity } from '@atlas/core';
+import { BundleManifestSchema, EXPERIMENT_FIELDS, countBySeverity } from '@atlas/core';
 import { compileAtlas, loadSearchIndex, writeBundle, type CompiledAtlas } from '../../src/index.ts';
+import { walkBlocks } from '../../src/markdown/walk.ts';
 import { DOCS_DIR, FIXED_COMPILED_AT, REFERENCE_STACK } from './paths.ts';
 
 describe('compileAtlas on the real docs', () => {
@@ -56,6 +57,35 @@ describe('compileAtlas on the real docs', () => {
 
   it('reports zero frontmatter-invalid diagnostics', () => {
     assert.equal(atlas.diagnostics.filter((item) => item.code === 'frontmatter-invalid').length, 0);
+  });
+
+  it('preserves all required fields of the new multimodal verification proposals', () => {
+    for (const [chapter, minimum] of [
+      [55, 6],
+      [56, 3],
+      [57, 2],
+    ] as const) {
+      const doc = atlas.documents.find((item) => item.meta.id === `ms.verification.${String(chapter)}`);
+      assert.ok(doc !== undefined, `verification chapter ${String(chapter)}`);
+      let experiments = 0;
+      for (const region of doc.regions) {
+        walkBlocks(region.blocks, (block) => {
+          if (block.kind !== 'experiment') return;
+          experiments += 1;
+          assert.deepEqual(
+            block.fields.map((field) => field.name),
+            [...EXPERIMENT_FIELDS],
+            `Experiment ${block.number} retains the canonical field order`,
+          );
+          assert.ok(
+            block.fields.every((field) => field.blocks.length > 0),
+            `Experiment ${block.number}`,
+          );
+        });
+      }
+      assert.ok(experiments >= minimum, `chapter ${String(chapter)} retains its proposed studies`);
+      assert.equal(doc.diagnostics.filter((item) => item.code === 'experiment-missing-field').length, 0);
+    }
   });
 
   it('counts diagnostics consistently and records the fixed timestamp', () => {

@@ -186,7 +186,14 @@ export function ChartView({
     : xScale.ticks.map((tick) => ({ x: px(tick), label: formatTick(tick, spec.x.format, spec.x.scale) }));
   const widest = Math.max(1, ...xTicks.map((tick) => textWidth(tick.label, TICK_FONT, isBar ? 'sans' : 'mono')));
   const stride = Math.max(1, Math.ceil((widest + 10) / Math.max(1, (x1 - x0) / Math.max(1, xTicks.length))));
-  const shownX = xTicks.filter((_, index) => index % stride === 0);
+  const shownX = xTicks
+    .filter((_, index) => index % stride === 0)
+    .map((tick) => {
+      const width = textWidth(tick.label, TICK_FONT, isBar ? 'sans' : 'mono');
+      const anchor = tick.x - width / 2 < 2 ? 'start' : tick.x + width / 2 > w - 2 ? 'end' : 'middle';
+      const labelX = anchor === 'start' ? 2 : anchor === 'end' ? w - 2 : tick.x;
+      return { ...tick, anchor, labelX };
+    });
 
   const seriesCount = Math.max(1, resolved.series.length);
   const groupWidth = band * 0.7;
@@ -311,7 +318,12 @@ export function ChartView({
         {shownX.map((tick) => (
           <g key={`x${tick.x}`}>
             <line class="vg-axis" x1={r1(tick.x)} y1={y1} x2={r1(tick.x)} y2={y1 + 4} />
-            <text class={cls('vg-tick', isBar && 'vg-tick--category')} x={r1(tick.x)} y={y1 + 16} text-anchor="middle">
+            <text
+              class={cls('vg-tick', isBar && 'vg-tick--category')}
+              x={r1(tick.labelX)}
+              y={y1 + 16}
+              text-anchor={tick.anchor}
+            >
               {tick.label}
             </text>
           </g>
