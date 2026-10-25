@@ -23,7 +23,7 @@ datasets: []
 status: {maturity: open, disputed: false}
 evidence_summary: {labels_used: [ASSUMED, DERIVED, MATHEMATICALLY-DERIVED, PAPER-REPORTED, OFFICIAL-DOCUMENTATION, NOT-DISCLOSED, UNVERIFIED], empirically_observed: false}
 word_count_target: 3000
-updated_at: 2026-10-14
+updated_at: 2026-10-25
 editorial_status: manuscript_draft
 ---
 
@@ -94,7 +94,7 @@ editorial_status: manuscript_draft
 
 **Controlled variables.** [ASSUMED] Candidate plan, source facts, hard policy, checker resource caps, effect budget and independent actual-state oracle. Do not expose the hidden oracle to the actor unless a feedback-available condition explicitly allows it.
 
-**Dataset/workload.** [ASSUMED] Cases distinguish SAT witness from universal plan success, bounded UNSAT from global infeasibility, vacuous validity from executability, and schema-compatible from semantically valid tool substitution.
+**Dataset/workload.** [ASSUMED] Cases distinguish SAT witness from universal plan success, bounded UNSAT from global infeasibility, vacuous validity from executability, and schema-compatible from semantically valid tool substitution. Include ?52.3's two-step nondeterministic graph with one goal-reaching full path and one deadlocked prefix: both a feasibility witness and complete-path UNSAT can coexist with branch failure.
 
 **Hardware.** [ASSUMED] Record solver version/theory/settings, test sandbox limits, model backend and evidence store. No compatible runtime tuple has yet been executed.
 

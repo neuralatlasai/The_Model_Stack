@@ -6,7 +6,7 @@
  * Server-rendered for the current page: the active branch is expanded, its
  * ancestors stay visible, unrelated branches are collapsed, planned nodes are
  * muted but navigable. The element persists across ClientRouter navigations
- * (`transition:persist`, named per tree variant — see persistName), so the
+ * (`transition:persist`, named per current chapter — see persistName), so the
  * client re-syncs `aria-current`,
  * `aria-expanded`, `hidden`, and the roving tabindex on `astro:page-load`
  * (see TreeBranch.astro for the DOM contract).
@@ -14,10 +14,11 @@
  * At ≥1440 px it is an in-flow column; below that it is a native popover
  * (off-canvas navigator) opened by the top-bar or dock toggle.
  */
-import type { NodeId } from '@atlas/core';
+import type { GraphNode, NodeId } from '@atlas/core';
 import { getGraph } from '../../lib/atlas.ts';
 import { enclosing, treeContains, treeState } from '../../lib/nodes.ts';
 import TreeBranch from './TreeBranch.astro';
+import { href } from '../research/lib/site.ts';
 
 interface Props {
   readonly currentId: NodeId | null;
@@ -30,14 +31,19 @@ const firstRoot = graph.tree[0]?.id ?? null;
 const focusId = state.currentId !== null && treeContains(graph.tree, state.currentId) ? state.currentId : firstRoot;
 const entityOf = (id: string): string => graph.nodes[id]?.entityType ?? 'node';
 /*
- * The tree omits the planned children of chapters without a manuscript unless
- * they are on the active branch, so pages inside such a chapter render a
- * different tree. Its persistence name says so: navigating into or out of that
- * chapter swaps the tree instead of keeping one that lacks the current node.
+ * Only the current chapter's children are server-rendered. Other written
+ * chapters load their small section index on expansion. Changing chapters
+ * must replace this persisted tree so the destination's active subtree is
+ * always present, including without JavaScript.
  */
-const plannedChapter = state.currentId === null ? null : enclosing(graph, state.currentId, 'chapter');
-const persistName =
-  plannedChapter !== null && !plannedChapter.hasManuscript ? `knowledge-tree-${plannedChapter.id}` : 'knowledge-tree';
+const currentChapter = state.currentId === null ? null : enclosing(graph, state.currentId, 'chapter');
+const persistName = currentChapter === null ? 'knowledge-tree' : `knowledge-tree-${currentChapter.id}`;
+const chapterLinks = graph.order
+  .map((id) => graph.nodes[id])
+  .filter((node): node is GraphNode => node?.entityType === 'chapter');
+const currentSections = (currentChapter?.children ?? [])
+  .map((id) => graph.nodes[id])
+  .filter((node): node is GraphNode => node !== undefined);
 ---
 
 <nav
@@ -56,6 +62,48 @@ const persistName =
       Close
     </button>
   </div>
+  <noscript>
+    <style is:inline>
+      .sh-tree-list {
+        display: none !important;
+      }
+    </style>
+    <div class="sh-tree-fallback" data-tree-fallback>
+      <p class="sh-tree-note">Open a chapter to browse its sections. These links work without JavaScript.</p>
+      {currentSections.length > 0 && (
+        <section aria-label="Current chapter sections">
+          <h2>Chapter {currentChapter?.number} sections</h2>
+          <ul role="list">
+            {currentSections.map((node) => (
+              <li>
+                <a href={href(node.url)} aria-current={node.id === currentId ? 'page' : undefined}>
+                  {node.number !== null ? `${node.number} ` : ''}
+                  {node.shortTitle}
+                </a>
+              </li>
+            ))}
+          </ul>
+        </section>
+      )}
+      <section aria-label="All chapters">
+        <h2>All chapters</h2>
+        <ol role="list">
+          {chapterLinks.map((node) => (
+            <li>
+              <a
+                href={href(node.url)}
+                data-fallback-chapter={node.id}
+                aria-current={node.id === currentId ? 'page' : undefined}
+              >
+                {node.number} {node.shortTitle}
+                {!node.hasManuscript && ' (planned)'}
+              </a>
+            </li>
+          ))}
+        </ol>
+      </section>
+    </div>
+  </noscript>
   <ul
     role="tree"
     class="sh-tree-list"

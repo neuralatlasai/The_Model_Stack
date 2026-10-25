@@ -23,7 +23,7 @@ datasets: []
 status: {"maturity":"active","disputed":false}
 evidence_summary: {"labels_used":["MATHEMATICALLY-DERIVED","DERIVED","PAPER-REPORTED","OFFICIAL-DOCUMENTATION","NOT-DISCLOSED","UNVERIFIED"],"empirically_observed":false}
 word_count_target: 2000
-updated_at: "2026-10-14"
+updated_at: "2026-10-25"
 editorial_status: "manuscript_draft"
 ---
 
@@ -239,14 +239,15 @@ where attention-head and layer factors are excluded. A decode token has $u=1$ bu
 
 ### Algorithm 44.1 — Transactional iteration admission
 
-[DERIVED] Inputs are eligible requests $\mathcal Q$, running state $\mathcal A$, token budget $\tau$, sequence bound $N$, a memory allocator, and a priority order. Output is one batch descriptor and updated queues. This is an explanatory continuous-batching procedure; it is not a transcription of a particular engine.
+[DERIVED] Inputs are eligible requests $\mathcal Q$, running state $\mathcal A$, token budget $\tau$, sequence bound $N$, a memory allocator, and a priority order. Validate nonnegative integer token budget and positive sequence bound. Output is one batch descriptor and updated queues. This is an explanatory continuous-batching procedure; it is not a transcription of a particular engine.
 
 $$
 \begin{aligned}
 1.\;&\mathcal A\gets\operatorname{retire\_completed}(\mathcal A);
 \quad \mathcal C\gets\operatorname{order}(\mathcal A\cup\mathcal Q),\space
 \mathcal B\gets\varnothing,\ b\gets0.\\
-2.\;&r\gets\operatorname{next}(\mathcal C),\quad
+2.\;&\mathcal C=\varnothing\lor b=\tau\lor|\mathcal B|=N
+ \Rightarrow\text{go to 5};\quad r\gets\operatorname{next}(\mathcal C),\quad
 u\gets\operatorname{work\_due}(r,\tau-b).\\
 3.\;&u=0\ \lor\ |\mathcal B|=N
 \Rightarrow\operatorname{defer}(r);
@@ -265,7 +266,7 @@ u\gets\operatorname{work\_due}(r,\tau-b).\\
 $$
 *(Eq. 44.4)*
 
-where every request is considered at most once per construction round. Invariants are Eq. 44.2, no mutation of in-flight block ownership, and one authoritative state epoch per request. An empty infeasible batch yields to a documented recovery policy instead of busy-looping. Construction terminates after $|\mathcal C|$ visits; model execution has its own bounded output limit and cancellation state.
+where every request is considered at most once per construction round. The empty candidate set and zero residual budget bypass selection; an empty batch is returned idle and is not launched. Invariants are Eq. 44.2, no mutation of in-flight block ownership, and one authoritative state epoch per request. An empty infeasible batch yields to a documented recovery policy instead of busy-looping. Construction terminates after $|\mathcal C|$ visits; model execution has its own bounded output limit and cancellation state.
 
 ## Implementation
 

@@ -412,6 +412,41 @@
   color: var(--ink-3);
 }
 
+.cx-palette__close {
+  display: inline-flex;
+  flex: none;
+  align-items: center;
+  gap: 0.5rem;
+  min-block-size: 32px;
+  padding: 0.3rem 0.5rem;
+  border: 1px solid var(--rule-strong);
+  background: var(--paper);
+  color: var(--ink-2);
+  font: 12px/1.4 var(--font-sans);
+  cursor: pointer;
+}
+
+.cx-palette__close:hover {
+  color: var(--ink);
+  background: var(--accent-wash);
+}
+
+.cx-palette__close:focus-visible {
+  outline: 2px solid var(--focus);
+  outline-offset: 2px;
+}
+
+@media (max-width: 719px) {
+  .cx-palette__close {
+    min-block-size: 44px;
+    min-inline-size: 44px;
+  }
+
+  .cx-palette__close .cx-palette__esc {
+    display: none;
+  }
+}
+
 .cx-palette__status {
   margin: 0;
   padding: 0.4rem 0.9rem;
@@ -458,6 +493,11 @@
   color: var(--ink-3);
   text-overflow: ellipsis;
   white-space: nowrap;
+}
+
+/* The selected surface is tinted; its small metadata needs stronger contrast. */
+.cx-palette__option[aria-selected='true'] .cx-palette__type {
+  color: var(--ink-2);
 }
 
 .cx-palette__title {

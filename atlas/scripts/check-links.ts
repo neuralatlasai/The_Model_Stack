@@ -7,18 +7,18 @@
  * (default `/`). Every internal href/src on every page must resolve to a built
  * file, must stay inside `base` (a root-relative link outside it 404s on a
  * GitHub Pages project site), every `#fragment` must name an element on its
- * target page, and every URL in the JSON data islands must stay inside
- * `base`. Exits 1 on any failure, printing the first examples of each kind.
+ * target page. JSON islands and standalone search/navigation payloads obey
+ * the same file, fragment and deployment-base checks. Exits 1 on failure.
  */
 import { readdir, readFile, stat } from 'node:fs/promises';
-import { join, sep } from 'node:path';
+import { isAbsolute, join, relative, resolve, sep } from 'node:path';
 
 const [distArg, baseArg = '/'] = process.argv.slice(2);
 if (distArg === undefined) {
   console.error('usage: node scripts/check-links.ts <dist-dir> [base]');
   process.exit(2);
 }
-const dist = distArg;
+const dist = resolve(distArg);
 const base = baseArg.endsWith('/') ? baseArg : `${baseArg}/`;
 const URL_KEY = /^(?:url|href|atlasUrl|link|path|canonical|target)$/iu;
 
@@ -38,12 +38,17 @@ async function fileFor(urlPath: string): Promise<string | null> {
   const clean = decodeURIComponent(urlPath.split('#')[0]?.split('?')[0] ?? '');
   const cached = resolved.get(clean);
   if (cached !== undefined) return cached;
-  const relative = clean.slice(base.length).split('/').join(sep);
+  const candidate = resolve(dist, clean.slice(base.length).split('/').join(sep));
+  const within = relative(dist, candidate);
+  if (within === '..' || within.startsWith(`..${sep}`) || isAbsolute(within)) {
+    resolved.set(clean, null);
+    return null;
+  }
   let found: string | null = null;
-  for (const candidate of [join(dist, relative), join(dist, relative, 'index.html')]) {
+  for (const file of [candidate, join(candidate, 'index.html')]) {
     try {
-      if ((await stat(candidate)).isFile()) {
-        found = candidate;
+      if ((await stat(file)).isFile()) {
+        found = file;
         break;
       }
     } catch {
@@ -77,21 +82,36 @@ const note = (map: Map<string, string>, key: string, page: string): void => {
 let links = 0;
 let fragments = 0;
 
-function checkData(node: unknown, page: string): void {
+async function checkData(node: unknown, page: string): Promise<void> {
   if (Array.isArray(node)) {
-    for (const item of node) checkData(item, page);
+    for (const item of node) await checkData(item, page);
     return;
   }
   if (node === null || typeof node !== 'object') return;
   for (const [key, value] of Object.entries(node)) {
     if (typeof value === 'string' && URL_KEY.test(key)) {
-      if (value.startsWith('/') && !value.startsWith('//') && !value.startsWith(base))
+      if (!value.startsWith('/') || value.startsWith('//')) continue;
+      links += 1;
+      if (!value.startsWith(base)) {
         note(failures.data, `${key}: ${value}`, page);
-    } else checkData(value, page);
+        continue;
+      }
+      const target = await fileFor(value);
+      if (target === null) {
+        note(failures.broken, value, page);
+        continue;
+      }
+      const hash = value.split('#')[1];
+      if (hash !== undefined && hash !== '' && target.endsWith('.html')) {
+        fragments += 1;
+        if (!(await idsOf(target)).has(decodeURIComponent(hash))) note(failures.anchors, value, page);
+      }
+    } else await checkData(value, page);
   }
 }
 
-const pages = (await listFiles(dist)).filter((file) => file.endsWith('.html'));
+const files = await listFiles(dist);
+const pages = files.filter((file) => file.endsWith('.html'));
 for (const file of pages) {
   const page = file.slice(dist.length).split(sep).join('/');
   const text = await readFile(file, 'utf8');
@@ -126,10 +146,21 @@ for (const file of pages) {
   }
   for (const match of text.matchAll(/<script\b[^>]*type="application\/json"[^>]*>([\s\S]*?)<\/script>/gu)) {
     try {
-      checkData(JSON.parse(match[1] ?? ''), page);
+      const value: unknown = JSON.parse(match[1] ?? '');
+      await checkData(value, page);
     } catch {
-      // not JSON
+      note(failures.data, 'invalid JSON island', page);
     }
+  }
+}
+
+for (const file of files.filter((entry) => entry.endsWith('.json'))) {
+  const page = file.slice(dist.length).split(sep).join('/');
+  try {
+    const value: unknown = JSON.parse(await readFile(file, 'utf8'));
+    await checkData(value, page);
+  } catch {
+    note(failures.data, 'invalid JSON payload', page);
   }
 }
 
@@ -141,7 +172,7 @@ for (const [label, map] of [
   ['broken links (no built file)', failures.broken],
   [`links outside ${base}`, failures.outside],
   ['fragments with no matching id', failures.anchors],
-  [`data-island URLs outside ${base}`, failures.data],
+  [`invalid JSON or data URLs outside ${base}`, failures.data],
   ['page illustrations with the wrong topic', failures.visuals],
 ] as const) {
   console.log(`${label}: ${String(map.size)}`);

@@ -23,7 +23,7 @@ datasets: []
 status: {maturity: active, disputed: false}
 evidence_summary: {labels_used: [DERIVED, MATHEMATICALLY-DERIVED, PAPER-REPORTED, OFFICIAL-DOCUMENTATION, NOT-DISCLOSED, UNVERIFIED], empirically_observed: false}
 word_count_target: 2100
-updated_at: 2026-10-14
+updated_at: 2026-10-25
 editorial_status: manuscript_draft
 ---
 
@@ -155,28 +155,36 @@ spec:
 
 ## Algorithm
 
-### Algorithm 40.3 — Finite recovery with quantizer freezing
+### Algorithm 40.3 — Finite recovery with separate observer and learned-scale state
 
-[MATHEMATICALLY-DERIVED] Inputs are source $\theta_0$, quantizer $\phi_0$, disjoint recovery/evaluation identities, maximum updates $J_{\max}$ and a declared freeze step $j_f$. Output is the selected exported checkpoint. State includes optimizer state $o_j$ and best validation record.
+[MATHEMATICALLY-DERIVED] Inputs are latent weights $\theta_0$, learned scale parameters $\lambda_0$, observer state $a_0$, optimizer state $o_0$, pairwise-disjoint recovery, selection and final-evaluation identities $\mathcal D_r,\mathcal D_v,\mathcal D_e$, positive integer attempt budget $J_{\max}$, and observer freeze step $0\le j_f\le J_{\max}$. A declared assembly map $\phi=\operatorname{Assemble}(a,\lambda)$ specifies how observer statistics and learned parameters determine the forward quantizer. A frozen observer does not overwrite a learned scale. The selection score $V$ is minimized, with first-seen tie breaking. State is $S_j=(\theta_j,\lambda_j,a_j,o_j)$ and the best valid exported candidate $B$.
 
 $$
 \begin{aligned}
-1.\;&j\leftarrow0;\ o_0\leftarrow0;\quad \text{reject overlapping split identities}.\\
-2.\;&u_j\sim\mathcal D_r;\quad
-\phi_j\leftarrow
-\begin{cases}\operatorname{Observe}(\phi_{j-1},u_j),&j<j_f\\
-\phi_{j-1},&j\ge j_f.\end{cases}\\
-3.\;&\widetilde\theta_j\leftarrow\mathcal Q_{\phi_j}(\theta_j);
-\quad \mathcal L_j\leftarrow\operatorname{DeclaredLoss}(u_j,\widetilde\theta_j).\\
-4.\;&\mathcal L_j\notin\mathbb R\Rightarrow\text{reject update and retain last finite state}.\\
-5.\;&(\theta_{j+1},\phi_{j+1},o_{j+1})\leftarrow
-\operatorname{Update}(\theta_j,\phi_j,o_j,\widetilde\nabla\mathcal L_j,\eta_j).\\
-6.\;&j+1<J_{\max}\Rightarrow j\leftarrow j+1,\;\text{return to 2};
-\quad \text{otherwise export and independently evaluate}.
+1.\;&j\leftarrow0;\ B\leftarrow\varnothing;\quad
+ \text{reject invalid budgets, overlapping splits or nonfinite }S_0.\\
+2.\;&j=J_{\max}\Rightarrow\text{go to 9};\quad u_j\sim\mathcal D_r.\\
+3.\;&a'_j\leftarrow
+ \begin{cases}\operatorname{Observe}(a_j,u_j),&j<j_f,\\a_j,&j\ge j_f.\end{cases}\\
+4.\;&\phi'_j\leftarrow\operatorname{Assemble}(a'_j,\lambda_j);\quad
+ \widetilde\theta_j\leftarrow\mathcal Q_{\phi'_j}(\theta_j);\quad
+ \mathcal L_j\leftarrow\operatorname{DeclaredLoss}(u_j,\widetilde\theta_j).\\
+5.\;&g_j\leftarrow\widetilde\nabla\mathcal L_j;\quad
+ \text{nonfinite loss or gradient}\Rightarrow\text{return failed attempt with }S_j.\\
+6.\;&(\theta^+,\lambda^+,o^+)\leftarrow
+ \operatorname{Update}(\theta_j,\lambda_j,o_j,g_j,\eta_j);\quad
+ \text{nonfinite proposal}\Rightarrow\text{return failed attempt with }S_j.\\
+7.\;&S_{j+1}\leftarrow(\theta^+,\lambda^+,a'_j,o^+);\quad
+ c_j\leftarrow\operatorname{Export}(\theta^+,\operatorname{Assemble}(a'_j,\lambda^+)).\\
+8.\;&\operatorname{ValidExport}(c_j)\Rightarrow
+ B\leftarrow\operatorname{KeepBest}(B,c_j,V(c_j;\mathcal D_v));\quad
+ j\leftarrow j+1;\ \text{return to 2}.\\
+9.\;&B=\varnothing\Rightarrow\text{return no valid candidate};\quad
+ \text{otherwise return }B\text{ and }\operatorname{Evaluate}(B;\mathcal D_e).
 \end{aligned}
 $$
 
-[MATHEMATICALLY-DERIVED] The invariant is an explicit forward representation and recoverable finite state. An observer can be frozen while learned scales remain trainable; these are different state variables. This explanatory procedure does not claim that every named implementation uses the same freeze schedule. Runtime is bounded by $J_{\max}$ training steps plus export/evaluation.
+[MATHEMATICALLY-DERIVED] `ValidExport` includes finite stored state, the declared format/runtime contract and a declared forward-parity tolerance; it is an obligation of the proposed procedure, not an executed check. A nonfinite loss or gradient aborts before calling the update map; a nonfinite proposal aborts before committing state. A nonfinite selection score cannot replace $B$. The invariant is a defined forward representation and a retained finite training state; a failed attempt terminates explicitly rather than retrying forever. Each successful loop advances $j$, so at most $J_{\max}$ updates and candidate export/selection evaluations occur. Retaining only $B$ avoids storing every candidate. The final set $\mathcal D_e$ is consulted once after selection and cannot change $B$. Observer freezing, learned-scale updates, selection, export parity and final acceptance are separate operations; this explanatory protocol does not assert that a named package implements them identically.
 
 ## Implementation
 
@@ -227,6 +235,12 @@ $$
 ## Limitations
 
 [MATHEMATICALLY-DERIVED] Straight-through updates have no general monotonic-descent guarantee for the true discrete loss. Local recovery can overfit captured inputs, and teacher matching cannot restore information absent from both teacher signals and representable student states. Source-supported success under a particular format is not evidence for a more aggressive format.
+
+### Decision and reversal conditions
+
+[MATHEMATICALLY-DERIVED] Choose the recovery method against an acceptance predicate specified before selection: the exported candidate must have a supported [format/runtime path](40-5-artifact-runtime-interfaces.md), satisfy memory and [latency constraints](../ch42-prefill-decode-kv-state-and-inference-resource-models/42-1-phase-decomposition.md), and meet a held-out task-retention threshold under [§40.6's evaluation boundary](40-6-evaluation.md). A lower calibration loss alone cannot establish this predicate. Construction compute, peak training memory, teacher access and the expected number of deployed requests then determine which feasible candidate is economical. Scale-only recovery is admissible when its restricted parameterization can meet that predicate; inability to fit the recovery set is evidence against that restriction, while acceptable recovery loss followed by export failure instead implicates numerical or runtime parity. Neither outcome proves that unrestricted QAT is superior.
+
+[DERIVED] Compare nearest-rounding PTQ, optimized PTQ, scale-only recovery and weight recovery on the same source checkpoint, eligible operators and acceptance distribution. Prefer a cheaper method only after it passes the same acceptance rule; benchmark reuse during checkpoint selection leaves that decision unresolved. Reopen the choice when longer contexts change the limiting cache budget, deployment changes the codebook/kernel path, or a new task distribution changes retained behavior. A counterexample to export parity calls for an implementation correction; an independently confirmed retention failure calls for a different representation or recovery construction. Stop the proposed comparison after the declared candidates and budget are exhausted, recording whether a feasible candidate was found. That stopping rule certifies termination and the bounded comparison, not global optimality.
 
 ## Reproducibility
 

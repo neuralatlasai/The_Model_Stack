@@ -23,7 +23,7 @@ datasets: []
 status: {"maturity":"active","disputed":false}
 evidence_summary: {"labels_used":["MATHEMATICALLY-DERIVED","DERIVED","PAPER-REPORTED","OFFICIAL-DOCUMENTATION","NOT-DISCLOSED","UNVERIFIED"],"empirically_observed":false}
 word_count_target: 2000
-updated_at: "2026-10-14"
+updated_at: "2026-10-25"
 editorial_status: "manuscript_draft"
 ---
 
@@ -87,7 +87,7 @@ editorial_status: "manuscript_draft"
 
 **Controlled variables.** [ASSUMED] logical IDs, immutable payloads, read/write sets, offered operation list, persisted attempt/work caps and deadlines.
 
-**Dataset/workload.** [ASSUMED] the two-flag invariant in Eq. 53.12, overlapping semantic updates, insertions that affect predicates, and crash schedules before/after internal commit, PREPARED persistence, external effect and receipt.
+**Dataset/workload.** [ASSUMED] the two-flag invariant in Eq. 53.12, overlapping semantic updates, insertions that affect predicates, the check?concurrent-correction?unguarded-effect schedule from ?53.3, and crash schedules before/after internal commit, PREPARED persistence, external effect and receipt.
 
 **Hardware.** [ASSUMED] proposed same CPU host, with explicit storage/replication topology recorded.
 
@@ -137,7 +137,7 @@ editorial_status: "manuscript_draft"
 - The current-state and historical-state oracle is fixed before scoring, and the model cannot supply its own correctness label.
 - All protected concurrency schedules preserve the declared invariant or return a recorded conflict/ambiguous state.
 - Durable budgets and attempt counts survive retry/restart; failed reservations dispatch no work.
-- External effects retain immutable logical identity and target binding; PREPARED/AMBIGUOUS operations enter reconciliation.
+- External effects retain immutable logical identity and target binding; PREPARED/AMBIGUOUS operations enter reconciliation. Strict current-state action acceptance requires atomic authoritative-precondition/effect protection; unavailable protection returns an explicit unsupported contract or a separately accepted best-effort outcome.
 - Deletion reports each copy/retention scope and serving fence; missing closure or acknowledgement prevents a physical-complete label.
 - Exact runtime claims require fixed transitions/randomness, exact counterfactual observations and restorable uncommitted effects.
 - Every offered evaluation task remains visible. Missing outcomes receive bounds/unresolved fractions, not invented values; lifecycle work includes writes, consolidation and repair.

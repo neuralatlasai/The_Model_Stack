@@ -312,29 +312,35 @@ Here $D_{\rm rec}$ is consumed recovery tokens, not available dataset size. Onli
 
 ### Algorithm 41.4 — Compression-constrained recovery
 
-[DERIVED] Inputs are a fixed extracted graph or support, a frozen declared teacher, recovery data, a maximum $K_{\max}$ steps, and an independent validation rule. Output is the best admissible recovered checkpoint or the unrecovered baseline.
+[DERIVED] Inputs are a fixed extracted graph or support $\mathcal C$, a frozen declared teacher, recovery data, positive integer attempt budget $K_{\max}$, and a fixed validation rule. State comprises student parameters, optimizer state and the best admissible candidate $B$. Output is $B$ or an explicit absence of an admissible candidate; an unrecovered baseline is returned as a candidate only if it passes the same validity rule.
 
 $$
 \begin{aligned}
-1.\;&\theta_c^0\leftarrow\mathsf{extract}(\theta_T);
-\quad \theta_{\rm best}\leftarrow\theta_c^0;\quad k\leftarrow0.\\
-2.\;&(x,m)\leftarrow\mathsf{nextBatch};\quad \sum_tm_t=0
-\Rightarrow\mathsf{skipBatch}.\\
-3.\;&u_T\leftarrow\mathsf{stopgrad}(f_T(x));\quad
-u_S\leftarrow f_{\theta_c^k}(x);\quad \mathcal J_k\leftarrow\text{Eq. 41.19}.\\
-4.\;&\mathcal J_k\notin\mathbb R\Rightarrow\mathsf{rollback};
-\quad \theta_c^{k+1}\leftarrow\mathsf{project}_{\mathcal C}
-(\mathsf{optimizerStep}(\theta_c^k,\nabla\mathcal J_k)).\\
-5.\;&\mathsf{valid}(\theta_c^{k+1})\land
-q_{\rm val}(\theta_c^{k+1})>q_{\rm val}(\theta_{\rm best})
-\Rightarrow\theta_{\rm best}\leftarrow\theta_c^{k+1}.\\
-6.\;&k\leftarrow k+1;\quad k<K_{\max}\land\neg\mathsf{stop}
-\Rightarrow2;\quad \mathsf{return}(\theta_{\rm best}).
+1.\;&\theta_c^0\leftarrow\mathsf{extract}(\theta_T);\quad o_0\leftarrow\mathsf{init};\quad
+ k\leftarrow0;\quad B\leftarrow\mathsf{admissibleBaseline}(\theta_c^0).\\
+2.\;&k=K_{\max}\Rightarrow\text{go to 9};\quad (x,m)\leftarrow\mathsf{nextBatch}.\\
+3.\;&\sum_tm_t=0\Rightarrow
+ (k\leftarrow k+1;\ (\theta_c^k,o_k)\leftarrow(\theta_c^{k-1},o_{k-1});\ \text{return to 2}).\\
+4.\;&u_T\leftarrow\mathsf{stopgrad}(f_T(x));\quad
+ u_S\leftarrow f_{\theta_c^k}(x);\quad \mathcal J_k\leftarrow\text{Eq. 41.19};\quad
+ g_k\leftarrow\nabla\mathcal J_k.\\
+5.\;&\text{nonfinite loss or gradient}\Rightarrow
+ \mathsf{returnFailed}(\theta_c^k,o_k,B).\\
+6.\;&(\widetilde\theta,\widetilde o)\leftarrow
+ \mathsf{optimizerStep}(\theta_c^k,o_k,g_k);\quad
+ \theta^+\leftarrow\mathsf{project}_{\mathcal C}(\widetilde\theta).\\
+7.\;&\neg\mathsf{finite}(\theta^+,\widetilde o)\lor\neg\mathsf{valid}(\theta^+)
+ \Rightarrow\mathsf{returnFailed}(\theta_c^k,o_k,B).\\
+8.\;&(\theta_c^{k+1},o_{k+1})\leftarrow(\theta^+,\widetilde o);\quad
+ B\leftarrow\mathsf{keepBestAdmissible}(B,\theta^+,q_{\rm val});\quad
+ k\leftarrow k+1;\ \text{return to 2}.\\
+9.\;&B=\varnothing\Rightarrow\mathsf{returnNoAdmissibleCandidate};\quad
+ \text{otherwise return }B.
 \end{aligned}
 $$
 *(Eq. 41.24)*
 
-[DERIVED] Support or extracted-graph validity is the invariant; teacher parameters remain unchanged. Termination is step bounded even if validation never improves. Runtime failure preserves the last valid checkpoint. Recovery is a training procedure, not a promise that a given budget will close the parent–student quality gap.
+[DERIVED] Validate $K_{\max}$ and the initial finite state before entering the loop. Empty batches consume attempts and preserve both parameter and optimizer state; they cannot prevent termination. A rejected update is never followed by an optimizer commit. Support or extracted-graph validity is invariant, teacher parameters remain unchanged, and each nonterminal loop advances $k$. The validation set selects a candidate; [§40.6's independent acceptance discipline](../ch40-quantization-from-numerical-model-to-deployable-artifact/40-6-evaluation.md) still requires an untouched final evaluation. At most $K_{\max}$ batches are attempted. Exhausting this budget does not promise closure of the parent–student quality gap, and the procedure returns a failure record rather than silently treating a rolled-back state as accepted recovery.
 
 ## Implementation
 

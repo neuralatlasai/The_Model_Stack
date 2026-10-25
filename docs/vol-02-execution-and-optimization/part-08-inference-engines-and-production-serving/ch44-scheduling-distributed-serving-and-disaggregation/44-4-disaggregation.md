@@ -23,7 +23,7 @@ datasets: []
 status: {"maturity":"active","disputed":false}
 evidence_summary: {"labels_used":["MATHEMATICALLY-DERIVED","DERIVED","PAPER-REPORTED","OFFICIAL-DOCUMENTATION","NOT-DISCLOSED","UNVERIFIED"],"empirically_observed":false}
 word_count_target: 2000
-updated_at: "2026-10-14"
+updated_at: "2026-10-25"
 editorial_status: "manuscript_draft"
 ---
 
@@ -277,34 +277,35 @@ where the inclusion says the gap contains readiness delay plus any next-token ex
 
 ## Algorithm
 
-### Algorithm 44.4 — Bounded state-handoff transaction
+### Algorithm 44.4 - Bounded state-handoff transaction
 
-[DERIVED] Inputs are request epoch $e$, compatible source/target layouts, finite handoff deadline $d$, destination capacity, and transport. Output is a single committed decode owner or a failed/cancelled request. State includes source references, destination reservations, copied ranges, and ownership epoch.
+[DERIVED] Inputs are request epoch $e$, compatible source/target layouts, finite deadline $d$, destination capacity and transport. The source is quiesced for this handoff: it retains state references but cannot concurrently continue decode. State includes a durable ownership record, source references, destination reservations, copied ranges and phase $\zeta\in\{\mathrm{PREPARED},\mathrm{READY},\mathrm{COMMITTED}\}$. Output is a known committed owner, a known failed/cancelled handoff, or an explicitly unresolved commit.
 
 $$
 \begin{aligned}
 1.\;&\operatorname{validate}(\operatorname{model},\operatorname{namespace},\operatorname{layout},e);
-\quad\neg\operatorname{valid}\Rightarrow\operatorname{fail\_unsupported}.\\
+ \quad\neg\operatorname{valid}\Rightarrow\operatorname{fail\_and\_return}.\\
 2.\;&\operatorname{reserve\_target}(V,e)\text{ fails}
-\Rightarrow\operatorname{wait\_until}(d)\text{ or reject};
-\quad\operatorname{pin\_source}(e).\\
-3.\;&\operatorname{publish\_manifest}(e,\operatorname{positions},\operatorname{ranges});
-\quad\operatorname{submit\_transfer}(\operatorname{ranges},e).\\
-4.\;&\operatorname{deadline}\lor\operatorname{cancel}\lor\operatorname{transport\_error}
-\Rightarrow\operatorname{quiesce\_transport};\
-\operatorname{invalidate\_target};\
-\operatorname{release\_owned\_reservations};\ \operatorname{return\_failed\_transaction}.\\
-5.\;&\operatorname{all\_ranges\_complete}\land\operatorname{epoch\_matches}
-\Rightarrow\operatorname{validate\_ready}(e);\space
-\operatorname{commit\_decode\_owner}(e).\\
-6.\;&\operatorname{commit\_acknowledged}
-\Rightarrow\operatorname{release\_source\_handoff\_reference};
-\quad\operatorname{resume\_decode}(e).
+ \Rightarrow\text{bounded retry of 2 before }d\text{ or reject and return};\quad
+ \operatorname{pin\_source}(e);\ \zeta\leftarrow\mathrm{PREPARED}.\\
+3.\;&\operatorname{publish\_immutable\_manifest}(e,\operatorname{positions},\operatorname{ranges});
+ \quad\operatorname{submit\_transfer}(\operatorname{ranges},e).\\
+4.\;&\text{error, cancellation or expiry before commit}
+ \Rightarrow\operatorname{quiesce\_or\_quarantine};\quad
+ \operatorname{invalidate\_provisional\_target};\quad
+ \operatorname{safe\_release\_and\_return\_failed}.\\
+5.\;&\text{all ranges complete and validated, epoch current, before }d
+ \Rightarrow\zeta\leftarrow\mathrm{READY};\quad
+ \operatorname{AtomicOwnerCAS}(e,\operatorname{source},\operatorname{target},\mathrm{READY}).\\
+6.\;&\text{commit known successful}\Rightarrow
+ (\zeta\leftarrow\mathrm{COMMITTED};\ \operatorname{release\_handoff\_reference};\ \operatorname{resume\_target});\\
+&\text{commit known rejected}\Rightarrow\operatorname{abort\_provisional\_handoff};\quad
+ \text{commit unknown}\Rightarrow\operatorname{reconcile\_ownership\_before\_replay}.
 \end{aligned}
 $$
 *(Eq. 44.20)*
 
-where source cache retention after handoff is a separate reuse policy. Invariants are no read of incomplete ranges, no freed buffer while transport can access it, and one execution owner per epoch. Retries are finite and idempotent. A lost acknowledgement requires querying/reconciling ownership before replay; blindly running both endpoints can duplicate output. Complexity is $O(n_{\rm ranges})$ metadata plus payload transfer; deadline termination bounds waiting, not successful completion.
+[DERIVED] The readiness predicate gates the ownership commit; validation failure cannot fall through into a commit. All reservation and reconciliation retries have finite attempt limits and the original deadline. A missing acknowledgement after the atomic ownership transition is not evidence that the transition failed. Reconciliation returns the recorded owner or an unresolved result; neither endpoint starts an additional decode while ownership is unknown. Once committed, cancellation is handled by the current owner and cannot roll back a historical transfer as if it were still provisional. Buffers touched by uncancellable transport remain quarantined until last use, including on timeout. Source cache retention after handoff is a separate reuse policy. Invariants are no read of incomplete ranges, no freed in-flight buffer and one fenced execution owner per epoch, conditional on the declared atomic ownership service and enforcement at both executors. This contract connects [local cache commit](../../part-07-inference-algorithms-distillation-and-compression/ch42-prefill-decode-kv-state-and-inference-resource-models/42-3-cache-organization.md) to [runtime publication](../ch43-runtime-architecture-and-inference-engine-selection/43-1-runtime-decomposition.md) and [retry identity](../ch46-admission-control-routing-autoscaling-and-service-contracts/46-5-resilience.md). Complexity is $O(n_{\rm ranges})$ metadata plus payload transfer; deadline termination bounds waiting, not successful handoff.
 
 ## Implementation
 

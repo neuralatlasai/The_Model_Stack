@@ -23,7 +23,7 @@ datasets: []
 status: {maturity: active, disputed: false}
 evidence_summary: {labels_used: [DERIVED, MATHEMATICALLY-DERIVED, PAPER-REPORTED, OFFICIAL-DOCUMENTATION, NOT-DISCLOSED, UNVERIFIED], empirically_observed: false}
 word_count_target: 1300
-updated_at: 2026-10-14
+updated_at: 2026-10-25
 editorial_status: manuscript_draft
 ---
 
@@ -100,7 +100,7 @@ flowchart LR
 | [43.1](43-1-runtime-decomposition.md) | Runtime decomposition | One call stack becomes explicit semantic and physical state owners | DERIVED / OFFICIAL-DOCUMENTATION |
 | [43.2](43-2-vllm.md) | vLLM | Engine-core scheduling becomes runner tensors, prefix references and compiled dispatch | PAPER-REPORTED / OFFICIAL-DOCUMENTATION |
 | [43.3](43-3-sglang.md) | SGLang | Program/prefix structure meets constraint state and asynchronous distributed execution | PAPER-REPORTED / OFFICIAL-DOCUMENTATION |
-| [43.4](43-4-tensorrt-llm.md) | TensorRT-LLM | Current PyTorch-native execution is separated from removed legacy backend workflows | OFFICIAL-DOCUMENTATION |
+| [43.4](43-4-tensorrt-llm.md) | TensorRT-LLM | Pinned PyTorch-native execution is separated from tagged legacy backend workflows | OFFICIAL-DOCUMENTATION |
 | [43.5](43-5-other-deployment-routes.md) | Other deployment routes | Graph capability and compilation must close complete generation semantics | DERIVED / OFFICIAL-DOCUMENTATION |
 | [43.6](43-6-selection-methodology.md) | Selection methodology | Capability and correctness gates precede service and migration comparison | DERIVED / PAPER-REPORTED |
 
@@ -118,11 +118,11 @@ flowchart LR
 
 - 2023 · PagedAttention [P36](references.md#p36) · **engineering optimization** · paged state integration enables additional active work under the original study.
 - 2024 · SGLang [P37](references.md#p37) · **alternative branch** · structured programs and prefix organization expose reuse opportunities.
-- 2026 · TensorRT-LLM release 1.2 removal boundary [R43.14–15](references.md#r43-14) · **superseded approach** · the legacy TensorRT backend is removed from the current path.
+- 2026 · TensorRT-LLM executable-revision boundary [R43.35-36](references.md#r43-35) · **superseded approach** · tagged v1.2.0 retains a legacy path absent from the inspected October development source.
 - 2026 · SGLang asynchronous runtime optimization report [R43.11](references.md#r43-11) · **engineering optimization** · synchronization/metadata interventions target observed GPU bubbles.
 - 2026 · The Silent Hyperparameter [R43.29](references.md#r43-29) · **current frontier** · controlled backend evaluation localizes semantic defaults and residual numerical effects.
 
-[DERIVED] These relations identify changed mechanisms and evidence, not a linear replacement order or an engine ranking. Historical methods can remain informative after their original implementation changes. The release boundary is a current documented state; it does not erase the reproducibility requirements of historical measurements.
+[DERIVED] These relations identify changed mechanisms and evidence, not a linear replacement order or an engine ranking. Historical methods can remain informative after their original implementation changes. The development/release distinction is an inspected source boundary; it does not erase the reproducibility requirements of historical measurements.
 
 ```figure
 id: fig-43.1

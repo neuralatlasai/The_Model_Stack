@@ -47,8 +47,8 @@ jobs:
       - name: Lint
         run: npm run lint
 
-      - name: Audit production dependencies
-        run: npm audit --omit=dev --audit-level=high
+      - name: Audit dependencies
+        run: npm audit --audit-level=high
 
       - name: Typecheck
         run: npm run typecheck
@@ -77,6 +77,9 @@ jobs:
 
       - name: Check every link
         run: node scripts/check-links.ts apps/web/dist "${{ steps.pages.outputs.base_path }}/"
+
+      - name: Check Pages artifact size
+        run: npm run check:size
 
       - uses: actions/upload-pages-artifact@v3
         with:

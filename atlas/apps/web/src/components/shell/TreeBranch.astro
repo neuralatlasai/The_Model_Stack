@@ -22,9 +22,9 @@
  * is derived in CSS from those attributes, so the persisted tree stays correct
  * when the client moves them. Weight matters (the tree is in every page):
  * `data-entity` is emitted for volumes, parts, and chapters only, `data-domain`
- * only on parts (the accent inherits as --domain-local), and chapters without
- * a manuscript do not render their planned children unless they are on the
- * active branch — their plan page lists them.
+ * only on parts (the accent inherits as --domain-local). The current chapter
+ * renders all children. Other written chapters defer their leaf links until
+ * expansion; other planned chapters link to their complete plan page.
  */
 import type { TreeNode } from '@atlas/core';
 import type { TreeState } from '../../lib/nodes.ts';
@@ -54,7 +54,8 @@ const numberWidth = (list: readonly TreeNode[]): number => Math.max(0, ...list.m
   const entity = entityOf(node.id);
   const onActivePath = state.activePath.has(node.id);
   const renderChildren = node.children.length > 0 && (node.hasManuscript || entity !== 'chapter' || onActivePath);
-  const expanded = renderChildren && state.expanded.has(node.id);
+  const deferred = renderChildren && entity === 'chapter' && node.hasManuscript && !onActivePath;
+  const expanded = renderChildren && !deferred && state.expanded.has(node.id);
   const groupId = domIdFor('tg', node.id);
   return (
     <li
@@ -104,9 +105,12 @@ const numberWidth = (list: readonly TreeNode[]): number => Math.max(0, ...list.m
           id={groupId}
           class="sh-tree-group"
           hidden={!expanded}
+          data-tree-chapter={deferred && node.number !== null ? String(Number(node.number)) : undefined}
           style={`--tree-num:${String(numberWidth(node.children))}ch`}
         >
-          <Astro.self nodes={node.children} level={level + 1} state={state} focusId={focusId} entityOf={entityOf} />
+          {!deferred && (
+            <Astro.self nodes={node.children} level={level + 1} state={state} focusId={focusId} entityOf={entityOf} />
+          )}
         </ul>
       )}
     </li>

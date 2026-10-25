@@ -23,13 +23,15 @@ datasets: []
 status: {"maturity":"active","disputed":false}
 evidence_summary: {"labels_used":["MATHEMATICALLY-DERIVED","DERIVED","PAPER-REPORTED","OFFICIAL-DOCUMENTATION","NOT-DISCLOSED","UNVERIFIED"],"empirically_observed":false}
 word_count_target: 2000
-updated_at: "2026-10-14"
+updated_at: "2026-10-25"
 editorial_status: "manuscript_draft"
 ---
 
 # Chapter 53 — References
 
 [DERIVED] All listed primary surfaces were inspected on **2026-10-14**. Paper revisions are pinned below; documentation major versions are fixed where available. Repository main paths are explicitly unpinned and were inspected without executing them. P16 and P40 retain their canonical spine identities. Method claims and original engineering derivations are separated in the sections.
+
+[DERIVED] Targeted reinspection on **2026-10-25** reopened R53.5 Appendix F.3 (status-aware constrained readout), R53.6 Theorem 1/Corollary 1 and Table 1 (conditional replay and token counts), and R53.9 ?13.2.1 (snapshot reads and concurrent-update condition re-evaluation). Other entries retain their original 2026-10-14 inspection scope. The check-to-effect counterexample in ??53.3?53.4 is an original finite schedule argument; no database, tool sink or agent was executed.
 
 | Key | Type | Work | Authors / organization | Venue / year | Primary URL | Official code | Status | Used for | Accessed |
 |---|---|---|---|---|---|---|---|---|---|

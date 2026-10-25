@@ -23,13 +23,13 @@ datasets: []
 status: {maturity: active, disputed: false}
 evidence_summary: {labels_used: [PAPER-REPORTED, OFFICIAL-DOCUMENTATION, NOT-DISCLOSED, UNVERIFIED], empirically_observed: false}
 word_count_target: 2000
-updated_at: 2026-10-14
+updated_at: 2026-10-25
 editorial_status: manuscript_draft
 ---
 
 # Chapter 43 — Primary evidence ledger
 
-[OFFICIAL-DOCUMENTATION] Every successful inspection below occurred on **2026-10-14**. Research methods, reported protocols, documentation bodies and selected official code functions were opened during authoring. A pinned source file supports narrow static observations; it does not establish executable compatibility, numerical parity or performance. No engine was run. Mutable stable/current documentation remains explicitly unpinned.
+[OFFICIAL-DOCUMENTATION] Original inspections occurred on **2026-10-14**; rows dated **2026-10-25** identify continuation reinspections. Research methods, reported protocols, documentation bodies and selected official code functions were opened during authoring. A pinned source file supports narrow static observations; it does not establish executable compatibility, numerical parity or performance. No engine was run. Mutable stable/current documentation remains explicitly unpinned.
 
 | Key | Type | Work | Authors / organisation | Venue / year | Primary URL | Official code | Status | Accessed | Used for |
 |---|---|---|---|---|---|---|---|---|---|
@@ -46,10 +46,10 @@ editorial_status: manuscript_draft
 | R43.9 | documentation | DP, DPA and SGLang DP Router | SGLang project | current | [distributed guide](https://docs.sglang.io/docs/advanced_features/dp_dpa_smg_guide) | same | official documentation | 2026-10-14 | Unpinned current; “Data Parallelism,” “How DPA Works,” “Activation Logic,” divisibility and dp_size/attn_dp_size interface constraints, SMG routing |
 | R43.10 | documentation | Breakable CUDA Graph | SGLang project | current | [graph boundaries](https://docs.sglang.io/docs/advanced_features/breakable_cuda_graph) | same | official documentation | 2026-10-14 | Unpinned current; segmented captured/eager execution and debugging path, not a speed measurement |
 | R43.11 | documentation | Serving GLM5.2 NVFP4 Agentic Workload with SGLang: Reaching 500 TPS in 2 Weeks | SGLang Team / LMSYS | 2026-07-14 | [first-party technical disclosure](https://www.lmsys.org/blog/2026-07-13-glm52-optimization) | linked PRs/reproduction branch | official documentation | 2026-10-14 | Unpinned article; “Runtime Optimization” reports 11% E2E gain; “Performance Results”/“Reproduction” v0.5.15.post1, B300, workload/precision/cache configuration |
-| R43.12 | documentation | TensorRT-LLM overview | NVIDIA | current | [overview](https://nvidia.github.io/TensorRT-LLM/overview.html) | [repository](https://github.com/NVIDIA/TensorRT-LLM) | official documentation | 2026-10-14 | Generated documentation build cc63e66, updated 2026-10-09; LLM API, PyTorch-native overview and serving integrations |
-| R43.13 | documentation | PyTorch backend architecture | NVIDIA | current | [architecture](https://nvidia.github.io/TensorRT-LLM/torch/arch_overview.html) | same | official documentation | 2026-10-14 | Build cc63e66; “PyExecutor,” ModelEngine, Scheduler, ResourceManager; stale opening TensorRT wording explicitly contrasted with release/removal guide |
-| R43.14 | documentation | TensorRT-LLM release notes | NVIDIA | releases through inspected 2026 surface | [release notes](https://nvidia.github.io/TensorRT-LLM/release-notes.html) | same | official documentation | 2026-10-14 | Build cc63e66; release 1.2 API changes/TensorRT backend removal; release 1.0 PyTorch default; not a claim that every release was executed |
-| R43.15 | documentation | Migration Guide: TensorRT Backend Removed | NVIDIA | current | [migration guide](https://nvidia.github.io/TensorRT-LLM/legacy/tensorrt-backend-removal.html) | same | official documentation | 2026-10-14 | Build cc63e66; removed/replacement table for backend, engine classes, trtllm-build and conversion workflows |
+| R43.12 | documentation | TensorRT-LLM overview | NVIDIA | current | [overview](https://nvidia.github.io/TensorRT-LLM/overview.html) | [repository](https://github.com/NVIDIA/TensorRT-LLM) | official documentation | 2026-10-25 | Generated documentation build 0372799, updated 2026-10-19; LLM API, PyTorch-native overview and serving integrations |
+| R43.13 | documentation | PyTorch backend architecture | NVIDIA | current | [architecture](https://nvidia.github.io/TensorRT-LLM/torch/arch_overview.html) | same | official documentation | 2026-10-25 | Build 0372799, updated 2026-10-19; “PyExecutor,” ModelEngine, Scheduler, ResourceManager; opening wording now agrees with development removal guide; tagged-release conflict remains |
+| R43.14 | documentation | TensorRT-LLM release notes | NVIDIA | releases through inspected 2026 surface | [release notes](https://nvidia.github.io/TensorRT-LLM/release-notes.html) | same | official documentation | 2026-10-25 | Build 0372799, updated 2026-10-19; mutable release-1.2 removal statement contrasted with tagged v1.2.0 in R43.35; release 1.0 PyTorch default; not a claim that every release was executed |
+| R43.15 | documentation | Migration Guide: TensorRT Backend Removed | NVIDIA | current | [migration guide](https://nvidia.github.io/TensorRT-LLM/legacy/tensorrt-backend-removal.html) | same | official documentation | 2026-10-25 | Build 0372799, updated 2026-10-19; removed/replacement table for backend, engine classes, trtllm-build and conversion workflows |
 | R43.16 | documentation | TensorRT-LLM Quick Start Guide | NVIDIA | current | [quick start](https://nvidia.github.io/TensorRT-LLM/quick-start-guide.html) | same | official documentation | 2026-10-14 | Build cc63e66; “Deploy Online Serving with trtllm-serve,” “Run Offline Inference with LLM API” direct checkpoint/repository input |
 | R43.17 | documentation | Paged Attention, IFB, and Request Scheduling | NVIDIA | mixed historical/current page | [IFB page](https://nvidia.github.io/TensorRT-LLM/features/paged-attention-ifb-scheduler.html) | same | official documentation | 2026-10-14 | Build cc63e66; “max_batch_size,” “max_seq_len,” “max_num_tokens,” “Chunked Context”; v0.11 flags/build language treated as historical |
 | R43.18 | documentation | Pushing Latency Boundaries: Optimizing DeepSeek-R1 Performance on NVIDIA B200 GPUs | NVIDIA | historical 2025 report in current docs | [technical report](https://nvidia.github.io/TensorRT-LLM/blogs/tech_blog/blog01_Pushing_Latency_Boundaries_Optimizing_DeepSeek-R1_Performance_on_NVIDIA_B200_GPUs.html) | linked TensorRT-LLM code | official documentation | 2026-10-14 | Build cc63e66; performance/model precision/optimization sections: 8 B200, concurrency 1, ISL1k/OSL2k, mixed BF16/NVFP4, 67→253→368 TPS combined interventions |
@@ -69,6 +69,8 @@ editorial_status: manuscript_draft
 | R43.32 | documentation | ONNX Runtime Execution Providers | ONNX Runtime maintainers | current | [provider index](https://onnxruntime.ai/docs/execution-providers/) | [official repository](https://github.com/microsoft/onnxruntime) | official documentation | 2026-10-14 | Unpinned; summary table and provider priority APIs; vendor interface routes, not target-model compatibility |
 | R43.33 | repository | SGLang scheduler | SGLang project | source inspected 2026 | [immutable scheduler.py](https://github.com/sgl-project/sglang/blob/6f646563a253d6e573fe340a30ec4bbfa642eafa/python/sglang/srt/managers/scheduler.py) | same | official documentation | 2026-10-14 | Commit 6f646563a253d6e573fe340a30ec4bbfa642eafa; event_loop_normal1940, event_loop_overlap1975–2048, get_next_batch_to_run3766, run_batch4490, process_batch_result4921; static read |
 | R43.34 | repository | TensorRT-LLM PyExecutor | NVIDIA | source inspected 2026 | [immutable py_executor.py](https://github.com/NVIDIA/TensorRT-LLM/blob/5c7fc3c7d60131ff0080e52736646691ed1867b3/tensorrt_llm/_torch/pyexecutor/py_executor.py) | same | official documentation | 2026-10-14 | Commit 5c7fc3c7d60131ff0080e52736646691ed1867b3; PyExecutor381, _schedule7083, _forward_step8254, resource calls3142/3772/8765; static read |
+| R43.35 | repository | TensorRT-LLM tagged v1.2.0 backend constructors | NVIDIA | Release published 12 March 2026 | [pinned llm.py](https://raw.githubusercontent.com/NVIDIA/TensorRT-LLM/51f5ef32b695f421dd27727f3935052015c945f9/tensorrt_llm/llmapi/llm.py); [release](https://github.com/NVIDIA/TensorRT-LLM/releases/tag/v1.2.0) | same | official documentation | 2026-10-25 | Commit 51f5ef32b695f421dd27727f3935052015c945f9: BaseLLM backend dispatch lines133-149, _TrtLLM lines808-829, _TorchLLM validation lines1068-1083 and public LLM lines1087-1102. Static inspection only. |
+| R43.36 | repository | TensorRT-LLM October development backend dispatch | NVIDIA | Commit dated 19 October 2026 | [pinned llm.py](https://raw.githubusercontent.com/NVIDIA/TensorRT-LLM/0372799d1543ef5920c1318b829cf127800dbcb9/tensorrt_llm/llmapi/llm.py) | same | official documentation | 2026-10-25 | Commit 0372799d1543ef5920c1318b829cf127800dbcb9: BaseLLM lines358-370 rejects non-PyTorch backend; _TorchLLM lines1722-1743 defaults and forwards the backend. Same source revision as re-inspected generated docs. No execution. |
 
 ## P36
 
@@ -128,11 +130,11 @@ editorial_status: manuscript_draft
 
 ## R43.13
 
-[OFFICIAL-DOCUMENTATION] The stale introductory backend wording is retained as an evidence conflict. Explicit removal documentation determines the chapter's current path.
+[OFFICIAL-DOCUMENTATION] The 19 October architecture text now agrees with the removal guide. Earlier wording is superseded for this development revision; tagged-release evidence is recorded separately.
 
 ## R43.14
 
-[OFFICIAL-DOCUMENTATION] Release 1.2 is the documented removal boundary, not the sole release existing in2026.
+[OFFICIAL-DOCUMENTATION] The mutable notes place removal under a 1.2 heading; this conflicts with the pinned v1.2.0 constructor source in R43.35. The chapter no longer treats that heading as a released-package guarantee.
 
 ## R43.15
 
@@ -217,3 +219,11 @@ editorial_status: manuscript_draft
 ## Evidence boundary
 
 [UNVERIFIED] Current source pins were resolved through GitHub's public commits API, then exact immutable source URLs were opened and source bodies inspected. No checkout, package import, kernel execution, compilation, server launch or benchmark ran. All current compatibility, performance, quality and recovery claims remain unverified until the proposed protocol is executed. Documentation omissions are recorded as NOT-DISCLOSED rather than supplied by assumptions.
+
+## R43.35
+
+[OFFICIAL-DOCUMENTATION] The v1.2.0 tag resolves to 51f5ef32b695f421dd27727f3935052015c945f9. Its retained TensorRT constructor and argument dispatch contradict a blanket removal claim for that tag. Static source availability does not establish a working device installation.
+
+## R43.36
+
+[OFFICIAL-DOCUMENTATION] This pinned development constructor accepts only the PyTorch backend. It establishes the inspected source boundary; it does not identify which distributed package first incorporated removal. The contradiction is retained rather than resolved by assigning an invented release number.

@@ -26,7 +26,7 @@ datasets: []
 status: {maturity: established, disputed: false}
 evidence_summary: {labels_used: [MATHEMATICALLY-DERIVED, DERIVED, PAPER-REPORTED, OFFICIAL-DOCUMENTATION, NOT-DISCLOSED, UNVERIFIED], empirically_observed: false}
 word_count_target: 2100
-updated_at: 2026-10-14
+updated_at: 2026-10-25
 editorial_status: manuscript_draft
 ---
 
@@ -263,7 +263,7 @@ where each $t_{\rm *}$ is elapsed seconds on the same request path. This is an a
 
 ## Algorithm
 
-**Algorithm 42.1 - Bounded request state machine.** [DERIVED] Inputs are immutable model/template/tokenizer identities, request bytes, finite context cap $S_{\max}$, output cap $S_{o,\max}$, deadline $t_{\max}$, positive integer chunk cap $q$ and a declared selection rule. State is $(z,h,j,\mathcal K,\mathcal E)$: phase, processed prefix length, selected output count, committed cache and delivery events. Output is a terminal status and ordered stream.
+**Algorithm 42.1 - Bounded request state machine.** [DERIVED] Inputs are immutable model/template/tokenizer identities, request bytes, finite context cap $S_{\max}$, output cap $S_{o,\max}$, deadline $t_{\max}$, positive integer chunk cap $q$ and a declared selection rule. The deadline uses a monotonic host clock; the output cap is a nonnegative integer. Reject malformed caps, and return an empty completed stream before model execution when $S_{o,\max}=0$. The encoder supplies the declared beginning-of-sequence conditioning for an otherwise empty prompt. State is $(z,h,j,\mathcal K,\mathcal E)$: phase, processed prefix length, selected output count, committed cache and delivery events. Output is a terminal status and ordered stream.
 
 $$
 \begin{aligned}
@@ -271,13 +271,16 @@ $$
 2.&\quad z\leftarrow\mathrm{WAIT};\ h\leftarrow\operatorname{ValidPrefix}(x);\ j\leftarrow0;\quad t>t_{\max}\Rightarrow\mathrm{TIMEOUT}.\\
 3.&\quad z\leftarrow\mathrm{PREFILL};\quad h<S_p\Rightarrow(\mathcal K,h)\leftarrow\operatorname{CausalAdvance}(x,h,\min(h+q,S_p)).\\
 4.&\quad h<S_p\Rightarrow\text{repeat line 3 within the deadline};\quad \ell\leftarrow\operatorname{FinalLogits}(\mathcal K,x).\\
-5.&\quad \ell\text{ nonfinite}\Rightarrow\mathrm{NUMERICAL\_FAILURE};\quad y_{j+1}\leftarrow\operatorname{Select}(\ell);\ j\leftarrow j+1.\\
-6.&\quad \mathcal E\leftarrow\operatorname{PublishAllowed}(\mathcal E,y_j);\quad \operatorname{Stop}(y_{1:j})\lor j=S_{o,\max}\Rightarrow\mathrm{COMPLETE}.\\
-7.&\quad h+1>S_{\max}\Rightarrow\mathrm{CONTEXT\_LIMIT};\quad z\leftarrow\mathrm{DECODE};\ (\mathcal K,\ell,h)\leftarrow\operatorname{Advance}(\mathcal K,y_j);\quad\text{return to line 5.}
+5.&\quad \operatorname{GuardDeadlineAndCancellation};\quad
+ \ell\text{ nonfinite}\Rightarrow\mathrm{NUMERICAL\_FAILURE};\quad y_{j+1}\leftarrow\operatorname{Select}(\ell);\ j\leftarrow j+1.\\
+6.&\quad \operatorname{GuardDeadlineAndCancellation};\quad
+ \mathcal E\leftarrow\operatorname{PublishAllowed}(\mathcal E,y_j);\quad \operatorname{Stop}(y_{1:j})\lor j=S_{o,\max}\Rightarrow\mathrm{COMPLETE}.\\
+7.&\quad \operatorname{GuardDeadlineAndCancellation};\quad
+ h+1>S_{\max}\Rightarrow\mathrm{CONTEXT\_LIMIT};\quad z\leftarrow\mathrm{DECODE};\ (\mathcal K,\ell,h)\leftarrow\operatorname{Advance}(\mathcal K,y_j);\quad\text{return to line 5.}
 \end{aligned}
 $$
 
-[DERIVED] Invariants are causal prefix order, immutable conditioning, committed state only after successful execution, and publication only after stop/channel rules. If all prompt tokens are reused, final logits still need an appropriate retained hidden state or recomputation of the last token; KV alone does not store the final probability vector. The procedure bounds advances by $S_p+S_{o,\max}$ and time by the deadline, assuming each operator itself has a timeout. Cancellation releases references after in-flight accesses finish. Its arithmetic is Eq. 42.1 plus output-policy work; cache space is developed in Section 42.2.
+[DERIVED] Invariants are causal prefix order, immutable conditioning, committed state only after successful execution, and publication only after stop/channel rules. If all prompt tokens are reused, final logits still need an appropriate retained hidden state or recomputation of the last token; KV alone does not store the final probability vector. The procedure bounds advances by $S_p+S_{o,\max}$. Each guard terminates on cancellation or an expired absolute deadline, and each operator receives only the remaining time budget; per-operator timeouts must not restart the request budget. Subject to bounded host scheduling/check delay, no new work or publication is authorized after expiry. This is not a physical device-preemption guarantee or a bound on network delivery time. An in-flight kernel can outlive the host timeout, so its references remain pinned or quarantined until completion. [Chapter 46](../../part-08-inference-engines-and-production-serving/ch46-admission-control-routing-autoscaling-and-service-contracts/46-5-resilience.md) owns deadline propagation and retry behavior; [Chapter 44](../../part-08-inference-engines-and-production-serving/ch44-scheduling-distributed-serving-and-disaggregation/44-4-disaggregation.md) owns cross-worker handoff. Its arithmetic is Eq. 42.1 plus output-policy work; cache space is developed in Section 42.2.
 
 ## Implementation
 

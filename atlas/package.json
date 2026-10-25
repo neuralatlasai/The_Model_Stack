@@ -20,6 +20,7 @@
     "compile": "node packages/compiler/src/cli.ts --docs ../docs --reference-stack ../Instruction/AI_REFERENCE_STACK.md --out .atlas",
     "compile:check": "node packages/compiler/src/cli.ts --docs ../docs --reference-stack ../Instruction/AI_REFERENCE_STACK.md --out .atlas --check",
     "figures:check": "node scripts/validate-figures.ts ../docs",
+    "check:size": "node scripts/check-site-size.ts apps/web/dist",
     "dev": "npm run compile && npm run dev --workspace @atlas/web",
     "build": "npm run compile && npm run build --workspace @atlas/web",
     "preview": "npm run preview --workspace @atlas/web",

@@ -1,6 +1,6 @@
 /** Bounded, legal input settings evaluated by the calculator's existing model. */
 import type { CalculatorSpec, ChartSpec } from '@atlas/core';
-import { sliderModel } from '@atlas/visual';
+import { sliderModel } from '@atlas/visual/math';
 import type { CalculatorModel } from './calculator-model.ts';
 
 const MAX_SAMPLES = 41;

@@ -79,6 +79,21 @@ export default tseslint.config(
     // Browser code: client controllers and islands.
     files: ['apps/web/src/client/**/*.ts', 'apps/web/src/islands/**/*.tsx'],
     languageOptions: { globals: { ...globals.browser } },
+    rules: {
+      // The package root also exports build-time ELK layout. Its side effects
+      // previously added 1.4 MB to the calculator's browser chunk.
+      'no-restricted-imports': [
+        'error',
+        {
+          paths: [
+            {
+              name: '@atlas/visual',
+              message: 'Use the browser-safe @atlas/visual/math, @atlas/visual/state or @atlas/visual/svg entry.',
+            },
+          ],
+        },
+      ],
+    },
   },
   {
     // astro.config.mjs runs under Node before Astro's own tooling loads.

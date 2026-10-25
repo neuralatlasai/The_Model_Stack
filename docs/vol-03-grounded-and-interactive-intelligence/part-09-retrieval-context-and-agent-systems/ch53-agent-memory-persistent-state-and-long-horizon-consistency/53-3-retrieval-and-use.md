@@ -23,7 +23,7 @@ datasets: []
 status: {"maturity":"active","disputed":false}
 evidence_summary: {"labels_used":["MATHEMATICALLY-DERIVED","DERIVED","PAPER-REPORTED","OFFICIAL-DOCUMENTATION","NOT-DISCLOSED","UNVERIFIED"],"empirically_observed":false}
 word_count_target: 2000
-updated_at: "2026-10-14"
+updated_at: "2026-10-25"
 editorial_status: "manuscript_draft"
 ---
 
@@ -50,11 +50,11 @@ editorial_status: "manuscript_draft"
   "id": "fig-53.9",
   "kind": "diagram",
   "title": "Eligible memories become status-aware evidence",
-  "caption": "Permission and temporal eligibility gate use. Current-state lookup resolves status separately from similarity; unresolved current state requests clarification, and historical values cannot authorize a current action.",
+  "caption": "Permission and temporal eligibility gate use. Current-state lookup resolves status separately from similarity. A strict current-action contract also needs authoritative preconditions checked atomically with its effect; a read before dispatch cannot supply that guarantee.",
   "placement": "inline",
   "evidence": "DERIVED",
   "source": "DERIVED:eq-53.10",
-  "alt": "A bounded search and accepted-state lookup feed eligibility and status resolution. Ineligible records are excluded. Supported current evidence reaches context and a version gate; historical evidence has a labeled readout, while outdated or unknown required state blocks action and requests clarification.",
+  "alt": "A bounded search and accepted-state lookup feed eligibility and status resolution. Ineligible records are excluded. Supported current evidence reaches context and an effect-boundary version contract. Matching authoritative preconditions commit with the effect; changed versions or unavailable atomic protection block a strict current action. Historical evidence has a labeled readout, while outdated or unknown required state requests clarification.",
   "spec": {
     "direction": "TB",
     "nodes": [
@@ -106,12 +106,12 @@ editorial_status: "manuscript_draft"
       {
         "id": "p",
         "kind": "branch",
-        "label": "dispatch-time version check"
+        "label": "atomic effect / precondition contract"
       },
       {
         "id": "a",
         "kind": "state",
-        "label": "admitted current action"
+        "label": "version-conditional effect committed"
       }
     ],
     "edges": [
@@ -175,13 +175,13 @@ editorial_status: "manuscript_draft"
         "from": "p",
         "to": "a",
         "kind": "flow",
-        "label": "current versions + authority"
+        "label": "matching versions + authority at commit"
       },
       {
         "from": "p",
         "to": "u",
         "kind": "flow",
-        "label": "changed / unsupported"
+        "label": "changed / required atomicity unavailable"
       }
     ]
   }
@@ -299,7 +299,7 @@ $$
 
 [PAPER-REPORTED] CUPMem analyzes query intent, presupposed states, required current-state basis and requested action. It returns status-aware bundles and verifies whether a premise is SUPPORTED, OUTDATED or UNRESOLVED before readout. Its state representation includes archived stale items and unknown-current markers. [R53.5, Appendix F.3]
 
-[DERIVED] The manuscript's action boundary adds a versioned precondition check. If a tool call depends on the current delivery address, retrieve the accepted address evidence and verify its authoritative version immediately before dispatch. If an intervening update changes the version, regenerate or reject the action. An unresolved memory can support a clarification question; it cannot authorize silently using the old value.
+[DERIVED] The manuscript's action boundary adds a versioned precondition manifest. If a tool call depends on the current delivery address, retrieve the accepted address and carry its authoritative version. A pre-dispatch reread can detect an already committed correction but cannot protect the interval after that read. Strict acceptance requires the effect owner to validate the relevant expected versions and invariant predicates atomically with the effect, under the [53.4 concurrency contract](53-4-state-consistency.md#mechanism). A conflict blocks the effect and triggers a bounded replan. If the destination cannot support that contract, return an unsupported strict requirement or a separately accepted best-effort outcome. The retrieval manifest declares this obligation; generating it does not establish action consistency. An unresolved memory can support clarification, while [51.5](../ch51-tool-use-protocol-interfaces-and-reliable-execution/51-5-side-effect-management.md) owns compensation for already committed effects.
 
 [DERIVED] Context assembly selects from these bundles under the exact token and dependency constraints in §50.1–50.2. It preserves source IDs, distinctions between current/historical/contested states, and the model's instruction hierarchy. Retrieved procedures are data until trusted policy authorizes their use. Quoting a procedure inside memory does not grant permission to execute its instructions.
 
@@ -333,7 +333,8 @@ $$
 8.\;& B_{\rm rem}\gets B_{\rm rem}+c-\operatorname{actual\_work};
       \quad\text{reconcile all earlier reservations similarly}.\\
 9.\;& \text{Return }(C_q,v,\text{source manifest},\text{action preconditions});\\
-   & \text{at dispatch, if current authoritative versions differ, block and replan}.
+   & \text{for a strict current action, require its effect owner to validate the manifest}\\
+   & \text{atomically with the effect; conflict or unavailable contract}\Rightarrow\text{block/replan}.
 \end{aligned}
 $$
 (Eq. 53.10)
@@ -374,7 +375,7 @@ $$
 
 ## Failure modes
 
-[DERIVED] False premises can dominate lexical retrieval. Access-based recency can promote repeatedly retrieved mistakes. Approximate search can omit corrections. Temporal parsing can remove needed evidence. Flattened bundles can blend historical and current states. A model can cite the correct record yet execute an action with an obsolete argument; the dispatch precondition check addresses that separate boundary.
+[DERIVED] False premises can dominate lexical retrieval. Access-based recency can promote repeatedly retrieved mistakes. Approximate search can omit corrections. Temporal parsing can remove needed evidence. Flattened bundles can blend historical and current states. A model can cite the correct record yet execute an action with an obsolete argument. A read-before-dispatch check leaves a check-to-effect race; only the declared atomic effect/precondition contract protects the strict linearization-point requirement.
 
 ## Siblings
 

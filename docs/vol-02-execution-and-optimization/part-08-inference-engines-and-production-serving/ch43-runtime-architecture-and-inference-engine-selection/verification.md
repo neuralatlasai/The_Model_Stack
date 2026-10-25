@@ -23,7 +23,7 @@ datasets: []
 status: {maturity: open, disputed: false}
 evidence_summary: {labels_used: [ASSUMED, DERIVED, MATHEMATICALLY-DERIVED, PAPER-REPORTED, OFFICIAL-DOCUMENTATION, NOT-DISCLOSED, UNVERIFIED], empirically_observed: false}
 word_count_target: 2400
-updated_at: 2026-10-14
+updated_at: 2026-10-25
 editorial_status: manuscript_draft
 ---
 
@@ -169,7 +169,7 @@ Obligation codes: **P** problem/prior limitation; **F** formal contract; **M** f
 | SGLang DP/DPA/EP/router | [43.3 Mechanism](43-3-sglang.md#mechanism), F/M/I/R/S/V | R43.9 “How DPA Works,” “Activation Logic,” SMG | Collective/capacity behavior unmeasured | No near-linear scaling inference |
 | SGLang plugin/model interface | [43.3 Implementation](43-3-sglang.md#implementation), I/C/V | R43.30entrypoint/ownership; R43.33run_batch4490 | Plugin compatibility unchecked | CLI compatibility is insufficient |
 | SGLang source experiments | [43.3 Experimental design/Observations](43-3-sglang.md#experimental-design), E/O/L | P37§6.1–6.2/Appendix C; R43.11runtime/performance/reproduction | Independent quality/tail evidence absent | Historical maxima/current11% bounded separately |
-| Current TensorRT-LLM backend | [43.4 Scope/Mechanism](43-4-tensorrt-llm.md#scope), P/F/M/I/C | R43.14release1.2 API changes; R43.15replacement table | Runtime release not installed | Current/legacy explicit |
+| Current TensorRT-LLM backend | [43.4 Scope/Mechanism](43-4-tensorrt-llm.md#scope), P/F/M/I/C | R43.14-15 development removal docs; R43.35-36 tagged/development source conflict | Runtime release not installed | Executable revision explicit; first released removal version unresolved |
 | PyExecutor/resources | [43.4 Mechanism/Algorithm](43-4-tensorrt-llm.md#mechanism), Eq43.14, M/X/I/R/V | R43.13components; R43.34_schedule7083/forward8254/resource calls | Doc/source revisions differ; execution absent | No automatic compatibility join |
 | Optimized kernels/fusion/precision | [43.4 Formulation/Mechanism](43-4-tensorrt-llm.md#formulation), Eq43.13/15, A/I/R/V | R43.18precision/optimization; explicit book triangle/cost derivations | Actual operator parity unknown | Separate artifact and execution deviations |
 | Distributed optimized execution | [43.4 Mechanism](43-4-tensorrt-llm.md#mechanism), Eq43.16, F/M/R/S | R43.19Offline Load Balancer | Topology/bandwidth/redundancy budget unmeasured | No free-replication or hidden-overlap claim |

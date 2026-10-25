@@ -24,7 +24,7 @@ datasets: []
 status: {maturity: active, disputed: false}
 evidence_summary: {labels_used: [MATHEMATICALLY-DERIVED, DERIVED, PAPER-REPORTED, OFFICIAL-DOCUMENTATION, NOT-DISCLOSED, UNVERIFIED], empirically_observed: false}
 word_count_target: 2100
-updated_at: 2026-10-14
+updated_at: 2026-10-25
 editorial_status: manuscript_draft
 ---
 
@@ -147,6 +147,8 @@ Here time is seconds, power watts, energy joules and $N_{\rm accepted}$ counts c
 [MATHEMATICALLY-DERIVED] Define window rate $g_k=N_k/\Delta t_k$ for accepted work $N_k$ and temperature slope $s_k=[\Theta(t_{k+1})-\Theta(t_k)]/\Delta t_k$. A near-zero slope over a declared window can indicate approximate equilibrium under stationary conditions; it does not prove equilibrium if cooling, ambient or workload changes. Firmware can stabilize temperature by reducing clocks, so stationary temperature and stationary service are separate conditions.
 
 [DERIVED] Retain sensor uncertainty and measurement overhead. Counters can alter scheduling; tracing changes memory traffic and timing. An external meter avoids some software interference but adds calibration, sampling and synchronization requirements. Rail telemetry can omit display, radio, regulator or storage contributions. Slow power sampling aliases bursts, while unaligned clocks attribute energy to the wrong phase. Report integration and missing intervals instead of silently interpolating long gaps.
+
+[MATHEMATICALLY-DERIVED] Missing power intervals create an identification limit. Let $E_{\rm obs}$ be exact energy over observed intervals and $T_{\rm miss}$ the total unobserved duration. If the declared consumption boundary satisfies $0\le P(t)\le P_{\max}$ throughout the gaps, then $E_{\rm obs}\le E_{\rm total}\le E_{\rm obs}+P_{\max}T_{\rm miss}$ by integrating the pointwise bounds. Without a justified $P_{\max}$ there is no finite upper bound from the observed trace alone. Sample interpolation and sensor error require additional error bounds; a trapezoidal point estimate is not $E_{\rm obs}$ exactly. Divide a justified total-energy interval by the same positive all-offered-run accepted count to obtain an efficiency interval. Omitting failed attempts' energy or reporting valid-interval energy as complete run energy changes the estimand. If the record cannot support that bound, retain partial energy and missing coverage as separate outputs and leave whole-run joules per accepted task unresolved. [Chapter 48](../ch48-capacity-planning-benchmarking-and-lifecycle-economics/48-5-economics.md) owns the broader accepted-service cost boundary.
 
 [DERIVED] Battery testing adds charge state, health, charging status and power mode. USB automation can supply energy or change performance policy. A laboratory supply stabilizes voltage while removing battery-dependent behavior; that is a deliberate boundary, not ordinary unplugged use. Extrapolating tasks per charge from a short trace assumes stable usable energy and future workload, and should be labelled.
 

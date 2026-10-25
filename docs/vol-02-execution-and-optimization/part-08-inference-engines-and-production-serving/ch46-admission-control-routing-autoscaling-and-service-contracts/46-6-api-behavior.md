@@ -23,7 +23,7 @@ datasets: []
 status: {maturity: active, disputed: false}
 evidence_summary: {labels_used: [DERIVED, MATHEMATICALLY-DERIVED, PAPER-REPORTED, OFFICIAL-DOCUMENTATION, NOT-DISCLOSED, UNVERIFIED], empirically_observed: false}
 word_count_target: 2000
-updated_at: 2026-10-14
+updated_at: 2026-10-25
 editorial_status: manuscript_draft
 ---
 
@@ -180,8 +180,10 @@ $$
 2.\;&\operatorname{AcquireAdmissionReservation};
 \quad\text{failure}\Rightarrow\operatorname{Reject};
 \quad j\leftarrow0.\\
-3.\;&\operatorname{ExecuteNextAdmissibleWorkAndProcessStopRules};\\
-4.\;&B_{\rm out}+\text{next event bytes}>B_{\max}
+3.\;&\operatorname{GuardDeadlineCancellationAndCaps};\quad
+ \operatorname{ExecuteNextAdmissibleWorkAndProcessStopRules};\\
+4.\;&\operatorname{GuardDeadlineCancellationAndOwnership};\quad
+ B_{\rm out}+\text{next event bytes}>B_{\max}
 \Rightarrow\operatorname{BoundedPauseOrCancel};\\
 &\text{otherwise }j\leftarrow j+1,\space
 \operatorname{Publish}(e_j).\\
@@ -192,7 +194,7 @@ $$
 \end{aligned}
 $$
 
-[DERIVED] A pause in line 4 resumes only when space is available within its finite timeout; it does not fall through into an overflowing publication. A terminal attempt to send an error may itself fail, leaving client state ambiguous. Invariants are authorization at every action boundary, monotonic event identity, no semantic output after terminal state and finite buffer/resource ownership.
+[DERIVED] The guards terminate expired/cancelled work before execution and revalidate ownership and deadline after asynchronous completion, immediately before publication. A zero output cap terminates before generating a token. A pause in line 4 resumes only when space is available within its finite timeout; it does not fall through into an overflowing publication. A terminal attempt to send an error may itself fail, leaving client state ambiguous. Invariants are authorization at every action boundary, monotonic event identity, no semantic output after terminal state and finite buffer/resource ownership.
 
 ## Implementation
 

@@ -24,7 +24,7 @@ datasets: []
 status: {maturity: active, disputed: false}
 evidence_summary: {labels_used: [MATHEMATICALLY-DERIVED, DERIVED, PAPER-REPORTED, OFFICIAL-DOCUMENTATION, NOT-DISCLOSED, UNVERIFIED], empirically_observed: false}
 word_count_target: 2100
-updated_at: 2026-10-14
+updated_at: 2026-10-25
 editorial_status: manuscript_draft
 ---
 
@@ -243,12 +243,13 @@ G\leftarrow\operatorname{ExportInEvaluationMode};\
 4.&\quad \text{For each bounded reference case: verify outputs and successive state mutations against the declared reference}.\\
 5.&\quad (x,\mathcal K)\notin\mathcal D_{\rm export}\Rightarrow\mathrm{DOMAIN\_REJECTION};\
 \operatorname{RunAndAwaitRequiredCompletion}.\\
-6.&\quad \operatorname{CommitStateAndDeliver};\
-\text{cancel/device loss/nonfinite state}\Rightarrow\operatorname{AbortConsistently}.
+6.&\quad \text{cancel, deadline, device loss or nonfinite state}
+ \Rightarrow\operatorname{AbortBeforeCommit};\quad
+ \text{otherwise }\operatorname{CommitStateAndDeliver}.
 \end{aligned}
 $$
 
-[DERIVED] Invariants are identical conditioning, visible delegated/fallback partitions, valid mutable-state lengths and no buffer release before use completes. Finite case/output budgets and timeouts bound execution. Compilation time is compiler/model dependent and NOT-DISCLOSED as a general bound; runtime costs follow the graph plus boundary counts above. This is a verification-oriented book procedure, not an assertion of executed framework compatibility.
+[DERIVED] Invariants are identical conditioning, visible delegated/fallback partitions, valid mutable-state lengths and no buffer release before use completes. Revalidate cancellation, deadline and state after awaited execution and before publication. A cancellation after a valid commit produces a terminal continuation record, not a fictitious retraction of delivered output. Referenced buffers remain pinned or quarantined until last use. Finite case/output budgets and timeouts bound authorized logical execution; a timeout alone does not prove that asynchronous device work stopped. Compilation time is compiler/model dependent and NOT-DISCLOSED as a general bound; runtime costs follow the graph plus boundary counts above. This is a verification-oriented book procedure, not an assertion of executed framework compatibility.
 
 ## Implementation
 

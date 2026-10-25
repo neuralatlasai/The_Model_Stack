@@ -23,7 +23,7 @@ datasets: []
 status: {maturity: active, disputed: false}
 evidence_summary: {labels_used: [DERIVED, MATHEMATICALLY-DERIVED, PAPER-REPORTED, OFFICIAL-DOCUMENTATION, NOT-DISCLOSED, UNVERIFIED], empirically_observed: false}
 word_count_target: 1800
-updated_at: 2026-10-14
+updated_at: 2026-10-25
 editorial_status: manuscript_draft
 ---
 
@@ -104,14 +104,19 @@ where the triangle inequality bounds the new norm by the sum, not the maximum, o
 
 [MATHEMATICALLY-DERIVED] Dequantization can be whole-tensor, layerwise or tiled inside the multiply. Whole-tensor decoding restores high-precision resident weights and can erase capacity savings. Layerwise decoding retains compressed persistent weights but needs a large temporary tensor. Tiled decoding limits temporary storage and can avoid writing expanded weights back to HBM. It adds decode instructions and scale loads to the multiply, so reduced traffic competes with arithmetic and occupancy overhead.
 
+[MATHEMATICALLY-DERIVED] Let $e\in\{0,1\}$ indicate whether a complete decoded copy is retained alongside the packed payload, and let $b_{\rm compute}$ denote decoded bytes/value. With $M_{\rm packed}=Nk_{\rm eff}/8$, the weight-state accounting is
+
 $$
-M_{\rm peak}\ge M_{\rm packed}+M_{\rm workspace}+M_{\rm activations}+M_{\rm cache},
-\qquad
-\Delta M_{\rm full\ decode}\approx N(b_{\rm compute}-k_{\rm eff}/8).
+\begin{aligned}
+M_{\rm weights}&=N(k_{\rm eff}/8+e\,b_{\rm compute}),\\
+M_{\rm peak}&\ge M_{\rm weights}+M_{\rm workspace}+M_{\rm activations}+M_{\rm cache},\\
+\Delta M_{\rm retain}&=Nb_{\rm compute},\qquad
+\Delta M_{\rm replace}=N(b_{\rm compute}-k_{\rm eff}/8).
+\end{aligned}
 $$
 *(Eq. 40.21)*
 
-where the second expression assumes simultaneous retained packed and decoded weights and excludes metadata details already included in $k_{\rm eff}$. A runtime that discards packed tensors after loading has a different peak/resident boundary.
+where the increments compare against the packed-only weight state. Retaining both copies adds the entire decoded allocation, $\Delta M_{\rm retain}$; subtracting packed bytes is valid only for the replacement boundary after packed storage is released, $\Delta M_{\rm replace}$. A loader can transiently retain both copies even when its final resident state is decoded-only, so its loading peak follows a different boundary from its steady state. Alignment and metadata must already be included in $k_{\rm eff}$ or added separately. Fig. 40.16 uses the simultaneous-copy identity on the first line.
 
 [DERIVED] Offline packing costs $O(N)$ code visits and payload reads/writes. A tiled weight-only multiply preserves the dense arithmetic count while adding unpacking; native low-bit arithmetic changes the realized instruction path. Tensor-parallel sharding can require repacking aligned groups or distributing scale metadata. Model conversion does not change token count. Startup latency, steady-state throughput, energy and money require separate measurements.
 

@@ -23,7 +23,7 @@
  *   lazily loaded tree-state.ts; toggles made before it loads are queued.
  */
 import { ATTR } from './contract.ts';
-import { $, $$, isRendered, scrollIntoContainer } from './dom.ts';
+import { $, $$, h, isRendered, replaceChildren, scrollIntoContainer } from './dom.ts';
 import { ACTIONS, closestAction, HOOK } from './hooks.ts';
 import type { PageContext } from './page.ts';
 import { keyToMove, moveIndex, typeaheadIndex } from './tree-model.ts';
@@ -34,12 +34,13 @@ const TYPEAHEAD_RESET_MS = 600;
 export interface TreeApi {
   readonly items: readonly HTMLElement[];
   readonly byId: ReadonlyMap<string, HTMLElement>;
-  /** Ancestors of the current node (they always stay expanded). */
+  /** Active branch, including the current node when it has children. */
   readonly ancestors: readonly string[];
   readonly current: HTMLElement | null;
   idOf(item: Element): string | null;
   isExpandable(item: HTMLElement): boolean;
   setExpanded(item: HTMLElement, open: boolean): void;
+  onItemsAdded(listener: (items: readonly HTMLElement[]) => void): void;
 }
 
 const apis = new WeakMap<PageContext, TreeApi>();
@@ -71,6 +72,8 @@ export function initTree(ctx: PageContext): void {
     const id = idOf(item);
     if (id !== null) byId.set(id, item);
   }
+  const addedListeners: ((items: readonly HTMLElement[]) => void)[] = [];
+  const requests = new WeakMap<HTMLElement, Promise<void>>();
 
   const groupOf = (item: HTMLElement): HTMLElement | null => {
     const owns = item.getAttribute('aria-owns');
@@ -94,8 +97,52 @@ export function initTree(ctx: PageContext): void {
     if (!isExpandable(item)) return;
     item.setAttribute('aria-expanded', open ? 'true' : 'false');
     const group = groupOf(item);
-    if (group !== null) group.hidden = !open;
+    if (group !== null) {
+      group.hidden = !open;
+      if (open) ensureChildren(item, group);
+    }
   };
+
+  function ensureChildren(item: HTMLElement, group: HTMLElement): void {
+    const chapter = group.getAttribute('data-tree-chapter');
+    const id = idOf(item);
+    if (chapter === null || id === null || group.hasAttribute('data-tree-loaded') || requests.has(group)) return;
+    const status = (message: string): void => {
+      replaceChildren(group, h('li', { role: 'none' }, h('p', { class: 'sh-tree-note', role: 'status' }, message)));
+    };
+    group.setAttribute('aria-busy', 'true');
+    status('Loading sections…');
+    const request = import('./tree-children.ts')
+      .then(async ({ fetchTreeChildren }) =>
+        fetchTreeChildren(
+          ctx,
+          id,
+          chapter,
+          Number(item.getAttribute('aria-level') ?? '3') + 1,
+          item.getAttribute('href') ?? '',
+        ),
+      )
+      .then((loaded) => {
+        if (ctl.disposed) return;
+        replaceChildren(group, ...loaded.rows);
+        group.setAttribute('data-tree-loaded', 'true');
+        for (const child of loaded.items) {
+          const childId = idOf(child);
+          if (childId !== null) byId.set(childId, child);
+          items.push(child);
+        }
+        for (const listener of addedListeners) listener(loaded.items);
+      })
+      .catch(() => {
+        if (!ctl.disposed)
+          status('Sections could not load. Collapse and expand to retry, or open the chapter to browse its sections.');
+      })
+      .finally(() => {
+        if (!ctl.disposed) group.removeAttribute('aria-busy');
+        requests.delete(group);
+      });
+    requests.set(group, request);
+  }
 
   // ── current node: aria-current, active branch, roving tabindex ────────────
   const current = nodeId === null ? null : (byId.get(nodeId) ?? null);
@@ -104,6 +151,10 @@ export function initTree(ctx: PageContext): void {
     const id = idOf(cursor);
     if (id !== null) ancestors.push(id);
     setExpanded(cursor, true);
+  }
+  if (current !== null && isExpandable(current)) {
+    const id = idOf(current);
+    if (id !== null) ancestors.push(id);
   }
   for (const item of items) {
     if (item === current) item.setAttribute('aria-current', 'page');
@@ -127,7 +178,16 @@ export function initTree(ctx: PageContext): void {
     });
   }
 
-  apis.set(ctx, { items, byId, ancestors, current, idOf, isExpandable, setExpanded });
+  apis.set(ctx, {
+    items,
+    byId,
+    ancestors,
+    current,
+    idOf,
+    isExpandable,
+    setExpanded,
+    onItemsAdded: (listener) => addedListeners.push(listener),
+  });
 
   const toggle = (item: HTMLElement, open: boolean): void => {
     setExpanded(item, open);
@@ -145,7 +205,9 @@ export function initTree(ctx: PageContext): void {
   };
 
   // ── interaction ───────────────────────────────────────────────────────────
-  const visibleItems = (): HTMLElement[] => items.filter(isRendered);
+  // Deferred children are appended after initialization; keyboard order must
+  // follow their position in the DOM rather than their arrival time.
+  const visibleItems = (): HTMLElement[] => $$('[role="treeitem"]', tree).filter(isRendered);
   const focusItem = (item: HTMLElement | undefined): void => {
     if (item === undefined) return;
     setRover(item);
@@ -175,7 +237,11 @@ export function initTree(ctx: PageContext): void {
           event.preventDefault();
           if (!isExpandable(item)) return;
           if (!isExpanded(item)) toggle(item, true);
-          else focusItem(groupOf(item)?.querySelector<HTMLElement>('[role="treeitem"]') ?? undefined);
+          else {
+            const group = groupOf(item);
+            if (group !== null) ensureChildren(item, group);
+            focusItem(group?.querySelector<HTMLElement>('[role="treeitem"]') ?? undefined);
+          }
           return;
         }
         case 'ArrowLeft': {
@@ -238,4 +304,12 @@ export function initTree(ctx: PageContext): void {
     },
     { signal: ctl.signal },
   );
+
+  // Preferences are a lazy enhancement. Register after the API is available;
+  // toggles made while the module loads are merged by initTreeState.
+  void import('./tree-state.ts')
+    .then(({ initTreeState }) => {
+      if (!ctl.disposed) initTreeState(ctx);
+    })
+    .catch(() => undefined);
 }

@@ -135,6 +135,7 @@ export function initRail(ctx: PageContext): void {
     host.hidden = false;
     fadeIn(host);
     focusElement(heading);
+    scrollIntoContainer(heading, root);
   };
 
   const hideInspector = (): void => {

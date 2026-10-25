@@ -92,6 +92,38 @@
   color: var(--ink-3);
 }
 
+.sh-tree-note {
+  margin: 0.5rem 0.75rem;
+  color: var(--ink-2);
+  font: 12px/1.5 var(--font-sans);
+}
+
+.sh-tree-fallback {
+  font: 14px/1.5 var(--font-sans);
+}
+
+.sh-tree-fallback h2 {
+  margin: 1rem 0.75rem 0.4rem;
+  font: 600 12px/1.5 var(--font-sans);
+}
+
+.sh-tree-fallback :is(ul, ol) {
+  list-style: none;
+  padding-inline: 0.75rem;
+}
+
+.sh-tree-fallback a {
+  display: block;
+  padding-block: 0.5rem;
+  min-block-size: 44px;
+  color: var(--ink-2);
+}
+
+.sh-tree-fallback [aria-current='page'] {
+  color: var(--accent);
+  font-weight: 600;
+}
+
 .sh-leader {
   flex: 1 1 auto;
   min-width: 1rem;

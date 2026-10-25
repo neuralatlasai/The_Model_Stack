@@ -23,7 +23,7 @@ datasets: []
 status: {maturity: active, disputed: false}
 evidence_summary: {labels_used: [DERIVED, MATHEMATICALLY-DERIVED, OFFICIAL-DOCUMENTATION, NOT-DISCLOSED, UNVERIFIED], empirically_observed: false}
 word_count_target: 2000
-updated_at: 2026-10-14
+updated_at: 2026-10-25
 editorial_status: manuscript_draft
 ---
 
@@ -35,7 +35,9 @@ editorial_status: manuscript_draft
 
 ## Why this exists
 
-[OFFICIAL-DOCUMENTATION] Release 1.2 removes the TensorRT backend and makes PyTorch the sole backend. The migration guide removes the former engine-build/conversion path and directs users toward loading Hugging Face or Model Optimizer checkpoints [R43.14, “TensorRT Backend Removal”; R43.15, replacement table]. This changes the deployable artifact contract, available commands and reproduction procedure.
+[OFFICIAL-DOCUMENTATION] The removal guide and release notes built from 0372799 (19 October 2026) describe a PyTorch-only path [R43.14-15]. However, the tagged v1.2.0 source at 51f5ef32b695f421dd27727f3935052015c945f9 retains `TrtLlmArgs` and `_TrtLLM` [R43.35]. Development source 0372799d1543ef5920c1318b829cf127800dbcb9 instead rejects non-PyTorch backends [R43.36]. Here, current path means that inspected development revision, not every installation labeled 1.2.
+
+[UNVERIFIED] The first released package version implementing removal is unresolved by these conflicting surfaces. The mutable release-notes heading is not sufficient to assign the change to tagged v1.2.0.
 
 [DERIVED] A chapter that still prescribes conversion followed by an ahead-of-time TensorRT engine build as the universal TensorRT-LLM workflow would give an obsolete method. Conversely, a historical result produced with an engine binary cannot be silently reinterpreted as a measurement of the PyTorch-native path. Backend identity is part of the experiment.
 
@@ -88,11 +90,11 @@ Validity includes positions, shapes, cache interpretation, rank groups and compl
 
 ### Methodology
 
-[OFFICIAL-DOCUMENTATION] The inspected architecture document decomposes PyExecutor into a model engine, decoder, scheduler and resource manager. ModelEngine has a forward interface; scheduling includes capacity and microbatch stages; resources are prepared, updated and freed around execution [R43.13, “PyExecutor,” “ModelEngine,” “Scheduler,” “ResourceManager”]. Its footer identifies documentation build cc63e66, updated 2026-10-09.
+[OFFICIAL-DOCUMENTATION] The inspected architecture document decomposes PyExecutor into a model engine, decoder, scheduler and resource manager. ModelEngine has a forward interface; scheduling includes capacity and microbatch stages; resources are prepared, updated and freed around execution [R43.13, “PyExecutor,” “ModelEngine,” “Scheduler,” “ResourceManager”]. The re-inspected footer identifies documentation build 0372799, updated 2026-10-19.
 
 [DERIVED] The resulting iteration has three different decisions. Capacity admission decides whether a request has valid resources. Microbatch construction chooses the work presented together. Decoding consumes model output and changes logical request state. Combining those decisions into “batching” hides which condition failed. A request may have free token-work slots but insufficient state capacity, or enough state while a selected kernel cannot handle its shape.
 
-[OFFICIAL-DOCUMENTATION] The same architecture overview retains introductory wording about execution “besides TensorRT.” That wording conflicts with the explicit release-1.2 removal/migration documentation [R43.13–15]. This chapter gives the release and migration statements precedence for current backend availability. The inconsistency is documented rather than reconciled by assumption.
+[OFFICIAL-DOCUMENTATION] The 19 October architecture overview now agrees with the removal guide about its PyTorch-only development path [R43.13, R43.15]. The earlier inspected introductory wording has changed. The remaining contradiction is between the mutable release-1.2 notes and tagged v1.2.0 source, so backend availability must follow an executable revision rather than an inferred version boundary [R43.35-36].
 
 [DERIVED] A resource manager's prepare phase must establish ownership before operators dereference handles. An update phase must distinguish completed device writes from planned future positions. Freeing a request is not simply decrementing a host counter: all device readers and cross-rank operations must have passed their last use. Those are the same invariants as §43.1, reconstructed at the documented executor boundary.
 
@@ -190,7 +192,7 @@ $$
 
 [DERIVED] Record release/container digest, model and quantization revision, current API arguments, attention/MoE/linear/communication kernel paths, graph mode, hardware topology and serving integration. A documentation-build commit is a source revision, not a tested runtime commit. No current compatibility claim is CODE-VERIFIED here.
 
-[OFFICIAL-DOCUMENTATION] Immutable source commit 5c7fc3c7d60131ff0080e52736646691ed1867b3 exposes PyExecutor._schedule, _forward_step and resource prepare/update/free calls [R43.34, py_executor.py:7083,8254,3142,3772,8765]. The inspected source is a different revision from documentation build cc63e66. The evidence establishes named integration boundaries, while model/device compatibility and event safety remain unexecuted.
+[OFFICIAL-DOCUMENTATION] Immutable source commit 5c7fc3c7d60131ff0080e52736646691ed1867b3 exposes PyExecutor._schedule, _forward_step and resource prepare/update/free calls [R43.34, py_executor.py:7083,8254,3142,3772,8765]. That retained source pin is different from the re-inspected documentation/development build 0372799. The evidence establishes named integration boundaries, while model/device compatibility and event safety remain unexecuted.
 
 ## Experimental design
 
@@ -230,7 +232,7 @@ $$
 
 ## Reproducibility
 
-[UNVERIFIED] Documentation build cc63e66 and access 2026-10-14 identify the inspected sources; no server/container execution occurred. Historical measurements retain their original backend identity. Future reproduction must pin executable source/container, artifacts and actual dispatch, then validate correctness before measuring [selection criteria](43-6-selection-methodology.md).
+[UNVERIFIED] Reinspection on 2026-10-25 distinguishes development source/documentation build 0372799 from tagged v1.2.0 at 51f5ef3 and the earlier PyExecutor pin. No server/container execution occurred. Historical measurements retain their original backend identity. Reproduction must pin executable source/container, artifacts and actual dispatch, then validate correctness before measuring [selection criteria](43-6-selection-methodology.md).
 
 ```figure
 {
@@ -312,20 +314,20 @@ $$
 ```figure
 id: fig-43.14
 kind: stat-panel
-title: Release boundary
-caption: TensorRT-LLM release 1.2 removes the TensorRT backend; the PyTorch backend is the sole current path in the inspected release documentation.
+title: Executable revision boundary
+caption: Tagged v1.2.0 retains the legacy constructor while the inspected October development source rejects it. Resolve the executable revision before migrating.
 placement: rail
 anchor: mechanism
 evidence: OFFICIAL-DOCUMENTATION
-source: R43.14
-alt: Release 1.2 is the documented TensorRT backend removal boundary.
+source: [R43.35, R43.36]
+alt: The tagged v1.2.0 source contains the legacy constructor. The October 19 development source accepts only the PyTorch backend.
 spec:
   header: EXECUTION CONTRACT
   rows:
-    - {key: backend removal boundary, value: "1.2"}
-    - {key: boundary, value: legacy workflows are historical}
+    - {key: tagged v1.2.0 source, value: legacy constructor present}
+    - {key: October 19 source, value: PyTorch-only dispatch}
 ```
 
 ## References
 
-[R43.12](references.md#r43-12), [R43.13](references.md#r43-13), [R43.14](references.md#r43-14), [R43.15](references.md#r43-15), [R43.16](references.md#r43-16), [R43.17](references.md#r43-17), [R43.18](references.md#r43-18), [R43.19](references.md#r43-19), [R43.34](references.md#r43-34).
+[R43.12](references.md#r43-12), [R43.13](references.md#r43-13), [R43.14](references.md#r43-14), [R43.15](references.md#r43-15), [R43.16](references.md#r43-16), [R43.17](references.md#r43-17), [R43.18](references.md#r43-18), [R43.19](references.md#r43-19), [R43.34](references.md#r43-34), [R43.35](references.md#r43-35), [R43.36](references.md#r43-36).

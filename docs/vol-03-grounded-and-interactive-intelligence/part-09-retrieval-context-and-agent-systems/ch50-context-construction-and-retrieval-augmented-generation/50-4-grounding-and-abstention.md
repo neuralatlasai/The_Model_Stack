@@ -23,7 +23,7 @@ datasets: []
 status: {"maturity":"active","disputed":false}
 evidence_summary: {"labels_used":["MATHEMATICALLY-DERIVED","DERIVED","PAPER-REPORTED","OFFICIAL-DOCUMENTATION","NOT-DISCLOSED","UNVERIFIED"],"empirically_observed":false}
 word_count_target: 2000
-updated_at: "2026-10-14"
+updated_at: "2026-10-25"
 editorial_status: "manuscript_draft"
 ---
 
@@ -196,7 +196,7 @@ $$
         "default": 0.05,
         "min": 0,
         "max": 1,
-        "format": "ratio"
+        "format": "percent"
       },
       {
         "symbol": "m",
@@ -212,7 +212,7 @@ $$
         "default": 0.05,
         "min": 0.001,
         "max": 0.2,
-        "format": "ratio"
+        "format": "percent"
       }
     ],
     "outputs": [
@@ -220,7 +220,7 @@ $$
         "symbol": "u",
         "label": "selective-risk upper bound",
         "formula": "min(1,r+sqrt(ln(m/d)/(2*n)))",
-        "format": "ratio",
+        "format": "percent",
         "emphasis": true
       }
     ]

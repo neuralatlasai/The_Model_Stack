@@ -23,7 +23,7 @@ datasets: []
 status: {maturity: active, disputed: false}
 evidence_summary: {labels_used: [DERIVED, MATHEMATICALLY-DERIVED, PAPER-REPORTED, OFFICIAL-DOCUMENTATION, NOT-DISCLOSED, UNVERIFIED], empirically_observed: false}
 word_count_target: 2100
-updated_at: 2026-10-14
+updated_at: 2026-10-25
 editorial_status: manuscript_draft
 ---
 
@@ -98,6 +98,8 @@ $$
 *(Eq. 52.12)*
 
 is satisfiable. The transition conjunction is empty and true when $h_v=0$. Unsatisfiability rules out encoded counterexamples within this horizon, provided the model admits the intended transitions and the encoding is correct. A separate executability/nonblocking check must cover every allowed nondeterministic branch through the horizon; one favorable witness excludes neither deadlock on another branch nor an impossible intended action.
+
+[MATHEMATICALLY-DERIVED] A two-step counterexample makes the quantifiers consequential. Let the first fixed action lead from $s_0$ nondeterministically to $g$ or $d$, and let the second action lead from $g$ to the goal $f$ but have no successor from $d$. Suppose all represented states satisfy the invariant. A successful full-length witness $s_0,g,f$ exists, and Eq. 52.12 can be unsatisfiable because it quantifies only complete two-transition paths. The allowed prefix $s_0,d$ is nevertheless stuck before the goal. Thus a satisfiable feasibility query plus an unsatisfiable complete-path counterexample query still does not establish success on every branch. Separately reject any reachable prefix before the horizon whose prescribed next action has no allowed successor, unless the declared task contract already permits terminal success there. A timeout or solver unknown on this prefix check leaves the corresponding verdict unresolved.
 
 [MATHEMATICALLY-DERIVED] Suppose all actual initial states map into the modeled initial set; all actual candidate transitions are represented by $\widehat K$ under $\alpha$; model predicates imply their actual counterparts; and all actual executions are defined through the checked horizon. If every modeled execution satisfies $\widehat I$ throughout and $\widehat G$ at the end, induction on the transition simulation gives the corresponding actual properties:
 
@@ -232,7 +234,7 @@ $$
 
 ## Failure modes
 
-> **Failure mode — Vacuous model validity.** [DERIVED] *Symptom:* a plan is declared safe because its impossible transition sequence has no counterexample. *Cause:* unsatisfiability is interpreted without checking executability. *Detection:* require at least one admitted modeled execution and replay the witness. *Mitigation:* distinguish feasibility from universal property checking.
+> **Failure mode — Vacuous model validity.** [DERIVED] *Symptom:* a plan is declared safe because its impossible transition sequence has no counterexample. *Cause:* unsatisfiability is interpreted without checking executability. *Detection:* check both that intended executions exist and that every allowed reachable prefix can execute its prescribed next action or satisfies an explicitly permitted terminal condition; replaying one favorable witness is insufficient. *Mitigation:* distinguish existential feasibility, prefix nonblocking and complete-path safety/goal checking.
 
 [DERIVED] Additional failures include judge/reference bias, test leakage, stale evidence, solver unknown treated as unsat and outcome checks that omit unauthorized side effects. Each has a distinct counterexample boundary.
 

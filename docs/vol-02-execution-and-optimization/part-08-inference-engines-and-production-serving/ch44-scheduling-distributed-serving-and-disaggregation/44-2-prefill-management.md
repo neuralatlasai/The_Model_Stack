@@ -23,7 +23,7 @@ datasets: []
 status: {"maturity":"active","disputed":false}
 evidence_summary: {"labels_used":["MATHEMATICALLY-DERIVED","DERIVED","PAPER-REPORTED","OFFICIAL-DOCUMENTATION","NOT-DISCLOSED","UNVERIFIED"],"empirically_observed":false}
 word_count_target: 2000
-updated_at: "2026-10-14"
+updated_at: "2026-10-25"
 editorial_status: "manuscript_draft"
 ---
 
@@ -241,10 +241,11 @@ $$
 \begin{aligned}
 1.\;&\mathcal B\gets\operatorname{reserve\_decode}(\mathcal D),\quad
 b\gets|\mathcal B|;\quad
-b>\tau\Rightarrow\operatorname{invoke\_admission\_recovery}.\\
+b>\tau\Rightarrow\operatorname{return\_recovery\_required}.\\
 2.\;&\mathcal C\gets\operatorname{credit\_then\_age\_order}(\mathcal P,\mathcal W);
 \quad d_i\gets d_i+Q_i.\\
-3.\;&r\gets\operatorname{next}(\mathcal C),\quad
+3.\;&\mathcal C=\varnothing\lor b=\tau\Rightarrow\text{go to 6};\quad
+ r\gets\operatorname{next}(\mathcal C),\quad
 q\gets\min(P_r-S_r,\tau-b,\operatorname{credit\_cap}(r)).\\
 4.\;&q\gets\operatorname{largest\_feasible\_prefix}(q,\widehat f,\epsilon,\delta);
 \quad q=0\Rightarrow\operatorname{defer}(r).\\
@@ -260,7 +261,7 @@ q\gets\min(P_r-S_r,\tau-b,\operatorname{credit\_cap}(r)).\\
 $$
 *(Eq. 44.9)*
 
-where $\widehat c_r$ uses the chosen fairness unit. Invariants are monotonically increasing prompt offsets, unchanged causal positions, legal token/state budgets, and no output publication before its computation completes. A bounded search over chunk sizes can enumerate all aligned candidates; monotonic binary search is valid only if the measured feasibility function is monotone. A round with no prefill progress records why; it must not claim starvation freedom.
+where $\widehat c_r$ uses the chosen fairness unit and the credit cap is nonnegative. Recovery in line 1 returns without constructing an infeasible batch; the caller must rerun admission before attempting another schedule. An empty prefill candidate set launches only already-reserved decodes, and an entirely empty batch returns idle. Invariants are monotonically increasing prompt offsets, unchanged causal positions, legal token/state budgets, and no output publication before its computation completes. A bounded search over chunk sizes can enumerate all aligned candidates; monotonic binary search is valid only if the measured feasibility function is monotone. A round with no prefill progress records why; it must not claim starvation freedom.
 
 ## Implementation
 

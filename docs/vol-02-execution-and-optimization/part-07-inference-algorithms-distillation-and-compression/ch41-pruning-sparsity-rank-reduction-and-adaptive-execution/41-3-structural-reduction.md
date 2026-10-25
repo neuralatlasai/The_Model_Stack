@@ -23,7 +23,7 @@ datasets: []
 status: {"maturity":"active","disputed":false}
 evidence_summary: {"labels_used":["MATHEMATICALLY-DERIVED","DERIVED","PAPER-REPORTED","OFFICIAL-DOCUMENTATION","NOT-DISCLOSED","UNVERIFIED"],"empirically_observed":false}
 word_count_target: 2000
-updated_at: "2026-10-14"
+updated_at: "2026-10-25"
 editorial_status: "manuscript_draft"
 ---
 
@@ -272,6 +272,25 @@ Choosing principal components minimizes average squared projection error on the 
 [MATHEMATICALLY-DERIVED] Expert removal is different from zeroing an expert's contribution after dispatch. If the router selects top-$k$ among $E$ experts, restricting its candidate set to $E'<E$ can change every selected index and renormalized gate. Holding the original gates while removing an output yields perturbation $-g_ez_e$; rerouting to replacement experts adds further terms. Thus a first-order fixed-router attribution is a local proxy, not the exact effect of rebuilding the router. Total parameter memory can fall even if top-$k$ activated parameters stay constant. Token traffic and load balance can worsen when the remaining experts attract more tokens.
 
 [PAPER-REPORTED] The 2026 attribution/coverage method estimates expert loss impact from output-gradient attribution, then assigns per-expert channel counts by score coverage and redistributes counts to aligned multiples [R41.15](references.md), §§4.1–4.3, Appendix A. Its important differential is retaining different portions of important experts rather than deciding only whole-expert survival. Fine-tuning and quantization are separate stages in its experiments.
+
+### Coverage allocation and its admissible guarantee
+
+[PAPER-REPORTED] The 2026 MoE method sorts nonnegative channel scores within each allocation item and computes prefix sums. It sets target score-coverage fractions by scaling an importance prior, searches the common scale under a channel budget, and repeats this construction across layers and then within each layer. Its final alignment stage removes undersized experts, rounds surviving widths down to supported block sizes, and apportions available blocks using fractional remainders [R41.15](references.md), sections 4.2-4.3 and Appendix A. These are three distinct decisions: importance estimation, score coverage and executable shape alignment.
+
+[MATHEMATICALLY-DERIVED] Write the allocation items as $u\in\mathcal I$, their channel counts as $m_u$, sorted scores as $s_{u,1}\ge\cdots\ge s_{u,m_u}\ge0$, and $C_u(n)=\sum_{j=1}^n s_{u,j}$ with $C_u(0)=0$. For positive total scores and fixed priors $\phi_u\ge0$, the searched family is
+
+$$
+\rho_u(\alpha)=\min(\alpha\phi_u,1),\qquad
+n_u(\alpha)=\min\{n\in\{0,\ldots,m_u\}:C_u(n)\ge\rho_u(\alpha)C_u(m_u)\},
+\qquad N(\alpha)=\sum_{u\in\mathcal I}n_u(\alpha).
+$$
+*(Eq. 41.34)*
+
+[MATHEMATICALLY-DERIVED] Each $n_u$ is nondecreasing in $\alpha$, because increasing a nonnegative coverage target cannot lower the minimum satisfying prefix length. Thus feasibility $N(\alpha)\le N_{\rm budget}$ can be searched monotonically. This establishes a property of a one-dimensional, prior-constrained family, not an optimum over all channel allocations, final task loss or measured latency. A zero-total-score item needs an explicit convention rather than division by zero.
+
+[MATHEMATICALLY-DERIVED] Discreteness matters even in a two-item analytical example. Give each item one channel, scores $100$ and $1$, equal priors one, and budget one. At $\alpha=0$ both required counts are zero; at every $\alpha>0$ both counts are one. The family therefore offers costs zero and two, while unrestricted selection can retain the score-100 channel for cost one. This is a counterexample to identifying the restricted search with globally maximum retained score. It also proves that a stopping rule requiring an arbitrarily small distance to the integer budget can be unattainable. Bisection needs a finite iteration/interval limit, stagnation detection and retention of the best feasible candidate; unmet tolerance is an explicit result, not permission to exceed the budget. This is an analytical limitation of the stated search family, not a report of an observed failure in source code.
+
+[MATHEMATICALLY-DERIVED] With $J$ bounded scalar-search iterations, sorting costs $O(\sum_u m_u\log m_u)$ and binary lookup of each prefix costs $O(J\sum_u\log(m_u+1))$, in addition to forward/backward importance estimation and $O(\sum_um_u)$ prefix storage. Fixed numerical tolerance can make $J$ a configuration constant; it does not make the whole allocation independent of model size. After [alignment and kernel selection](41-6-hardware-realization.md), recheck retained counts, eligible-parameter denominators and assembled quality. Reopen the choice if [calibration moments shift](41-2-selection-criteria.md), the prior suppresses a useful item, or the runtime's legal shapes change. A score-coverage advantage alone cannot justify a deployment preference over uniform pruning or a matched recovery baseline.
 
 [MATHEMATICALLY-DERIVED] For calibration-aware rank reduction, let $G=XX^\top/n\succ0$ and $G=RR^\top$. Then
 $$

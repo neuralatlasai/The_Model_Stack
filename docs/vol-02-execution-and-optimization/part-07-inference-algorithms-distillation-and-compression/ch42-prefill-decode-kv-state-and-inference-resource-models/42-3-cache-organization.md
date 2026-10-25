@@ -26,7 +26,7 @@ datasets: []
 status: {maturity: established, disputed: false}
 evidence_summary: {labels_used: [MATHEMATICALLY-DERIVED, DERIVED, PAPER-REPORTED, OFFICIAL-DOCUMENTATION, NOT-DISCLOSED, UNVERIFIED], empirically_observed: false}
 word_count_target: 2100
-updated_at: 2026-10-14
+updated_at: 2026-10-25
 editorial_status: manuscript_draft
 ---
 
@@ -243,24 +243,34 @@ $o=(\sum_je^{m_j-m}u_j)/(\sum_je^{m_j-m}a_j)$. Multiplying each block's numerato
 
 ## Algorithm
 
-**Algorithm 42.3 — Append with sharing and reclamation.** [DERIVED] Inputs are one append operation, immutable namespace, logical table, physical pool of $U_{\max}$ blocks, reference counts and completion events. Output is an atomically committed table or a named failure. The transaction has a finite candidate scan and deadline.
+**Algorithm 42.3 - Append with sharing and reclamation.** [DERIVED] Inputs are one append operation, immutable namespace, logical table, physical pool of $U_{\max}$ blocks, reference counts and completion events. Output is an atomically committed table or a named failure. Serialize mutations of each logical sequence. Pool acquisition atomically reserves a block; a tail-write guard prevents a concurrent fork or alias publication from racing the reference-count test. State includes a private table snapshot $T'_i$, expected sequence version $v$, and provisional block/event ownership. The candidate scan and host waiting have finite deadlines.
 
 $$
 \begin{aligned}
-1.&\quad (j,o)\leftarrow(\lfloor S_i/p\rfloor,S_i\bmod p);\quad \mathcal T_{\rm old}\leftarrow T_i.\\
-2.&\quad o=0\Rightarrow b_{\rm new}\leftarrow\operatorname{AcquireFreeOrEvictUnreferenced}(U_{\max}).\\
-3.&\quad o>0\land \operatorname{refs}(T_i[j])>1\Rightarrow b_{\rm new}\leftarrow\operatorname{Acquire};\
-\operatorname{CopyValidTail}(T_i[j],b_{\rm new},o).\\
-4.&\quad \text{No eligible block or elapsed deadline}\Rightarrow\operatorname{Rollback};\ \mathrm{CAPACITY\_FAILURE}.\\
-5.&\quad b_{\rm target}\leftarrow b_{\rm new}\text{ if acquired, else }T_i[j];\quad \operatorname{WriteKV}(b_{\rm target},o);\quad \operatorname{WaitWriteCompletion};\
-T_i[j]\leftarrow b_{\rm target};\ S_i\leftarrow S_i+1.\\
-6.&\quad \operatorname{CommitRefs}(T_i,\mathcal T_{\rm old});\
-o=p-1\Rightarrow\operatorname{PublishFullBlockHash}(T_i[j]).\\
-7.&\quad \operatorname{ReclaimRetiredAfterReadersComplete};\quad \operatorname{Return}(T_i,S_i).
+1.&\quad \operatorname{AcquireSequenceAndTailGuards};\quad
+ (T'_i,v)\leftarrow\operatorname{Snapshot}(T_i);\quad
+ (j,o)\leftarrow(\lfloor S_i/p\rfloor,S_i\bmod p).\\
+2.&\quad o=0\Rightarrow b_{\rm new}\leftarrow
+ \operatorname{AcquireFreeOrEvictUnreferenced}(U_{\max}).\\
+3.&\quad o>0\land\operatorname{refs}(T_i[j])>1\Rightarrow
+ b_{\rm new}\leftarrow\operatorname{Acquire};\quad
+ \operatorname{Acquired}(b_{\rm new})\Rightarrow\operatorname{CopyValidTail}(T_i[j],b_{\rm new},o).\\
+4.&\quad \text{No guarded ownership, eligible block, valid copy or remaining time}
+ \Rightarrow\operatorname{AbortAndRetireProvisionals};\quad\mathrm{CAPACITY\_OR\_TIMEOUT}.\\
+5.&\quad b_{\rm target}\leftarrow b_{\rm new}\text{ if acquired, else }T_i[j];\quad
+ \operatorname{WriteKV}(b_{\rm target},o);\quad\operatorname{WaitWriteCompletion};\quad
+ T'_i[j]\leftarrow b_{\rm target}.\\
+6.&\quad \operatorname{WriteFailedOrExpired}\Rightarrow
+ \operatorname{AbortAndRetireProvisionals};\quad
+ \text{otherwise }\operatorname{AtomicCommit}(T'_i,S_i+1,\operatorname{refDeltas},v).\\
+7.&\quad \operatorname{CommitFailed}\Rightarrow\operatorname{AbortAndRetireProvisionals};\quad
+ o=p-1\Rightarrow\operatorname{PublishCommittedFullBlockHash}(T'_i[j]).\\
+8.&\quad \operatorname{ReleaseGuards};\quad
+ \operatorname{ReclaimRetiredAfterReadersComplete};\quad\operatorname{Return}(T_i,S_i).
 \end{aligned}
 $$
 
-[DERIVED] Invariants are no writes to multiply referenced state, no published uninitialized positions, no reclaimed in-flight data and nonnegative reference counts. A failed write leaves the old logical state committed and invalidates the provisional region. Selection among eviction candidates can require $O(U_{\max})$ in this bounded reference procedure; an indexed free queue reduces ordinary acquisition to constant-time metadata operations. Copy volume and KV generation are counted separately.
+[DERIVED] The table pointer, logical length, reference deltas and version change at one host-visible commit boundary. A failed append preserves the old committed table and length. An unused position in an exclusive old tail can have provisional bytes, but readers must obey the old length and those bytes are not reusable state. No multiply referenced tail is modified in place. Guards and pool reservations must also cover alias/fork operations; a reference count sampled without that synchronization is insufficient. Abort releases guards but retires or quarantines buffers until submitted copies/writes have completed, rather than immediately returning them to the free pool. Hash publication follows commit and full-block initialization. These are requirements of this book procedure, not claims that a named engine uses this exact locking scheme. Selection among eviction candidates can require $O(U_{\max})$ in this bounded reference; an indexed free queue reduces ordinary acquisition metadata work. Copy volume and KV generation are counted separately. For cross-worker ownership changes, use [Chapter 44's handoff contract](../../part-08-inference-engines-and-production-serving/ch44-scheduling-distributed-serving-and-disaggregation/44-4-disaggregation.md) instead of treating this local transaction as a distributed commit.
 
 ## Implementation
 

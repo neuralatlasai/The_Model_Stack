@@ -23,7 +23,7 @@ datasets: []
 status: {"maturity":"active","disputed":false}
 evidence_summary: {"labels_used":["MATHEMATICALLY-DERIVED","DERIVED","PAPER-REPORTED","OFFICIAL-DOCUMENTATION","NOT-DISCLOSED","UNVERIFIED"],"empirically_observed":false}
 word_count_target: 2000
-updated_at: "2026-10-14"
+updated_at: "2026-10-25"
 editorial_status: "manuscript_draft"
 ---
 
@@ -312,7 +312,7 @@ $$
 
 [PAPER-REPORTED] SparseGPT uses 128 randomly sampled 2048-token C4 segments, sequential one-shot pruning on an A100 80GB, and matched dense/sparse evaluation code. Table 1 reports OPT-175B raw-WikiText2 perplexities 8.35 dense, 8.21 at 50% unstructured sparsity, and 8.74 for 2:4 [R41.1](references.md), §4, Table 1. These are source-reported quality values; construction hardware is not an inference-speed boundary.
 
-[PAPER-REPORTED] Wanda's LLaMA-7B comparison at 50% unstructured sparsity reports WikiText perplexity 7.26 versus magnitude pruning 17.29 [R41.2](references.md), arXiv v2 §4.2, Table 3; ?4 describes the shared 128-sequence C4 calibration and evaluation. The study varies scoring at a fixed sparsity pattern and reports downstream zero-shot tasks separately. Table 17 also reports multi-seed variation for selected configurations; these uncertainty records do not establish uncertainty for every main-table cell or deployment workload.
+[PAPER-REPORTED] Wanda's LLaMA-7B comparison at 50% unstructured sparsity reports WikiText perplexity 7.26 versus magnitude pruning 17.29 [R41.2](references.md), arXiv v2 §4.2, Table 3; §4 describes the shared 128-sequence C4 calibration and evaluation. The study varies scoring at a fixed sparsity pattern and reports downstream zero-shot tasks separately. Table 17 also reports multi-seed variation for selected configurations; these uncertainty records do not establish uncertainty for every main-table cell or deployment workload.
 
 ## Observations
 

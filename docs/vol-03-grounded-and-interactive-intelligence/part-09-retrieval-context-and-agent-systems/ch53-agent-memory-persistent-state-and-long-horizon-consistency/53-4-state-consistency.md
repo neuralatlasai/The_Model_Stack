@@ -23,7 +23,7 @@ datasets: []
 status: {"maturity":"active","disputed":false}
 evidence_summary: {"labels_used":["MATHEMATICALLY-DERIVED","DERIVED","PAPER-REPORTED","OFFICIAL-DOCUMENTATION","NOT-DISCLOSED","UNVERIFIED"],"empirically_observed":false}
 word_count_target: 2000
-updated_at: "2026-10-14"
+updated_at: "2026-10-25"
 editorial_status: "manuscript_draft"
 ---
 
@@ -338,7 +338,9 @@ $$
 
 [MATHEMATICALLY-DERIVED] This identity concerns repeated application of the same operation and payload. It does not say that two different IDs, mutated payloads, or a non-idempotent downstream service share the property. The controller must bind ID, payload digest, target version and authorization scope; otherwise a retry can become a new effect.
 
-[DERIVED] Dispatch-time preconditions require environment support at the actual mutation boundary. Reading the latest state and then sending an unconditional action still permits an intervening update. A version-conditional API or a valid exclusive lease can close that race within its declared scope. If the environment offers neither, the service must disclose the residual race and use a conservative action policy.
+[DERIVED] Dispatch-time preconditions require environment support at the actual mutation boundary. Reading the latest state and then sending an unconditional action still permits an intervening update. A concrete schedule is: check authoritative version $v$ at $t_1$, commit a correction to $v+1$ at $t_2$, then commit the old-version action at $t_3$, with $t_1<t_2<t_3$. The read succeeded, yet freshness at the action's commit failed. A version-conditional API or a valid exclusive lease can close that race only if its protected authority, predicate scope and lifetime cover the relevant state and effect. A sink-local version unrelated to the source-state version cannot supply this protection.
+
+[DERIVED] The temporal acceptance rule must identify its linearization point: the instant at which the effect and its authoritative precondition are treated as one atomic decision. A later correction does not retroactively invalidate an earlier effect that was permitted at that point. Conversely, an internal outbox commit cannot establish freshness for a later remote effect, and rereading after the effect detects a violation without undoing it. If the environment cannot provide the required atomic or equivalent coordinated contract, return an unsupported strict requirement or disclose a separately accepted best-effort policy; do not label a source-version manifest itself a consistency guarantee. This is the downstream obligation carried by [53.3's retrieval manifest](53-3-retrieval-and-use.md#algorithm).
 
 [DERIVED] Cache/index epochs constrain stale readout. A retrieved summary includes its source-version vector and view epoch; a request requiring the current version cannot accept a mismatch merely because the summary's text looks relevant. Invalidation messages accelerate refresh but can be delayed or lost. Correctness depends on final version checks or an explicit bounded-staleness contract, not on assuming perfect broadcast delivery.
 

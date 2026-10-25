@@ -23,7 +23,7 @@ datasets: []
 status: {"maturity":"active","disputed":false}
 evidence_summary: {"labels_used":["MATHEMATICALLY-DERIVED","DERIVED","PAPER-REPORTED","OFFICIAL-DOCUMENTATION","NOT-DISCLOSED","UNVERIFIED"],"empirically_observed":false}
 word_count_target: 2000
-updated_at: "2026-10-14"
+updated_at: "2026-10-25"
 editorial_status: "manuscript_draft"
 ---
 
@@ -201,7 +201,7 @@ Thus rejecting when $L_j>\delta_j$ and declaring endpoint noninferiority only wh
         "default": 0.05,
         "min": 0.001,
         "max": 1,
-        "format": "ratio"
+        "format": "percent"
       },
       {
         "symbol": "h",
@@ -209,7 +209,7 @@ Thus rejecting when $L_j>\delta_j$ and declaring endpoint noninferiority only wh
         "default": 0.2,
         "min": 0,
         "max": 1,
-        "format": "ratio"
+        "format": "percent"
       }
     ],
     "outputs": [
@@ -217,7 +217,7 @@ Thus rejecting when $L_j>\delta_j$ and declaring endpoint noninferiority only wh
         "symbol": "g",
         "label": "aggregate incremental failure",
         "formula": "p*h",
-        "format": "ratio",
+        "format": "percent",
         "emphasis": true
       }
     ]

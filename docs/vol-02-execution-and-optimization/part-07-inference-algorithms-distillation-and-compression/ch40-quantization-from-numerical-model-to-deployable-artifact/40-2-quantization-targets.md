@@ -23,7 +23,7 @@ datasets: []
 status: {maturity: active, disputed: false}
 evidence_summary: {labels_used: [DERIVED, MATHEMATICALLY-DERIVED, PAPER-REPORTED, OFFICIAL-DOCUMENTATION, NOT-DISCLOSED, UNVERIFIED], empirically_observed: false}
 word_count_target: 2000
-updated_at: 2026-10-14
+updated_at: 2026-10-25
 editorial_status: manuscript_draft
 ---
 
@@ -185,7 +185,9 @@ $$
 
 [OFFICIAL-DOCUMENTATION] The October 2026 AutoQuant KV disclosure uses Qwen3-8B with BF16 weights, comparing uniform cache formats and mixed assignments under effective-bit budgets [R40.20, “Mixed-precision results”]. It reports RULER at 128K and task results separately. The starter recipe uses 128 CNN/DailyMail examples of 512 tokens; it is presented as a workflow example, not a complete disclosure of every reported evaluation configuration.
 
-[NOT-DISCLOSED] The inspected results page does not supply full evaluator seeds, confidence intervals or complete hardware/runtime measurement records. Its reported cache payload is modeled storage, not measured peak process memory.
+[OFFICIAL-DOCUMENTATION] The 25 October reinspection identifies a development vLLM image with TP1/DP4 and matched settings within each benchmark. The reported asymmetric FP8-key/NVFP4-value assignments use a broader menu than the starter recipe. Study checkpoints and the runtime image are not distributed with the post; SciCode counts missing or unsuccessful generations as failures in 2,704 trials, and only the fixed Native 6.25 comparator averages three runs [R40.20, “Mixed-precision results”].
+
+[NOT-DISCLOSED] Complete evaluator seeds, repeated-run uncertainty for every assignment, hardware identity and executable runtime provenance remain absent. The disclosed point differences are not significance claims, and modeled cache payload is not measured peak process memory.
 
 ## Observations
 

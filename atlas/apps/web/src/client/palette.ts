@@ -157,6 +157,7 @@ interface Group {
 interface PaletteView {
   readonly dialog: HTMLDialogElement;
   readonly input: HTMLInputElement;
+  readonly close: HTMLButtonElement;
   readonly list: HTMLElement;
   readonly status: HTMLElement;
 }
@@ -183,6 +184,12 @@ function buildView(doc: Document): PaletteView {
   });
   const list = h('div', { id: IDS.list, class: 'cx-palette__list', role: 'listbox', 'aria-label': 'Results' });
   const status = h('p', { id: IDS.status, class: 'cx-palette__status', role: 'status', 'aria-live': 'polite' });
+  const close = h(
+    'button',
+    { type: 'button', class: 'cx-palette__close', 'aria-label': 'Close search' },
+    'Close',
+    h('kbd', { class: 'cx-palette__esc', 'aria-hidden': 'true' }, 'Esc'),
+  );
   const dialog = h(
     'dialog',
     { id: IDS.dialog, class: 'cx-palette', 'aria-label': 'Search and commands' },
@@ -198,20 +205,20 @@ function buildView(doc: Document): PaletteView {
           'Search concepts, papers, equations, systems; type > for commands',
         ),
         input,
-        h('kbd', { class: 'cx-palette__esc', 'aria-hidden': 'true' }, 'Esc'),
+        close,
       ),
       status,
       list,
     ),
   );
   doc.body.append(dialog);
-  return { dialog, input, list, status };
+  return { dialog, input, close, list, status };
 }
 
 export function openPalette(ctx: PageContext, returnFocus: HTMLElement | null): void {
   const { doc, ctl } = ctx;
   if (view?.dialog.isConnected !== true) view = buildView(doc);
-  const { dialog, input, list, status } = view;
+  const { dialog, input, close: closeButton, list, status } = view;
   if (dialog.open) {
     input.focus();
     input.select();
@@ -249,6 +256,7 @@ export function openPalette(ctx: PageContext, returnFocus: HTMLElement | null): 
   const close = (): void => {
     if (dialog.open) dialog.close();
   };
+  closeButton.addEventListener('click', close, listen);
 
   /** Commands run after the dialog has closed (and returned focus), so they may move focus themselves. */
   const runCommand = (command: Command): void => {
@@ -363,7 +371,9 @@ export function openPalette(ctx: PageContext, returnFocus: HTMLElement | null): 
       show(index);
       return;
     }
-    status.textContent = 'Loading the search index…';
+    // Recent items or commands belong to the previous query. Clear their
+    // active option while loading so Enter cannot follow a stale destination.
+    render([], 'Loading the search index…');
     loadIndex(ctx.base)
       .then(show)
       .catch(() => {

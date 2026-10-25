@@ -37,8 +37,13 @@ export function initTreeState(ctx: PageContext): void {
   };
 
   const progress = store.read(STORAGE_KEYS.progress, StoredProgressSchema, {});
-  for (const [id, entry] of Object.entries(progress)) {
-    const item = api.byId.get(id);
-    if (item !== undefined && item !== api.current) setProgress(item, entry.max.toFixed(3));
-  }
+  const paintProgress = (items: readonly HTMLElement[]): void => {
+    for (const item of items) {
+      const id = api.idOf(item);
+      const entry = id === null ? undefined : progress[id];
+      if (entry !== undefined && item !== api.current) setProgress(item, entry.max.toFixed(3));
+    }
+  };
+  paintProgress(api.items);
+  api.onItemsAdded(paintProgress);
 }

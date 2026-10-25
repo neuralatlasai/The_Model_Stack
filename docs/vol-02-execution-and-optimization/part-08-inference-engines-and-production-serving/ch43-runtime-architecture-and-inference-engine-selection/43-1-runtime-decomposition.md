@@ -23,7 +23,7 @@ datasets: []
 status: {maturity: active, disputed: false}
 evidence_summary: {labels_used: [DERIVED, MATHEMATICALLY-DERIVED, PAPER-REPORTED, OFFICIAL-DOCUMENTATION, NOT-DISCLOSED, UNVERIFIED], empirically_observed: false}
 word_count_target: 2000
-updated_at: 2026-10-14
+updated_at: 2026-10-25
 editorial_status: manuscript_draft
 ---
 
@@ -131,30 +131,32 @@ spec:
 
 ## Algorithm
 
-### Algorithm 43.1 — Cancellable request state machine
+### Algorithm 43.1 - Cancellable request state machine
 
-[DERIVED] Inputs are an immutable execution contract, finite output cap $n_{\max}$ and deadline $t_d$. Output is a committed stream plus one terminal result. State contains Eq. 43.1 and in-flight device events.
+[DERIVED] Inputs are an immutable execution contract, nonnegative integer output cap $n_{\max}$ and absolute monotonic deadline $t_d$. Output is a committed stream plus one logical terminal result from the current owner. State contains Eq. 43.1, expected output position and pending device event. Reject invalid caps; a zero cap returns an empty completed stream before dispatch. This is an explanatory contract, not an implementation claim for a named engine.
 
 $$
 \begin{aligned}
-1.\;&s\leftarrow(\text{validated},\varnothing,\varnothing,\varnothing,\psi,e).\\
-2.\;&\text{invalid inputs or unsupported contract}\Rightarrow\text{terminal reject}.\\
-3.\;&\text{reserve resources};\quad
-\text{reservation fails}\Rightarrow\text{defer or reject under declared policy}.\\
-4.\;&\mathcal B_j\leftarrow\operatorname{Prepare}(s);
-\quad(E_j,z_j)\leftarrow\operatorname{Dispatch}(\mathcal B_j).\\
-5.\;&E_j\text{ incomplete}\Rightarrow\text{retain all referenced resources};
-\quad E_j\text{ complete}\Rightarrow y_j\leftarrow\operatorname{Decode}(z_j,\psi).\\
-6.\;&\text{epoch matches and request active}\Rightarrow
-\operatorname{Commit}(s,y_j);
-\quad\text{otherwise discard stale output}.\\
-7.\;&\text{stop, cancel, deadline or }|y|\ge n_{\max}
-\Rightarrow\text{drain dependent events, free references, terminal result}.\\
-8.\;&\text{otherwise return to 3}.
+1.\;&s\leftarrow(\text{validated},\varnothing,\varnothing,\varnothing,\psi,e);\quad
+ \text{invalid inputs or unsupported contract}\Rightarrow\text{terminal reject}.\\
+2.\;&\text{stop, cancel, expired deadline or output cap reached}\Rightarrow\text{go to 7}.\\
+3.\;&\operatorname{Reserve}(s,\text{remaining budget})\text{ fails}
+ \Rightarrow\text{bounded wait or terminal rejection};\quad\text{recheck line 2 before retry}.\\
+4.\;&\mathcal B_j\leftarrow\operatorname{Prepare}(s);\quad
+ (E_j,z_j)\leftarrow\operatorname{DispatchOnce}(\mathcal B_j);\quad\text{mark pending}.\\
+5.\;&\text{cancel or deadline}\Rightarrow\text{go to 7};\quad
+ E_j\text{ incomplete}\Rightarrow
+ (\operatorname{RetainReferences};\ \operatorname{WaitNextEvent};\ \text{return to 5});\quad
+ y_j\leftarrow\operatorname{Decode}(z_j,\psi).\\
+6.\;&\text{stale epoch}\Rightarrow\operatorname{RetireAttemptAndReturn};\quad
+ \text{active, expected position and }t<t_d\Rightarrow\operatorname{CommitOnce}(s,y_j);\quad
+ \text{return to 2}.\\
+7.\;&\operatorname{StopNewWork};\quad\operatorname{PublishTerminalOnce};\quad
+ \operatorname{DrainOrQuarantineReferencedResources};\quad\text{return}.
 \end{aligned}
 $$
 
-[DERIVED] A token is committed at most once per epoch/position; resource reuse happens after dependent events; exactly one terminal result belongs to the request. Deadline/output cap bound logical work, but physical completion still needs a failure-recovery policy when a worker hangs. The pseudocode is an explanatory contract, not a claimed implementation of any engine.
+[DERIVED] `WaitNextEvent` uses the remaining absolute budget and can wake on cancellation; it never authorizes a second dispatch of the pending iteration. Only successful completion reaches decoding. The commit check revalidates epoch, position, cancellation and deadline immediately before publication; a failed check discards the provisional output. The current owner emits the one logical terminal result; retirement of an obsolete attempt does not terminate a newer owner. Physical reclamation follows last use: a hung kernel or failed collective can outlive the host deadline, requiring pinned/quarantined buffers and worker fencing before reuse. Thus caps and deadlines bound authorized logical work and host waiting under the declared scheduling bound, not an unconditional time to free device memory. These responsibilities connect [local cache commit](../../part-07-inference-algorithms-distillation-and-compression/ch42-prefill-decode-kv-state-and-inference-resource-models/42-3-cache-organization.md), [cross-worker handoff](../ch44-scheduling-distributed-serving-and-disaggregation/44-4-disaggregation.md) and [service retry/cancellation semantics](../ch46-admission-control-routing-autoscaling-and-service-contracts/46-5-resilience.md).
 
 ## Implementation
 

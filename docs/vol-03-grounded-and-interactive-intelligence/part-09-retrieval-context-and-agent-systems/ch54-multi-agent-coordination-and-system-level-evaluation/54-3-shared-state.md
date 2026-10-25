@@ -23,7 +23,7 @@ datasets: []
 status: {maturity: active, disputed: false}
 evidence_summary: {labels_used: [MATHEMATICALLY-DERIVED, DERIVED, PAPER-REPORTED, OFFICIAL-DOCUMENTATION, NOT-DISCLOSED, UNVERIFIED], empirically_observed: false}
 word_count_target: 2100
-updated_at: 2026-10-14
+updated_at: "2026-10-25"
 editorial_status: manuscript_draft
 ---
 
@@ -113,7 +113,7 @@ $$
         "default": 0.3,
         "min": 0,
         "max": 0.99,
-        "format": "ratio"
+        "format": "percent"
       },
       {
         "symbol": "k",

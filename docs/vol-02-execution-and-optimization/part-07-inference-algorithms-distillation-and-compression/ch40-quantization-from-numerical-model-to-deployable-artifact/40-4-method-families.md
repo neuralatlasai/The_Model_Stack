@@ -23,7 +23,7 @@ datasets: []
 status: {maturity: active, disputed: false}
 evidence_summary: {labels_used: [DERIVED, MATHEMATICALLY-DERIVED, PAPER-REPORTED, OFFICIAL-DOCUMENTATION, NOT-DISCLOSED, UNVERIFIED], empirically_observed: false}
 word_count_target: 2600
-updated_at: 2026-10-14
+updated_at: 2026-10-25
 editorial_status: manuscript_draft
 ---
 
@@ -131,7 +131,9 @@ where $a_g>0$ normalizes a group and $k$ bits index the codebook. Uniform INT4 h
 
 [PAPER-REPORTED] QLoRA introduces NF4 for approximately normal weight distributions, quantizes scale constants again, and computes with a higher-precision dequantized base while training adapters [P15, §3]. This establishes a storage/computation distinction, not native four-bit GEMM. Its normality premise is a model of weight statistics and not a theorem for all block-normalized tensors.
 
-[OFFICIAL-DOCUMENTATION] bitsandbytes Linear4bit exposes FP4/NF4 choices, compute dtype and compressed statistics [R40.16, Linear4bit]. LLM.int8() instead decomposes activation outlier dimensions into a higher-precision path and uses vectorwise integer multiplication for the rest [R40.8, §3]. The library name does not identify which method was selected.
+[OFFICIAL-DOCUMENTATION] bitsandbytes Linear4bit exposes FP4/NF4 choices, compute dtype and compressed statistics [R40.16, Linear4bit]. The library name does not identify which method was selected.
+
+[PAPER-REPORTED] LLM.int8() instead decomposes activation outlier dimensions into a higher-precision path and uses vectorwise integer multiplication for the rest [R40.8, §3].
 
 [OFFICIAL-DOCUMENTATION] NVFP4 uses E2M1 values with an E4M3 scale per sixteen values and a tensor-level FP32 scale; MXFP4 uses a power-of-two shared scale per thirty-two values [R40.17, Table 1, “What is NVFP4?”]. Before alignment, NVFP4 block payload is $4+8/16=4.5$ bits/value plus tensor scale; MXFP4's corresponding arithmetic is $4+8/32=4.25$. These are storage calculations, not accuracy or speed rankings.
 

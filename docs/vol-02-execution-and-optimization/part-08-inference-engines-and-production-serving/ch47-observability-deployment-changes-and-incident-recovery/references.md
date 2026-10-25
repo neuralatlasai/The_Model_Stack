@@ -23,13 +23,15 @@ datasets: []
 status: {"maturity":"active","disputed":false}
 evidence_summary: {"labels_used":["MATHEMATICALLY-DERIVED","DERIVED","PAPER-REPORTED","OFFICIAL-DOCUMENTATION","NOT-DISCLOSED","UNVERIFIED"],"empirically_observed":false}
 word_count_target: 1500
-updated_at: "2026-10-14"
+updated_at: "2026-10-25"
 editorial_status: "manuscript_draft"
 ---
 
 # Chapter 47 references
 
 [DERIVED] Primary surfaces below were actually inspected on **2026-10-14**. Versioned papers are pinned to the stated revision; current documentation and branch source are explicitly unpinned. Inspection does not imply execution or independent replication. No private logs or raw production trace were available.
+
+[DERIVED] Targeted reinspection on **2026-10-25** reopened R47.1 (metric descriptions and V1 frontend/event boundaries), R47.3 (?4 Eqs. 1?7, ?7.1?7.3 tables and consistency discrepancy), and R47.6 (?5.1?5.6/Table 3 and Appendix B). The original 2026-10-14 records remain the inspection basis for other entries; no engine or production trace was executed.
 
 | Key | Type | Work | Authors / organization | Venue / year | Primary URL | Official code | Status | Used for | Accessed |
 |---|---|---|---|---|---|---|---|---|---|
