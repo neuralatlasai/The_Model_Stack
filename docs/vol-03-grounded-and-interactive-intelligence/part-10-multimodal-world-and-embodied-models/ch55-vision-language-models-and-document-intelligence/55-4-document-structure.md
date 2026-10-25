@@ -178,6 +178,16 @@ $$
 
 where embeddings share width $d$. This score can collect maxima from unrelated regions; it does not enforce that all query predicates bind to one object or coherent table row. Longer queries can change score scale, and normalization choices belong to the retriever contract. Approximate candidate search adds a recall boundary before the exact shortlist score.
 
+[MATHEMATICALLY-DERIVED] For uncompressed storage of $N$ pages, a shared vector width $d$ and $b$ bytes per coordinate, the vector payload is
+
+$$
+M_{\mathrm{index}}=bd\sum_{p=1}^{N}M_p,\qquad
+M_{\mathrm{index}}=NMdb\quad\text{if every }M_p=M.
+$$
+*(Eq. 55.15a)*
+
+[DERIVED] This counts vector coordinates only. ANN metadata, IDs, alignment, replicas, source pages and working buffers are separate allocations. The uniform-page special case drives [Fig. 55.14](#fig-55-14); it does not evaluate the retrieval score in Eq. 55.15.
+
 [PAPER-REPORTED] LITTA keeps its visual index fixed, generates multiple query variants and fuses ranked page lists, using a frozen retriever, candidate depth 20 and reciprocal-rank constant 60 in its main configuration [R55.9, Secs. 3-4]. Its reported three-domain mean NDCG@10 rises from 64.2 for one query to 69.5 for three and 72.0 for five. Domain gains differ; optional reranking and failed-expansion fallback must be logged. It is query-side evidence access, not retriever retraining.
 
 [MATHEMATICALLY-DERIVED] With $Q$ variants, candidate sets $C_i$ and one-indexed ranks $r_i(p)$, a rank-fusion construction is
@@ -269,7 +279,7 @@ $$
 
 ## Implementation
 
-[MATHEMATICALLY-DERIVED] Storing $N$ pages with $M$ vectors/page, width $d$ and $b$ bytes/value requires $NMdb$ payload bytes before indexing overhead. Exact shortlist interaction for $Q$ queries, $k$ candidates each and length $L_q$ costs $O(QkL_qMd)$ arithmetic. Omitting $d$ is valid only when treating width as fixed; this chapter keeps it explicit. Query generation, ANN search, transfer, reranking and answer generation are additional costs. A compressed embedding index can save memory while changing recall and numerical ties.
+[MATHEMATICALLY-DERIVED] Storing $N$ pages with $M$ vectors/page, width $d$ and $b$ bytes/value requires $NMdb$ payload bytes before indexing overhead (Eq. 55.15a). Exact shortlist interaction for $Q$ queries, $k$ candidates each and length $L_q$ costs $O(QkL_qMd)$ arithmetic. Omitting $d$ is valid only when treating width as fixed; this chapter keeps it explicit. Query generation, ANN search, transfer, reranking and answer generation are additional costs. A compressed embedding index can save memory while changing recall and numerical ties.
 
 [DERIVED] Maintain both physical PDF index and displayed page label, plus crop-to-page transforms from Sec. 55.1. Heading hierarchy and cross-page tables require document-level state; continuation must preserve column semantics and units, not merely concatenate adjacent pages. An extracted cell should link to its exact region and parser revision so an answer can be rechecked. Page images and OCR text can be complementary access paths, but the language model must distinguish source text from generated descriptions or inferred repairs. Tool/security boundaries remain in Chapter 51 and are not replaced by visual parsing.
 
@@ -280,15 +290,15 @@ $$
   "id": "fig-55.14",
   "kind": "calculator",
   "title": "Multi-vector page-index payload",
-  "caption": "Illustrative uncompressed payload NMdb. The calculator excludes ANN metadata, IDs, alignment, replication and source page storage. More page vectors increase index cost while changing the information exposed to retrieval.",
+  "caption": "Illustrative uniform-page vector payload in Eq. 55.15a, with every page holding M vectors. The calculator excludes ANN metadata, IDs, alignment, replication and source page storage. More page vectors increase index cost while changing the information exposed to retrieval.",
   "placement": "rail",
   "anchor": "implementation",
   "evidence": "MATHEMATICALLY-DERIVED",
-  "source": "DERIVED:eq-55.15",
+  "source": "DERIVED:eq-55.15a",
   "alt": "Illustrative uncompressed payload NMdb. The calculator excludes ANN metadata, IDs, alignment, replication and source page storage. More page vectors increase index cost while changing the information exposed to retrieval.",
   "spec": {
     "tex": "M_{\\rm index}=NMdb",
-    "equation": "55.15",
+    "equation": "55.15a",
     "inputs": [
       {
         "symbol": "N",

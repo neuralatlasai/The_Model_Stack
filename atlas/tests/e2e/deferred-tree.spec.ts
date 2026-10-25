@@ -160,3 +160,40 @@ test('mobile citation inspection brings its title into the panel without moving 
   await inspector.getByRole('button', { name: 'Close', exact: true }).click();
   await expect(citation).toBeFocused();
 });
+
+test('deferred popover focus preserves a warm inspector title handoff', async ({ page }) => {
+  await page.setViewportSize({ width: 390, height: 844 });
+  await page.goto(POLICIES);
+  const citation = page.locator('a[data-cite="R54.6"]').first();
+  await citation.click();
+  const inspector = page.locator('[data-rail-inspector]');
+  await expect(inspector).toBeVisible();
+  await inspector.getByRole('button', { name: 'Close', exact: true }).click();
+  await page.keyboard.press('Escape');
+  await expect(page.locator('#context-rail')).toBeHidden();
+  await citation.click();
+  await expect(inspector.locator('.cx-insp__title')).toBeFocused();
+
+  // Reproduce the exact ordering without racing the dynamic import against the
+  // browser's toggle task: content has handed off focus before the opening
+  // callback's animation frame executes. The real popover remains open.
+  const preserved = await page.locator('#context-rail').evaluate(async (panel) => {
+    if (!panel.matches(':popover-open')) throw new Error('The native context popover must be open');
+    const heading = panel.querySelector<HTMLElement>('#atlas-inspector-title');
+    if (heading === null) throw new Error('The warm inspector title must be rendered');
+    heading.focus({ preventScroll: true });
+    panel.dispatchEvent(new ToggleEvent('toggle', { oldState: 'closed', newState: 'open' }));
+    await new Promise<void>((resolve) => {
+      requestAnimationFrame(() => {
+        requestAnimationFrame(() => {
+          resolve();
+        });
+      });
+    });
+    return document.activeElement === heading;
+  });
+  expect(preserved).toBe(true);
+  await expect(inspector.locator('.cx-insp__title')).toBeFocused();
+  await inspector.getByRole('button', { name: 'Close', exact: true }).click();
+  await expect(citation).toBeFocused();
+});

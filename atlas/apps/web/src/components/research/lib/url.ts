@@ -60,7 +60,9 @@ export function fragment(anchor: string): string {
 
 /** `DERIVED:eq-5.8` → `{ number: '5.8', anchor: 'eq-5-8' }`; null when the source is not an equation derivation. */
 export function derivedEquation(raw: string): { readonly number: string; readonly anchor: string } | null {
-  const match = /^DERIVED:\s*eq-(\d+\.\d+)$/iu.exec(raw.trim());
+  const match = /^DERIVED:\s*eq-(.+)$/iu.exec(raw.trim());
   const number = match?.[1];
-  return number === undefined ? null : { number, anchor: `eq-${number.replaceAll('.', '-')}` };
+  return number === undefined || !/^\d+\.\d+[a-z]?$/u.test(number)
+    ? null
+    : { number, anchor: `eq-${number.replaceAll('.', '-')}` };
 }

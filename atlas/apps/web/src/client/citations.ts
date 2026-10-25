@@ -216,7 +216,7 @@ export function targetFromTrigger(element: Element): InspectTarget | null {
   const xref = element.getAttribute(ATTR.xref);
   if (xref?.startsWith('equation:') === true) {
     const number = xref.slice('equation:'.length);
-    if (/^\d+\.\d+$/u.test(number)) return { type: 'equation', number };
+    if (/^\d+\.\d+[a-z]?$/u.test(number)) return { type: 'equation', number };
   }
   const node = parseNodeId(element.getAttribute(ATTR.linkNode));
   if (node !== null) return { type: 'node', id: node };

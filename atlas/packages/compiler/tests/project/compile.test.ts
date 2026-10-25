@@ -88,6 +88,20 @@ describe('compileAtlas on the real docs', () => {
     }
   });
 
+  it('binds the page-index calculator to the storage equation rather than the retrieval score', () => {
+    const doc = atlas.documents.find((item) => item.meta.id === 'ms.section.55.4');
+    const calculator = doc?.figures.find((figure) => figure.id === 'fig-55.14');
+    assert.ok(calculator?.spec.kind === 'calculator');
+    assert.equal(calculator.spec.spec.equation, '55.15a');
+    const payload = atlas.registry.equations.find((equation) => equation.number === '55.15a');
+    const score = atlas.registry.equations.find((equation) => equation.number === '55.15');
+    assert.ok(payload !== undefined && score !== undefined);
+    assert.equal(payload.nodeId, 'ms.section.55.4');
+    assert.ok(payload.url.endsWith('#eq-55-15a'));
+    assert.ok(payload.tex.includes('NMdb'));
+    assert.ok(!score.tex.includes('NMdb'));
+  });
+
   it('counts diagnostics consistently and records the fixed timestamp', () => {
     assert.deepEqual(atlas.manifest.diagnostics, countBySeverity(atlas.diagnostics));
     assert.equal(atlas.manifest.compiledAt, FIXED_COMPILED_AT);

@@ -32,7 +32,7 @@ export interface FigureIssue {
 }
 
 const CITE_KEY = /^(?:P\d{2}|R\d+\.\d+)$/u;
-const DERIVED_SOURCE = /^DERIVED:(?:eq|alg|fig|prop)-\d+\.\d+$/u;
+const DERIVED_SOURCE = /^DERIVED:(?:eq|alg|fig|prop)-\d+\.\d+[a-z]?$/u;
 const OD_SOURCE = /^OD:[A-Za-z0-9][A-Za-z0-9._-]*$/u;
 const COMMIT = /\b[0-9a-f]{7,40}\b/u;
 

@@ -231,6 +231,9 @@ function enhancePopoverPanels(ctx: PageContext): void {
       (event) => {
         if (!(event instanceof ToggleEvent) || event.newState !== 'open') return;
         ctl.frame(() => {
+          // An inspector may have loaded and placed focus after this popover
+          // opened. Preserve that deliberate handoff instead of stealing it.
+          if (panel.contains(doc.activeElement)) return;
           const target = focusTarget(panel);
           target?.focus({ preventScroll: true });
         });

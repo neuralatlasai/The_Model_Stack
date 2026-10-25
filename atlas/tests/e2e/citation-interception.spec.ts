@@ -93,9 +93,36 @@ test.describe('native citation tabs', () => {
         expect(response.ok()).toBe(true);
         expect(await response.finished()).toBeNull();
         await paper.waitForURL(/\/papers\/r19-22\//u, { waitUntil: 'domcontentloaded', timeout: 20_000 });
-        await expect(paper.locator('[data-paper-page]')).toBeVisible();
-        await expect(paper.locator('[data-paper-page] .sh-identity')).toContainText(/\bR19\.22\b/u);
-        await expect(paper.getByRole('heading', { level: 1 })).toHaveText('Automatic Mixed Precision examples');
+        // Native background tabs can retain a stale pending-navigation guard in
+        // the driver after the document has committed. Read the actual document
+        // in its main world, retaining the same visibility and identity checks.
+        await expect
+          .poll(() =>
+            paper.evaluate(() => {
+              const marker = document.querySelector<HTMLElement>('[data-paper-page]');
+              const bounds = marker?.getBoundingClientRect();
+              const style = marker === null ? null : getComputedStyle(marker);
+              return {
+                url: document.URL,
+                committed: document.readyState === 'interactive' || document.readyState === 'complete',
+                visible:
+                  bounds !== undefined &&
+                  bounds.width > 0 &&
+                  bounds.height > 0 &&
+                  style?.visibility !== 'hidden' &&
+                  style?.display !== 'none',
+                identity: marker?.querySelector('.sh-identity')?.textContent,
+                title: marker?.querySelector('h1')?.textContent?.replace(/\s+/gu, ' ').trim(),
+              };
+            }),
+          )
+          .toMatchObject({
+            url: response.url(),
+            committed: true,
+            visible: true,
+            identity: expect.stringMatching(/\bR19\.22\b/u),
+            title: 'Automatic Mixed Precision examples',
+          });
         await expect(page).toHaveURL(/19-2-batch-semantics\//u);
         await expect(page.locator('[data-rail-inspector]')).toBeHidden();
       } finally {

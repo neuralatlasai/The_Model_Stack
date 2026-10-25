@@ -312,10 +312,10 @@ export const CalculatorSpecSchema = z
   .object({
     /** Display equation (TeX). Rendered with KaTeX; symbols in `inputs` become inspectable. */
     tex: z.string().min(1).max(400),
-    /** Equation number this calculator executes, e.g. `5.8`. */
+    /** Equation number this calculator executes, e.g. `5.8` or `55.15a`. */
     equation: z
       .string()
-      .regex(/^\d+\.\d+$/u)
+      .regex(/^\d+\.\d+[a-z]?$/u)
       .optional(),
     inputs: z
       .array(

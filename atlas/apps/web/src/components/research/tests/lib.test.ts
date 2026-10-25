@@ -45,6 +45,10 @@ describe('url', () => {
 
   it('parses DERIVED equation sources into anchors', () => {
     assert.deepEqual(derivedEquation('DERIVED:eq-5.8'), { number: '5.8', anchor: 'eq-5-8' });
+    assert.deepEqual(derivedEquation('DERIVED:eq-55.15a'), { number: '55.15a', anchor: 'eq-55-15a' });
+    assert.equal(derivedEquation('DERIVED:eq-55.15aa'), null);
+    assert.equal(derivedEquation('DERIVED:eq-55.15A'), null);
+    assert.deepEqual(derivedEquation('derived:EQ-55.15a'), { number: '55.15a', anchor: 'eq-55-15a' });
     assert.deepEqual(derivedEquation(' DERIVED: eq-42.1 '), { number: '42.1', anchor: 'eq-42-1' });
     assert.equal(derivedEquation('P19'), null);
   });
